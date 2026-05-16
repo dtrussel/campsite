@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ResourceDefinition" load_steps=2 format=3 uid="uid://b0campsiteitemwood"]
+
+[ext_resource type="Script" path="res://scripts/resources/resource_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"wood"
+display_name = "Wood"
+description = "Basic construction material. Most early buildings and tools start here."
+icon = null
+rarity = 1
+max_stack = 99
+ui_color = Color(0.55, 0.36, 0.18, 1)

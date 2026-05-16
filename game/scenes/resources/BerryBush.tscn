@@ -1,0 +1,61 @@
+[gd_scene load_steps=7 format=3 uid="uid://b0campsiteberrybush01"]
+
+[ext_resource type="Script" path="res://scripts/resources/resource_node.gd" id="1_rn"]
+[ext_resource type="Resource" uid="uid://b0campsiteitemberries" path="res://resources/items/berries.tres" id="2_def"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_bush"]
+radius = 0.55
+height = 0.7
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bush"]
+albedo_color = Color(0.3, 0.55, 0.28, 1)
+roughness = 0.85
+
+[sub_resource type="SphereMesh" id="SphereMesh_berries"]
+radius = 0.12
+height = 0.24
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_berries"]
+albedo_color = Color(0.85, 0.25, 0.35, 1)
+roughness = 0.4
+emission_enabled = true
+emission = Color(0.6, 0.1, 0.2, 1)
+emission_energy_multiplier = 0.2
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_bush"]
+radius = 0.55
+
+[node name="BerryBush" type="StaticBody3D"]
+collision_layer = 3
+collision_mask = 1
+script = ExtResource("1_rn")
+definition = ExtResource("2_def")
+yield_amount = 3
+gather_time_seconds = 1.0
+respawn_seconds = 15.0
+
+[node name="Visual" type="Node3D" parent="."]
+
+[node name="Foliage" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
+mesh = SubResource("SphereMesh_bush")
+surface_material_override/0 = SubResource("StandardMaterial3D_bush")
+
+[node name="BerryA" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.45, 0.15)
+mesh = SubResource("SphereMesh_berries")
+surface_material_override/0 = SubResource("StandardMaterial3D_berries")
+
+[node name="BerryB" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.5, 0.2)
+mesh = SubResource("SphereMesh_berries")
+surface_material_override/0 = SubResource("StandardMaterial3D_berries")
+
+[node name="BerryC" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 0.55, -0.25)
+mesh = SubResource("SphereMesh_berries")
+surface_material_override/0 = SubResource("StandardMaterial3D_berries")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
+shape = SubResource("SphereShape3D_bush")

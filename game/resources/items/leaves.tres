@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ResourceDefinition" load_steps=2 format=3 uid="uid://b0campsiteitemleaves"]
+
+[ext_resource type="Script" path="res://scripts/resources/resource_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"leaves"
+display_name = "Leaves"
+description = "Camouflage, bedding, simple roofs, ground-cover crafts."
+icon = null
+rarity = 1
+max_stack = 99
+ui_color = Color(0.45, 0.78, 0.32, 1)

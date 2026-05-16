@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ResourceDefinition" load_steps=2 format=3 uid="uid://b0campsiteitemmushrooms"]
+
+[ext_resource type="Script" path="res://scripts/resources/resource_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"mushrooms"
+display_name = "Mushrooms"
+description = "Potions, special crafting, and risky food."
+icon = null
+rarity = 2
+max_stack = 50
+ui_color = Color(0.78, 0.58, 0.88, 1)

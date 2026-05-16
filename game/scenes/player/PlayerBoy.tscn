@@ -1,6 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://b0campsiteplayer01"]
+[gd_scene load_steps=8 format=3 uid="uid://b0campsiteplayer01"]
 
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_player_script"]
+[ext_resource type="Script" path="res://scripts/player/gather_interactor.gd" id="2_interactor_script"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
 radius = 0.35
@@ -18,6 +19,9 @@ roughness = 0.7
 radius = 0.32
 height = 0.32
 
+[sub_resource type="SphereShape3D" id="SphereShape3D_interactor"]
+radius = 1.6
+
 [node name="PlayerBoy" type="CharacterBody3D"]
 script = ExtResource("1_player_script")
 
@@ -33,3 +37,14 @@ surface_material_override/0 = SubResource("StandardMaterial3D_player")
 [node name="Hat" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.5, 0, 0, 0, 1, 0, 1.35, 0)
 mesh = SubResource("SphereMesh_hat")
+
+[node name="GatherInteractor" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+collision_layer = 0
+collision_mask = 2
+monitoring = true
+monitorable = false
+script = ExtResource("2_interactor_script")
+
+[node name="Shape" type="CollisionShape3D" parent="GatherInteractor"]
+shape = SubResource("SphereShape3D_interactor")

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ResourceDefinition" load_steps=2 format=3 uid="uid://b0campsiteitemclay"]
+
+[ext_resource type="Script" path="res://scripts/resources/resource_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"clay"
+display_name = "Clay"
+description = "Reinforced walls, ovens, brick-tier upgrades."
+icon = null
+rarity = 2
+max_stack = 50
+ui_color = Color(0.82, 0.52, 0.32, 1)

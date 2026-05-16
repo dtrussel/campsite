@@ -2,30 +2,20 @@ extends CanvasLayer
 
 ## HUD
 ##
-## Phase 0 placeholder HUD. Lists time of day, base HP, and all 10
-## resources with placeholder values. Real values arrive in later
-## phases (ResourceManager in Phase 2, base HP wiring in Phase 5).
-
-const RESOURCE_NAMES: Array[String] = [
-	"Wood",
-	"Stone",
-	"Berries",
-	"Fiber",
-	"Mushrooms",
-	"Clay",
-	"Leaves",
-	"Resin",
-	"Scrap",
-	"Glow Shards",
-]
+## Subscribes to ResourceManager.resource_changed and updates one
+## resource label per event (no per-frame polling for inventory).
+## The time-of-day label still ticks every frame via _process.
 
 @onready var time_label: Label = $Panel/VBox/TimeLabel
 @onready var base_hp_label: Label = $Panel/VBox/BaseHPLabel
 @onready var resource_list: VBoxContainer = $Panel/VBox/ResourceList
 
+var _rows: Dictionary = {}  # StringName -> Label
+
 
 func _ready() -> void:
 	_populate_resources()
+	ResourceManager.resource_changed.connect(_on_resource_changed)
 
 
 func _process(_delta: float) -> void:
@@ -37,7 +27,20 @@ func _process(_delta: float) -> void:
 func _populate_resources() -> void:
 	for child in resource_list.get_children():
 		child.queue_free()
-	for res_name in RESOURCE_NAMES:
+	_rows.clear()
+	for definition in ResourceManager.get_definitions():
 		var row: Label = Label.new()
-		row.text = "%s: 0" % res_name
+		row.text = "%s: %d" % [definition.display_name, ResourceManager.get_count(definition.id)]
+		row.add_theme_color_override("font_color", definition.ui_color)
 		resource_list.add_child(row)
+		_rows[definition.id] = row
+
+
+func _on_resource_changed(id: StringName, new_value: int, _delta: int) -> void:
+	var row: Label = _rows.get(id, null) as Label
+	if row == null:
+		push_warning("HUD: no row for resource id '%s'" % id)
+		return
+	var definition: ResourceDefinition = ResourceManager.get_definition(id)
+	var display_name: String = definition.display_name if definition != null else String(id)
+	row.text = "%s: %d" % [display_name, new_value]

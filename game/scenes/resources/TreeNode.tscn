@@ -1,0 +1,50 @@
+[gd_scene load_steps=8 format=3 uid="uid://b0campsitetreenode01"]
+
+[ext_resource type="Script" path="res://scripts/resources/resource_node.gd" id="1_rn"]
+[ext_resource type="Resource" uid="uid://b0campsiteitemwood" path="res://resources/items/wood.tres" id="2_def"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_trunk"]
+top_radius = 0.18
+bottom_radius = 0.22
+height = 1.6
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_trunk"]
+albedo_color = Color(0.36, 0.22, 0.12, 1)
+roughness = 0.9
+
+[sub_resource type="SphereMesh" id="SphereMesh_canopy"]
+radius = 0.9
+height = 1.6
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_canopy"]
+albedo_color = Color(0.22, 0.55, 0.25, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_trunk"]
+height = 1.6
+radius = 0.3
+
+[node name="TreeNode" type="StaticBody3D"]
+collision_layer = 3
+collision_mask = 1
+script = ExtResource("1_rn")
+definition = ExtResource("2_def")
+yield_amount = 2
+gather_time_seconds = 1.5
+respawn_seconds = 20.0
+
+[node name="Visual" type="Node3D" parent="."]
+
+[node name="Trunk" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+mesh = SubResource("CylinderMesh_trunk")
+surface_material_override/0 = SubResource("StandardMaterial3D_trunk")
+
+[node name="Canopy" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
+mesh = SubResource("SphereMesh_canopy")
+surface_material_override/0 = SubResource("StandardMaterial3D_canopy")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+shape = SubResource("CylinderShape3D_trunk")

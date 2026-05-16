@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ResourceDefinition" load_steps=2 format=3 uid="uid://b0campsiteitemscrap"]
+
+[ext_resource type="Script" path="res://scripts/resources/resource_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"scrap"
+display_name = "Scrap"
+description = "Improvised tools, weapon upgrades, complex devices."
+icon = null
+rarity = 3
+max_stack = 30
+ui_color = Color(0.7, 0.7, 0.78, 1)
