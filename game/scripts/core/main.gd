@@ -8,4 +8,8 @@ extends Node
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("quit_game"):
+		# BuildManager treats Esc as cancel while in build mode; don't
+		# also quit the game in that case.
+		if BuildManager.is_in_build_mode():
+			return
 		get_tree().quit()

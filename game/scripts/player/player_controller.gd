@@ -27,6 +27,8 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("interact"):
+		if BuildManager.is_in_build_mode():
+			return
 		_try_begin_gather()
 
 

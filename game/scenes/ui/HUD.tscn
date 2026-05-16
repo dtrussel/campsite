@@ -30,6 +30,11 @@ text = "Day 1 - Morning"
 layout_mode = 2
 text = "Base HP: 100 / 100"
 
+[node name="BuildModeLabel" type="Label" parent="Panel/VBox"]
+visible = false
+layout_mode = 2
+text = "Build: -"
+
 [node name="Separator" type="HSeparator" parent="Panel/VBox"]
 layout_mode = 2
 
@@ -42,4 +47,4 @@ layout_mode = 2
 
 [node name="Hint" type="Label" parent="Panel/VBox"]
 layout_mode = 2
-text = "WASD to move - Esc to quit"
+text = "WASD move - E gather - B build - Esc quit"

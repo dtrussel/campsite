@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="BuildingDefinition" load_steps=3 format=3 uid="uid://b0campsitebuilddefwoodenfence"]
+
+[ext_resource type="Script" path="res://scripts/buildings/building_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" uid="uid://b0campsitebuildwoodenfence01" path="res://scenes/buildings/WoodenFence.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"wooden_fence"
+display_name = "Wooden Fence"
+description = "A cheap wooden barrier. Slows or blocks small mobs."
+scene = ExtResource("2_scene")
+cost = {
+&"wood": 2,
+&"fiber": 1
+}
+max_hp = 50
+footprint_size = Vector3(1.6, 1.2, 0.3)
+ui_color = Color(0.55, 0.36, 0.18, 1)
+sort_order = 10
