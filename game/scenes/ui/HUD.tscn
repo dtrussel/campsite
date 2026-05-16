@@ -28,12 +28,21 @@ text = "Day 1 - Morning"
 
 [node name="BaseHPLabel" type="Label" parent="Panel/VBox"]
 layout_mode = 2
-text = "Base HP: 100 / 100"
+text = "Base HP: - / -"
+
+[node name="CompanionTaskLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "Companion: -"
 
 [node name="BuildModeLabel" type="Label" parent="Panel/VBox"]
 visible = false
 layout_mode = 2
 text = "Build: -"
+
+[node name="CampDestroyedLabel" type="Label" parent="Panel/VBox"]
+visible = false
+layout_mode = 2
+text = "Camp destroyed."
 
 [node name="Separator" type="HSeparator" parent="Panel/VBox"]
 layout_mode = 2
@@ -47,4 +56,4 @@ layout_mode = 2
 
 [node name="Hint" type="Label" parent="Panel/VBox"]
 layout_mode = 2
-text = "WASD move - E gather - B build - Esc quit"
+text = "WASD move - E gather - LMB attack - B build - F/G/T/Y companion - Esc"

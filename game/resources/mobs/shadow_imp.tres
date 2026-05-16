@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="MobDefinition" load_steps=3 format=3 uid="uid://b0campsitemobdefshadowimp"]
+
+[ext_resource type="Script" path="res://scripts/mobs/mob_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" uid="uid://b0campsitemobshadowimp01" path="res://scenes/mobs/ShadowImp.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"shadow_imp"
+display_name = "Shadow Imp"
+scene = ExtResource("2_scene")
+max_hp = 8
+move_speed = 2.4
+attack_damage = 4
+attack_range = 1.2
+attack_cooldown_seconds = 1.0
+xp_reward = 5
+ui_color = Color(0.55, 0.3, 0.7, 1)

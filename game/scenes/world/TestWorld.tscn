@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://b0campsiteworld01"]
+[gd_scene load_steps=15 format=3 uid="uid://b0campsiteworld01"]
 
 [ext_resource type="PackedScene" uid="uid://b0campsitebase01" path="res://scenes/base/CampfireCore.tscn" id="1_campfire"]
 [ext_resource type="PackedScene" uid="uid://b0campsiteplayer01" path="res://scenes/player/PlayerBoy.tscn" id="2_player"]
@@ -6,6 +6,10 @@
 [ext_resource type="PackedScene" uid="uid://b0campsitetreenode01" path="res://scenes/resources/TreeNode.tscn" id="4_tree"]
 [ext_resource type="PackedScene" uid="uid://b0campsiterocknode01" path="res://scenes/resources/RockNode.tscn" id="5_rock"]
 [ext_resource type="PackedScene" uid="uid://b0campsiteberrybush01" path="res://scenes/resources/BerryBush.tscn" id="6_bush"]
+[ext_resource type="Script" path="res://scripts/world/world_lighting.gd" id="7_worldlight"]
+[ext_resource type="Script" path="res://scripts/mobs/mob_spawner.gd" id="8_spawner"]
+[ext_resource type="PackedScene" uid="uid://b0campsitecompsibling01" path="res://scenes/companions/Sibling.tscn" id="9_sibling"]
+[ext_resource type="Resource" uid="uid://b0campsitemobdefshadowimp" path="res://resources/mobs/shadow_imp.tres" id="10_mobdef"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 size = Vector2(40, 40)
@@ -97,3 +101,31 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 5)
 
 [node name="Bush2" parent="Resources" instance=ExtResource("6_bush")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, -3)
+
+[node name="WorldLighting" type="Node" parent="."]
+script = ExtResource("7_worldlight")
+sun_path = NodePath("../SunLight")
+environment_path = NodePath("../WorldEnvironment")
+
+[node name="Sibling" parent="." instance=ExtResource("9_sibling")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 1.5)
+
+[node name="MobSpawner" type="Node3D" parent="."]
+script = ExtResource("8_spawner")
+mob_definition = ExtResource("10_mobdef")
+base_spawn_count = 4
+per_night_extra = 1
+spawn_interval_seconds = 4.0
+initial_delay_seconds = 2.0
+
+[node name="SpawnPointN" type="Marker3D" parent="MobSpawner"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -16)
+
+[node name="SpawnPointS" type="Marker3D" parent="MobSpawner"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 16)
+
+[node name="SpawnPointE" type="Marker3D" parent="MobSpawner"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, 0)
+
+[node name="SpawnPointW" type="Marker3D" parent="MobSpawner"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, 0)

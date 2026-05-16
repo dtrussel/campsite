@@ -14,13 +14,19 @@ enum PlayerState { IDLE, MOVING, GATHERING }
 @export var acceleration: float = 20.0
 @export var friction: float = 18.0
 
+@export var attack_damage: int = 4
+@export var attack_range: float = 1.8
+@export var attack_cooldown_seconds: float = 0.4
+
 @onready var _interactor: Node = $GatherInteractor
 
 var _state: int = PlayerState.IDLE
 var _active_node: ResourceNode = null
+var _attack_cooldown_remaining: float = 0.0
 
 
 func _ready() -> void:
+	add_to_group("player")
 	if _interactor != null and _interactor.has_signal("interactable_exited"):
 		_interactor.interactable_exited.connect(_on_interactor_exited)
 
@@ -30,9 +36,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		if BuildManager.is_in_build_mode():
 			return
 		_try_begin_gather()
+	elif event.is_action_pressed("attack"):
+		if BuildManager.is_in_build_mode():
+			return
+		_try_attack()
 
 
 func _physics_process(delta: float) -> void:
+	_attack_cooldown_remaining = max(0.0, _attack_cooldown_remaining - delta)
 	if _state == PlayerState.GATHERING:
 		velocity = Vector3.ZERO
 		move_and_slide()
@@ -108,3 +119,32 @@ func _process(_delta: float) -> void:
 	)
 	if input_dir.length() > 0.0:
 		_cancel_active_gather()
+
+
+func _try_attack() -> void:
+	if _state == PlayerState.GATHERING:
+		return
+	if _attack_cooldown_remaining > 0.0:
+		return
+	var target: Node3D = _find_nearest_mob_in_range()
+	if target == null:
+		return
+	if target.has_method("take_damage"):
+		target.take_damage(attack_damage)
+		_attack_cooldown_remaining = attack_cooldown_seconds
+
+
+func _find_nearest_mob_in_range() -> Node3D:
+	var best: Node3D = null
+	var best_d_sq: float = attack_range * attack_range
+	for node in get_tree().get_nodes_in_group("mobs"):
+		if node == null or not is_instance_valid(node):
+			continue
+		var n3d: Node3D = node as Node3D
+		if n3d == null:
+			continue
+		var d_sq: float = n3d.global_position.distance_squared_to(global_position)
+		if d_sq < best_d_sq:
+			best_d_sq = d_sq
+			best = n3d
+	return best

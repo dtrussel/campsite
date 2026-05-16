@@ -2,44 +2,75 @@ extends Node
 
 ## TimeManager
 ##
-## Drives the day/night cycle. Phase 0 stub: holds a time-of-day
-## value in [0, 1) and emits structural signals so other systems
-## can subscribe today. The actual day/night transitions are
-## fleshed out in Phase 5.
+## Drives the day/night cycle. Owns the current phase, a per-phase
+## countdown, and the transition signals. Other systems subscribe
+## rather than poll.
 
 signal day_started(day_number: int)
 signal sunset_warning(seconds_until_night: float)
 signal night_started(day_number: int)
 signal dawn_started(day_number: int)
+signal phase_changed(new_phase: int)
 
 enum Phase { DAY, SUNSET, NIGHT, DAWN }
 
-@export var seconds_per_full_day: float = 240.0
+@export var day_seconds: float = 90.0
+@export var sunset_seconds: float = 8.0
+@export var night_seconds: float = 60.0
+@export var dawn_seconds: float = 5.0
 
-var time_of_day: float = 0.25  # 0.0 = midnight, 0.25 = morning
 var current_phase: int = Phase.DAY
+var remaining_seconds: float = 0.0
 var day_number: int = 1
 
 
 func _ready() -> void:
-	# Announce day 1 starting so listeners can initialize.
+	current_phase = Phase.DAY
+	remaining_seconds = day_seconds
+	phase_changed.emit(current_phase)
 	day_started.emit(day_number)
 
 
 func _process(delta: float) -> void:
-	# Phase 0 only advances the clock value; no transitions yet.
-	if seconds_per_full_day <= 0.0:
-		return
-	time_of_day = fposmod(time_of_day + delta / seconds_per_full_day, 1.0)
+	remaining_seconds -= delta
+	if remaining_seconds <= 0.0:
+		_advance_phase()
+
+
+func get_phase_name() -> String:
+	match current_phase:
+		Phase.DAY: return "Day"
+		Phase.SUNSET: return "Sunset"
+		Phase.NIGHT: return "Night"
+		Phase.DAWN: return "Dawn"
+	return "?"
 
 
 func get_phase_label() -> String:
-	# Naive label until Phase 5 introduces real phase transitions.
-	if time_of_day < 0.25:
-		return "Night"
-	elif time_of_day < 0.5:
-		return "Morning"
-	elif time_of_day < 0.75:
-		return "Afternoon"
-	else:
-		return "Evening"
+	return get_phase_name()
+
+
+func is_night() -> bool:
+	return current_phase == Phase.NIGHT
+
+
+func _advance_phase() -> void:
+	match current_phase:
+		Phase.DAY:
+			current_phase = Phase.SUNSET
+			remaining_seconds = sunset_seconds
+			sunset_warning.emit(sunset_seconds)
+		Phase.SUNSET:
+			current_phase = Phase.NIGHT
+			remaining_seconds = night_seconds
+			night_started.emit(day_number)
+		Phase.NIGHT:
+			current_phase = Phase.DAWN
+			remaining_seconds = dawn_seconds
+			dawn_started.emit(day_number)
+		Phase.DAWN:
+			day_number += 1
+			current_phase = Phase.DAY
+			remaining_seconds = day_seconds
+			day_started.emit(day_number)
+	phase_changed.emit(current_phase)
