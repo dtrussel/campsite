@@ -1,0 +1,38 @@
+# Godot 4 specific ignores
+.godot/
+.import/
+*.translation
+
+# Exported builds
+build/
+export/
+exports/
+*.exe
+*.pck
+*.zip
+
+# Editor / OS artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.tmp
+
+# Logs and crash dumps
+*.log
+*.dmp
+
+# User-local Godot overrides
+override.cfg
+
+# Local credentials / env
+.env
+.env.local
+
+# Tooling caches
+node_modules/
+__pycache__/
+*.pyc

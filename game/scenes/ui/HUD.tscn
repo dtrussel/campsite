@@ -1,0 +1,45 @@
+[gd_scene load_steps=3 format=3 uid="uid://b0campsitehud01"]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0, 0, 0, 0.45)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud_script")
+
+[node name="Panel" type="PanelContainer" parent="."]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 280.0
+offset_bottom = 460.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+
+[node name="TimeLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "Day 1 - Morning"
+
+[node name="BaseHPLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "Base HP: 100 / 100"
+
+[node name="Separator" type="HSeparator" parent="Panel/VBox"]
+layout_mode = 2
+
+[node name="ResourcesHeading" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "Resources"
+
+[node name="ResourceList" type="VBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+
+[node name="Hint" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "WASD to move - Esc to quit"
