@@ -1,0 +1,31 @@
+# Godot 4 generated files
+game/.godot/
+game/android/
+game/ios/
+game/export/
+
+# Export artifacts
+*.exe
+*.pck
+*.apk
+*.ipa
+*.zip
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/settings.json
+*.user
+
+# Logs
+*.log
+logs/
+
+# Local tool configs
+.env
+.env.local

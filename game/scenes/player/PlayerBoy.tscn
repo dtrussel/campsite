@@ -1,0 +1,37 @@
+[gd_scene load_steps=6 format=3 uid="uid://playerboy_001"]
+
+[ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_script"]
+
+[sub_resource type="CapsuleMesh" id="1_mesh"]
+radius = 0.3
+height = 1.4
+
+[sub_resource type="StandardMaterial3D" id="2_mat"]
+albedo_color = Color(0.2, 0.5, 1.0, 1.0)
+
+[sub_resource type="CapsuleShape3D" id="3_shape"]
+radius = 0.3
+height = 1.4
+
+[sub_resource type="SphereShape3D" id="4_interact_shape"]
+radius = 2.0
+
+[node name="PlayerBoy" type="CharacterBody3D" script=ExtResource("1_script")]
+move_speed = 5.0
+sprint_multiplier = 1.6
+gather_range = 2.0
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.7, 0)
+mesh = SubResource("1_mesh")
+surface_material_override/0 = SubResource("2_mat")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.7, 0)
+shape = SubResource("3_shape")
+
+[node name="InteractArea" type="Area3D" parent="."]
+position = Vector3(0, 0.7, 0)
+
+[node name="InteractShape" type="CollisionShape3D" parent="InteractArea"]
+shape = SubResource("4_interact_shape")

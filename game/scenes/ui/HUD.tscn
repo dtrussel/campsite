@@ -1,0 +1,59 @@
+[gd_scene load_steps=2 format=3 uid="uid://hud_scene_001"]
+
+[ext_resource type="Script" path="res://scripts/ui/hud_controller.gd" id="1_script"]
+
+[node name="HUD" type="CanvasLayer" script=ExtResource("1_script")]
+layer = 10
+
+[node name="Panel" type="Panel" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -220.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = 500.0
+grow_horizontal = 0
+
+[node name="DayLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "Day 1"
+theme_override_font_sizes/font_size = 16
+
+[node name="TimeLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "Phase: Day"
+theme_override_font_sizes/font_size = 14
+
+[node name="BaseHealthLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "Base HP: 200 / 200"
+theme_override_font_sizes/font_size = 14
+
+[node name="HSep" type="HSeparator" parent="Panel/VBox"]
+layout_mode = 2
+
+[node name="ResourcesTitle" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "Resources"
+theme_override_font_sizes/font_size = 13
+
+[node name="Resources" type="VBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+
+[node name="WarningLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = ""
+visible = false
+theme_override_colors/font_color = Color(1, 0.4, 0.1, 1)
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 3

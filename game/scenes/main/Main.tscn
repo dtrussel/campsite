@@ -1,0 +1,45 @@
+[gd_scene load_steps=5 format=3 uid="uid://main_scene_001"]
+
+[ext_resource type="PackedScene" path="res://scenes/world/TestWorld.tscn" id="1_world"]
+[ext_resource type="PackedScene" path="res://scenes/player/PlayerBoy.tscn" id="2_player"]
+[ext_resource type="PackedScene" path="res://scenes/ui/HUD.tscn" id="3_hud"]
+
+[sub_resource type="GDScript" id="1_main_script"]
+script/source = "extends Node
+
+@onready var _hud = $HUD
+
+func _ready() -> void:
+	# Connect base core to HUD once the tree is ready
+	var base_nodes: Array = get_tree().get_nodes_in_group('base_core')
+	for base_node in base_nodes:
+		base_node.base_damaged.connect(_on_base_damaged)
+
+	# Initialize HUD state
+	GameManager.new_day_started.emit(GameManager.current_day)
+
+func _on_base_damaged(damage: int, new_health: int) -> void:
+	var base_nodes: Array = get_tree().get_nodes_in_group('base_core')
+	if base_nodes.is_empty():
+		return
+	var base = base_nodes[0]
+	_hud.update_base_health(new_health, base.get_max_health())
+"
+
+[node name="Main" type="Node" script=SubResource("1_main_script")]
+
+[node name="World" parent="." instance=ExtResource("1_world")]
+
+[node name="Characters" type="Node3D" parent="."]
+
+[node name="PlayerBoy" parent="Characters" instance=ExtResource("2_player")]
+position = Vector3(2, 0, 2)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.643, 0.766, 0, -0.766, 0.643, 0, 14, 12)
+projection = 1
+size = 20.0
+near = 0.1
+far = 200.0
+
+[node name="HUD" parent="." instance=ExtResource("3_hud")]
