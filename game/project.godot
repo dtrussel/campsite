@@ -20,6 +20,7 @@ GameManager="*res://scripts/core/game_manager.gd"
 TimeManager="*res://scripts/core/time_manager.gd"
 ResourceManager="*res://scripts/core/resource_manager.gd"
 BuildManager="*res://scripts/core/build_manager.gd"
+ProgressionManager="*res://scripts/core/progression_manager.gd"
 
 [display]
 

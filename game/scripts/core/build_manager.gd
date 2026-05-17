@@ -19,6 +19,7 @@ const BUILDINGS_DIR: String = "res://resources/buildings/"
 const GHOST_NODE_NAME: StringName = &"_BuildGhost"
 const FOOTPRINT_NODE_NAME: StringName = &"_GhostFootprint"
 const GROUND_GROUP: StringName = &"ground"
+const BUILD_XP_REWARD: int = 5
 
 var _definitions: Array[BuildingDefinition] = []
 var _by_id: Dictionary = {}                  # StringName -> BuildingDefinition
@@ -131,9 +132,17 @@ func _try_confirm() -> void:
 		return
 	scene_root.add_child(building)
 	building_placed.emit(building)
+	_award_build_xp()
 	# Force a validity re-eval so the ghost flips to red if the cost can
 	# no longer be afforded after spending.
 	_update_validity(_compute_validity(), true)
+
+
+func _award_build_xp() -> void:
+	var players: Array = get_tree().get_nodes_in_group("player")
+	if players.is_empty():
+		return
+	ProgressionManager.award_xp(players[0] as Node, BUILD_XP_REWARD, &"build")
 
 
 func _spawn_ghost(definition: BuildingDefinition) -> bool:

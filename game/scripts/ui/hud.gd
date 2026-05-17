@@ -10,6 +10,8 @@ extends CanvasLayer
 @onready var time_label: Label = $Panel/VBox/TimeLabel
 @onready var base_hp_label: Label = $Panel/VBox/BaseHPLabel
 @onready var companion_task_label: Label = $Panel/VBox/CompanionTaskLabel
+@onready var player_progress_label: Label = $Panel/VBox/PlayerProgressLabel
+@onready var companion_progress_label: Label = $Panel/VBox/CompanionProgressLabel
 @onready var build_mode_label: Label = $Panel/VBox/BuildModeLabel
 @onready var camp_destroyed_label: Label = $Panel/VBox/CampDestroyedLabel
 @onready var resource_list: VBoxContainer = $Panel/VBox/ResourceList
@@ -20,9 +22,15 @@ const _PHASE_COLOR_DAY: Color = Color(1, 1, 1, 1)
 const _PHASE_COLOR_SUNSET: Color = Color(1, 0.55, 0.45, 1)
 const _PHASE_COLOR_NIGHT: Color = Color(0.7, 0.75, 1, 1)
 const _PHASE_COLOR_DAWN: Color = Color(1, 0.9, 0.7, 1)
+const _PROGRESS_COLOR_DEFAULT: Color = Color(1, 1, 1, 1)
+const _PROGRESS_COLOR_LEVEL_UP: Color = Color(0.6, 1.0, 0.6, 1)
+const _LEVEL_UP_FLASH_SECONDS: float = 1.2
 
 var _rows: Dictionary = {}  # StringName -> Label
 var _base_core: Node = null
+var _player: Node = null
+var _companion: Node = null
+var _level_up_flash_until: Dictionary = {}  # Node -> float (msec)
 
 
 func _ready() -> void:
@@ -34,8 +42,11 @@ func _ready() -> void:
 	TimeManager.phase_changed.connect(_on_phase_changed)
 	GameManager.camp_destroyed.connect(_on_camp_destroyed)
 	GameManager.companion_task_changed.connect(_on_companion_task_changed)
+	ProgressionManager.xp_gained.connect(_on_xp_gained)
+	ProgressionManager.level_up.connect(_on_level_up)
 	call_deferred("_hook_base_core")
 	call_deferred("_refresh_companion_label")
+	call_deferred("_refresh_progress_labels")
 	_apply_phase_color(TimeManager.current_phase)
 
 
@@ -47,6 +58,7 @@ func _process(_delta: float) -> void:
 		base_hp_label.text = "Base HP: %d / %d" % [
 			_base_core.current_hp, _base_core.max_hp
 		]
+	_tick_level_up_flash()
 
 
 func _populate_resources() -> void:
@@ -134,3 +146,76 @@ func _hook_base_core() -> void:
 	for node in get_tree().get_nodes_in_group("base_core"):
 		_base_core = node
 		break
+
+
+func _on_xp_gained(character: Node, _amount: int, _source: StringName) -> void:
+	_refresh_progress_for(character)
+
+
+func _on_level_up(character: Node, _new_level: int) -> void:
+	_refresh_progress_for(character)
+	_level_up_flash_until[character] = Time.get_ticks_msec() + int(_LEVEL_UP_FLASH_SECONDS * 1000.0)
+	var label: Label = _progress_label_for(character)
+	if label != null:
+		label.add_theme_color_override("font_color", _PROGRESS_COLOR_LEVEL_UP)
+
+
+func _refresh_progress_labels() -> void:
+	# Resolve player / companion references once the scene tree is up.
+	if _player == null:
+		var players: Array = get_tree().get_nodes_in_group("player")
+		if not players.is_empty():
+			_player = players[0]
+	if _companion == null:
+		var companions: Array = get_tree().get_nodes_in_group("companions")
+		if not companions.is_empty():
+			_companion = companions[0]
+	_refresh_progress_for(_player)
+	_refresh_progress_for(_companion)
+
+
+func _refresh_progress_for(character: Node) -> void:
+	if character == null:
+		return
+	var label: Label = _progress_label_for(character)
+	if label == null:
+		return
+	var stats: CharacterStatsDefinition = ProgressionManager.get_stats(character)
+	var display: String = "?"
+	if stats != null and stats.display_name != "":
+		display = stats.display_name
+	elif character.has_method("get_task_name"):
+		display = "Sibling"
+	else:
+		display = "Player"
+	var level: int = ProgressionManager.get_level(character)
+	var xp: int = ProgressionManager.get_xp(character)
+	var to_next: int = ProgressionManager.get_xp_to_next_level(character)
+	if to_next <= 0 and stats != null and level >= stats.max_level():
+		label.text = "%s: Lv %d - MAX" % [display, level]
+	else:
+		var threshold: int = xp + to_next
+		label.text = "%s: Lv %d - %d / %d XP" % [display, level, xp, threshold]
+
+
+func _progress_label_for(character: Node) -> Label:
+	if character == _player:
+		return player_progress_label
+	if character == _companion:
+		return companion_progress_label
+	return null
+
+
+func _tick_level_up_flash() -> void:
+	if _level_up_flash_until.is_empty():
+		return
+	var now: int = Time.get_ticks_msec()
+	var expired: Array = []
+	for character in _level_up_flash_until.keys():
+		if now >= int(_level_up_flash_until[character]):
+			expired.append(character)
+	for character in expired:
+		_level_up_flash_until.erase(character)
+		var label: Label = _progress_label_for(character)
+		if label != null:
+			label.add_theme_color_override("font_color", _PROGRESS_COLOR_DEFAULT)

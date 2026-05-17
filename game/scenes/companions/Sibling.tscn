@@ -1,7 +1,8 @@
-[gd_scene load_steps=7 format=3 uid="uid://b0campsitecompsibling01"]
+[gd_scene load_steps=8 format=3 uid="uid://b0campsitecompsibling01"]
 
 [ext_resource type="Script" path="res://scripts/companions/companion_controller.gd" id="1_comp"]
 [ext_resource type="Resource" uid="uid://b0campsitecompdefsibling" path="res://resources/companions/sibling.tres" id="2_def"]
+[ext_resource type="Resource" uid="uid://b0campsitestatssibling" path="res://resources/progression/sibling_stats.tres" id="3_stats"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_sibling"]
 radius = 0.35
@@ -28,6 +29,7 @@ collision_layer = 1
 collision_mask = 1
 script = ExtResource("1_comp")
 definition = ExtResource("2_def")
+stats = ExtResource("3_stats")
 follow_distance = 2.5
 guard_radius = 3.5
 detection_radius = 6.0

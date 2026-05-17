@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="CharacterStatsDefinition" load_steps=2 format=3 uid="uid://b0campsitestatssibling"]
+
+[ext_resource type="Script" path="res://scripts/progression/character_stats.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Sibling"
+base_max_health = 40
+base_attack_damage = 3
+max_health_per_level = 4
+attack_damage_per_level = 1
+xp_table = PackedInt32Array(0, 30, 75, 140, 225, 330, 460, 615, 800)
+ui_color = Color(0.6, 0.95, 0.6, 1)

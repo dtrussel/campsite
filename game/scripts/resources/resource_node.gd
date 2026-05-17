@@ -15,6 +15,8 @@ signal gathered(actor: Node, id: StringName, amount: int)
 signal depleted
 signal respawned
 
+const GATHER_XP_REWARD: int = 1
+
 @export var definition: ResourceDefinition
 @export var yield_amount: int = 1
 @export var gather_time_seconds: float = 1.5
@@ -67,6 +69,7 @@ func _on_gather_complete() -> void:
 	var actor: Node = _active_gather_actor
 	_active_gather_actor = null
 	ResourceManager.add(definition.id, yield_amount)
+	ProgressionManager.award_xp(actor, GATHER_XP_REWARD, &"gather")
 	gathered.emit(actor, definition.id, yield_amount)
 	_deplete()
 

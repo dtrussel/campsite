@@ -1,7 +1,8 @@
-[gd_scene load_steps=8 format=3 uid="uid://b0campsiteplayer01"]
+[gd_scene load_steps=9 format=3 uid="uid://b0campsiteplayer01"]
 
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_player_script"]
 [ext_resource type="Script" path="res://scripts/player/gather_interactor.gd" id="2_interactor_script"]
+[ext_resource type="Resource" uid="uid://b0campsitestatsplayer" path="res://resources/progression/player_stats.tres" id="3_stats"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
 radius = 0.35
@@ -26,6 +27,7 @@ radius = 1.6
 collision_layer = 1
 collision_mask = 3
 script = ExtResource("1_player_script")
+stats = ExtResource("3_stats")
 
 [node name="Collision" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)

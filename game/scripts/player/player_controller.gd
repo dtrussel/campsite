@@ -17,6 +17,7 @@ enum PlayerState { IDLE, MOVING, GATHERING }
 @export var attack_damage: int = 4
 @export var attack_range: float = 1.8
 @export var attack_cooldown_seconds: float = 0.4
+@export var stats: CharacterStatsDefinition
 
 @onready var _interactor: Node = $GatherInteractor
 
@@ -29,6 +30,11 @@ func _ready() -> void:
 	add_to_group("player")
 	if _interactor != null and _interactor.has_signal("interactable_exited"):
 		_interactor.interactable_exited.connect(_on_interactor_exited)
+	if stats != null:
+		attack_damage = stats.base_attack_damage
+	ProgressionManager.register_character(self, stats)
+	if not ProgressionManager.level_up.is_connected(_on_level_up):
+		ProgressionManager.level_up.connect(_on_level_up)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -130,8 +136,14 @@ func _try_attack() -> void:
 	if target == null:
 		return
 	if target.has_method("take_damage"):
-		target.take_damage(attack_damage)
+		target.take_damage(attack_damage, self)
 		_attack_cooldown_remaining = attack_cooldown_seconds
+
+
+func _on_level_up(character: Node, _new_level: int) -> void:
+	if character != self or stats == null:
+		return
+	attack_damage += stats.attack_damage_per_level
 
 
 func _find_nearest_mob_in_range() -> Node3D:

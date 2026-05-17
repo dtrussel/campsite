@@ -12,6 +12,7 @@ signal task_changed(new_task: int)
 enum Task { IDLE, FOLLOW_PLAYER, GUARD_BASE, GATHER_NEAREST }
 
 @export var definition: CompanionDefinition
+@export var stats: CharacterStatsDefinition
 @export var follow_distance: float = 2.5
 @export var guard_radius: float = 3.5
 @export var detection_radius: float = 6.0
@@ -23,6 +24,7 @@ var current_task: int = Task.IDLE
 var _player: Node3D = null
 var _base_core: Node3D = null
 var _attack_cooldown_remaining: float = 0.0
+var _current_attack_damage: int = 0
 var _active_resource_node: Node = null   # ResourceNode currently being gathered
 
 
@@ -30,6 +32,12 @@ func _ready() -> void:
 	add_to_group("companions")
 	_refresh_world_refs()
 	_update_task_label()
+	_current_attack_damage = definition.attack_damage if definition != null else 0
+	if stats != null:
+		_current_attack_damage = stats.base_attack_damage
+	ProgressionManager.register_character(self, stats)
+	if not ProgressionManager.level_up.is_connected(_on_level_up):
+		ProgressionManager.level_up.connect(_on_level_up)
 
 
 func set_task(task: int) -> void:
@@ -183,8 +191,14 @@ func _on_resource_gathered(actor: Node, _id: StringName, _amount: int) -> void:
 func _attack_mob(mob: Node3D) -> void:
 	if not mob.has_method("take_damage"):
 		return
-	mob.take_damage(definition.attack_damage)
+	mob.take_damage(_current_attack_damage, self)
 	_attack_cooldown_remaining = definition.attack_cooldown_seconds
+
+
+func _on_level_up(character: Node, _new_level: int) -> void:
+	if character != self or stats == null:
+		return
+	_current_attack_damage += stats.attack_damage_per_level
 
 
 func _find_nearest_mob(within: float) -> Node3D:

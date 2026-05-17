@@ -20,6 +20,7 @@ var state: int = State.MOVING_TO_TARGET
 var _target_position: Vector3 = Vector3.ZERO
 var _attack_target: Node = null
 var _attack_cooldown_remaining: float = 0.0
+var _last_damage_source: Node = null
 
 
 func _ready() -> void:
@@ -32,14 +33,25 @@ func _ready() -> void:
 	_refresh_target_position()
 
 
-func take_damage(amount: int) -> void:
+func take_damage(amount: int, source: Node = null) -> void:
 	if amount <= 0 or state == State.DYING:
 		return
+	if source != null:
+		_last_damage_source = source
 	current_hp = max(0, current_hp - amount)
 	if current_hp == 0:
 		state = State.DYING
+		_award_kill_xp()
 		defeated.emit(self)
 		queue_free()
+
+
+func _award_kill_xp() -> void:
+	if _last_damage_source == null or not is_instance_valid(_last_damage_source):
+		return
+	if definition == null or definition.xp_reward <= 0:
+		return
+	ProgressionManager.award_xp(_last_damage_source, definition.xp_reward, &"kill")
 
 
 func _physics_process(delta: float) -> void:
