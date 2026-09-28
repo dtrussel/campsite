@@ -326,22 +326,30 @@ def hair_and_cap():
 
 
 def face():
+    """Ekko-style: heavy half-lidded confident eyes under thick angled
+    brows, a wide cocky grin and camp face-paint marks on the
+    cheekbones (echoing Ekko's markings)."""
     parts = []
     for side in (-1, 1):
-        parts += chibi.almond_eye(HEAD, side * 0.35, -0.02, side, 0.062, 0.042, IRIS, IRIS_DARK, LASH, tilt=0.16,
-                                  iris_r=0.037, look=(0.006, 0.004), name="eye")
+        parts += chibi.almond_eye(HEAD, side * 0.35, -0.03, side, 0.066, 0.046, IRIS, IRIS_DARK, LASH, tilt=0.12,
+                                  iris_r=0.04, look=(0.008, 0.0), name="eye", lid_drop=0.28, lid_scale=1.5,
+                                  pupil=0.4, big_highlight=0.34)
         # One cocky raised brow (his left), one lower and determined.
         cocky = side > 0
-        parts.append(chibi.brow(HEAD, side * 0.36, 0.36 if cocky else 0.27, side, BROW, width=0.08,
-                                arch=0.016 if cocky else 0.006, thick=0.024, tilt=0.28 if cocky else 0.12))
-    parts += chibi.smirk(HEAD, -0.56, 0.058, 0.004, side=-1, open_depth=0.022)
-    for yaw, pitch in ((-0.16, -0.24), (-0.22, -0.29), (-0.28, -0.24), (0.16, -0.24), (0.22, -0.29), (0.28, -0.24),
-                       (-0.1, -0.2), (0.1, -0.2)):
+        parts.append(chibi.brow(HEAD, side * 0.36, 0.33 if cocky else 0.22, side, BROW, width=0.09,
+                                arch=0.02 if cocky else 0.004, thick=0.032, tilt=0.3 if cocky else 0.18))
+        # Face-paint: two short teal stripes under each eye.
+        for k in range(2):
+            y0 = side * (0.36 + 0.07 * k)
+            parts.append(HEAD.ribbon(y0, -0.27 - 0.03 * k, [(0.0, 0.02), (0.012 * side, -0.02)], [0.012, 0.006],
+                                     0.0045, TEAL, name="paint"))
+    parts += chibi.smirk(HEAD, -0.56, 0.072, 0.004, side=-1, open_depth=0.032)
+    for yaw, pitch in ((-0.14, -0.22), (-0.2, -0.25), (0.14, -0.22), (0.2, -0.25), (-0.08, -0.2), (0.08, -0.2)):
         parts.append(HEAD.ellipse(yaw, pitch, 0.005, 0.0045, 0.004, FRECKLE, name="freckle", nu=6, nv=2))
-    # A straight, slightly pointed nose.
+    # A small, straight nose.
     p, n = HEAD.point(0, -0.26)
-    nose = chibi.ellipsoid((0, 0, 0), (0.017, 0.022, 0.034), name="nose", segs=(14, 10))
-    nose.data.transform(Matrix.Translation(p - n * 0.008 + Vector((0, 0, 0.012))) @ Matrix.Rotation(-0.35, 4, "X"))
+    nose = chibi.ellipsoid((0, 0, 0), (0.015, 0.02, 0.03), name="nose", segs=(14, 10))
+    nose.data.transform(Matrix.Translation(p - n * 0.008 + Vector((0, 0, 0.01))) @ Matrix.Rotation(-0.35, 4, "X"))
     common.color_by(nose, lambda pos, nrm: common.lerp(SKIN, SKIN_SHADE, max(0.0, -nrm.z * 0.8)))
     parts.append(nose)
     return parts
@@ -360,8 +368,8 @@ def ears():
 
 
 def head_piece():
-    head = chibi.sculpt_head(HEAD, SKIN, SKIN_SHADE, BLUSH, jaw=0.32, chin_len=0.14, chin_fwd=0.09,
-                             cheekbone=0.1, face_flat=0.12, blush_yaw=0.5, blush_pitch=-0.3, blush_size=0.07)
+    head = chibi.sculpt_head(HEAD, SKIN, SKIN_SHADE, BLUSH, jaw=0.28, chin_len=0.1, chin_fwd=0.08,
+                             cheekbone=0.14, face_flat=0.12, blush_yaw=0.5, blush_pitch=-0.3, blush_size=0.05)
     parts = [head] + ears() + face() + hair_and_cap()
     chibi.report(parts)
     return common.join(parts, "Leo_Head")

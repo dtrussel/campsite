@@ -225,31 +225,33 @@ def pigtail(side):
 
 def hair():
     parts = [hair_cap()]
-    # Short soft fringe with rounded, slightly hooked ends.
-    for k, (yaw, length, width) in enumerate(((-0.58, 0.8, 0.07), (-0.32, 1.0, 0.085), (-0.06, 0.85, 0.08),
-                                               (0.2, 1.0, 0.085), (0.46, 0.85, 0.075), (0.68, 0.7, 0.06))):
-        root, n = HEAD.point(yaw, 0.78, -0.005)
-        side = Vector((math.sin(yaw) * 0.5 + 0.1, 0, 0))
-        controls = [root + F * 0.1 + U * 0.02 + side * 0.03,
-                    root + F * 0.1 - U * 0.1 * length + side * 0.06,
-                    root + F * 0.12 - U * 0.13 * length + side * 0.08]
-        clump(parts, root, n, controls, width)
+    # Annie-style blunt fringe: straight clumps cut level across the brow.
+    for k in range(9):
+        yaw = -0.72 + k * 0.18
+        root, n = HEAD.point(yaw, 0.82, -0.005)
+        end_z = HEAD.point(yaw, 0.26)[0].z
+        tip, tn = HEAD.point(yaw, 0.26, 0.05)
+        controls = [root + F * 0.1 + U * 0.01, tip + tn * 0.02 + U * 0.05, Vector((tip.x, tip.y, end_z))]
+        clump(parts, root, n, controls, 0.085, thickness=0.4)
     for side in (-1, 1):
         parts += pigtail(side)
     return parts
 
 
 def face():
+    """Annie-style: a round face with huge, low-set, wide-apart eyes with
+    big dark pupils and sparkles, thin high brows, a tiny nose and a
+    small cheeky grin between big rosy cheeks."""
     parts = []
     for side in (-1, 1):
-        parts += chibi.almond_eye(HEAD, side * 0.36, -0.12, side, 0.078, 0.074, IRIS, IRIS_DARK, LASH, tilt=0.0,
-                                  iris_r=0.062, look=(0.0, 0.008), lower_lid=(0.85, 0.5, 0.52), flicks=3, name="eye")
-        # A second, small sparkle for the big Annie-style eyes.
-        parts.append(HEAD.ellipse(side * 0.36, -0.12, 0.011, 0.011, 0.0095, (1.0, 1.0, 1.0),
-                                  du=0.022 * side, dv=-0.022, name="eye_hi2", nu=6, nv=2))
-        parts.append(chibi.brow(HEAD, side * 0.36, 0.3, side, BROW, width=0.07, arch=0.022, thick=0.013, tilt=-0.06))
-    parts += chibi.smile(HEAD, -0.5, 0.065, 0.048, 0.004, curve=3.4)
-    parts.append(chibi.nose(HEAD, SKIN, pitch=-0.3))
+        parts += chibi.almond_eye(HEAD, side * 0.41, -0.2, side, 0.088, 0.088, IRIS, IRIS_DARK, LASH, tilt=0.0,
+                                  iris_r=0.074, look=(0.0, 0.004), lower_lid=(0.85, 0.5, 0.52), flicks=3, name="eye",
+                                  pupil=0.55, big_highlight=0.38)
+        parts.append(HEAD.ellipse(side * 0.41, -0.2, 0.013, 0.013, 0.0095, (1.0, 1.0, 1.0),
+                                  du=0.03 * side, dv=-0.03, name="eye_hi2", nu=6, nv=2))
+        parts.append(chibi.brow(HEAD, side * 0.4, 0.2, side, BROW, width=0.07, arch=0.024, thick=0.011, tilt=-0.08))
+    parts += chibi.smile(HEAD, -0.6, 0.046, 0.036, 0.004, curve=4.5)
+    parts.append(chibi.nose(HEAD, SKIN, pitch=-0.4))
     for side in (-1, 1):
         p, n = HEAD.point(side * 1.5, -0.15)
         e = chibi.ellipsoid(p + n * 0.01, (0.035, 0.03, 0.05), name="ear", segs=(14, 8))
@@ -259,8 +261,8 @@ def face():
 
 
 def head_piece():
-    head = chibi.sculpt_head(HEAD, SKIN, SKIN_SHADE, BLUSH, jaw=0.38, chin_len=0.06, chin_fwd=0.04, cheeks=0.16,
-                             face_flat=0.05, blush_yaw=0.6, blush_pitch=-0.4, blush_size=0.12)
+    head = chibi.sculpt_head(HEAD, SKIN, SKIN_SHADE, BLUSH, jaw=0.3, chin_len=0.03, chin_fwd=0.03, cheeks=0.2,
+                             face_flat=0.04, blush_yaw=0.62, blush_pitch=-0.46, blush_size=0.13)
     parts = [head] + face() + hair()
     chibi.report(parts)
     return common.join(parts, "Nela_Head")

@@ -581,7 +581,8 @@ def sculpt_head(head, skin, skin_shade, blush, jaw=0.3, chin_len=0.15, chin_fwd=
 
 
 def almond_eye(head, yaw, pitch, side, w, h, iris, iris_dark, lash, tilt=0.0, iris_r=None, look=(0.0, 0.0),
-               lower_lid=(0.55, 0.32, 0.26), flicks=0, sclera=(0.99, 0.98, 0.96), name="eye"):
+               lower_lid=(0.55, 0.32, 0.26), flicks=0, sclera=(0.99, 0.98, 0.96), name="eye", lid_drop=0.0,
+               lid_scale=1.0, pupil=0.45, big_highlight=0.3):
     """A LoL-style almond eye: pointed corners, an arched top and flatter
     bottom, a big iris clipped to the eye shape, a thick tapered upper lid
     that wings past the outer corner, a thin lower lid and one highlight.
@@ -591,8 +592,9 @@ def almond_eye(head, yaw, pitch, side, w, h, iris, iris_dark, lash, tilt=0.0, ir
     ir = iris_r or h * 0.95
 
     def top(u):
+        # lid_drop flattens the top: a heavy, half-lidded (cocky) look.
         t = max(0.0, 1.0 - (u / w) ** 2)
-        return h * t ** 0.62 + tilt * u * out
+        return h * (1.0 - lid_drop) * t ** (0.62 + lid_drop) + tilt * u * out
 
     def bottom(u):
         t = max(0.0, 1.0 - (u / w) ** 2)
@@ -617,9 +619,9 @@ def almond_eye(head, yaw, pitch, side, w, h, iris, iris_dark, lash, tilt=0.0, ir
                 lambda u: min(top(u), iv + radius * math.sqrt(max(0.0, 1 - ((u - iu) / radius) ** 2))))
     lo, hi, b, t = clipped(ir)
     parts.append(head.patch(yaw, pitch, lo, hi, b, t, 0.0065, iris_colour, name=name + "_iris", nu=12, nv=5))
-    lo, hi, b, t = clipped(ir * 0.45)
+    lo, hi, b, t = clipped(ir * pupil)
     parts.append(head.patch(yaw, pitch, lo, hi, b, t, 0.0078, (0.04, 0.05, 0.1), name=name + "_pupil", nu=8, nv=3))
-    hr = ir * 0.3
+    hr = ir * big_highlight
     parts.append(head.ellipse(yaw, pitch, hr, hr, 0.009, (1.0, 1.0, 1.0), du=iu - ir * 0.35 * out * -1.0,
                               dv=iv + ir * 0.35, name=name + "_hi", nu=8, nv=3))
     # Thick upper lid: tapered at the inner corner, winged at the outer.
@@ -628,7 +630,7 @@ def almond_eye(head, yaw, pitch, side, w, h, iris, iris_dark, lash, tilt=0.0, ir
         u = -w + 2 * w * k / 10
         uu = u * out  # inner (-) to outer (+)
         pts.append((u, top(u) + 0.004))
-        widths.append(0.006 + 0.014 * max(0.0, min(1.0, (uu / w + 1.0) * 0.6)))
+        widths.append((0.006 + 0.014 * max(0.0, min(1.0, (uu / w + 1.0) * 0.6))) * lid_scale)
     order = sorted(range(len(pts)), key=lambda i: pts[i][0] * out)
     pts = [pts[i] for i in order]
     widths = [widths[i] for i in order]
