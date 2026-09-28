@@ -77,18 +77,18 @@ func _on_dawn_started(_day_number: int) -> void:
 
 
 func _spawn_one() -> void:
-	if mob_definition == null or mob_definition.scene == null:
+	if mob_definition == null or mob_definition.get_scene() == null:
 		return
 	var parent: Node = get_tree().current_scene
 	if parent == null:
 		return
-	var instance: Node = mob_definition.scene.instantiate()
+	var instance: Node = mob_definition.get_scene().instantiate()
 	var mob: Node3D = instance as Node3D
 	if mob == null:
 		instance.queue_free()
 		return
-	mob.global_position = _pick_spawn_position()
 	parent.add_child(mob)
+	mob.global_position = _pick_spawn_position()
 	_alive_mobs.append(mob)
 	if instance.has_signal("defeated"):
 		instance.defeated.connect(_on_mob_defeated)

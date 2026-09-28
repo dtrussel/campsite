@@ -10,12 +10,25 @@ extends Resource
 @export var id: StringName = &""
 @export var display_name: String = ""
 @export var description: String = ""
-@export var scene: PackedScene
 @export var cost: Dictionary = {}        # { &"wood": 2, &"fiber": 1 }
 @export var max_hp: int = 50
 @export var footprint_size: Vector3 = Vector3(1.0, 1.0, 1.0)
 @export var ui_color: Color = Color.WHITE
 @export var sort_order: int = 100        # lower comes first in the build menu
+
+
+## Scenes are referenced by path (not PackedScene) because the scene
+## itself embeds this definition; a direct reference would be cyclic
+## and fail to load.
+@export_file("*.tscn") var scene_path: String = ""
+
+var _scene_cache: PackedScene = null
+
+
+func get_scene() -> PackedScene:
+	if _scene_cache == null and scene_path != "":
+		_scene_cache = load(scene_path) as PackedScene
+	return _scene_cache
 
 
 func cost_summary() -> String:

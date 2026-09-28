@@ -1,14 +1,13 @@
-[gd_resource type="Resource" script_class="BuildingDefinition" load_steps=3 format=3 uid="uid://b0campsitebuilddefwatchpost"]
+[gd_resource type="Resource" script_class="BuildingDefinition" load_steps=2 format=3 uid="uid://b0campsitebuilddefwatchpost"]
 
 [ext_resource type="Script" path="res://scripts/buildings/building_definition.gd" id="1_def"]
-[ext_resource type="PackedScene" uid="uid://b0campsitebuildwatchpost01" path="res://scenes/buildings/WatchPost.tscn" id="2_scene"]
 
 [resource]
 script = ExtResource("1_def")
 id = &"watch_post"
 display_name = "Watch Post"
 description = "An elevated post a companion can guard from."
-scene = ExtResource("2_scene")
+scene_path = "res://scenes/buildings/WatchPost.tscn"
 cost = {
 &"wood": 4,
 &"stone": 2,

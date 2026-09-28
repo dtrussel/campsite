@@ -54,7 +54,7 @@ func is_in_build_mode() -> bool:
 
 
 func enter_build_mode(definition: BuildingDefinition) -> bool:
-	if definition == null or definition.scene == null:
+	if definition == null or definition.get_scene() == null:
 		return false
 	if is_in_build_mode():
 		_destroy_ghost()
@@ -119,18 +119,17 @@ func _select_index(idx: int) -> void:
 func _try_confirm() -> void:
 	if not _is_valid:
 		return
-	if _active_definition == null or _active_definition.scene == null:
+	if _active_definition == null or _active_definition.get_scene() == null:
 		return
 	if not ResourceManager.spend_costs(_active_definition.cost):
 		return
-	var building: Node = _active_definition.scene.instantiate()
-	if _ghost != null:
-		(building as Node3D).global_transform = _ghost.global_transform
 	var scene_root: Node = get_tree().current_scene
 	if scene_root == null:
-		building.queue_free()
 		return
+	var building: Node = _active_definition.get_scene().instantiate()
 	scene_root.add_child(building)
+	if _ghost != null:
+		(building as Node3D).global_transform = _ghost.global_transform
 	building_placed.emit(building)
 	_award_build_xp()
 	# Force a validity re-eval so the ghost flips to red if the cost can
@@ -149,7 +148,7 @@ func _spawn_ghost(definition: BuildingDefinition) -> bool:
 	var scene_root: Node = get_tree().current_scene
 	if scene_root == null:
 		return false
-	var instance: Node = definition.scene.instantiate()
+	var instance: Node = definition.get_scene().instantiate()
 	var ghost: Node3D = instance as Node3D
 	if ghost == null:
 		instance.queue_free()
@@ -285,28 +284,17 @@ func _make_ghost_material(color: Color) -> StandardMaterial3D:
 func _load_definitions() -> void:
 	_definitions.clear()
 	_by_id.clear()
-	var dir: DirAccess = DirAccess.open(BUILDINGS_DIR)
-	if dir == null:
-		push_warning("BuildManager: cannot open %s" % BUILDINGS_DIR)
-		return
-	dir.list_dir_begin()
-	var file_name: String = dir.get_next()
-	while file_name != "":
-		if not dir.current_is_dir() and file_name.ends_with(".tres"):
-			var path: String = BUILDINGS_DIR + file_name
-			var loaded: Resource = load(path)
-			var def: BuildingDefinition = loaded as BuildingDefinition
-			if def == null:
-				push_warning("BuildManager: %s is not a BuildingDefinition" % path)
-			elif def.id == &"":
-				push_warning("BuildManager: %s has empty id; skipping" % path)
-			elif def.scene == null:
-				push_warning("BuildManager: %s has no scene; skipping" % path)
-			else:
-				_definitions.append(def)
-				_by_id[def.id] = def
-		file_name = dir.get_next()
-	dir.list_dir_end()
+	for loaded in DefinitionLoader.load_all(BUILDINGS_DIR):
+		var def: BuildingDefinition = loaded as BuildingDefinition
+		if def == null:
+			push_warning("BuildManager: %s is not a BuildingDefinition" % loaded.resource_path)
+		elif def.id == &"":
+			push_warning("BuildManager: %s has empty id; skipping" % loaded.resource_path)
+		elif def.get_scene() == null:
+			push_warning("BuildManager: %s has no scene; skipping" % loaded.resource_path)
+		else:
+			_definitions.append(def)
+			_by_id[def.id] = def
 	_definitions.sort_custom(_compare_definitions)
 
 
