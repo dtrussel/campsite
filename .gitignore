@@ -36,3 +36,6 @@ override.cfg
 node_modules/
 __pycache__/
 *.pyc
+
+# Blender (bpy) venv for art builds
+.venv-blender/
