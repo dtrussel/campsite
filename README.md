@@ -13,23 +13,25 @@ fragile camping trip into a magical woodland fortress.
 
 ## Status
 
-**Pre-production / prototype bootstrap.**
+**Prototype, ready for first playtest (v0.1.0-playtest1).**
 
-The repository currently contains:
+A complete 3-night run is playable:
 
-- Full documentation foundation (vision, requirements, design, architecture,
-  roadmap, decisions, testing strategy, coding standards).
-- A minimal runnable Godot 4 / GDScript skeleton: main scene, test world,
-  placeholder boy character with basic movement, placeholder campfire core,
-  placeholder HUD listing all 10 resources, and a top-down/isometric camera.
-- The agent feature workflow under `.features/`.
+1. Title screen.
+2. Days of gathering, building, and crafting.
+3. Nights of Shadow Imp waves.
+4. A win or loss screen, and restart.
 
-There is **no gameplay yet** beyond walking around a flat test world. See
-[`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md) for the planned phases.
+Roadmap phases 0–7 are implemented. Save/load (Phase 8) is next, after
+playtest feedback. See [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md)
+and [`.features/005-first-playtest-build/handoff.md`](.features/005-first-playtest-build/handoff.md).
+
+**Playtesters:** follow [`docs/testing/playtest-001.md`](docs/testing/playtest-001.md).
+The tester package is built with `tools/export_playtest.sh`.
 
 ## Technology stack
 
-- **Engine:** Godot 4.x (4.2+ recommended)
+- **Engine:** Godot 4.3 (pinned in `tools/godot_version.txt`)
 - **Language:** GDScript only (no C#)
 - **Target platform:** Windows desktop first; other platforms later.
 - **Licensing intent:** Free / open-source friendly.
@@ -46,16 +48,39 @@ The reasoning is captured in
    `game/project.godot`.
 4. Open the project.
 
-## How to run the main scene
+## How to run the game
 
 - Press **F5** in the Godot editor, or use **Project > Run**.
-- The configured main scene is `game/scenes/main/Main.tscn`, which loads the
-  test world, spawns the placeholder boy, and shows the placeholder HUD.
+- The main scene is `game/scenes/ui/TitleScreen.tscn`; **Play** loads
+  `game/scenes/main/Main.tscn`.
 
-Controls (prototype):
+**Goal:** survive 3 nights and keep the campfire burning.
 
-- **W / A / S / D** &mdash; move the boy.
-- **Esc** &mdash; quit (placeholder).
+Controls (also shown in-game with **H**):
+
+| Key | Action |
+|-----|--------|
+| W A S D / arrows | Move |
+| E | Gather (tree, pine, rock, bush) |
+| Left click / Space | Swing at nearby Shadow Imps |
+| B, then 1 / 2 | Build mode: Wooden Fence / Watch Post (R rotate, LMB place, RMB/Esc cancel) |
+| C | Crafting panel (near the campfire) |
+| Q | Plant a crafted torch |
+| R | Eat 2 berries to heal |
+| F / G / T / Y | Sibling: follow / guard camp / gather / idle |
+| N | Call the night early (daytime) |
+| H | Help |
+| Esc / P | Pause menu |
+
+## Checks and builds
+
+```
+tools/check.sh            # headless: import, validate all data, full smoke run
+tools/export_playtest.sh  # Windows zip + self-tested Linux export in build/
+```
+
+Both scripts use `godot` on PATH, or `$GODOT`. Exports need the Godot
+4.3 export templates.
 
 ## Repository structure
 
@@ -99,8 +124,10 @@ Controls (prototype):
     mobs/             Mob definitions
     companions/       Companion definitions
   tests/
-    manual/           Manual playtest checklists and smoke scenes
-    automated/        Script-level tests (later)
+    manual/           (placeholder for manual smoke scenes)
+    automated/        Headless smoke test (smoke_run.tscn)
+    sim/              Balance simulation and screenshot capture
+  tools/              In-project tools (validate_project.tscn)
 
 /docs/                Project documentation
   requirements/       Product and functional requirements
@@ -110,7 +137,7 @@ Controls (prototype):
   decisions/          Architecture decision records (ADRs)
   testing/            Test strategy and checklists
 
-/tools/               Helper scripts, build tooling, dev utilities (later)
+/tools/               check.sh, export_playtest.sh, pinned Godot version
 
 /.features/           Agent feature workflow
   README.md
@@ -134,7 +161,8 @@ Start here if you are a new contributor or coding agent:
 6. [Test strategy](docs/testing/test-strategy.md)
 7. [ADR-0001: Engine & language selection](docs/decisions/ADR-0001-engine-and-language-selection.md)
 8. [Agent feature workflow](.features/README.md)
-9. [Bootstrap feature handoff](.features/000-project-bootstrap/handoff.md)
+9. [Latest feature handoff](.features/005-first-playtest-build/handoff.md)
+10. [Playtest 001 script](docs/testing/playtest-001.md)
 
 ## Development workflow
 
@@ -150,17 +178,18 @@ Start here if you are a new contributor or coding agent:
 
 ## Roadmap (summary)
 
-| Phase | Goal                                       |
-|-------|--------------------------------------------|
-| 0     | Project foundation (this commit)           |
-| 1     | Playable movement and camp scene           |
-| 2     | Resources and gathering                    |
-| 3     | Building placement                         |
-| 4     | Companion prototype                        |
-| 5     | Day/night cycle and first mob wave         |
-| 6     | Combat, XP, and leveling                   |
-| 7     | Crafting and first survival loop           |
-| 8     | Save/load prototype                        |
+| Phase | Goal                                       | Status |
+|-------|--------------------------------------------|--------|
+| 0     | Project foundation                         | done |
+| 1     | Playable movement and camp scene           | done |
+| 2     | Resources and gathering                    | done |
+| 3     | Building placement                         | done |
+| 4     | Companion prototype                        | done |
+| 5     | Day/night cycle and first mob wave         | done |
+| 6     | Combat, XP, and leveling                   | done |
+| 7     | Crafting and first survival loop           | done |
+| P1    | First human playtest                       | **next** |
+| 8     | Save/load prototype                        | planned |
 
 Full detail in [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md).
 

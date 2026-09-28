@@ -47,6 +47,23 @@ Each roadmap phase ends in &ldquo;Acceptance criteria&rdquo;. The matching
 tester ticks. A phase is &ldquo;done&rdquo; only when its checkboxes are
 all green and `handoff.md` is updated.
 
+## What exists today
+
+- `tools/check.sh` runs the whole headless suite. Run it before every
+  push:
+  - `game/tools/validate_project.tscn` is the data validator from
+    layer 3. It also fails on any script, scene, or resource that
+    doesn't load.
+  - `game/tests/automated/smoke_run.tscn` is the integration smoke
+    scene from layer 5. It plays a full winning run and a losing run.
+- `game/tests/sim/balance_sim.tscn` is a tuning aid, not pass/fail.
+- `game/tests/sim/screenshots.tscn` captures the key screens under
+  Xvfb for visual review.
+- Exported builds support `-- --selftest` to prove the PCK loads its
+  data.
+- Headless tests run as **scenes**, not `-s` scripts, because `-s`
+  runs without autoloads.
+
 ## Tools and conventions
 
 - Manual smoke tests are run inside the Godot editor with **F5**.

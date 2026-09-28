@@ -3,6 +3,8 @@
 > Phase-based plan from empty repository to a complete first vertical
 > slice. Each phase is independently shippable: the project should build
 > and run at the end of every phase.
+>
+> **Status (2026-09):** Phases 0&ndash;7 done; Playtest 1 is next.
 
 ## Phase 0 &mdash; Project foundation
 
@@ -169,6 +171,26 @@ placeholder HUD.
 - Player can craft at least one item.
 - Crafting visibly consumes resources and grants XP.
 - The recipe&rsquo;s output is usable in the world.
+
+## Playtest 1 &mdash; First human playtest (inserted before Phase 8)
+
+**Goal:** confirm that a first-time player understands the loop and
+enjoys it before we invest in save/load. Implemented by
+`.features/005-first-playtest-build`.
+
+**Deliverables**
+
+- Title, pause, help, and end screens; 3-night win condition; restart.
+- Threat to the boy and companion; feedback juice; balance pass.
+- Windows playtest package, guided script, questionnaire, and event
+  log (`docs/testing/playtest-001.md`).
+
+**Acceptance criteria**
+
+- A tester with no Godot install can launch the build and finish a
+  run.
+- `tools/check.sh` passes; the exported build passes `--selftest`.
+- Feedback from at least 2 testers is triaged into the next feature.
 
 ## Phase 8 &mdash; Save/load prototype
 
