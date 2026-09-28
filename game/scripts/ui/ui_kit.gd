@@ -3,33 +3,110 @@ extends RefCounted
 
 ## UiKit
 ##
-## Builders for the placeholder menu UI (title, pause, end screen,
-## controls, crafting). Everything is constructed in code from engine
-## Controls so the menus stay consistent without a theme asset.
+## The game's UI look, inspired by the LoL client "hextech" style:
+## deep navy panels, thin gold trims, Cinzel display type for titles,
+## Nunito Sans for body text, and gold-framed buttons with a warm hover.
+## `theme()` is applied to the root window once, so every Control
+## picks it up; the builders below assemble common menu pieces.
 
-const COLOR_PANEL: Color = Color(0.06, 0.08, 0.07, 0.92)
-const COLOR_DIM: Color = Color(0, 0, 0, 0.55)
-const COLOR_ACCENT: Color = Color(1.0, 0.72, 0.35)
-const COLOR_TEXT: Color = Color(0.95, 0.95, 0.9)
-const COLOR_MUTED: Color = Color(0.7, 0.72, 0.68)
+const COLOR_NAVY: Color = Color(0.02, 0.06, 0.1, 0.94)
+const COLOR_NAVY_LIGHT: Color = Color(0.06, 0.12, 0.17, 0.96)
+const COLOR_GOLD: Color = Color(0.78, 0.67, 0.43)
+const COLOR_GOLD_DARK: Color = Color(0.47, 0.35, 0.16)
+const COLOR_GOLD_LIGHT: Color = Color(0.94, 0.9, 0.82)
+const COLOR_TEAL: Color = Color(0.04, 0.78, 0.73)
+const COLOR_DIM: Color = Color(0.0, 0.02, 0.05, 0.62)
+const COLOR_TEXT: Color = Color(0.94, 0.9, 0.82)
+const COLOR_MUTED: Color = Color(0.63, 0.61, 0.55)
+## Kept for older call sites.
+const COLOR_ACCENT: Color = COLOR_GOLD
+const COLOR_PANEL: Color = COLOR_NAVY
 
 const GOAL_TEXT: String = "Survive 3 nights. Keep the campfire burning!"
 
 ## [keys, action] rows shared by the title screen and the in-game overlay.
 const CONTROLS: Array = [
-	["W A S D / Arrows", "Move"],
-	["E", "Gather from a tree, pine, rock or bush"],
-	["Left click / Space", "Swing at nearby Shadow Imps"],
-	["B, then 1 / 2", "Build mode: Wooden Fence / Watch Post"],
-	["R / Left click / Right click", "In build mode: rotate / place / cancel"],
-	["C", "Crafting (stand near the campfire)"],
+	["Right click", "Move / attack an imp / gather / use the campfire"],
+	["Left click", "Attack or use what you click (never moves)"],
+	["Mouse wheel", "Zoom"],
+	["Space", "Attack the nearest imp"],
+	["E", "Gather the nearest resource"],
 	["Q", "Plant a crafted torch"],
 	["R", "Eat 2 berries to heal"],
+	["C", "Crafting (near the campfire)"],
+	["B, then 1 / 2", "Build: Wooden Fence / Watch Post  (R rotate, LMB place, RMB cancel)"],
 	["F / G / T / Y", "Sibling: Follow / Guard camp / Gather / Idle"],
 	["N", "Call the night early (daytime only)"],
-	["H", "Show this help"],
-	["Esc / P", "Pause"],
+	["W A S D", "Walk directly (optional)"],
+	["H  /  Esc", "Help  /  Pause"],
 ]
+
+static var _theme: Theme = null
+
+
+## Project-wide theme, built once.
+static func theme() -> Theme:
+	if _theme != null:
+		return _theme
+	var t: Theme = Theme.new()
+	t.default_font = Fx.body_font(600)
+	t.default_font_size = 18
+
+	t.set_color("font_color", "Label", COLOR_TEXT)
+	t.set_color("font_outline_color", "Label", Color(0, 0, 0, 1))
+	t.set_constant("outline_size", "Label", 0)
+	t.set_stylebox("panel", "PanelContainer", panel_style())
+	t.set_stylebox("panel", "Panel", panel_style())
+
+	t.set_font("font", "Button", title_font_for_buttons())
+	t.set_font_size("font_size", "Button", 19)
+	t.set_color("font_color", "Button", Color(0.8, 0.75, 0.57))
+	t.set_color("font_hover_color", "Button", COLOR_GOLD_LIGHT)
+	t.set_color("font_pressed_color", "Button", COLOR_GOLD)
+	t.set_color("font_focus_color", "Button", COLOR_GOLD_LIGHT)
+	t.set_color("font_disabled_color", "Button", Color(0.4, 0.4, 0.4))
+	t.set_stylebox("normal", "Button", button_style(Color(0.08, 0.11, 0.13, 0.95), COLOR_GOLD_DARK))
+	t.set_stylebox("hover", "Button", button_style(Color(0.12, 0.17, 0.2, 0.98), COLOR_GOLD))
+	t.set_stylebox("pressed", "Button", button_style(Color(0.04, 0.06, 0.08, 1.0), COLOR_GOLD))
+	t.set_stylebox("focus", "Button", button_style(Color(0, 0, 0, 0), COLOR_GOLD_LIGHT, 1))
+	t.set_stylebox("disabled", "Button", button_style(Color(0.06, 0.07, 0.08, 0.9), Color(0.25, 0.25, 0.25)))
+
+	var separator: StyleBoxLine = StyleBoxLine.new()
+	separator.color = Color(COLOR_GOLD_DARK, 0.8)
+	separator.thickness = 1
+	t.set_stylebox("separator", "HSeparator", separator)
+	t.set_constant("separation", "HSeparator", 10)
+	_theme = t
+	return _theme
+
+
+static func title_font_for_buttons() -> Font:
+	return Fx.title_font(700)
+
+
+static func panel_style(fill: Color = COLOR_NAVY, border: Color = COLOR_GOLD_DARK) -> StyleBoxFlat:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(3)
+	style.set_content_margin_all(20)
+	style.shadow_color = Color(0, 0, 0, 0.45)
+	style.shadow_size = 10
+	return style
+
+
+static func button_style(fill: Color, border: Color, border_width: int = 2) -> StyleBoxFlat:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(border_width)
+	style.set_corner_radius_all(2)
+	style.content_margin_left = 22
+	style.content_margin_right = 22
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	return style
 
 
 static func full_rect(control: Control) -> void:
@@ -56,12 +133,8 @@ static func centered() -> CenterContainer:
 
 static func panel(padding: int = 24) -> PanelContainer:
 	var container: PanelContainer = PanelContainer.new()
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = COLOR_PANEL
-	style.set_corner_radius_all(10)
+	var style: StyleBoxFlat = panel_style()
 	style.set_content_margin_all(padding)
-	style.border_color = Color(COLOR_ACCENT, 0.5)
-	style.set_border_width_all(2)
 	container.add_theme_stylebox_override("panel", style)
 	return container
 
@@ -77,18 +150,33 @@ static func label(text: String, size: int = 18, color: Color = COLOR_TEXT) -> La
 	result.text = text
 	result.add_theme_font_size_override("font_size", size)
 	result.add_theme_color_override("font_color", color)
-	result.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
-	result.add_theme_constant_override("outline_size", 4 if size >= 24 else 0)
+	if size >= 24:
+		result.add_theme_constant_override("outline_size", 6)
 	return result
+
+
+## Gold Cinzel heading, LoL-style.
+static func title(text: String, size: int = 34, color: Color = COLOR_GOLD) -> Label:
+	var result: Label = label(text.to_upper(), size, color)
+	result.add_theme_font_override("font", Fx.title_font(700))
+	result.add_theme_constant_override("outline_size", 8)
+	result.add_theme_color_override("font_outline_color", Color(0.05, 0.03, 0.01, 1))
+	return result
+
+
+## Thin gold rule with a diamond in the middle (hextech divider).
+static func divider(width: float = 320.0) -> Control:
+	var rule: _Divider = _Divider.new()
+	rule.custom_minimum_size = Vector2(width, 14)
+	return rule
 
 
 ## `focusable = false` for in-game overlays, so Space (attack) is never
 ## swallowed by a focused button.
 static func button(text: String, on_pressed: Callable, focusable: bool = true) -> Button:
 	var result: Button = Button.new()
-	result.text = text
-	result.custom_minimum_size = Vector2(260, 44)
-	result.add_theme_font_size_override("font_size", 20)
+	result.text = text.to_upper()
+	result.custom_minimum_size = Vector2(280, 46)
 	result.focus_mode = Control.FOCUS_ALL if focusable else Control.FOCUS_NONE
 	result.pressed.connect(on_pressed)
 	return result
@@ -98,8 +186,22 @@ static func controls_grid() -> GridContainer:
 	var grid: GridContainer = GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 24)
-	grid.add_theme_constant_override("v_separation", 6)
+	grid.add_theme_constant_override("v_separation", 5)
 	for row in CONTROLS:
-		grid.add_child(label(row[0], 17, COLOR_ACCENT))
-		grid.add_child(label(row[1], 17))
+		var keys: Label = label(row[0], 16, COLOR_GOLD)
+		keys.add_theme_font_override("font", Fx.bold_font())
+		grid.add_child(keys)
+		grid.add_child(label(row[1], 16))
 	return grid
+
+
+class _Divider extends Control:
+	func _draw() -> void:
+		var y: float = size.y * 0.5
+		var mid: float = size.x * 0.5
+		draw_line(Vector2(0, y), Vector2(mid - 10, y), UiKit.COLOR_GOLD_DARK, 1.0)
+		draw_line(Vector2(mid + 10, y), Vector2(size.x, y), UiKit.COLOR_GOLD_DARK, 1.0)
+		var diamond: PackedVector2Array = PackedVector2Array([
+			Vector2(mid, y - 5), Vector2(mid + 6, y), Vector2(mid, y + 5), Vector2(mid - 6, y)
+		])
+		draw_colored_polygon(diamond, UiKit.COLOR_GOLD)

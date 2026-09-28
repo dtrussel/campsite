@@ -6,7 +6,7 @@ render_mode cull_disabled, diffuse_lambert, specular_disabled;
 // per-instance tip colour (INSTANCE COLOR), which also lets a few tufts
 // read as flowers.
 
-uniform vec4 base_color : source_color = vec4(0.3, 0.5, 0.2, 1.0);
+uniform vec4 base_color : source_color = vec4(0.34, 0.56, 0.23, 1.0);
 uniform float wind_strength = 0.12;
 uniform float wind_speed = 1.3;
 
@@ -24,6 +24,8 @@ void vertex() {
 }
 
 void fragment() {
+	// Two-sided blades: light back faces like front faces.
+	NORMAL = FRONT_FACING ? NORMAL : -NORMAL;
 	vec3 tip = COLOR.rgb;
 	ALBEDO = mix(base_color.rgb, tip, smoothstep(0.0, 0.9, blade_height));
 	ROUGHNESS = 1.0;

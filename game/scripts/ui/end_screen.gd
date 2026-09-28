@@ -17,6 +17,7 @@ func _ready() -> void:
 	layer = 20
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_root = Control.new()
+	_root.theme = UiKit.theme()
 	UiKit.full_rect(_root)
 	add_child(_root)
 	_root.add_child(UiKit.dim_background())
@@ -26,13 +27,15 @@ func _ready() -> void:
 	center.add_child(panel)
 	var column: VBoxContainer = UiKit.vbox(10)
 	panel.add_child(column)
-	_title = UiKit.label("", 44)
+	_title = UiKit.title("", 54)
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_title)
 	_reason = UiKit.label("", 22)
 	_reason.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_reason)
-	column.add_child(HSeparator.new())
+	var divider_row: CenterContainer = CenterContainer.new()
+	divider_row.add_child(UiKit.divider(420))
+	column.add_child(divider_row)
 	_stats = UiKit.label("", 18)
 	column.add_child(_stats)
 	column.add_child(HSeparator.new())
@@ -52,8 +55,8 @@ func _ready() -> void:
 
 
 func _on_run_ended(won: bool, reason: String) -> void:
-	_title.text = "Victory!" if won else "Game over"
-	_title.add_theme_color_override("font_color", Color(0.6, 1, 0.6) if won else Color(1, 0.45, 0.4))
+	_title.text = "VICTORY" if won else "DEFEAT"
+	_title.add_theme_color_override("font_color", UiKit.COLOR_GOLD if won else Color(0.85, 0.25, 0.22))
 	_reason.text = reason
 	var stats: Dictionary = GameManager.stats
 	var lines: PackedStringArray = PackedStringArray()

@@ -13,6 +13,7 @@ func _ready() -> void:
 	layer = 12
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_root = Control.new()
+	_root.theme = UiKit.theme()
 	UiKit.full_rect(_root)
 	add_child(_root)
 	_root.add_child(UiKit.dim_background())
@@ -22,9 +23,10 @@ func _ready() -> void:
 	center.add_child(panel)
 	var column: VBoxContainer = UiKit.vbox(10)
 	panel.add_child(column)
-	var title: Label = UiKit.label("Paused", 34, UiKit.COLOR_ACCENT)
+	var title: Label = UiKit.title("Paused", 34)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(title)
+	column.add_child(UiKit.divider(280))
 	column.add_child(UiKit.button("Resume", _resume, false))
 	column.add_child(UiKit.button("Controls", _show_controls, false))
 	column.add_child(UiKit.button("Restart run", _restart, false))

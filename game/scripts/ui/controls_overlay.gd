@@ -17,6 +17,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	add_to_group("controls_overlay")
 	_root = Control.new()
+	_root.theme = UiKit.theme()
 	UiKit.full_rect(_root)
 	add_child(_root)
 	_root.add_child(UiKit.dim_background())
@@ -26,17 +27,18 @@ func _ready() -> void:
 	center.add_child(panel)
 	var column: VBoxContainer = UiKit.vbox(10)
 	panel.add_child(column)
-	column.add_child(UiKit.label("How to play", 30, UiKit.COLOR_ACCENT))
+	column.add_child(UiKit.title("How to play", 30))
+	column.add_child(UiKit.divider(520))
 	column.add_child(UiKit.label(UiKit.GOAL_TEXT, 20))
 	column.add_child(UiKit.label(
 		"Day: gather, build fences, craft torches at the campfire.\n"
-		+ "Night: Shadow Imps attack the campfire - and you, if you get close.\n"
-		+ "Kill every imp to bring dawn early.", 16, UiKit.COLOR_MUTED
+		+ "Night: Shadow Imps rise from the forest and attack the campfire - and you, if you get close.\n"
+		+ "Right-click to move. Click an imp to fight it, a tree or rock to gather. Clear the wave to bring dawn early.", 16, UiKit.COLOR_MUTED
 	))
 	column.add_child(HSeparator.new())
 	column.add_child(UiKit.controls_grid())
 	column.add_child(HSeparator.new())
-	_start_button = UiKit.button("Let's go!  (H to reopen)", close, false)
+	_start_button = UiKit.button("Let's go!", close, false)
 	var row: CenterContainer = CenterContainer.new()
 	row.add_child(_start_button)
 	column.add_child(row)

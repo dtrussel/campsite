@@ -78,6 +78,7 @@ script = ExtResource("2_fire")
 size = 1.1
 light_energy = 3.0
 light_range = 11.0
+smoke = false
 
 [node name="Collision" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)

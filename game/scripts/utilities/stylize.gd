@@ -23,7 +23,7 @@ const EYE_MESH_HINT: String = "Eyes"
 const TINT_META: StringName = &"style_tint"
 
 ## Shared tints so the world stays colour-consistent.
-const TINT_FOLIAGE: Color = Color(0.78, 1.0, 0.62)
+const TINT_FOLIAGE: Color = Color(0.92, 0.78, 0.48)
 const TINT_ROCK: Color = Color(0.62, 0.63, 0.7)
 
 static var _cache: Dictionary = {}  # "<instance id>|<profile>" -> Material
@@ -88,12 +88,12 @@ static func _make(base: StandardMaterial3D, profile: String, is_eye: bool) -> St
 				material.emission_energy_multiplier = 4.0
 				material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 			else:
-				material.albedo_color = Color(0.36, 0.27, 0.52)
+				material.albedo_color = Color(0.2, 0.15, 0.3)
 				material.emission_enabled = true
-				material.emission = Color(0.22, 0.05, 0.38)
-				material.emission_energy_multiplier = 0.9
-				material.rim = 1.0
-				material.rim_tint = 0.0
+				material.emission = Color(0.3, 0.06, 0.5)
+				material.emission_energy_multiplier = 0.35
+				material.rim = 0.8
+				material.rim_tint = 0.9
 		_:
 			material.rim = 0.25
 			material.rim_tint = 0.5

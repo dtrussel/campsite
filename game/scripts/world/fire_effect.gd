@@ -14,10 +14,13 @@ const FLAME_SHADER: Shader = preload("res://shaders/flame.gdshader")
 @export var light_color: Color = Color(1.0, 0.62, 0.3)
 @export var smoke: bool = true
 @export var flame_count: int = 3
+## Light height above the flame base, in multiples of `size`.
+@export var light_height: float = 0.9
 
 var _light: OmniLight3D = null
 var _flicker_time: float = 0.0
 var _base_energy: float = 0.0
+var _flame_materials: Array[ShaderMaterial] = []
 
 
 func _ready() -> void:
@@ -30,6 +33,7 @@ func _ready() -> void:
 		material.set_shader_parameter("seed", float(i) * 1.7)
 		material.set_shader_parameter("speed", 1.4 + i * 0.25)
 		quad.material = material
+		_flame_materials.append(material)
 		var flame: MeshInstance3D = MeshInstance3D.new()
 		flame.mesh = quad
 		flame.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -43,7 +47,7 @@ func _ready() -> void:
 		Vector3(0, 0.6 * size, 0), 1.6 * size, true, 0.3 * size))
 	if smoke:
 		add_child(_make_particles(
-			8, 3.2, Color(0.55, 0.52, 0.5, 0.18), Color(0.6, 0.6, 0.62, 0.0), 1.1 * size,
+			8, 3.2, Color(0.85, 0.82, 0.8, 0.1), Color(0.9, 0.9, 0.92, 0.0), 1.1 * size,
 			Vector3(0, 1.9 * size, 0), 0.8 * size, false, 0.2 * size))
 
 	_light = OmniLight3D.new()
@@ -52,7 +56,7 @@ func _ready() -> void:
 	_light.omni_range = light_range
 	_light.omni_attenuation = 1.2
 	_light.shadow_enabled = false
-	_light.position = Vector3(0, 0.9 * size, 0)
+	_light.position = Vector3(0, light_height * size, 0)
 	add_child(_light)
 	_base_energy = light_energy
 
@@ -68,6 +72,9 @@ func _process(delta: float) -> void:
 
 func set_intensity(factor: float) -> void:
 	_base_energy = light_energy * factor
+	# Flames read hotter at night, softer against a bright day.
+	for material in _flame_materials:
+		material.set_shader_parameter("intensity", 1.25 * clampf(factor, 0.75, 1.3))
 
 
 func _make_particles(amount: int, lifetime: float, start: Color, end: Color, particle_size: float,

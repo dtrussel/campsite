@@ -1,13 +1,14 @@
-[gd_resource type="Resource" script_class="ResourceDefinition" load_steps=2 format=3 uid="uid://b0campsiteitemstone"]
+[gd_resource type="Resource" script_class="ResourceDefinition" load_steps=3 format=3 uid="uid://b0campsiteitemstone"]
 
 [ext_resource type="Script" path="res://scripts/resources/resource_definition.gd" id="1_def"]
+[ext_resource type="Texture2D" path="res://assets/icons/stone.png" id="2_icon"]
 
 [resource]
 script = ExtResource("1_def")
 id = &"stone"
 display_name = "Stone"
 description = "Sturdier construction material. Used in reinforced walls and heavy traps."
-icon = null
+icon = ExtResource("2_icon")
 rarity = 1
 max_stack = 99
 ui_color = Color(0.62, 0.62, 0.62, 1)

@@ -30,6 +30,7 @@ var stats: Dictionary = {}
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	get_tree().root.theme = UiKit.theme()
 	TimeManager.day_started.connect(_on_day_started)
 	TimeManager.dawn_started.connect(_on_dawn_started)
 	ResourceManager.resource_changed.connect(_on_resource_changed)

@@ -17,20 +17,35 @@ func _ready() -> void:
 	layer = 5
 	add_to_group("crafting_panel")
 	_root = Control.new()
+	_root.theme = UiKit.theme()
 	UiKit.full_rect(_root)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_root)
 	var panel: PanelContainer = UiKit.panel(16)
 	panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	panel.position = Vector2(-440, -120)
+	panel.position = Vector2(-440, -170)
 	panel.custom_minimum_size = Vector2(420, 0)
 	_root.add_child(panel)
 	var column: VBoxContainer = UiKit.vbox(8)
 	panel.add_child(column)
-	column.add_child(UiKit.label("Campfire crafting", 24, UiKit.COLOR_ACCENT))
+	column.add_child(UiKit.title("Campfire crafting", 22))
 	for recipe in CraftingManager.get_recipes():
-		column.add_child(HSeparator.new())
-		column.add_child(UiKit.label("%s  <-  %s" % [recipe.display_name, recipe.input_summary()], 18))
+		column.add_child(UiKit.divider(380))
+		var header: HBoxContainer = HBoxContainer.new()
+		header.add_theme_constant_override("separation", 10)
+		var output: ResourceDefinition = ResourceManager.get_definition(recipe.output_id)
+		header.add_child(_icon_rect(output.icon if output != null else null, 52))
+		var name_column: VBoxContainer = VBoxContainer.new()
+		name_column.add_child(UiKit.title(recipe.display_name, 20, UiKit.COLOR_GOLD_LIGHT))
+		var inputs: HBoxContainer = HBoxContainer.new()
+		inputs.add_theme_constant_override("separation", 6)
+		for key in recipe.inputs.keys():
+			var input_def: ResourceDefinition = ResourceManager.get_definition(StringName(key))
+			inputs.add_child(_icon_rect(input_def.icon if input_def != null else null, 26))
+			inputs.add_child(UiKit.label("x%d" % int(recipe.inputs[key]), 16))
+		name_column.add_child(inputs)
+		header.add_child(name_column)
+		column.add_child(header)
 		var description: Label = UiKit.label(recipe.description, 14, UiKit.COLOR_MUTED)
 		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		column.add_child(description)
@@ -41,6 +56,15 @@ func _ready() -> void:
 	_root.visible = false
 	ResourceManager.resource_changed.connect(func(_id: StringName, _v: int, _d: int) -> void: _refresh())
 	GameManager.run_ended.connect(func(_won: bool, _reason: String) -> void: close())
+
+
+func _icon_rect(texture: Texture2D, size_px: int) -> TextureRect:
+	var rect: TextureRect = TextureRect.new()
+	rect.texture = texture
+	rect.custom_minimum_size = Vector2(size_px, size_px)
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	return rect
 
 
 func is_open() -> bool:

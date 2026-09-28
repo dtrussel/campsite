@@ -241,6 +241,8 @@ static func particle_material(additive: bool) -> StandardMaterial3D:
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD if additive else BaseMaterial3D.BLEND_MODE_MIX
 	material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	# Without this the particle scale is dropped and every sprite is 1 m wide.
+	material.billboard_keep_scale = true
 	material.vertex_color_use_as_albedo = true
 	material.albedo_texture = soft_texture()
 	material.disable_receive_shadows = true

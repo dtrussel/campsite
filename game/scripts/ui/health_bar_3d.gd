@@ -51,6 +51,7 @@ func _ready() -> void:
 		_level_label.no_depth_test = true
 		_level_label.render_priority = 11
 		_level_label.font = Fx.bold_font()
+		_level_label.outline_modulate = Color(0.05, 0.03, 0.01)
 		_level_label.font_size = 40
 		_level_label.pixel_size = 0.006
 		_level_label.outline_size = 10
