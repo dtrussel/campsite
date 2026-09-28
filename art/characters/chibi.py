@@ -227,14 +227,15 @@ def limb(points, radii, up=(0, 0, 1), name="limb", ring=16, cap=True):
     (w, d): w across `up` x tangent, d along the section's up direction.
     For stylised anatomy (flattened wrists, calf and forearm swells) that
     tubes can't do. Ends are capped (to be fused/remeshed afterwards)."""
-    up = Vector(up).normalized()
+    ups = [Vector(u).normalized() for u in up] if isinstance(up[0], (tuple, list, Vector)) else None
+    up = Vector(up[0] if ups else up).normalized()
     pts = [Vector(p) for p in points]
     bm = bmesh.new()
     rings = []
     n = len(pts)
     for i, p in enumerate(pts):
         t = (pts[min(n - 1, i + 1)] - pts[max(0, i - 1)]).normalized()
-        b = t.cross(up)
+        b = t.cross(ups[i] if ups else up)
         if b.length < 1e-5:
             b = t.orthogonal()
         b.normalize()
@@ -1156,9 +1157,21 @@ def boot(side, upper, sole, toe, lace, accent=None, scale=1.0, cuff=None):
 # ---------------------------------------------------------------- gear
 
 def compass(center, gold, face=(0.98, 0.95, 0.85), needle=(0.9, 0.2, 0.15), cord=(0.35, 0.25, 0.15),
-            neck_z=1.2, radius=0.05):
+            neck_z=1.2, radius=0.05, lid=False):
     parts = []
     c = Vector(center)
+    # Raised bezel ring around the glass.
+    bezel = torus(c + Vector((0, -0.011, 0)), radius * 0.86, radius * 0.1, name="compass", axis="Y", segs=(24, 6))
+    common.set_color(bezel, common.lerp(gold, (1, 1, 1), 0.2))
+    parts.append(bezel)
+    if lid:
+        # Hinged lid standing open above the case (as in the art).
+        cover = cylinder((0, 0, 0), radius, 0.012, name="compass", axis="Y", bevel=0.004)
+        common.color_by(cover, lambda p, n: common.lerp(gold, (0, 0, 0), 0.35) if n.y < -0.9 else gold,
+                        smooth=False)
+        cover.data.transform(Matrix.Translation(c + Vector((0, 0.004, radius))) @ Matrix.Rotation(-1.9, 4, "X")
+                             @ Matrix.Translation((0, 0, radius)))
+        parts.append(cover)
     body = cylinder(c, radius, 0.022, name="compass", axis="Y", bevel=0.006)
     common.color_by(body, lambda p, n: face if n.y < -0.9 and (p - c).length < radius * 0.8 else gold, smooth=False)
     parts.append(body)
@@ -1204,6 +1217,28 @@ def bedroll(center, length, radius, colour, tie, name="bedroll"):
     return roll
 
 
+def bedroll_detail(center, length, radius, colour, strap, metal=(0.8, 0.72, 0.5), cinch_at=(-0.28, 0.28)):
+    """Layered spiral rings on the bedroll ends and two cinch straps with
+    buckles that pinch the roll."""
+    c = Vector(center)
+    parts = []
+    for end in (-1, 1):
+        for i, rr in enumerate((0.35, 0.6, 0.85)):
+            ring = torus(c + Vector((end * (length / 2 + 0.002 * i), 0, 0)), radius * rr, radius * 0.08,
+                         name="bedroll_ring", axis="X", segs=(24, 6))
+            common.set_color(ring, common.lerp(colour, (0.05, 0.05, 0.08), 0.35 + 0.15 * i))
+            parts.append(ring)
+    for f in cinch_at:
+        x = c.x + f * length
+        loop = hem_ring((x, c.y, c.z), (radius * 1.04, radius * 1.04), radius * 0.13, name="cinch", axis="X",
+                        segs=(28, 6))
+        common.set_color(loop, strap)
+        parts.append(loop)
+        parts.append(buckle((x, c.y, c.z + radius * 1.12), (0, 0, 1), up=(0, -1, 0), width=radius * 0.5,
+                            height=radius * 0.5, colour=metal, name="cinch_buckle"))
+    return parts
+
+
 def rope_coil(center, radius, colour, loops=4, axis="Y"):
     parts = []
     c = Vector(center)
@@ -1220,15 +1255,64 @@ def rope_coil(center, radius, colour, loops=4, axis="Y"):
     return parts
 
 
-def straps(colour, top_y=0.22, front_y=-0.2, xs=(-0.15, 0.15), shoulder_z=1.2, bottom_z=0.78, width=0.035):
+def webbing(points, normals, width=0.036, thick=0.009, name="strap"):
+    """A thick flat strap along a path; normals = the strap face's outward
+    direction at each point (so it can wrap over a shoulder)."""
+    return limb(points, [(width, thick)] * len(points), up=list(normals), name=name, ring=8)
+
+
+def buckle(center, normal, up=(0, 0, 1), width=0.05, height=0.042, bar=0.007, colour=(0.8, 0.72, 0.5),
+           name="buckle"):
+    """A metal buckle: a rectangular frame with a centre bar and a prong,
+    facing along `normal`."""
+    nrm = Vector(normal).normalized()
+    upv = (Vector(up) - nrm * Vector(up).dot(nrm)).normalized()
+    side = upv.cross(nrm)
+    rot = Matrix((side, upv, nrm)).transposed().to_4x4()
+    parts = []
+    for cx, cy, sx, sy in ((0, height / 2, width, bar), (0, -height / 2, width, bar), (width / 2, 0, bar, height),
+                           (-width / 2, 0, bar, height), (0, 0, width, bar * 0.7)):
+        b = box((sx, sy, bar * 1.2), (cx, cy, 0), bevel=bar * 0.35, name=name, segments=1)
+        parts.append(b)
+    prong = box((bar * 0.6, height * 0.5, bar * 0.8), (0, height * 0.22, bar * 0.4), bevel=bar * 0.2, name=name,
+                segments=1)
+    parts.append(prong)
+    obj = common.join(parts, name)
+    obj.data.transform(Matrix.Translation(Vector(center)) @ rot)
+    common.color_by(obj, lambda p, n: colour if n.dot(nrm) > 0.3 else common.lerp(colour, (0, 0, 0), 0.4),
+                    smooth=False)
+    return obj
+
+
+def straps(colour, top_y=0.22, front_y=-0.2, xs=(-0.15, 0.15), shoulder_z=1.2, bottom_z=0.78, width=0.035,
+           thick=0.0, metal=(0.8, 0.72, 0.5), shoulder_r=0.13):
+    """Backpack shoulder straps. thick > 0: real webbing that wraps over
+    the shoulder (with padding), an adjuster slider and a buckle."""
     parts = []
     for sx in xs:
-        s = tube([Vector((sx, top_y, shoulder_z - 0.04)), Vector((sx * 1.05, 0.0, shoulder_z + 0.035)),
-                  Vector((sx * 1.1, front_y, shoulder_z - 0.02)), Vector((sx * 1.2, front_y - 0.02, bottom_z + 0.12)),
-                  Vector((sx * 1.6, 0.0, bottom_z))],
-                 [(width, 0.014)] * 5, name="strap", levels=0)
-        common.set_color(s, colour)
-        parts.append(s)
+        pts = [Vector((sx, top_y, shoulder_z - 0.04)), Vector((sx * 1.05, 0.0, shoulder_z + 0.035)),
+               Vector((sx * 1.1, front_y, shoulder_z - 0.02)), Vector((sx * 1.2, front_y - 0.02, bottom_z + 0.12)),
+               Vector((sx * 1.6, 0.0, bottom_z))]
+        if not thick:
+            st = tube(pts, [(width, 0.014)] * 5, name="strap", levels=0)
+            common.set_color(st, colour)
+            parts.append(st)
+            continue
+        # Smooth path over the shoulder with outward normals.
+        path = sweep(pts[0], pts[1:], steps=14)
+        centre = Vector((sx * 0.6, 0.0, shoulder_z - shoulder_r))
+        normals = []
+        for q in path:
+            out = q - centre
+            out.x *= 0.3
+            normals.append(out.normalized())
+        pad = webbing(path, normals, width=width * 1.25, thick=thick * 1.8, name="strap")
+        common.color_by(pad, lambda p, n: colour if abs(p.x - sx * 1.1) < width * 0.9 else common.lerp(colour, (0, 0, 0), 0.3))
+        parts.append(pad)
+        # Adjuster slider and buckle on the front run.
+        mid = path[9]
+        parts.append(buckle(mid + normals[9] * thick * 1.6, normals[9], up=(0, 0, 1), width=width * 1.5,
+                            height=width * 0.9, colour=metal, name="slider"))
     return parts
 
 

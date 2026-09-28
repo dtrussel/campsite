@@ -56,6 +56,7 @@ BARK = (0.38, 0.23, 0.12)
 BARK_LIGHT = (0.58, 0.4, 0.22)
 LEAF = (0.36, 0.62, 0.2)
 RED = (0.86, 0.16, 0.14)
+METAL = (0.72, 0.68, 0.6)
 
 HEAD = chibi.HeadFrame((0, -0.01, 1.565), (0.27, 0.258, 0.272))
 PROP = chibi.Proportions(legs=1.85, spine=1.3, arms=1.25)
@@ -470,66 +471,145 @@ def head_piece():
 # ----------------------------------------------------------------- gear
 
 def backpack():
+    """A layered camo hiking pack (the art): a canvas bag with sculpted
+    wrinkles, an overhanging top flap, a front pocket with its own flap and
+    buckle strap, side pockets, compression straps with buckles, a haul
+    loop, the navy bedroll cinched on top (overhanging his left), a steel
+    bottle on his left and the rope on a red carabiner on his right."""
     parts = []
-    bag = chibi.box((0.54, 0.3, 0.62), (0, 0.41, 0.94), bevel=0.1, name="pack")
-    common.color_by(bag, camo, smooth=False)
+    bag = chibi.fuse([chibi.box((0.52, 0.28, 0.6), (0, 0.41, 0.94), bevel=0.1, name="pack", segments=4),
+                      chibi.ellipsoid((0, 0.47, 0.8), (0.25, 0.14, 0.2), name="sag")], "pack", voxel=0.008,
+                     faces=6000)
+    chibi.fold(bag, (0, 0.55, 0.95), (0.3, 0.2, 0.36), 0.006, wavelength=0.07, across=(0.3, 0, 1), twist=1.2, seed=41)
+    common.color_by(bag, camo)
     parts.append(bag)
-    flap = chibi.box((0.56, 0.33, 0.14), (0, 0.415, 1.23), bevel=0.05, name="flap")
-    common.color_by(flap, lambda p, n: common.lerp(camo(p, n), (0.1, 0.12, 0.06), 0.35), smooth=False)
+    flap = chibi.box((0.56, 0.33, 0.07), (0, 0.42, 1.235), bevel=0.028, name="flap", segments=3)
+    for v in flap.data.vertices:
+        # Sag over the front edge and droop at the corners.
+        front = max(0.0, (v.co.y - 0.45) / 0.14)
+        v.co.z -= 0.09 * front ** 2 + 0.03 * front * (abs(v.co.x) / 0.28) ** 2
+    common.color_by(flap, lambda p, n: common.lerp(camo(p, n), (0.08, 0.1, 0.05), 0.3))
     parts.append(flap)
-    pocket = chibi.box((0.36, 0.1, 0.26), (0, 0.58, 0.82), bevel=0.04, name="pocket")
-    common.color_by(pocket, camo, smooth=False)
+    # Front pocket with its own flap and buckle strap.
+    pocket = chibi.box((0.34, 0.09, 0.26), (0, 0.585, 0.83), bevel=0.035, name="pocket", segments=3)
+    common.color_by(pocket, camo)
     parts.append(pocket)
-    for sx in (-0.13, 0.13):
-        buckle = chibi.box((0.05, 0.14, 0.2), (sx, 0.6, 1.05), bevel=0.01, name="buckle")
-        common.color_by(buckle, lambda p, n: (0.1, 0.1, 0.1) if 1.0 < p.z < 1.03 else STRAP, smooth=False)
-        parts.append(buckle)
-    parts.append(chibi.bedroll((0, 0.4, 1.38), 0.66, 0.105, BEDROLL, STRAP))
-    bottle = chibi.cylinder((0.31, 0.42, 0.84), 0.062, 0.25, name="bottle", bevel=0.02)
-    common.color_by(bottle, lambda p, n: (0.2, 0.2, 0.22) if p.z > 0.94 else
-                    ((0.3, 0.32, 0.36) if 0.8 < p.z < 0.86 and n.x > 0.5 else STEEL), smooth=False)
+    pflap = chibi.box((0.36, 0.1, 0.06), (0, 0.595, 0.95), bevel=0.02, name="pocketflap", segments=2)
+    for v in pflap.data.vertices:
+        v.co.z -= 0.03 * max(0.0, (v.co.y - 0.6) / 0.05) ** 2
+    common.color_by(pflap, lambda p, n: common.lerp(camo(p, n), (0.08, 0.1, 0.05), 0.35))
+    parts.append(pflap)
+    # Side pockets.
+    for sx in (-1, 1):
+        side = chibi.box((0.07, 0.2, 0.24), (sx * 0.29, 0.42, 0.8), bevel=0.03, name="sidepocket", segments=2)
+        common.color_by(side, camo)
+        parts.append(side)
+    # Compression straps down the front, each with a buckle, and the
+    # pocket strap.
+    for sx in (-0.12, 0.12):
+        path = [Vector((sx, 0.47, 1.25)), Vector((sx, 0.555, 1.2)), Vector((sx, 0.64, 1.05)), Vector((sx, 0.645, 0.9)),
+                Vector((sx, 0.64, 0.74))]
+        st = chibi.webbing(path, [(0, 0, 1), (0, 0.6, 0.8), (0, 1, 0.1), (0, 1, 0), (0, 1, 0)], width=0.02,
+                           thick=0.006, name="packstrap")
+        common.set_color(st, STRAP)
+        parts.append(st)
+        parts.append(chibi.buckle((sx, 0.655, 1.0), (0, 1, 0), width=0.05, height=0.04, colour=METAL))
+    haul = chibi.torus((0, 0.3, 1.27), 0.05, 0.011, name="haul", axis="Y", segs=(18, 6))
+    for v in haul.data.vertices:
+        v.co.z = max(v.co.z, 1.265)
+    common.set_color(haul, STRAP)
+    parts.append(haul)
+    # Bedroll on top, overhanging his left side; cinched.
+    roll_c = (0.05, 0.4, 1.38)
+    parts.append(chibi.bedroll(roll_c, 0.7, 0.105, BEDROLL, STRAP))
+    parts += chibi.bedroll_detail(roll_c, 0.7, 0.105, BEDROLL, STRAP, metal=METAL)
+    # Steel bottle on his left: cap, neck ring, painted mountain logo.
+    bc = Vector((0.33, 0.42, 0.84))
+    bottle = chibi.cylinder(bc, 0.062, 0.25, name="bottle", bevel=0.02, segments=24)
+    common.color_by(bottle, lambda p, n: (0.3, 0.32, 0.36) if 0.8 < p.z < 0.86 and n.x > 0.5 else STEEL,
+                    smooth=False)
     parts.append(bottle)
-    parts += chibi.rope_coil((-0.32, 0.4, 0.84), 0.1, ROPE, loops=4, axis="X")
-    clip = chibi.torus((-0.33, 0.36, 1.0), 0.035, 0.009, name="carabiner", axis="X", segs=(14, 6))
+    neck = chibi.cylinder(bc + Vector((0, 0, 0.14)), 0.035, 0.04, name="bottle", segments=16)
+    common.set_color(neck, STEEL)
+    cap = chibi.cylinder(bc + Vector((0, 0, 0.175)), 0.04, 0.035, name="bottle", bevel=0.008, segments=16)
+    common.set_color(cap, (0.18, 0.18, 0.2))
+    ring = chibi.torus(bc + Vector((0, 0, 0.2)), 0.02, 0.005, name="bottle", axis="Y", segs=(12, 5))
+    common.set_color(ring, (0.18, 0.18, 0.2))
+    parts += [neck, cap, ring]
+    # Rope coil on his right, clipped with a red carabiner.
+    parts += chibi.rope_coil((-0.34, 0.42, 0.82), 0.11, ROPE, loops=5, axis="X")
+    clip = chibi.torus((-0.34, 0.37, 0.99), 0.04, 0.01, name="carabiner", axis="X", segs=(16, 6))
+    for v in clip.data.vertices:
+        v.co.z = 0.99 + (v.co.z - 0.99) * 1.5
     common.set_color(clip, RED)
     parts.append(clip)
-    parts += chibi.straps(STRAP, top_y=0.22, front_y=-0.215, xs=(-0.15, 0.15), shoulder_z=1.21, bottom_z=0.74)
-    sternum = chibi.box((0.32, 0.02, 0.028), (0, -0.215, 1.06), bevel=0.006, name="sternum")
+    parts += chibi.straps(STRAP, top_y=0.22, front_y=-0.245, xs=(-0.15, 0.15), shoulder_z=1.235, bottom_z=0.74,
+                          width=0.034, thick=0.01, metal=METAL)
+    sternum = chibi.webbing([(-0.17, -0.252, 1.06), (0, -0.258, 1.06), (0.17, -0.252, 1.06)],
+                            [(0, -1, 0)] * 3, width=0.012, thick=0.006, name="sternum")
     common.set_color(sternum, STRAP)
     parts.append(sternum)
+    parts.append(chibi.buckle((0, -0.266, 1.06), (0, -1, 0), width=0.045, height=0.035, colour=METAL))
     return parts
 
 
 def stick(rig, down):
     """Knotty walking stick in the handslot.r frame: local +X points down
     in the idle pose; `down` is the hand's height, so it reaches the
-    ground. A carved knob on top, rope grip and two leaves."""
+    ground. A hand-carved faceted shaft (flat-shaded planes), knots and a
+    snapped-off spur, a carved knob, a twine helix grip and two leafy
+    twigs with folded leaves."""
     to_world = chibi.bone_frame(rig, "handslot.r")
     top = 0.55
     pts, radii = [], []
-    for k in range(11):
-        t = k / 10
+    for k in range(15):
+        t = k / 14
         x = -top + t * (top + down)
         wob = Vector((0, noise.noise(Vector((t * 4, 1, 0))) * 0.035, noise.noise(Vector((t * 4, 5, 0))) * 0.035))
         pts.append(Vector((x, 0, 0)) + wob)
-        knot = 0.008 if k in (3, 6, 8) else 0.0
-        radii.append(0.036 - t * 0.01 + knot)
-    shaft = chibi.tube(pts, radii, name="stick", levels=1)
-    knob = chibi.ellipsoid(pts[0] + Vector((-0.04, 0, 0)), (0.08, 0.058, 0.058), name="knob", segs=(16, 12))
-    spur = chibi.curved_lock(pts[2], (-0.5, 0.7, 0.2), 0.12, 0.018, name="spur")
-    body = common.join([shaft, knob, spur], "stick")
-    common.color_by(body, lambda p, n: BARK_LIGHT if noise.noise(Vector((p.x * 30, p.y * 4, p.z * 4))) > 0.2 else BARK,
+        radii.append(0.036 - t * 0.011)
+    shaft = chibi.limb(pts, radii, up=(0, 0, 1), name="stick", ring=7)
+    for poly in shaft.data.polygons:
+        poly.use_smooth = False     # whittled planes
+    parts = [shaft]
+    for k, (i, ang) in enumerate(((3, 0.5), (6, 2.4), (9, 4.1), (12, 1.2))):
+        q = pts[i] + Vector((0, math.cos(ang), math.sin(ang))) * radii[i] * 0.85
+        parts.append(chibi.ellipsoid(q, (0.02, 0.014, 0.014), name="knot", segs=(10, 6)))
+    knob = chibi.ellipsoid(pts[0] + Vector((-0.045, 0, 0)), (0.075, 0.056, 0.056), name="knob", segs=(9, 7))
+    for poly in knob.data.polygons:
+        poly.use_smooth = False
+    parts.append(knob)
+    parts.append(chibi.curved_lock(pts[3], (-0.5, 0.7, 0.2), 0.12, 0.018, name="spur"))
+    body = common.join(parts, "stick")
+    common.color_by(body, lambda p, n: BARK_LIGHT if noise.noise(Vector((p.x * 30, p.y * 4, p.z * 4))) > 0.15
+                    else (common.lerp(BARK, (0.1, 0.06, 0.03), 0.3) if noise.noise(p * 50) > 0.3 else BARK),
                     smooth=False)
     parts = [body]
-    for x in (-0.07, -0.03, 0.01, 0.08):
-        wrap = chibi.torus((x, 0, 0), 0.04, 0.011, name="wrap", axis="X", segs=(14, 6))
-        common.set_color(wrap, ROPE)
-        parts.append(wrap)
-    for x, ang in ((pts[1].x, 0.6), (pts[2].x + 0.03, -0.9)):
-        leaf = chibi.ellipsoid((0, 0.07, 0), (0.026, 0.06, 0.007), name="leaf", segs=(10, 6))
-        leaf.data.transform(Matrix.Translation((x, 0, 0)) @ Matrix.Rotation(ang, 4, "X"))
-        common.set_color(leaf, LEAF)
-        parts.append(leaf)
+    # Twine wound as a real helix around the grip.
+    helix = [Vector((-0.11 + 0.22 * i / 60, 0.042 * math.cos(i * 0.9), 0.042 * math.sin(i * 0.9))) for i in range(61)]
+    twine = chibi.tube(helix, [0.009] * len(helix), name="twine", levels=0)
+    common.color_by(twine, lambda p, n: ROPE if noise.noise(p * 80) > -0.2 else common.lerp(ROPE, (0.3, 0.2, 0.1), 0.4))
+    parts.append(twine)
+    for end in (-0.12, 0.12):
+        knot = chibi.torus((end, 0, 0), 0.043, 0.012, name="twine", axis="X", segs=(14, 6))
+        common.set_color(knot, common.lerp(ROPE, (0.3, 0.2, 0.1), 0.3))
+        parts.append(knot)
+    # Leafy twigs with leaves folded along the midrib.
+    for x, ang, twig_dir in ((pts[1].x, 0.6, (0.3, 0.8, 0.4)), (pts[3].x + 0.02, -0.9, (0.2, -0.7, 0.5))):
+        root = Vector((x, 0, 0))
+        twig = chibi.curved_lock(root, twig_dir, 0.08, 0.008, name="twig")
+        common.set_color(twig, BARK)
+        parts.append(twig)
+        tip = root + Vector(twig_dir).normalized() * 0.08
+        for k, spread in enumerate((-0.5, 0.4)):
+            leaf = chibi.ellipsoid((0, 0.05, 0), (0.024, 0.055, 0.005), name="leaf", segs=(12, 6))
+            for v in leaf.data.vertices:
+                v.co.z += abs(v.co.x) * 0.45            # fold along the midrib
+                v.co.z += (v.co.y / 0.1) ** 2 * 0.02     # droop to the tip
+            leaf.data.transform(Matrix.Translation(tip) @ Matrix.Rotation(ang + spread, 4, "X")
+                                @ Matrix.Rotation(spread, 4, "Z"))
+            common.color_by(leaf, lambda p, n: LEAF if abs(p.x - tip.x) > 0.003 else common.lerp(LEAF, (1, 1, 0.6), 0.3))
+            parts.append(leaf)
     obj = common.join(parts, "Leo_Stick")
     obj.data.transform(to_world)
     return obj
@@ -540,7 +620,7 @@ def build():
     soft = [skin_piece(), shirt_piece(), shorts_piece()]
     rigid = hands_and_feet()
     rigid.append((badge(), "chest"))
-    for part in chibi.compass((0, -0.228, 0.98), GOLD, neck_z=1.22, radius=0.042):
+    for part in chibi.compass((0, -0.228, 0.98), GOLD, neck_z=1.22, radius=0.042, lid=True):
         rigid.append((part, "chest"))
     rigid += cargo_pockets()
     pack_c = Vector((0, 0.37, 1.0))
