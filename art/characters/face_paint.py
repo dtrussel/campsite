@@ -71,6 +71,9 @@ class FaceLayout:
     lid_fold: float = 0.55        # lid crease opacity
     nose_shadow: float = 0.6      # shadow down one side of the nose bridge
     nostril_alpha: float = 0.55
+    plane_light: float = 0.0      # painted plane lighting (hand-painted game style), 0 = off
+    face_half_w: float = 0.2      # face half-width at the cheeks (for the side form shadow)
+    light_colour: tuple = (1.0, 0.93, 0.84)
 
 
 def _grid(layout):
@@ -120,6 +123,42 @@ def _stroke(u, v, points, widths, px, soft=0.0):
     return _aa(-best, px)
 
 
+def _step(mask, edge=0.3, width=0.35):
+    """Posterised coverage: a crisp painted edge instead of an airbrush fade."""
+    return np.clip((mask - edge) / width, 0.0, 1.0)
+
+
+def _plane_light(canvas, u, v, px, L):
+    """Light and shadow painted onto the head's planes, the hand-painted
+    game way: few value steps, crisp edges, top-front light."""
+    k = L.plane_light
+    lit, dark = L.light_colour, L.skin_shadow
+    # Form shadow down the side planes of the face (temple -> cheek -> jaw).
+    for side in (-1, 1):
+        pts = [(side * (L.face_half_w - 0.005), L.eye_z + 0.08), (side * (L.face_half_w + 0.004), L.eye_z - 0.02),
+               (side * (L.face_half_w - 0.01), L.mouth_z), (side * (L.face_half_w * 0.55), L.chin_z + 0.01)]
+        _over(canvas, dark, k * 0.55 * _step(_stroke(u, v, pts, [0.05, 0.055, 0.05, 0.04], px, soft=0.022), 0.25, 0.3))
+    # Under the brow (a band over each eye), under the nose, under the lower
+    # lip, and under the jaw.
+    for side in (-1, 1):
+        _over(canvas, dark, k * 0.35 * _step(_soft_ellipse(u, v, side * L.eye_x, L.eye_z + L.eye_h * 1.6,
+                                                           L.eye_w * 1.5, L.eye_h * 1.0, 1.0)))
+    _over(canvas, dark, k * 0.5 * _step(_soft_ellipse(u, v, 0.0, L.nose_z - 0.015, L.nose_w * 2.2, 0.009, 1.0)))
+    _over(canvas, dark, k * 0.4 * _step(_soft_ellipse(u, v, 0.0, L.mouth_z - L.open_mouth - L.lip_lower - 0.014,
+                                                      L.mouth_w * 0.8, 0.01, 1.0)))
+    _over(canvas, dark, k * 0.6 * _step(_soft_ellipse(u, v, 0.0, L.chin_z - 0.03, 0.12, 0.035, 1.0), 0.2, 0.3))
+    # Lit planes: forehead, nose bridge and tip, cheek tops, chin, upper lip.
+    _over(canvas, lit, k * 0.22 * _step(_soft_ellipse(u, v, 0.0, L.eye_z + 0.1, 0.1, 0.05, 1.0), 0.2, 0.6))
+    _over(canvas, lit, k * 0.5 * _step(_stroke(u, v, [(0.0, L.eye_z - L.eye_h * 0.5), (0.0, L.nose_z + 0.006)],
+                                              [0.007, 0.011], px, soft=0.005), 0.2, 0.3))
+    _over(canvas, lit, k * 0.55 * _step(_soft_ellipse(u, v, -0.002, L.nose_z + 0.004, L.nose_w * 0.8, 0.007, 1.0)))
+    for side in (-1, 1):
+        _over(canvas, lit, k * 0.4 * _step(_soft_ellipse(u, v, side * (L.eye_x + 0.006), L.eye_z - L.eye_h - 0.022,
+                                                         0.034, 0.014, 1.0)))
+    _over(canvas, lit, k * 0.4 * _step(_soft_ellipse(u, v, 0.0, L.chin_z + 0.03, 0.026, 0.012, 1.0)))
+    _over(canvas, lit, k * 0.25 * _step(_soft_ellipse(u, v, 0.0, L.mouth_z + L.lip_upper + 0.012, 0.012, 0.006, 1.0)))
+
+
 def _eye_curves(layout, side):
     """top(du), bottom(du) of the eye opening, du measured from the eye
     centre with + pointing outward (toward the temple)."""
@@ -163,6 +202,9 @@ def paint_face(layout, path):
                                                           [0.006, 0.008], px, soft=0.005))
     _over(canvas, L.highlight, L.contour * 0.5 * _soft_ellipse(u, v, 0.0, L.eye_z + 0.075, 0.05, 0.03, 1.4))
     _over(canvas, L.highlight, L.contour * 0.5 * _soft_ellipse(u, v, 0.0, L.chin_z + 0.025, 0.018, 0.012, 1.3))
+
+    if L.plane_light:
+        _plane_light(canvas, u, v, px, L)
 
     # --- soft skin shading painted around the features -----------------
     for side in (-1, 1):

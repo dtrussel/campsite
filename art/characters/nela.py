@@ -66,15 +66,15 @@ FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "nela_face.png")
 # full low cheeks with a strong rosy blush and a few freckles; and a
 # wide open laugh showing her top teeth.
 FACE = face_paint.FaceLayout(
-    size=0.34, eye_x=0.09, eye_z=-0.055, eye_w=0.046, eye_h=0.032, eye_tilt=0.03, lid=0.1, iris_r=0.028,
+    size=0.34, eye_x=0.092, eye_z=-0.055, eye_w=0.053, eye_h=0.038, eye_tilt=0.03, lid=0.08, iris_r=0.032,
     look=(0.002, 0.004), iris=(0.36, 0.64, 0.98), iris_dark=(0.04, 0.14, 0.44), lash=(0.14, 0.07, 0.05),
-    lash_width=0.0085, wing=0.005, lower_lash=0.35, eyeshadow_alpha=0.0, socket=(0.84, 0.56, 0.5),
+    lash_width=0.011, wing=0.006, lower_lash=0.35, eyeshadow_alpha=0.0, socket=(0.84, 0.56, 0.5),
     socket_alpha=0.25, lid_fold=0.4, nose_shadow=0.12, nostril_alpha=0.22, brows=((0.03, 0.04, 0.011, 0.012), (0.03, 0.04, 0.011, 0.012)),
     brow_len=0.054, brow_colour=(0.66, 0.44, 0.22), brow_alpha=0.75, nose_z=-0.114, nose_w=0.014,
-    mouth_z=-0.155, mouth_w=0.046, smile=6.0, smirk=0.0, open_mouth=0.012, lip_upper=0.003, lip_lower=0.008,
+    mouth_z=-0.152, mouth_w=0.052, smile=7.0, smirk=0.0, open_mouth=0.016, lip_upper=0.003, lip_lower=0.008,
     lip_colour=(0.9, 0.48, 0.48), lip_dark=(0.52, 0.18, 0.18), tongue=(0.84, 0.38, 0.4), chin_z=-0.215,
-    skin_shadow=(0.78, 0.48, 0.42), blush=(1.0, 0.42, 0.42), blush_alpha=0.5, blush_pos=(0.12, -0.115),
-    contour=0.2, catch2=0.9, flush_alpha=0.1, highlight=(1.0, 0.93, 0.87), freckle_colour=(0.72, 0.4, 0.28),
+    skin_shadow=(0.78, 0.48, 0.42), blush=(1.0, 0.42, 0.42), blush_alpha=0.6, blush_pos=(0.12, -0.115),
+    contour=0.1, plane_light=1.0, face_half_w=0.21, catch2=0.9, flush_alpha=0.1, highlight=(1.0, 0.93, 0.87), freckle_colour=(0.72, 0.4, 0.28),
     freckles=[(sx * x, z) for sx in (-1, 1) for x, z in ((0.095, -0.11), (0.115, -0.125), (0.135, -0.108),
                                                           (0.11, -0.14), (0.15, -0.13))])
 # Head (feature 014): a drawn, planar game head, related to Leo's but its
@@ -89,7 +89,7 @@ LOFT = head_loft.HeadLoft(
               (-0.08, 0.218, -0.243, 0.195, 2.4, 2.2), (-0.12, 0.196, -0.238, 0.165, 2.4, 2.2),
               (-0.155, 0.16, -0.228, 0.13, 2.4, 2.2), (-0.185, 0.112, -0.215, 0.095, 2.35, 2.15),
               (-0.205, 0.066, -0.2, 0.06, 2.2, 2.1), (-0.22, 0.03, -0.165, 0.03, 2.1, 2.0)),
-    nose_top=-0.075, nose_tip_z=-0.106, nose_base_z=-0.117, nose_h=0.02, nose_bridge_h=0.002,
+    nose_top=-0.075, nose_tip_z=-0.106, nose_base_z=-0.117, nose_h=0.013, nose_bridge_h=0.002,
     nose_w=(0.004, 0.009), nose_side=0.011, alae=0.0, cheek=0.009, cheek_pos=(0.115, -0.11),
     eye_inset=0.004, eye_plate=(1.1, 1.35), brow_shelf=0.003,
     upper_lip=0.0025, lower_lip=0.0035, chin=0.003)
@@ -100,8 +100,8 @@ LOFT = head_loft.HeadLoft(
 def skin_piece():
     """Toddler skin: short neck, chubby arms (soft elbow, a wrist crease
     instead of a bony wrist), chubby legs mostly hidden by the pants."""
-    parts = [chibi.limb([(0, 0.005, 1.08), (0, 0.01, 1.25), (0, 0.012, 1.38)], [(0.08, 0.076), (0.074, 0.07),
-                                                                             (0.07, 0.066)], up=(0, -1, 0),
+    parts = [chibi.limb([(0, 0.005, 1.08), (0, 0.01, 1.25), (0, 0.012, 1.38)], [(0.09, 0.084), (0.082, 0.078),
+                                                                             (0.078, 0.072)], up=(0, -1, 0),
                         name="neck")]
     for s in (-1, 1):
         xs = (0.28, 0.37, 0.45, 0.53, 0.62, 0.7, 0.735, 0.78)
@@ -316,102 +316,114 @@ def wavy(parts, root, up, controls, width, wave, side, thickness=0.42, steps=9, 
     parts.append(obj)
 
 
+BUN_BASE = Vector((0.03, 0.09, 0.0))   # set from HEAD in bun_base()
+
+
+def bun_base():
+    """Where her hair is gathered: the back of the crown, a little
+    off-centre (as in the art)."""
+    p, n = HEAD.point(0.35, 1.05, 0.02)
+    return p + Vector((0.0, 0.03, 0.0))
+
+
 def top_bun():
-    """The messy little top bun from the art: a lumpy knot of hair on the
-    crown, a purple tie and a few loose wisps sticking out."""
+    """The messy bun: a lumpy knot with loops and a purple tie, and a few
+    loose wisps springing out of it."""
     parts = []
-    c, r = HEAD.c, HEAD.r
-    base = c + Vector((0.035, 0.07, r.z * 0.9))  # a little off-centre, as in the art
+    base = bun_base()
+    rng = random.Random(11)
     puffs = [chibi.ellipsoid(base + Vector(o), rad, name="bun", segs=(16, 10))
-             for o, rad in (((0, 0, 0.07), (0.1, 0.09, 0.08)), ((0.04, 0.02, 0.12), (0.07, 0.065, 0.06)),
-                            ((-0.04, -0.01, 0.11), (0.065, 0.06, 0.06)))]
-    bun = chibi.fuse(puffs, "bun", voxel=0.012, smooth=2, faces=900)
-    common.color_by(bun, chibi.hair_colour(HAIR_LIGHT, HAIR, HAIR_DARK, base, scale=12.0, strands=16))
+             for o, rad in (((0, 0.01, 0.045), (0.085, 0.08, 0.065)), ((0.045, 0.03, 0.08), (0.058, 0.055, 0.05)),
+                            ((-0.04, 0.0, 0.085), (0.055, 0.05, 0.05)), ((0.0, 0.05, 0.1), (0.05, 0.045, 0.045)))]
+    bun = chibi.fuse(puffs, "bun", voxel=0.01, smooth=2, faces=1400)
+    common.color_by(bun, chibi.hair_colour(HAIR_LIGHT, HAIR, HAIR_DARK, base, scale=14.0, strands=18))
     parts.append(bun)
-    tie = chibi.torus(base + Vector((0, 0, 0.02)), 0.08, 0.02, name="tie", segs=(18, 8))
+    tie = chibi.torus(base + Vector((0, 0.005, 0.012)), 0.062, 0.017, name="tie", segs=(18, 8))
     common.set_color(tie, TIE)
     parts.append(tie)
-    for k, (dx, dy, lean) in enumerate(((0.05, -0.02, 1), (-0.06, 0.02, -1), (0.0, 0.07, 1), (0.03, -0.05, -1))):
-        root = base + Vector((dx, dy, 0.13))
-        out = Vector((dx, dy, 0)).normalized() if (dx or dy) else Vector((1, 0, 0))
-        wavy(parts, root, out, [root + U * 0.06 + out * 0.03, root + U * 0.1 + out * 0.08,
-                                              root + U * 0.1 + out * 0.14 + Vector((0, 0, -0.03))],
-             0.03, 0.012, Vector((-out.y, out.x, 0)) * lean, thickness=0.35, steps=7, sharp=True, tier=2)
+    for k in range(7):
+        a = k / 7 * math.tau + rng.uniform(-0.3, 0.3)
+        out = Vector((math.cos(a), math.sin(a), 0.15)).normalized()
+        root = base + Vector((0, 0.02, 0.08)) + out * 0.05
+        side = Vector((-out.y, out.x, 0)).normalized()
+        L = rng.uniform(0.07, 0.13)
+        wavy(parts, root, side, [root + out * L * 0.5, root + out * L * 0.9 + side * 0.02 - U * 0.02,
+                                 root + out * L + side * 0.05 - U * 0.06],
+             rng.uniform(0.02, 0.03), 0.01, side, thickness=0.32, steps=7, sharp=True, tier=2)
     return parts
 
 
 def hair():
-    """Her wild wavy mane in three tiers: big primary masses that make the
-    cloud-like silhouette, secondary locks layered over them, and thin
-    sharp flyaways and face-framing strands. Her left side is fuller."""
+    """Her hair as in the art: pulled up into a messy bun at the back of
+    the crown - locks lie along the skull and run up to it - with loose
+    face-framing locks falling to the chin and curling out, loose locks
+    at the nape, and thin curling flyaways all round (the wild outline).
+    Built in tiers: primary pulled masses, secondary locks, flyaways."""
     parts = [hair_cap()]
     rng = random.Random(3)
-    # Side-swept wispy fringe, parted a little off-centre.
-    for yaw, drop, fan, width, tier in ((-0.55, 0.24, -0.08, 0.075, 1), (-0.25, 0.16, -0.14, 0.08, 1),
-                                        (0.05, 0.1, 0.16, 0.07, 1), (0.3, 0.2, 0.12, 0.08, 1),
-                                        (0.58, 0.26, 0.07, 0.075, 1), (-0.4, 0.26, -0.03, 0.03, 2),
-                                        (0.16, 0.22, 0.1, 0.028, 2), (0.45, 0.3, 0.02, 0.03, 2)):
-        root, n = HEAD.point(yaw, 0.78, 0.01)
+    base = bun_base()
+
+    def pulled(yaw, pitch, width, tier, lift=0.012):
+        """A lock from the hairline running along the skull up to the bun."""
+        root, n = HEAD.point(yaw, pitch, lift)
+        mids = []
+        for t in (0.35, 0.7):
+            q, qn = HEAD.point(yaw * (1 - t) + 0.35 * t, pitch * (1 - t) + 1.0 * t, lift + 0.012 + 0.012 * t)
+            mids.append(q)
+        side = (mids[0] - root).cross(n).normalized()
+        wavy(parts, root, n, mids + [base + (root - base).normalized() * 0.04], width, 0.008, side,
+             thickness=(0.42, 0.36, 0.3)[tier], steps=9, sharp=tier > 0, twist=rng.uniform(-0.3, 0.3), tier=tier,
+             ring=10 if tier == 0 else 8)
+
+    # Primary pulled masses all round the head, then secondary locks over them.
+    for k in range(12):
+        yaw = -math.pi + (k + 0.5) / 12 * math.tau
+        if abs(yaw) < 1.0:
+            continue                                     # keep the forehead for the fringe
+        pulled(yaw, 0.25 + 0.08 * (k % 2), 0.11, 0, lift=0.006)
+    for k in range(14):
+        yaw = rng.uniform(-2.9, 2.9)
+        if abs(yaw) < 0.9:
+            continue
+        pulled(yaw, rng.uniform(0.3, 0.55), rng.uniform(0.05, 0.07), 1, lift=0.012)
+    # Wispy side-swept fringe, parted a little off-centre; lifted toward the bun.
+    for yaw, drop, fan, width, tier in ((-0.42, 0.09, -0.08, 0.035, 2), (-0.12, 0.07, -0.1, 0.03, 2),
+                                        (0.2, 0.08, 0.1, 0.03, 2), (0.45, 0.1, 0.08, 0.035, 2)):
+        root, n = HEAD.point(yaw, 0.8, 0.006)
         side = Vector((-math.cos(yaw), -math.sin(yaw), 0))
-        wavy(parts, root, F, [root + F * 0.06 + U * 0.02, root + F * 0.07 - U * drop * 0.5 - side * fan * 0.5,
-                              root + F * 0.05 - U * drop - side * fan * 1.3], width, 0.01, side,
-             thickness=0.38 if tier == 1 else 0.3, sharp=True, twist=rng.uniform(-0.3, 0.3), tier=tier)
+        wavy(parts, root, F, [root + F * 0.05 + U * 0.02, root + F * 0.06 - U * drop * 0.5 - side * fan * 0.5,
+                              root + F * 0.045 - U * drop - side * fan * 1.3], width, 0.01, side,
+             thickness=0.3 if tier == 1 else 0.26, sharp=True, twist=rng.uniform(-0.3, 0.3), tier=tier)
+    # Loose face-framing locks from the temples to the chin, curling out.
     for side in (-1, 1):
         out = Vector((side, 0, 0))
-        full = 0.03 if side > 0 else 0.0
-        # Primary masses: big, thick, wavy, puffing out to the shoulders.
-        for k, yaw in enumerate((1.35, 1.75, 2.15, 2.55)):
-            root, n = HEAD.point(side * yaw, 0.5, -0.005)
-            flat = Vector((n.x, n.y, 0)).normalized()
-            puff = 0.1 + 0.03 * (k % 2) + full
-            length = 0.38 + 0.05 * (k % 2)
-            wavy(parts, root, n, [root + flat * puff * 0.7 - U * length * 0.25, root + flat * puff - U * length * 0.7,
-                                  root + flat * puff * 0.8 - U * length + out * 0.02],
-                 0.12, 0.035, Vector((-flat.y, flat.x, 0)) * (1 if k % 2 else -1), thickness=0.45, ring=10,
-                 tier=0, sharp=True, twist=0.3 * side)
-        # Secondary locks layered over the masses.
-        for k in range(8):
-            yaw = 0.9 + k * 0.24 + rng.uniform(-0.05, 0.05)
-            pitch = rng.uniform(0.3, 0.55)
-            root, n = HEAD.point(side * yaw, pitch, 0.01)
-            flat = Vector((n.x, n.y, 0)).normalized()
-            puff = rng.uniform(0.1, 0.17) + full
-            length = rng.uniform(0.24, 0.42)
-            wavy(parts, root, n, [root + flat * puff * 0.75 - U * length * 0.3, root + flat * puff - U * length * 0.7,
-                                  root + flat * puff * 0.9 - U * length + out * 0.03],
-                 rng.uniform(0.07, 0.1), 0.03, Vector((-flat.y, flat.x, 0)) * rng.choice((-1, 1)), thickness=0.42,
-                 sharp=True, twist=rng.uniform(-0.5, 0.5), tier=1)
-        # Face-framing strand in front of the ear, down to the cheek.
-        root, n = HEAD.point(side * 0.95, 0.35, 0.01)
-        wavy(parts, root, n, [root + out * 0.03 - U * 0.08, root + out * 0.05 - U * 0.2 + F * 0.02,
-                              root + out * 0.07 - U * 0.3 + F * 0.03], 0.035, 0.02, F, thickness=0.3, sharp=True,
-             twist=side * 0.4, tier=2)
-    # Back: two primary masses and secondary locks.
-    for yaw in (2.85, 3.43):
-        root, n = HEAD.point(yaw, 0.35, 0.0)
+        for k, (yaw, length, width) in enumerate(((0.85, 0.26, 0.05), (1.05, 0.3, 0.045))):
+            root, n = HEAD.point(side * yaw, 0.32 - 0.06 * k, 0.012)
+            wavy(parts, root, n, [root + out * 0.02 - U * length * 0.35 + F * 0.01,
+                                  root + out * 0.03 - U * length * 0.8 + F * 0.02,
+                                  root + out * 0.08 - U * length + F * 0.015], width, 0.018, F,
+                 thickness=0.34, steps=9, sharp=True, twist=side * 0.4, tier=1)
+    # Loose locks at the nape.
+    for k, yaw in enumerate((2.6, 2.95, 3.3, 3.65)):
+        root, n = HEAD.point(yaw, -0.05, 0.01)
         flat = Vector((n.x, n.y, 0)).normalized()
-        wavy(parts, root, n, [root + flat * 0.1 - U * 0.1, root + flat * 0.13 - U * 0.3, root + flat * 0.12 - U * 0.44],
-             0.16, 0.03, Vector((1, 0, 0)), thickness=0.55, ring=10, tier=0)
-    for k in range(5):
-        yaw = 2.7 + k * 0.22
-        root, n = HEAD.point(yaw, rng.uniform(0.35, 0.6), 0.01)
-        flat = Vector((n.x, n.y, 0)).normalized()
-        length = rng.uniform(0.3, 0.45)
-        wavy(parts, root, n, [root + flat * 0.12 - U * length * 0.3, root + flat * 0.15 - U * length * 0.7,
-                              root + flat * 0.13 - U * length], rng.uniform(0.07, 0.1), 0.03,
-             Vector((1, 0, 0)) * rng.choice((-1, 1)), thickness=0.42, sharp=True, twist=rng.uniform(-0.5, 0.5))
-    # Tertiary: thin sharp flyaways springing off the mane and crown.
-    for k in range(14):
-        yaw = rng.uniform(-2.6, 2.6)
-        yaw += 0.6 * math.copysign(1, yaw) if abs(yaw) < 0.6 else 0.0   # keep them off the face
-        pitch = rng.uniform(0.2, 1.05)
+        length = rng.uniform(0.14, 0.22)
+        wavy(parts, root, n, [root - U * length * 0.4 + flat * 0.02, root - U * length * 0.85 + flat * 0.04,
+                              root - U * length + flat * 0.07], rng.uniform(0.05, 0.07), 0.015,
+             Vector((1, 0, 0)) * rng.choice((-1, 1)), thickness=0.36, sharp=True, tier=1)
+    # Flyaways: thin strands curling off the mass (the messy outline).
+    for k in range(12):
+        yaw = rng.uniform(-3.0, 3.0)
+        if abs(yaw) < 0.8:
+            yaw += 0.8 * math.copysign(1, yaw)
+        pitch = rng.uniform(0.2, 0.9)
         root, n = HEAD.point(yaw, pitch, 0.03)
         curl = Vector((math.cos(yaw), math.sin(yaw), 0)) * rng.choice((-1, 1))
-        length = rng.uniform(0.08, 0.16)
-        wavy(parts, root, n, [root + n * length * 0.3 + curl * length * 0.4,
-                              root + n * length * 0.45 + curl * length * 0.85,
-                              root + n * length * 0.35 + curl * length * 1.1 - U * 0.03],
-             rng.uniform(0.018, 0.028), 0.01, curl, thickness=0.3, steps=7, sharp=True, tier=2)
+        length = rng.uniform(0.06, 0.1)
+        wavy(parts, root, n, [root + n * length * 0.2 + curl * length * 0.5,
+                              root + n * length * 0.35 + curl * length * 0.95,
+                              root + n * length * 0.25 + curl * length * 1.15 - U * 0.015],
+             rng.uniform(0.014, 0.022), 0.01, curl, thickness=0.3, steps=7, sharp=True, tier=2)
     parts += top_bun()
     return parts
 

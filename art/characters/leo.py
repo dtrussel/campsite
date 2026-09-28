@@ -67,15 +67,15 @@ FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "leo_face.png")
 # showing a hint of teeth, freckles over the nose and cheeks and a warm
 # sun-flush. Contouring is kept soft: children's faces are rounded.
 FACE = face_paint.FaceLayout(
-    size=0.3, eye_x=0.084, eye_z=-0.03, eye_w=0.042, eye_h=0.026, eye_tilt=0.05, lid=0.14, iris_r=0.023,
+    size=0.3, eye_x=0.086, eye_z=-0.03, eye_w=0.05, eye_h=0.033, eye_tilt=0.05, lid=0.12, iris_r=0.029,
     look=(0.006, 0.005), iris=(0.36, 0.72, 0.98), iris_dark=(0.03, 0.2, 0.46), lash=(0.2, 0.11, 0.06),
-    lash_width=0.0065, wing=0.004, lower_lash=0.3, eyeshadow_alpha=0.0, socket=(0.8, 0.52, 0.44),
+    lash_width=0.0095, wing=0.005, lower_lash=0.3, eyeshadow_alpha=0.0, socket=(0.8, 0.52, 0.44),
     socket_alpha=0.3, lid_fold=0.4, nose_shadow=0.22, nostril_alpha=0.25, brows=((0.024, 0.08, 0.012, 0.01), (0.02, 0.06, 0.012, 0.009)),
     brow_len=0.056, brow_colour=(0.44, 0.25, 0.1), brow_alpha=1.0, nose_z=-0.098, nose_w=0.016,
-    mouth_z=-0.148, mouth_w=0.044, smile=5.0, smirk=0.06, open_mouth=0.007, lip_upper=0.004, lip_lower=0.007,
+    mouth_z=-0.145, mouth_w=0.054, smile=7.0, smirk=0.06, open_mouth=0.011, lip_upper=0.004, lip_lower=0.007,
     lip_colour=(0.88, 0.5, 0.44), lip_dark=(0.5, 0.2, 0.16), tongue=(0.8, 0.36, 0.36), chin_z=-0.228,
-    skin_shadow=(0.72, 0.42, 0.34), blush=(0.98, 0.46, 0.4), blush_alpha=0.32, blush_pos=(0.125, -0.1),
-    contour=0.28, catch2=0.8, flush_alpha=0.16, freckle_colour=(0.66, 0.36, 0.22),
+    skin_shadow=(0.72, 0.42, 0.34), blush=(0.98, 0.46, 0.4), blush_alpha=0.45, blush_pos=(0.125, -0.1),
+    contour=0.12, plane_light=1.0, face_half_w=0.19, catch2=0.8, flush_alpha=0.16, freckle_colour=(0.66, 0.36, 0.22),
     freckles=[(sx * x, z) for sx in (-1, 1) for x, z in ((0.03, -0.075), (0.045, -0.07), (0.06, -0.078),
                                                           (0.075, -0.09), (0.052, -0.088), (0.09, -0.1),
                                                           (0.11, -0.09), (0.1, -0.115), (0.022, -0.086))]
@@ -93,7 +93,7 @@ LOFT = head_loft.HeadLoft(
               (-0.09, 0.196, -0.232, 0.185, 2.8, 2.3), (-0.13, 0.172, -0.233, 0.16, 2.8, 2.35),
               (-0.165, 0.138, -0.226, 0.13, 2.9, 2.35), (-0.195, 0.095, -0.216, 0.095, 2.9, 2.3),
               (-0.218, 0.055, -0.2, 0.06, 2.5, 2.2), (-0.235, 0.028, -0.155, 0.03, 2.2, 2.1)),
-    nose_top=-0.05, nose_tip_z=-0.092, nose_base_z=-0.108, nose_h=0.03, nose_bridge_h=0.004,
+    nose_top=-0.05, nose_tip_z=-0.092, nose_base_z=-0.108, nose_h=0.019, nose_bridge_h=0.004,
     nose_w=(0.006, 0.012), nose_side=0.014, alae=0.0, cheek=0.006, cheek_pos=(0.11, -0.085),
     eye_inset=0.004, eye_plate=(1.1, 1.35), brow_shelf=0.004)
 
@@ -114,8 +114,8 @@ def skin_piece():
     """Skin with stylised landmarks (rest pose, before the proportions
     stretch): shoulder at x 0.21, elbow 0.45, wrist 0.75; hip z 0.52,
     knee 0.29, ankle 0.145."""
-    parts = [chibi.limb([(0, 0.005, 1.08), (0, 0.01, 1.25), (0, 0.012, 1.4)], [(0.078, 0.074), (0.07, 0.066),
-                                                                             (0.068, 0.064)], up=(0, -1, 0),
+    parts = [chibi.limb([(0, 0.005, 1.08), (0, 0.01, 1.25), (0, 0.012, 1.4)], [(0.092, 0.084), (0.084, 0.078),
+                                                                             (0.078, 0.072)], up=(0, -1, 0),
                         name="neck")]
     for s in (-1, 1):
         # Arm: widths are (front-back, up-down). Bicep swell, a narrower
@@ -361,19 +361,19 @@ def hair_and_cap():
         clump(parts, root, F, controls, width, thickness=(0.5, 0.4, 0.35)[tier], sharp=tier > 0,
               twist=rng.uniform(-0.35, 0.35), ring=(10, 8, 8)[tier], steps=(9, 8, 7)[tier], tier=tier)
 
-    # Primary masses.
-    for yaw, drop, sweep, width in ((-0.58, 0.16, 0.08, 0.1), (-0.22, 0.13, 0.1, 0.1), (0.14, 0.12, 0.09, 0.095),
-                                    (0.5, 0.15, -0.05, 0.09)):
+    # Primary masses: short, sweeping to his right, ending above the brows.
+    for yaw, drop, sweep, width in ((-0.58, 0.1, 0.1, 0.095), (-0.24, 0.085, 0.12, 0.1), (0.1, 0.075, 0.11, 0.095),
+                                    (0.46, 0.1, -0.04, 0.09)):
         fringe(yaw, 0.66, drop, sweep, width, 0)
     # Secondary clumps between and on top of them.
     for k in range(8):
         yaw = -0.7 + k * 0.19 + rng.uniform(-0.04, 0.04)
-        fringe(yaw, 0.69, rng.uniform(0.07, 0.14), rng.uniform(0.05, 0.14) * (1 if yaw < 0.35 else -0.6),
+        fringe(yaw, 0.69, rng.uniform(0.05, 0.1), rng.uniform(0.06, 0.14) * (1 if yaw < 0.35 else -0.6),
                rng.uniform(0.05, 0.066), 1, lift=0.055)
     # Tertiary: thin sharp flicks, a couple sticking up out of the opening,
     # and single strands falling over the forehead.
     for yaw, drop, sweep, flick in ((-0.46, 0.06, 0.12, 0.028), (-0.05, 0.08, -0.06, 0.012), (0.36, 0.07, -0.1, 0.018),
-                                    (-0.3, 0.17, 0.06, 0.0), (0.02, 0.19, 0.08, 0.0), (0.28, 0.16, 0.05, 0.0),
+                                    (-0.3, 0.13, 0.08, 0.0), (0.02, 0.12, 0.1, 0.0), (0.28, 0.12, 0.06, 0.0),
                                     (0.62, 0.12, -0.08, 0.0), (-0.72, 0.13, 0.05, 0.01), (0.74, 0.1, -0.04, 0.015)):
         fringe(yaw, 0.7, drop, sweep, rng.uniform(0.022, 0.032), 2, lift=0.05, up_flick=flick)
     # Sides over the ears: layered sharp tufts flicking out at the tips.

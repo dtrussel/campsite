@@ -212,7 +212,7 @@ def metaball_object(name, elements, resolution=0.05, threshold=0.6):
 
 
 def export_glb(path, objects, animations=False, image_format="AUTO"):
-    if os.environ.get("BAKE_SIZE"):
+    if os.environ.get("BAKE_SIZE") and not os.environ.get("DRAFT_EXPORT"):
         # Draft bakes are for review only: keep the committed assets.
         print("draft bake (BAKE_SIZE): not exporting", os.path.relpath(path, ROOT))
         return
