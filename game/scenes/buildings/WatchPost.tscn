@@ -32,6 +32,10 @@ collision_layer = 4
 collision_mask = 1
 script = ExtResource("1_build")
 definition = ExtResource("2_def")
+hp_label_height = 3.2
+auto_attack_damage = 2
+auto_attack_range = 5.0
+auto_attack_interval = 1.2
 
 [node name="Visual" type="Node3D" parent="."]
 

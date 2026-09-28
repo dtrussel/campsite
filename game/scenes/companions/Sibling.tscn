@@ -51,8 +51,10 @@ surface_material_override/0 = SubResource("StandardMaterial3D_hair")
 [node name="TaskLabel" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.95, 0)
 billboard = 1
+no_depth_test = true
+pixel_size = 0.009
 text = "Idle"
 modulate = Color(0.9, 1, 0.8, 1)
 outline_modulate = Color(0, 0, 0, 1)
-font_size = 36
-outline_size = 8
+font_size = 48
+outline_size = 12

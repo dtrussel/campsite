@@ -17,6 +17,13 @@ signal destroyed
 
 ## Height of the overhead HP label; set per scene.
 @export var hp_label_height: float = 1.6
+## Optional defensive behaviour (Watch Post): damage the nearest mob in
+## range every interval. 0 damage disables it.
+@export var auto_attack_damage: int = 0
+@export var auto_attack_range: float = 5.0
+@export var auto_attack_interval: float = 1.5
+
+var _auto_attack_timer: float = 0.0
 
 var current_hp: int = 0
 var _hp_label: Label3D = null
@@ -29,6 +36,27 @@ func _ready() -> void:
 		push_warning("Building '%s' has no definition" % name)
 	_hp_label = Fx.make_hp_label(self, hp_label_height)
 	_refresh_hp_label()
+	# The build-mode ghost is a real instance; keep it inert.
+	set_physics_process(auto_attack_damage > 0 and not has_meta(&"build_ghost"))
+
+
+func _physics_process(delta: float) -> void:
+	_auto_attack_timer += delta
+	if _auto_attack_timer < auto_attack_interval:
+		return
+	var target: Node3D = null
+	var best: float = auto_attack_range
+	for node in get_tree().get_nodes_in_group("mobs"):
+		var mob: Node3D = node as Node3D
+		if mob == null:
+			continue
+		var d: float = mob.global_position.distance_to(global_position)
+		if d < best:
+			best = d
+			target = mob
+	if target != null:
+		_auto_attack_timer = 0.0
+		target.take_damage(auto_attack_damage, self)
 
 
 func take_damage(amount: int, _source: Node = null) -> void:

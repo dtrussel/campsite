@@ -75,6 +75,20 @@ func _run_win_scenario() -> void:
 	fence.take_damage(5)
 	_check(fence.current_hp == fence_def.max_hp - 5, "fence takes damage")
 
+	# Watch Post pelts a nearby imp on its own.
+	var post_def: BuildingDefinition = BuildManager.get_known_definitions()[1]
+	var post: Building = post_def.get_scene().instantiate() as Building
+	get_tree().current_scene.add_child(post)
+	post.global_position = Vector3(12, 0, 12)
+	var imp: Mob = (load("res://scenes/mobs/ShadowImp.tscn") as PackedScene).instantiate() as Mob
+	get_tree().current_scene.add_child(imp)
+	imp.global_position = Vector3(14, 0, 12)
+	imp.set_physics_process(false)  # hold still for the check
+	var imp_hp: int = imp.current_hp
+	await _wait(post.auto_attack_interval + 0.5)
+	_check(imp.current_hp < imp_hp, "watch post damaged a nearby imp (%d -> %d)" % [imp_hp, imp.current_hp])
+	imp.take_damage(999, player)
+
 	companion.call("set_task", 2)  # guard the campfire
 	for night in range(1, GameManager.nights_to_win + 1):
 		await _survive_night(night, player)

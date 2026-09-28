@@ -16,7 +16,7 @@ script = ExtResource("1_hud_script")
 offset_left = 16.0
 offset_top = 16.0
 offset_right = 280.0
-offset_bottom = 460.0
+offset_bottom = 120.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="VBox" type="VBoxContainer" parent="Panel"]

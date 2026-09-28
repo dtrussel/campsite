@@ -66,6 +66,7 @@ func _die() -> void:
 	collision_layer = 0
 	collision_mask = 0
 	_award_kill_xp()
+	GameManager.record(&"kills")
 	defeated.emit(self)
 	var tween: Tween = create_tween()
 	tween.tween_property(self, "scale", Vector3(1.4, 0.05, 1.4), 0.18)

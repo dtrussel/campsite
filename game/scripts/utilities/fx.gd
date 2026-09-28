@@ -44,9 +44,9 @@ static func float_text(anchor: Node3D, text: String, color: Color, height: float
 	label.text = text
 	label.modulate = color
 	label.outline_modulate = Color(0, 0, 0, 1)
-	label.outline_size = 10
-	label.font_size = 48
-	label.pixel_size = 0.006
+	label.outline_size = 12
+	label.font_size = 64
+	label.pixel_size = 0.01
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
 	scene_root.add_child(label)
@@ -65,9 +65,9 @@ static func make_hp_label(owner_node: Node3D, height: float) -> Label3D:
 	label.name = "HPLabel"
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
-	label.font_size = 40
-	label.pixel_size = 0.005
-	label.outline_size = 8
+	label.font_size = 48
+	label.pixel_size = 0.009
+	label.outline_size = 12
 	label.outline_modulate = Color(0, 0, 0, 1)
 	label.position = Vector3(0, height, 0)
 	owner_node.add_child(label)

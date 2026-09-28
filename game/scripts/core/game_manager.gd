@@ -35,6 +35,25 @@ func _ready() -> void:
 	ResourceManager.resource_changed.connect(_on_resource_changed)
 	ProgressionManager.xp_gained.connect(_on_xp_gained)
 	_reset_stats()
+	if "--selftest" in OS.get_cmdline_user_args():
+		_run_selftest.call_deferred()
+
+
+## `Campsite -- --selftest` checks an exported build can load its data
+## and gameplay scene from the PCK, prints a summary, and exits.
+func _run_selftest() -> void:
+	var items: int = ResourceManager.get_definitions().size()
+	var buildings: int = BuildManager.get_known_definitions().size()
+	var recipes: int = CraftingManager.get_recipes().size()
+	var scene: PackedScene = load(GAME_SCENE) as PackedScene
+	var instance: Node = scene.instantiate() if scene != null else null
+	var ok: bool = items >= 11 and buildings >= 2 and recipes >= 1 and instance != null
+	print("selftest: items=%d buildings=%d recipes=%d main_scene=%s -> %s" % [
+		items, buildings, recipes, instance != null, "OK" if ok else "FAILED"
+	])
+	if instance != null:
+		instance.free()
+	get_tree().quit(0 if ok else 1)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -141,9 +160,7 @@ func _on_resource_changed(_id: StringName, _new_value: int, delta: int) -> void:
 
 
 func _on_xp_gained(_character: Node, _amount: int, source: StringName) -> void:
-	if source == &"kill":
-		record(&"kills")
-	elif source == &"build":
+	if source == &"build":
 		record(&"built")
 
 

@@ -42,6 +42,7 @@ var _goal_label: Label = null
 var _imps_label: Label = null
 var _banner: Label = null
 var _banner_tween: Tween = null
+var _empty_inventory_label: Label = null
 
 
 func _ready() -> void:
@@ -97,12 +98,14 @@ func _build_dynamic_widgets() -> void:
 	hint.add_theme_color_override("font_color", Color(1, 0.85, 0.5))
 
 	_banner = Label.new()
-	_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_banner.offset_top = 40
-	_banner.offset_left = -400
-	_banner.offset_right = 400
+	# Spans the screen to the right of the stats panel so they never overlap.
+	_banner.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_banner.offset_top = 24
+	_banner.offset_left = 300
+	_banner.offset_right = -24
+	_banner.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_banner.add_theme_font_size_override("font_size", 34)
+	_banner.add_theme_font_size_override("font_size", 30)
 	_banner.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
 	_banner.add_theme_constant_override("outline_size", 8)
 	_banner.modulate.a = 0.0
@@ -217,8 +220,24 @@ func _populate_resources() -> void:
 		var row: Label = Label.new()
 		row.text = "%s: %d" % [definition.display_name, ResourceManager.get_count(definition.id)]
 		row.add_theme_color_override("font_color", definition.ui_color)
+		row.visible = ResourceManager.get_count(definition.id) > 0
 		resource_list.add_child(row)
 		_rows[definition.id] = row
+	_empty_inventory_label = Label.new()
+	_empty_inventory_label.text = "(nothing yet - press E near a tree)"
+	_empty_inventory_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	resource_list.add_child(_empty_inventory_label)
+	_refresh_empty_inventory_label()
+
+
+## Rows for items the player has none of are hidden to keep the panel short.
+func _refresh_empty_inventory_label() -> void:
+	var any_visible: bool = false
+	for id in _rows.keys():
+		if (_rows[id] as Label).visible:
+			any_visible = true
+			break
+	_empty_inventory_label.visible = not any_visible
 
 
 func _on_resource_changed(id: StringName, new_value: int, _delta: int) -> void:
@@ -229,6 +248,8 @@ func _on_resource_changed(id: StringName, new_value: int, _delta: int) -> void:
 	var definition: ResourceDefinition = ResourceManager.get_definition(id)
 	var display_name: String = definition.display_name if definition != null else String(id)
 	row.text = "%s: %d" % [display_name, new_value]
+	row.visible = new_value > 0
+	_refresh_empty_inventory_label()
 
 
 func _on_build_mode_entered(definition: BuildingDefinition) -> void:
@@ -273,7 +294,7 @@ func _refresh_build_label(definition: BuildingDefinition) -> void:
 	if definition == null:
 		build_mode_label.text = "Build: -"
 		return
-	build_mode_label.text = "Build: %s (%s) - LMB place, RMB/Esc cancel" % [
+	build_mode_label.text = "Build: %s (%s)\n1/2 switch - R rotate - LMB place - RMB/Esc cancel" % [
 		definition.display_name, definition.cost_summary()
 	]
 

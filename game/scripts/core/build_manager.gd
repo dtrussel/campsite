@@ -30,6 +30,7 @@ var _ghost_meshes: Array[MeshInstance3D] = []
 var _ghost_footprint: Area3D = null
 var _is_valid: bool = false
 var _has_ground_hit: bool = false
+var _ghost_yaw_degrees: float = 0.0  # kept between placements
 
 var _valid_material: StandardMaterial3D
 var _invalid_material: StandardMaterial3D
@@ -76,6 +77,8 @@ func exit_build_mode() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not GameManager.is_playing():
+		return
 	if event.is_action_pressed("toggle_build_mode"):
 		if is_in_build_mode():
 			exit_build_mode()
@@ -88,7 +91,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not is_in_build_mode():
 		return
 
-	if event.is_action_pressed("select_building_1"):
+	if event.is_action_pressed("rotate_building"):
+		_ghost_yaw_degrees = fmod(_ghost_yaw_degrees + 90.0, 360.0)
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("select_building_1"):
 		_select_index(0)
 	elif event.is_action_pressed("select_building_2"):
 		_select_index(1)
@@ -154,6 +160,7 @@ func _spawn_ghost(definition: BuildingDefinition) -> bool:
 		instance.queue_free()
 		return false
 	ghost.name = GHOST_NODE_NAME
+	ghost.set_meta(&"build_ghost", true)
 
 	# Disable physics on the root so the ghost neither blocks nor is hit.
 	var sb: StaticBody3D = ghost as StaticBody3D
@@ -230,6 +237,7 @@ func _update_ghost_transform() -> void:
 		return
 	_ghost.visible = true
 	_ghost.global_position = hit.position
+	_ghost.rotation_degrees.y = _ghost_yaw_degrees
 	_has_ground_hit = true
 
 

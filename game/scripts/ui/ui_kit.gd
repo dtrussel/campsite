@@ -21,7 +21,7 @@ const CONTROLS: Array = [
 	["E", "Gather from a tree, pine, rock or bush"],
 	["Left click / Space", "Swing at nearby Shadow Imps"],
 	["B, then 1 / 2", "Build mode: Wooden Fence / Watch Post"],
-	["Left click / Right click", "Place building / cancel (in build mode)"],
+	["R / Left click / Right click", "In build mode: rotate / place / cancel"],
 	["C", "Crafting (stand near the campfire)"],
 	["Q", "Plant a crafted torch"],
 	["R", "Eat 2 berries to heal"],

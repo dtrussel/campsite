@@ -13,14 +13,14 @@
 [ext_resource type="Resource" uid="uid://b0campsitemobdefshadowimp" path="res://resources/mobs/shadow_imp.tres" id="10_mobdef"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
-size = Vector2(40, 40)
+size = Vector2(120, 120)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
 albedo_color = Color(0.32, 0.45, 0.25, 1)
 roughness = 1.0
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
-size = Vector3(40, 0.2, 40)
+size = Vector3(120, 0.2, 120)
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
 sky_top_color = Color(0.4, 0.6, 0.85, 1)

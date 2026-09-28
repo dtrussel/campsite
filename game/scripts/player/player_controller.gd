@@ -34,6 +34,9 @@ const BERRIES_PER_MEAL: int = 2
 @export var regen_per_second: float = 1.5
 @export var hurt_invulnerability_seconds: float = 0.6
 @export var heal_per_meal: int = 15
+## Half-size of the playable square around the campfire; keeps the boy
+## inside the area the camera and mob spawns are designed around.
+@export var play_area_half_extent: float = 19.0
 
 @onready var _interactor: Node = $GatherInteractor
 
@@ -134,6 +137,8 @@ func _physics_process(delta: float) -> void:
 	velocity.z = move_toward(velocity.z, target_velocity.z, rate * delta)
 	velocity.y = 0.0
 	move_and_slide()
+	global_position.x = clampf(global_position.x, -play_area_half_extent, play_area_half_extent)
+	global_position.z = clampf(global_position.z, -play_area_half_extent, play_area_half_extent)
 
 
 func _try_begin_gather() -> void:

@@ -40,6 +40,7 @@ func _ready() -> void:
 	column.add_child(UiKit.label("C or Esc to close", 13, UiKit.COLOR_MUTED))
 	_root.visible = false
 	ResourceManager.resource_changed.connect(func(_id: StringName, _v: int, _d: int) -> void: _refresh())
+	GameManager.run_ended.connect(func(_won: bool, _reason: String) -> void: close())
 
 
 func is_open() -> bool:
