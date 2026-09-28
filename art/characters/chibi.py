@@ -20,7 +20,7 @@ import os
 
 import bpy  # noqa: F401  (must precede bmesh / mathutils)
 import bmesh
-from mathutils import Matrix, Vector, noise
+from mathutils import Matrix, Quaternion, Vector, noise
 
 from lib import common
 
@@ -735,10 +735,12 @@ def smirk(head, pitch, width, lift, lip=(0.55, 0.16, 0.16), inner=(0.32, 0.06, 0
     return parts
 
 
-def hair_clump(points, widths, thickness, up, name="clump", ring=8, crescent=0.45):
+def hair_clump(points, widths, thickness, up, name="clump", ring=8, crescent=0.45, sharp=False, twist=0.0):
     """A big sculpted LoL hair clump: a flattened, slightly cupped
     ribbon-tube along points, tapering to a sharp tip.
-    widths/thickness: per point (or scalar thickness ratio)."""
+    widths/thickness: per point (or scalar thickness ratio).
+    sharp: lens-shaped section pinched to crisp side edges, no subsurf
+    (MOBA-style hard hair planes). twist: radians of roll along the clump."""
     up = Vector(up).normalized()
     bm = bmesh.new()
     rings = []
@@ -756,11 +758,20 @@ def hair_clump(points, widths, thickness, up, name="clump", ring=8, crescent=0.4
         if i == n - 1 or w < 1e-4:
             rings.append([bm.verts.new(p)])
             continue
+        if twist:
+            q = Quaternion(t, twist * i / max(1, n - 1))
+            b = q @ b
+            nrm = q @ nrm
         ring_verts = []
         for k in range(ring):
             a = k / ring * math.tau
             ca, sa = math.cos(a), math.sin(a)
-            off = b * (ca * w) + nrm * (sa * th - crescent * th * ca * ca)
+            if sharp:
+                # Lens: full thickness in the middle, pinched at the edges.
+                lens = math.copysign(abs(sa) ** 1.6, sa)
+                off = b * (ca * w) + nrm * (lens * th - crescent * th * ca * ca)
+            else:
+                off = b * (ca * w) + nrm * (sa * th - crescent * th * ca * ca)
             ring_verts.append(bm.verts.new(p + off))
         rings.append(ring_verts)
     for i in range(n - 1):
@@ -774,9 +785,10 @@ def hair_clump(points, widths, thickness, up, name="clump", ring=8, crescent=0.4
     bm.faces.new(list(reversed(rings[0])))
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     obj = common.mesh_object(name, bm)
-    sub = obj.modifiers.new("Sub", "SUBSURF")
-    sub.levels = 1
-    common.apply_all_modifiers(obj)
+    if not sharp:
+        sub = obj.modifiers.new("Sub", "SUBSURF")
+        sub.levels = 1
+        common.apply_all_modifiers(obj)
     common.shade_smooth(obj)
     return obj
 
@@ -1055,7 +1067,8 @@ def quick_material(obj, overlay=None):
         geo = tree.nodes.new("ShaderNodeNewGeometry")
         colour = paint_bake.overlay_socket(tree, colour, geo, *overlay)
     tree.links.new(colour, bsdf.inputs["Base Color"])
-    bsdf.inputs["Roughness"].default_value = 0.8
+    bsdf.inputs["Roughness"].default_value = 1.0
+    bsdf.inputs["Specular IOR Level"].default_value = 0.0
     obj.data.materials.clear()
     obj.data.materials.append(mat)
 

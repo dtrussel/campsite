@@ -9,6 +9,7 @@ Output: nela.glb"""
 
 import math
 import os
+import random
 import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -18,7 +19,7 @@ import bmesh  # noqa: E402
 from mathutils import Matrix, Vector, noise  # noqa: E402
 
 from lib import common, paint_bake, preview  # noqa: E402
-from characters import chibi, face_paint  # noqa: E402
+from characters import chibi, face_paint, head_sculpt  # noqa: E402
 from characters.leo import render_previews  # noqa: E402
 
 SKIN = (0.98, 0.76, 0.62)
@@ -68,7 +69,7 @@ FACE = face_paint.FaceLayout(
     size=0.36, eye_x=0.108, eye_z=-0.07, eye_w=0.058, eye_h=0.05, eye_tilt=0.0, lid=0.04, iris_r=0.041,
     look=(0.002, 0.004), iris=(0.36, 0.64, 0.98), iris_dark=(0.04, 0.14, 0.44), lash=(0.14, 0.07, 0.05),
     lash_width=0.0105, wing=0.006, lower_lash=0.35, eyeshadow_alpha=0.0, socket=(0.84, 0.56, 0.5),
-    socket_alpha=0.25, lid_fold=0.4, brows=((0.05, 0.04, 0.011, 0.012), (0.05, 0.04, 0.011, 0.012)),
+    socket_alpha=0.25, lid_fold=0.4, nose_shadow=0.12, brows=((0.05, 0.04, 0.011, 0.012), (0.05, 0.04, 0.011, 0.012)),
     brow_len=0.06, brow_colour=(0.66, 0.44, 0.22), brow_alpha=0.75, nose_z=-0.14, nose_w=0.015,
     mouth_z=-0.18, mouth_w=0.06, smile=7.5, smirk=0.0, open_mouth=0.026, lip_upper=0.003, lip_lower=0.008,
     lip_colour=(0.9, 0.48, 0.48), lip_dark=(0.52, 0.18, 0.18), tongue=(0.84, 0.38, 0.4), chin_z=-0.245,
@@ -76,7 +77,15 @@ FACE = face_paint.FaceLayout(
     contour=0.2, catch2=0.9, flush_alpha=0.1, highlight=(1.0, 0.93, 0.87), freckle_colour=(0.72, 0.4, 0.28),
     freckles=[(sx * x, z) for sx in (-1, 1) for x, z in ((0.1, -0.135), (0.12, -0.15), (0.14, -0.132),
                                                           (0.115, -0.165), (0.155, -0.155))])
-FEATURES = dict(socket=0.008, eyeball=0.008, brow=0.004, nose=0.013, lips=0.004, chin=0.004)
+# Sculpt: a 3-year-old's head. A big round cranium and forehead, the
+# features set low, very full low cheeks, a soft wide jaw and a small
+# chin, a tiny button nose with almost no bridge, and an open laugh.
+SHAPE = head_sculpt.HeadShape(
+    occiput=0.05, face_flat=0.02, mid_face=0.03, forehead=0.032, temple=0.001, jaw_w=0.23, jaw_y=0.07, jaw_z=-0.2,
+    chin_w=0.09, chin_z=-0.27, chin_fwd=0.022, jaw_soft=0.035, jaw_top=-0.17, cheek=0.03, cheek_pos=(0.13, -0.15),
+    cheek_size=(0.085, 0.075), cheekbone=0.0, socket=0.012, eyeball=0.019, lid=0.006, lid_band=0.01, crease=0.001,
+    lower_lid=0.001, brow=0.005, bridge=0.0, bridge_top=-0.8, tip=0.02, tip_lift=0.004, alae=0.009, nostril=0.004,
+    muzzle=0.014, upper_lip=0.004, lower_lip=0.006, mouth_depth=0.02, apple=0.014, chin_pad=0.006)
 
 
 # ---------------------------------------------------------------- body
@@ -241,17 +250,24 @@ def hair_cap():
     return shell
 
 
-def wavy(parts, root, up, controls, width, wave, side, thickness=0.42, steps=9):
-    """A wavy lock: the swept centreline wiggles sideways as it falls."""
+def wavy(parts, root, up, controls, width, wave, side, thickness=0.42, steps=9, sharp=False, twist=0.0, tier=1,
+          ring=8):
+    """A wavy lock: the swept centreline wiggles sideways as it falls.
+    tier 0 = primary mass (darker roots), 1 = secondary, 2 = flyaway (lighter)."""
     pts = chibi.sweep(root, controls, steps=steps)
     for i in range(1, steps):
         pts[i] = pts[i] + side * wave * math.sin(i / (steps - 1) * math.pi * 2.2) * (i / (steps - 1))
     widths = [width * (1.0 - (i / (steps - 1)) ** 1.8) * (0.85 + 0.3 * math.sin(math.pi * i / (steps - 1)))
               for i in range(steps)]
     widths[-1] = 0.0
-    obj = chibi.hair_clump(pts, widths, thickness, up, name="curl", ring=8)
+    obj = chibi.hair_clump(pts, widths, thickness, up, name="curl", ring=ring, sharp=sharp, twist=twist)
     length = sum((pts[i + 1] - pts[i]).length for i in range(steps - 1))
-    common.color_by(obj, chibi.lock_colour(root, length, HAIR_LIGHT, HAIR, HAIR_DARK))
+    light, mid, dark = HAIR_LIGHT, HAIR, HAIR_DARK
+    if tier == 0:
+        mid, dark = common.lerp(HAIR, HAIR_DARK, 0.25), common.lerp(HAIR_DARK, (0.2, 0.1, 0.03), 0.3)
+    elif tier == 2:
+        light, mid = common.lerp(HAIR_LIGHT, (1, 1, 0.9), 0.35), common.lerp(HAIR, HAIR_LIGHT, 0.45)
+    common.color_by(obj, chibi.lock_colour(root, length, light, mid, dark))
     parts.append(obj)
 
 
@@ -260,7 +276,7 @@ def top_bun():
     crown, a purple tie and a few loose wisps sticking out."""
     parts = []
     c, r = HEAD.c, HEAD.r
-    base = c + Vector((0, 0.06, r.z * 0.92))
+    base = c + Vector((0.035, 0.07, r.z * 0.9))  # a little off-centre, as in the art
     puffs = [chibi.ellipsoid(base + Vector(o), rad, name="bun", segs=(16, 10))
              for o, rad in (((0, 0, 0.07), (0.1, 0.09, 0.08)), ((0.04, 0.02, 0.12), (0.07, 0.065, 0.06)),
                             ((-0.04, -0.01, 0.11), (0.065, 0.06, 0.06)))]
@@ -275,66 +291,93 @@ def top_bun():
         out = Vector((dx, dy, 0)).normalized() if (dx or dy) else Vector((1, 0, 0))
         wavy(parts, root, out, [root + U * 0.06 + out * 0.03, root + U * 0.1 + out * 0.08,
                                               root + U * 0.1 + out * 0.14 + Vector((0, 0, -0.03))],
-             0.03, 0.012, Vector((-out.y, out.x, 0)) * lean, thickness=0.4, steps=7)
+             0.03, 0.012, Vector((-out.y, out.x, 0)) * lean, thickness=0.35, steps=7, sharp=True, tier=2)
     return parts
 
 
 def hair():
+    """Her wild wavy mane in three tiers: big primary masses that make the
+    cloud-like silhouette, secondary locks layered over them, and thin
+    sharp flyaways and face-framing strands. Her left side is fuller."""
     parts = [hair_cap()]
-    c = HEAD.c
-    # Wispy, side-swept fringe: thin locks from the hairline, parted a
-    # little off-centre, that fall to the brows and flick outward.
-    for yaw, drop, fan, width in ((-0.55, 0.24, -0.08, 0.075), (-0.25, 0.16, -0.14, 0.08), (0.05, 0.1, 0.16, 0.07),
-                                  (0.3, 0.2, 0.12, 0.08), (0.58, 0.26, 0.07, 0.075)):
+    rng = random.Random(3)
+    # Side-swept wispy fringe, parted a little off-centre.
+    for yaw, drop, fan, width, tier in ((-0.55, 0.24, -0.08, 0.075, 1), (-0.25, 0.16, -0.14, 0.08, 1),
+                                        (0.05, 0.1, 0.16, 0.07, 1), (0.3, 0.2, 0.12, 0.08, 1),
+                                        (0.58, 0.26, 0.07, 0.075, 1), (-0.4, 0.26, -0.03, 0.03, 2),
+                                        (0.16, 0.22, 0.1, 0.028, 2), (0.45, 0.3, 0.02, 0.03, 2)):
         root, n = HEAD.point(yaw, 0.78, 0.01)
         side = Vector((-math.cos(yaw), -math.sin(yaw), 0))
         wavy(parts, root, F, [root + F * 0.06 + U * 0.02, root + F * 0.07 - U * drop * 0.5 - side * fan * 0.5,
-                              root + F * 0.05 - U * drop - side * fan * 1.3], width, 0.01, side, thickness=0.38)
-    # Big wild wavy mane: two layers of locks all round the sides and
-    # back, puffing outward and falling to the shoulders (her silhouette).
+                              root + F * 0.05 - U * drop - side * fan * 1.3], width, 0.01, side,
+             thickness=0.38 if tier == 1 else 0.3, sharp=True, twist=rng.uniform(-0.3, 0.3), tier=tier)
     for side in (-1, 1):
         out = Vector((side, 0, 0))
-        for layer, pitch in enumerate((0.55, 0.22)):
-            for k in range(7):
-                yaw = 0.9 + k * 0.33 + layer * 0.16
-                length = (0.3 if layer == 0 else 0.42) + 0.06 * math.sin(k * 1.7)
-                root, n = HEAD.point(side * yaw, pitch - 0.04 * (k % 2), 0.0)
-                flat = Vector((n.x, n.y, 0)).normalized()
-                puff = 0.07 + 0.03 * ((k + layer) % 3) + 0.02 * layer
-                wavy(parts, root, n, [root + flat * puff * 0.8 - U * length * 0.3,
-                                      root + flat * puff - U * length * 0.72,
-                                      root + flat * puff * 0.85 - U * length + out * 0.01],
-                     0.12, 0.03, Vector((-flat.y, flat.x, 0)) * (1 if (k + layer) % 2 else -1), thickness=0.5)
-    for yaw in (3.0, 3.3):
-        root, n = HEAD.point(yaw, 0.3, 0.01)
+        full = 0.03 if side > 0 else 0.0
+        # Primary masses: big, thick, wavy, puffing out to the shoulders.
+        for k, yaw in enumerate((1.0, 1.45, 1.9, 2.4)):
+            root, n = HEAD.point(side * yaw, 0.5, -0.005)
+            flat = Vector((n.x, n.y, 0)).normalized()
+            puff = 0.12 + 0.03 * (k % 2) + full
+            length = 0.38 + 0.05 * (k % 2)
+            wavy(parts, root, n, [root + flat * puff * 0.7 - U * length * 0.25, root + flat * puff - U * length * 0.7,
+                                  root + flat * puff * 0.8 - U * length + out * 0.02],
+                 0.16, 0.035, Vector((-flat.y, flat.x, 0)) * (1 if k % 2 else -1), thickness=0.55, ring=10,
+                 tier=0)
+        # Secondary locks layered over the masses.
+        for k in range(8):
+            yaw = 0.9 + k * 0.24 + rng.uniform(-0.05, 0.05)
+            pitch = rng.uniform(0.3, 0.68)
+            root, n = HEAD.point(side * yaw, pitch, 0.01)
+            flat = Vector((n.x, n.y, 0)).normalized()
+            puff = rng.uniform(0.1, 0.17) + full
+            length = rng.uniform(0.24, 0.42)
+            wavy(parts, root, n, [root + flat * puff * 0.75 - U * length * 0.3, root + flat * puff - U * length * 0.7,
+                                  root + flat * puff * 0.9 - U * length + out * 0.03],
+                 rng.uniform(0.07, 0.1), 0.03, Vector((-flat.y, flat.x, 0)) * rng.choice((-1, 1)), thickness=0.42,
+                 sharp=True, twist=rng.uniform(-0.5, 0.5), tier=1)
+        # Face-framing strand in front of the ear, down to the cheek.
+        root, n = HEAD.point(side * 0.95, 0.35, 0.01)
+        wavy(parts, root, n, [root + out * 0.03 - U * 0.08, root + out * 0.05 - U * 0.2 + F * 0.02,
+                              root + out * 0.07 - U * 0.3 + F * 0.03], 0.035, 0.02, F, thickness=0.3, sharp=True,
+             twist=side * 0.4, tier=2)
+    # Back: two primary masses and secondary locks.
+    for yaw in (2.85, 3.43):
+        root, n = HEAD.point(yaw, 0.35, 0.0)
         flat = Vector((n.x, n.y, 0)).normalized()
-        wavy(parts, root, n, [root + flat * 0.1 - U * 0.1, root + flat * 0.12 - U * 0.3, root + flat * 0.14 - U * 0.42],
-             0.11, 0.02, Vector((1, 0, 0)))
-    # Flyaway wisps over the crown (the messy look).
-    for yaw, pitch in ((-0.9, 0.95), (0.8, 1.0), (1.8, 0.8), (-2.1, 0.85)):
-        root, n = HEAD.point(yaw, pitch, 0.02)
-        wavy(parts, root, Vector((math.cos(yaw), math.sin(yaw), 0)), [root + n * 0.03 + Vector((math.sin(yaw), 0, 0)) * 0.03, root + n * 0.05 + Vector((math.sin(yaw), 0, 0)) * 0.07,
-                              root + n * 0.05 + Vector((math.sin(yaw) * 0.11, 0, -0.05))], 0.025, 0.01,
-             Vector((1, 0, 0)), thickness=0.35, steps=7)
+        wavy(parts, root, n, [root + flat * 0.1 - U * 0.1, root + flat * 0.13 - U * 0.3, root + flat * 0.12 - U * 0.44],
+             0.16, 0.03, Vector((1, 0, 0)), thickness=0.55, ring=10, tier=0)
+    for k in range(5):
+        yaw = 2.7 + k * 0.22
+        root, n = HEAD.point(yaw, rng.uniform(0.35, 0.6), 0.01)
+        flat = Vector((n.x, n.y, 0)).normalized()
+        length = rng.uniform(0.3, 0.45)
+        wavy(parts, root, n, [root + flat * 0.12 - U * length * 0.3, root + flat * 0.15 - U * length * 0.7,
+                              root + flat * 0.13 - U * length], rng.uniform(0.07, 0.1), 0.03,
+             Vector((1, 0, 0)) * rng.choice((-1, 1)), thickness=0.42, sharp=True, twist=rng.uniform(-0.5, 0.5))
+    # Tertiary: thin sharp flyaways springing off the mane and crown.
+    for k in range(14):
+        yaw = rng.uniform(-2.6, 2.6)
+        yaw += 0.6 * math.copysign(1, yaw) if abs(yaw) < 0.6 else 0.0   # keep them off the face
+        pitch = rng.uniform(0.2, 1.05)
+        root, n = HEAD.point(yaw, pitch, 0.03)
+        curl = Vector((math.cos(yaw), math.sin(yaw), 0)) * rng.choice((-1, 1))
+        length = rng.uniform(0.08, 0.16)
+        wavy(parts, root, curl, [root + n * length * 0.5, root + n * length * 0.9 + curl * 0.03,
+                                 root + n * length + curl * 0.07 - U * 0.03],
+             rng.uniform(0.018, 0.028), 0.01, curl, thickness=0.3, steps=7, sharp=True, tier=2)
     parts += top_bun()
     return parts
 
 
 def ears():
-    parts = []
-    for side in (-1, 1):
-        p, n = HEAD.point(side * 1.5, -0.15)
-        e = chibi.ellipsoid(p + n * 0.012, (0.03, 0.03, 0.05), name="ear", segs=(14, 8))
-        common.color_by(e, lambda pos, nrm, n=n: SKIN_SHADE if nrm.dot(n) > 0.6 else SKIN, smooth=False)
-        parts.append(e)
-    return parts
+    return [head_sculpt.ear(HEAD, side, yaw=1.5, pitch=-0.2, size=1.0, tilt=0.35, colour=SKIN, shade=SKIN_SHADE)
+            for side in (-1, 1)]
 
 
 def head_piece():
     face_paint.paint_face(FACE, FACE_PNG)
-    head = chibi.sculpt_head(HEAD, SKIN, SKIN_SHADE, BLUSH, jaw=0.2, chin_len=0.0, chin_fwd=0.03, cheeks=0.22,
-                             face_flat=0.1, blush_yaw=0.62, blush_pitch=-0.46, blush_size=0.01,
-                             layout=FACE, features=FEATURES, tris=11000)
+    head = head_sculpt.build_head(HEAD, FACE, SHAPE, SKIN, SKIN_SHADE, BLUSH, tris=24000)
     chibi.face_uv(head, HEAD, FACE)
     ear_parts = ears()
     for part in ear_parts:
@@ -342,7 +385,7 @@ def head_piece():
     hair_parts = hair()
     chibi.report([head] + ear_parts + hair_parts)
     hair_obj = common.join(hair_parts, "Nela_Hair")
-    chibi.decimate_tris(hair_obj, 12000)
+    chibi.decimate_tris(hair_obj, 28000)
     return common.join([head] + ear_parts, "Nela_Head"), hair_obj
 
 

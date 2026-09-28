@@ -8,6 +8,7 @@ animations work. Output: leo.glb"""
 
 import math
 import os
+import random
 import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -17,7 +18,7 @@ import bmesh  # noqa: E402
 from mathutils import Matrix, Vector, noise  # noqa: E402
 
 from lib import common, paint_bake, preview  # noqa: E402
-from characters import chibi, face_paint  # noqa: E402
+from characters import chibi, face_paint, head_sculpt  # noqa: E402
 
 SKIN = (0.95, 0.7, 0.55)
 SKIN_SHADE = (0.76, 0.46, 0.36)
@@ -68,7 +69,7 @@ FACE = face_paint.FaceLayout(
     size=0.3, eye_x=0.098, eye_z=-0.03, eye_w=0.052, eye_h=0.039, eye_tilt=0.03, lid=0.08, iris_r=0.033,
     look=(0.009, 0.008), iris=(0.36, 0.72, 0.98), iris_dark=(0.03, 0.2, 0.46), lash=(0.2, 0.11, 0.06),
     lash_width=0.0085, wing=0.003, lower_lash=0.3, eyeshadow_alpha=0.0, socket=(0.8, 0.52, 0.44),
-    socket_alpha=0.3, lid_fold=0.4, brows=((0.03, 0.08, 0.014, 0.012), (0.026, 0.06, 0.014, 0.01)),
+    socket_alpha=0.3, lid_fold=0.4, nose_shadow=0.22, brows=((0.03, 0.08, 0.014, 0.012), (0.026, 0.06, 0.014, 0.01)),
     brow_len=0.062, brow_colour=(0.44, 0.25, 0.1), brow_alpha=1.0, nose_z=-0.1, nose_w=0.017,
     mouth_z=-0.14, mouth_w=0.052, smile=8.0, smirk=0.06, open_mouth=0.014, lip_upper=0.003, lip_lower=0.008,
     lip_colour=(0.88, 0.5, 0.44), lip_dark=(0.5, 0.2, 0.16), tongue=(0.8, 0.36, 0.36), chin_z=-0.205,
@@ -78,7 +79,15 @@ FACE = face_paint.FaceLayout(
                                                           (0.075, -0.09), (0.052, -0.088), (0.09, -0.1),
                                                           (0.11, -0.09), (0.1, -0.115), (0.022, -0.086))]
     + [(0.0, -0.072), (0.008, -0.08), (-0.009, -0.078)])
-FEATURES = dict(socket=0.009, eyeball=0.007, brow=0.006, nose=0.02, lips=0.004, chin=0.006)
+# Sculpt: a 7-year-old's head. A round cranium, full cheeks set low, a
+# small but clear jaw line and chin, big eyes set into sockets under a
+# soft brow, a short upturned nose and a wide grin with smile apples.
+SHAPE = head_sculpt.HeadShape(
+    occiput=0.06, face_flat=0.03, mid_face=0.035, forehead=0.028, temple=0.002, jaw_w=0.2, jaw_y=0.06, jaw_z=-0.16,
+    chin_w=0.07, chin_z=-0.235, chin_fwd=0.03, jaw_soft=0.022, jaw_top=-0.13, cheek=0.022, cheek_pos=(0.11, -0.1),
+    cheek_size=(0.07, 0.065), cheekbone=0.004, socket=0.012, eyeball=0.016, lid=0.008, lid_band=0.009,
+    crease=0.001, lower_lid=0.0015, brow=0.009, bridge=0.002, bridge_top=-0.6, tip=0.03, tip_lift=0.006,
+    alae=0.012, nostril=0.005, muzzle=0.014, upper_lip=0.004, lower_lip=0.006, apple=0.012, chin_pad=0.009)
 
 
 def camo(pos, normal):
@@ -228,14 +237,22 @@ def hands_and_feet():
 F, R, U = Vector((0, -1, 0)), Vector((-1, 0, 0)), Vector((0, 0, 1))  # forward, his right, up
 
 
-def clump(parts, root, up, controls, width, length_ratio=None, thickness=0.55, colour=None, steps=7):
+def clump(parts, root, up, controls, width, length_ratio=None, thickness=0.55, colour=None, steps=7, sharp=False,
+          twist=0.0, ring=8, tier=1):
+    """One hair clump. tier 0 = primary mass (darker roots), 1 = secondary,
+    2 = tertiary flick (lighter)."""
     pts = chibi.sweep(root, controls, steps=steps)
     widths = [width * (1.0 - (i / (steps - 1)) ** 1.6) * (0.85 + 0.3 * math.sin(math.pi * i / (steps - 1)))
               for i in range(steps)]
     widths[-1] = 0.0
-    obj = chibi.hair_clump(pts, widths, thickness, up, name="clump", ring=8)
+    obj = chibi.hair_clump(pts, widths, thickness, up, name="clump", ring=ring, sharp=sharp, twist=twist)
     length = sum((pts[i + 1] - pts[i]).length for i in range(steps - 1))
-    common.color_by(obj, colour or chibi.lock_colour(root, length, HAIR_LIGHT, HAIR, HAIR_DARK))
+    light, mid, dark = HAIR_LIGHT, HAIR, HAIR_DARK
+    if tier == 0:
+        mid, dark = common.lerp(HAIR, HAIR_DARK, 0.25), common.lerp(HAIR_DARK, (0.2, 0.1, 0.03), 0.3)
+    elif tier == 2:
+        light, mid = common.lerp(HAIR_LIGHT, (1, 1, 0.9), 0.3), common.lerp(HAIR, HAIR_LIGHT, 0.4)
+    common.color_by(obj, colour or chibi.lock_colour(root, length, light, mid, dark))
     parts.append(obj)
 
 
@@ -265,41 +282,58 @@ def hair_and_cap():
     common.color_by(shell, chibi.hair_colour(HAIR_LIGHT, HAIR, HAIR_DARK, c, strands=30))
     parts.append(shell)
 
-    # Messy fringe spilling out of the backwards cap's front opening:
-    # clumps poke out, then flop forward and down over the forehead,
-    # fanning outward, of uneven length (the tousled look in the art).
-    for yaw, drop, fan, width in ((-0.66, 0.14, -0.1, 0.06), (-0.42, 0.1, -0.1, 0.065), (-0.2, 0.07, -0.08, 0.06),
-                                  (0.02, 0.09, 0.05, 0.055), (0.22, 0.06, 0.1, 0.06), (0.44, 0.1, 0.12, 0.065),
-                                  (0.68, 0.14, 0.1, 0.06)):
-        root, n = HEAD.point(yaw, 0.66, -0.012)
+    # Messy fringe out of the backwards cap's front opening, in three
+    # tiers (MOBA-style layered hair): a few big primary masses that set
+    # the silhouette, secondary clumps layered between them, and thin sharp
+    # tertiary flicks. Most of it sweeps to his right, as in the art.
+    rng = random.Random(7)
+
+    def fringe(yaw, pitch, drop, sweep, width, tier, lift=0.045, up_flick=0.0):
+        root, n = HEAD.point(yaw, pitch, -0.012)
         side = Vector((-math.cos(yaw), -math.sin(yaw), 0))  # tangent toward his right
-        controls = [root + F * 0.06 + U * 0.045,
-                    root + F * 0.1 - U * drop * 0.45 - side * fan * 0.6,
-                    root + F * 0.075 - U * drop - side * fan * 1.5]
-        clump(parts, root, F, controls, width, thickness=0.42)
-    root, n = HEAD.point(0.1, 0.62, -0.01)
-    clump(parts, root, F, [root + F * 0.07 + U * 0.02, root + F * 0.09 - U * 0.09 + R * 0.03,
-                           root + F * 0.06 - U * 0.16 + R * 0.07], 0.04, thickness=0.4)
-    # A few short rebel flicks sticking up and out through the opening.
-    for yaw, lean in ((-0.34, -0.05),):
-        root, n = HEAD.point(yaw, 0.72, -0.01)
-        clump(parts, root, F, [root + F * 0.05 + U * 0.05, root + F * 0.08 + U * 0.04 - R * lean,
-                               root + F * 0.1 + U * 0.03 - R * lean * 2.2], 0.045, thickness=0.55, steps=6)
-    # Tight sides over the ears and a short nape, flicking out at the tips.
+        controls = [root + F * 0.06 + U * (lift + up_flick),
+                    root + F * 0.1 - U * (drop * 0.4 - up_flick * 1.5) + side * sweep * 0.55,
+                    root + F * (0.08 + up_flick) - U * (drop - up_flick * 3.0) + side * sweep * 1.5]
+        clump(parts, root, F, controls, width, thickness=(0.5, 0.4, 0.35)[tier], sharp=tier > 0,
+              twist=rng.uniform(-0.35, 0.35), ring=(10, 8, 8)[tier], steps=(9, 8, 7)[tier], tier=tier)
+
+    # Primary masses.
+    for yaw, drop, sweep, width in ((-0.58, 0.16, 0.08, 0.1), (-0.22, 0.13, 0.1, 0.1), (0.14, 0.12, 0.09, 0.095),
+                                    (0.5, 0.15, -0.05, 0.09)):
+        fringe(yaw, 0.66, drop, sweep, width, 0)
+    # Secondary clumps between and on top of them.
+    for k in range(8):
+        yaw = -0.7 + k * 0.19 + rng.uniform(-0.04, 0.04)
+        fringe(yaw, 0.69, rng.uniform(0.07, 0.14), rng.uniform(0.05, 0.14) * (1 if yaw < 0.35 else -0.6),
+               rng.uniform(0.05, 0.066), 1, lift=0.055)
+    # Tertiary: thin sharp flicks, a couple sticking up out of the opening,
+    # and single strands falling over the forehead.
+    for yaw, drop, sweep, flick in ((-0.46, 0.06, 0.12, 0.028), (-0.05, 0.08, -0.06, 0.012), (0.36, 0.07, -0.1, 0.018),
+                                    (-0.3, 0.17, 0.06, 0.0), (0.02, 0.19, 0.08, 0.0), (0.28, 0.16, 0.05, 0.0),
+                                    (0.62, 0.12, -0.08, 0.0), (-0.72, 0.13, 0.05, 0.01), (0.74, 0.1, -0.04, 0.015)):
+        fringe(yaw, 0.7, drop, sweep, rng.uniform(0.022, 0.032), 2, lift=0.05, up_flick=flick)
+    # Sides over the ears: layered sharp tufts flicking out at the tips.
     for side in (-1, 1):
         out = Vector((side, 0, 0))
-        for yaw in (1.35, 1.6, 1.85, 2.1):
-            root, n = HEAD.point(side * yaw, 0.38, -0.01)
-            back = Vector((0, 1, 0)) * (0.02 + 0.03 * (yaw - 1.35))
-            clump(parts, root, n, [root - U * 0.05 + out * 0.03, root - U * 0.1 + out * 0.045 + back,
-                                   root - U * 0.12 + out * 0.08 + back * 1.5], 0.06)
-    for yaw in (2.45, 2.8, 3.14, 3.48, 3.83):
+        for k, yaw in enumerate((1.25, 1.45, 1.65, 1.85, 2.05, 2.25)):
+            root, n = HEAD.point(side * yaw, 0.36 + 0.04 * (k % 2), -0.01)
+            back = Vector((0, 1, 0)) * (0.02 + 0.03 * (yaw - 1.25))
+            length = rng.uniform(0.09, 0.14)
+            clump(parts, root, n, [root - U * length * 0.4 + out * 0.03,
+                                   root - U * length * 0.85 + out * 0.045 + back,
+                                   root - U * length + out * (0.07 + 0.03 * (k % 2)) + back * 1.5],
+                  rng.uniform(0.045, 0.065), thickness=0.4, sharp=True, twist=side * 0.3, tier=1 + k % 2)
+    # Nape: uneven tufts under the cap, alternating directions.
+    for k, yaw in enumerate((2.4, 2.65, 2.9, 3.14, 3.38, 3.63, 3.88)):
         root, n = HEAD.point(yaw, 0.1, -0.01)
         outv = (root - c)
         outv.z = 0
         outv.normalize()
-        clump(parts, root, n, [root - U * 0.08 + outv * 0.02, root - U * 0.14 + outv * 0.05,
-                               root - U * 0.15 + outv * 0.1], 0.065)
+        sidev = Vector((-outv.y, outv.x, 0)) * (0.03 if k % 2 else -0.03)
+        length = rng.uniform(0.12, 0.18)
+        clump(parts, root, n, [root - U * length * 0.5 + outv * 0.02, root - U * length * 0.85 + outv * 0.05 + sidev,
+                               root - U * length + outv * 0.1 + sidev * 1.6], rng.uniform(0.05, 0.075), thickness=0.4,
+              sharp=True, tier=k % 3)
 
     # Backwards cap: snug crown, cut higher at the front.
     cap_c = c + Vector((0, 0.018, 0.02))
@@ -357,22 +391,14 @@ def hair_and_cap():
 
 
 def ears():
-    parts = []
-    for side in (-1, 1):
-        p, n = HEAD.point(side * 1.52, -0.12)
-        e = chibi.ellipsoid((0, 0, 0), (0.026, 0.044, 0.058), name="ear", segs=(16, 10))
-        e.data.transform(Matrix.Translation(p + n * 0.016) @ Matrix.Rotation(side * -0.5, 4, "Z")
-                         @ Matrix.Rotation(-0.25, 4, "X"))
-        common.color_by(e, lambda pos, nrm, n=n: SKIN_SHADE if nrm.dot(n) > 0.6 else SKIN, smooth=False)
-        parts.append(e)
-    return parts
+    # Ears that stick out a little (the art), angled back.
+    return [head_sculpt.ear(HEAD, side, yaw=1.5, pitch=-0.13, size=1.12, tilt=0.5, colour=SKIN, shade=SKIN_SHADE)
+            for side in (-1, 1)]
 
 
 def head_piece():
     face_paint.paint_face(FACE, FACE_PNG)
-    head = chibi.sculpt_head(HEAD, SKIN, SKIN_SHADE, BLUSH, jaw=0.1, chin_len=0.0, chin_fwd=0.05,
-                             cheeks=0.16, face_flat=0.12, blush_yaw=0.5, blush_pitch=-0.3, blush_size=0.01,
-                             layout=FACE, features=FEATURES, tris=11000)
+    head = head_sculpt.build_head(HEAD, FACE, SHAPE, SKIN, SKIN_SHADE, BLUSH, tris=24000)
     chibi.face_uv(head, HEAD, FACE)
     ear_parts = ears()
     for part in ear_parts:
@@ -381,7 +407,7 @@ def head_piece():
     chibi.report([head] + ear_parts + hair)
     # Separate textures: the face gets most of the head's texels.
     hair_obj = common.join(hair, "Leo_Hair")
-    chibi.decimate_tris(hair_obj, 10000)
+    chibi.decimate_tris(hair_obj, 24000)
     return common.join([head] + ear_parts, "Leo_Head"), hair_obj
 
 
