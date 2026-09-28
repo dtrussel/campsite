@@ -2,15 +2,16 @@
 
 ## Art
 
-**Original art.** The boy, sibling and Shadow Imp models, trees, pines,
+**Original art.** Leo, Nela (modelled from the project's own concept
+art) and the Shadow Imp, the hand-painted ground textures, trees, pines,
 rocks, berry bushes and camp props (campfire, tent, fence, watch post,
 torch, woodpile, crate, barrel, toadstools) are original to this project.
 They are generated and hand-paint-baked by the Blender scripts in `art/`
 (`tools/build_art.sh`) and written to `game/assets/custom/`.
 
 **KayKit.** The characters still use KayKit skeletons and animations:
-the kids are reshaped and repainted KayKit adventurers, and the imp is a
-new body on the Skeleton Minion rig. Hills, mountains, dead trees,
+Leo and Nela are new models on the Adventurers rig, and the imp is a new
+body on the Skeleton Minion rig. Hills, mountains, dead trees,
 pumpkins and lanterns are KayKit models.
 
 3D models and animations by **Kay Lousberg** — [KayKit](https://kaylousberg.com),
@@ -19,7 +20,7 @@ with thanks). Vendored by `tools/fetch_assets.sh` from pinned commits of:
 
 | Pack | Used for |
 |------|----------|
-| [KayKit Character Pack: Adventurers 1.0](https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0) | Base meshes, rigs and animations for the boy (Rogue) and sibling (Mage) |
+| [KayKit Character Pack: Adventurers 1.0](https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0) | Rig and animations for Leo and Nela |
 | [KayKit Character Pack: Skeletons 1.0](https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0) | Rig and animations for the Shadow Imp (Skeleton Minion) |
 | [KayKit Halloween Bits 1.0](https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0) | Autumn pines, dead trees, pumpkins, lanterns, candles |
 | [KayKit Medieval Hexagon Pack 1.0](https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0) | Hills and far background |

@@ -35,7 +35,7 @@ const CONTROLS: Array = [
 	["R", "Eat 2 berries to heal"],
 	["C", "Crafting (near the campfire)"],
 	["B, then 1 / 2", "Build: Wooden Fence / Watch Post  (R rotate, LMB place, RMB cancel)"],
-	["F / G / T / Y", "Sibling: Follow / Guard camp / Gather / Idle"],
+	["F / G / T / Y", "Nela: Follow / Guard camp / Gather / Idle"],
 	["N", "Call the night early (daytime only)"],
 	["W A S D", "Walk directly (optional)"],
 	["H  /  Esc", "Help  /  Pause"],
@@ -214,7 +214,7 @@ const PICTURE_GUIDE: Array = [
 	["key:Q", "torch", "Torch"],
 	["key:R", "berries", "Eat"],
 	["key:B", "fence", "Build"],
-	["key:F G T Y", "portrait_sibling", "Helper"],
+	["key:F G T Y", "portrait_nela", "Nela"],
 	["key:N", "glyph:moon", "Night"],
 ]
 

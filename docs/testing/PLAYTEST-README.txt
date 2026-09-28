@@ -1,4 +1,4 @@
-CAMPSITE - Playtest build 0.3.0 (playtest 1)
+CAMPSITE - Playtest build 0.4.0 (playtest 1)
 ============================================
 
 Thanks for testing! This is an early prototype. There is no sound
@@ -19,7 +19,7 @@ Survive 3 nights. Keep the campfire burning!
 - During the DAY, gather resources, build fences, and craft torches.
 - At NIGHT, Shadow Imps come out of the forest and attack the
   campfire, and they will attack YOU if you get close.
-- You lose if the campfire goes out or if the boy is knocked out.
+- You lose if the campfire goes out or if Leo is knocked out.
 
 CONTROLS (like League of Legends)
 --------
@@ -33,7 +33,7 @@ CONTROLS (like League of Legends)
   C .................... crafting (near the campfire)
   B .................... build mode (1 = fence, 2 = watch post)
      R rotate, left click place, right click / Esc cancel
-  F / G / T / Y ........ sibling: follow / guard camp / gather / idle
+  F / G / T / Y ........ Nela: follow / guard camp / gather / idle
   N .................... call the night early (daytime only)
   W A S D .............. walk directly (optional)
   H / Esc .............. help / pause
@@ -43,12 +43,12 @@ THE SCREEN (made for kids: mostly pictures, few words)
   Top middle ........... sun/moon clock, one moon per night to survive
                          (they light up as nights are won), campfire
                          bar, and "imp x N" while imps are out
-  Top left ............. the sibling; click a picture to give a task
+  Top left ............. Nela, the little sister; click a picture to give a task
                          (zzz idle, footsteps follow, shield guard,
                          basket gather)
   Top right ............ what you are carrying
-  Bottom ............... the boy: health, XP and action keys
-  Small pictures pop up over the boy, e.g. a torch with a red X
+  Bottom ............... Leo, the big brother (you): health, XP and action keys
+  Small pictures pop up over Leo, e.g. a torch with a red X
   means "no torch left".
 
 AFTER PLAYING

@@ -2,19 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d03mbk8vqqwro"
-path="res://.godot/imported/sibling_Sibling_paint.png-7b4bd0c693ec20690fbd0de026270015.ctex"
+uid="uid://bcn87v06q5iq3"
+path="res://.godot/imported/portrait_nela.png-7a21f7138e6f130d0ffcbbf18e780676.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "ee2e78a2d00de678d3e17ba5eabd6009"
 }
 
 [deps]
 
-source_file="res://assets/custom/sibling_Sibling_paint.png"
-dest_files=["res://.godot/imported/sibling_Sibling_paint.png-7b4bd0c693ec20690fbd0de026270015.ctex"]
+source_file="res://assets/icons/portrait_nela.png"
+dest_files=["res://.godot/imported/portrait_nela.png-7a21f7138e6f130d0ffcbbf18e780676.ctex"]
 
 [params]
 
@@ -24,7 +21,7 @@ compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

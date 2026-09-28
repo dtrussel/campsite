@@ -2,16 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://tjug5kjuhdeo"
-path="res://.godot/imported/portrait_boy.png-36e8a0ce6de15a7700aa47e74ca994ba.ctex"
+uid="uid://deb43eahtuu40"
+path="res://.godot/imported/nela_Nela_paint.png-f2c7a7c5597dc3d792140d7f87f9b84e.ctex"
 metadata={
 "vram_texture": false
+}
+generator_parameters={
+"md5": "6b111aef4feeec1edc87c645cc956090"
 }
 
 [deps]
 
-source_file="res://assets/icons/portrait_boy.png"
-dest_files=["res://.godot/imported/portrait_boy.png-36e8a0ce6de15a7700aa47e74ca994ba.ctex"]
+source_file="res://assets/custom/nela_Nela_paint.png"
+dest_files=["res://.godot/imported/nela_Nela_paint.png-f2c7a7c5597dc3d792140d7f87f9b84e.ctex"]
 
 [params]
 
@@ -21,7 +24,7 @@ compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

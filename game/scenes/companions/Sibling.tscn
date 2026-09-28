@@ -4,7 +4,7 @@
 [ext_resource type="Resource" uid="uid://b0campsitecompdefsibling" path="res://resources/companions/sibling.tres" id="2_def"]
 [ext_resource type="Resource" uid="uid://b0campsitestatssibling" path="res://resources/progression/sibling_stats.tres" id="3_stats"]
 [ext_resource type="Script" path="res://scripts/utilities/character_visual.gd" id="4_visual"]
-[ext_resource type="PackedScene" path="res://assets/custom/sibling.glb" id="5_model"]
+[ext_resource type="PackedScene" path="res://assets/custom/nela.glb" id="5_model"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_sibling"]
 radius = 0.35
@@ -46,8 +46,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.65, 0)
 billboard = 1
 no_depth_test = true
 pixel_size = 0.009
-text = "Idle"
+text = ""
 modulate = Color(0.9, 1, 0.8, 1)
 outline_modulate = Color(0, 0, 0, 1)
 font_size = 30
 outline_size = 8
+
+[node name="LanternLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.55, -0.15)
+light_color = Color(1, 0.78, 0.45, 1)
+light_energy = 0.7
+omni_range = 3.2

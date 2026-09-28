@@ -134,9 +134,9 @@ func _build_sibling_frame(root: Control) -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	plate.add_child(row)
-	_sibling_portrait = HudWidgets.Portrait.new(_icon("portrait_sibling"))
+	_sibling_portrait = HudWidgets.Portrait.new(_icon("portrait_nela"))
 	_sibling_portrait.custom_minimum_size = Vector2(62, 62)
-	row.add_child(_sibling_portrait)
+	row.add_child(_name_tag(_sibling_portrait, "Nela", 16))
 	var column: VBoxContainer = VBoxContainer.new()
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_theme_constant_override("separation", 6)
@@ -203,6 +203,24 @@ func _build_tray(root: Control) -> void:
 		_tray_rows[id] = row
 
 
+## Portrait with the character's name underneath (the only word kids need).
+func _name_tag(portrait: Control, character_name: String, font_size: int) -> Control:
+	var column: VBoxContainer = VBoxContainer.new()
+	column.add_theme_constant_override("separation", 0)
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_child(portrait)
+	var label: Label = Label.new()
+	label.text = character_name
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_override("font", Fx.bold_font())
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.7))
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	label.add_theme_constant_override("outline_size", 5)
+	column.add_child(label)
+	return column
+
+
 func _build_hero_bar(root: Control) -> void:
 	var plate: PanelContainer = _plate(10)
 	plate.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
@@ -212,9 +230,9 @@ func _build_hero_bar(root: Control) -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
 	plate.add_child(row)
-	_hero_portrait = HudWidgets.Portrait.new(_icon("portrait_boy"))
+	_hero_portrait = HudWidgets.Portrait.new(_icon("portrait_leo"))
 	_hero_portrait.custom_minimum_size = Vector2(96, 96)
-	row.add_child(_hero_portrait)
+	row.add_child(_name_tag(_hero_portrait, "Leo", 18))
 	var column: VBoxContainer = VBoxContainer.new()
 	column.add_theme_constant_override("separation", 6)
 	column.alignment = BoxContainer.ALIGNMENT_CENTER

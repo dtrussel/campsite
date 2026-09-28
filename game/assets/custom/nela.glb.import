@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://b0elmoh6f4056"
-path="res://.godot/imported/boy.glb-7025dc092fe53df557dab9d8a53a5a49.scn"
+uid="uid://15vtt5ckp1x6"
+path="res://.godot/imported/nela.glb-64721c5dc46dfce41ad90b8f5160c564.scn"
 
 [deps]
 
-source_file="res://assets/custom/boy.glb"
-dest_files=["res://.godot/imported/boy.glb-7025dc092fe53df557dab9d8a53a5a49.scn"]
+source_file="res://assets/custom/nela.glb"
+dest_files=["res://.godot/imported/nela.glb-64721c5dc46dfce41ad90b8f5160c564.scn"]
 
 [params]
 

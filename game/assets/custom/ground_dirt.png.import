@@ -2,19 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d0sefvxie3ybm"
-path="res://.godot/imported/sibling_Sibling_Wand_paint.png-5ab717ed367a7743e9e03ddd175fb1d8.ctex"
+uid="uid://d3on3okjvh306"
+path="res://.godot/imported/ground_dirt.png-1cd59f9c720544dc21de6716fedf0825.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "a31d23bbce8b083417cbeab4bc6011cc"
 }
 
 [deps]
 
-source_file="res://assets/custom/sibling_Sibling_Wand_paint.png"
-dest_files=["res://.godot/imported/sibling_Sibling_Wand_paint.png-5ab717ed367a7743e9e03ddd175fb1d8.ctex"]
+source_file="res://assets/custom/ground_dirt.png"
+dest_files=["res://.godot/imported/ground_dirt.png-1cd59f9c720544dc21de6716fedf0825.ctex"]
 
 [params]
 

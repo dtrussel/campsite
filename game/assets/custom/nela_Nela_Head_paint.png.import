@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://coi5kiph7d2ap"
-path="res://.godot/imported/boy_Boy_Axe_paint.png-8455bddee1abcce0d14e92dcbda9eec5.ctex"
+uid="uid://dfshxbpo0bj35"
+path="res://.godot/imported/nela_Nela_Head_paint.png-722ef0ea0ef1eef5c0ad544a295f3102.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "dd14570d49ef07f7f3d0a022afb5c031"
+"md5": "f0218f7f5ab1d8975db9efc6020f42d8"
 }
 
 [deps]
 
-source_file="res://assets/custom/boy_Boy_Axe_paint.png"
-dest_files=["res://.godot/imported/boy_Boy_Axe_paint.png-8455bddee1abcce0d14e92dcbda9eec5.ctex"]
+source_file="res://assets/custom/nela_Nela_Head_paint.png"
+dest_files=["res://.godot/imported/nela_Nela_Head_paint.png-722ef0ea0ef1eef5c0ad544a295f3102.ctex"]
 
 [params]
 

@@ -7,7 +7,7 @@ extends Node3D
 ## line, and a slow orbiting camera. Purely decorative - no gameplay
 ## nodes, so nothing here reacts to input or the run state.
 
-const GROUND_SHADER: Shader = preload("res://shaders/painted_ground.gdshader")
+const GROUND_MATERIAL: Material = preload("res://assets/materials/painted_ground.tres")
 const CAMPFIRE_SCENE: PackedScene = preload("res://scenes/base/CampfireCore.tscn")
 const ASSETS: String = "res://assets/"
 
@@ -25,9 +25,7 @@ func _ready() -> void:
 	var plane: PlaneMesh = PlaneMesh.new()
 	plane.size = Vector2(120, 120)
 	ground.mesh = plane
-	var ground_material: ShaderMaterial = ShaderMaterial.new()
-	ground_material.shader = GROUND_SHADER
-	ground.material_override = ground_material
+	ground.material_override = GROUND_MATERIAL
 	ground.set_meta(&"stylized", "skip")
 	add_child(ground)
 
@@ -44,8 +42,8 @@ func _ready() -> void:
 		if child is HealthBar3D:
 			child.queue_free()
 
-	_character("custom/boy.glb", 0.72, "hero", Vector3(1.5, 0, 1.0), [], "Sit_Floor_Idle")
-	_character("custom/sibling.glb", 0.62, "hero", Vector3(-1.4, 0, 1.2), [], "Sit_Floor_Idle")
+	_character("custom/leo.glb", 0.72, "hero", Vector3(1.5, 0, 1.0), [], "Sit_Floor_Idle")
+	_character("custom/nela.glb", 0.62, "hero", Vector3(-1.4, 0, 1.2), [], "Sit_Floor_Idle")
 	for spot in [Vector3(-7.5, 0, -8.0), Vector3(-5.0, 0, -9.5), Vector3(8.0, 0, -7.0)]:
 		_character("custom/shadow_imp.glb", 0.62, "shadow", spot, [], "Taunt")
 

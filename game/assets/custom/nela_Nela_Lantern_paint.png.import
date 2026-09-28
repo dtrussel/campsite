@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b63dobgwthvf3"
-path="res://.godot/imported/boy_Boy_paint.png-34ba9b078efdc3e4e3f23ea61c4ddc38.ctex"
+uid="uid://d01wsojwjxn1a"
+path="res://.godot/imported/nela_Nela_Lantern_paint.png-52f8d33b081fa0b8e13ee1ce33e305bf.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "510054ddd8ed5b39ad2dba05973ebb79"
+"md5": "badb1aa736f5d474e2ea427471783ddb"
 }
 
 [deps]
 
-source_file="res://assets/custom/boy_Boy_paint.png"
-dest_files=["res://.godot/imported/boy_Boy_paint.png-34ba9b078efdc3e4e3f23ea61c4ddc38.ctex"]
+source_file="res://assets/custom/nela_Nela_Lantern_paint.png"
+dest_files=["res://.godot/imported/nela_Nela_Lantern_paint.png-52f8d33b081fa0b8e13ee1ce33e305bf.ctex"]
 
 [params]
 

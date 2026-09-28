@@ -9,7 +9,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PY="$ROOT/.venv-blender/bin/python"
 [[ -x "$PY" ]] || "$ROOT/tools/setup_blender.sh"
 if [[ $# -eq 0 ]]; then
-	set -- $(cd "$ROOT/art" && ls nature/*.py props/*.py characters/*.py 2>/dev/null | sed 's/\.py$//')
+	set -- $(cd "$ROOT/art" && ls ground/*.py nature/*.py props/*.py characters/*.py 2>/dev/null | sed 's/\.py$//')
 fi
 for script in "$@"; do
 	echo "== $script"

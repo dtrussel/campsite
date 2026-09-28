@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c7bt1631fvh06"
-path="res://.godot/imported/portrait_sibling.png-1fbb21fc13e77fa7818c960d44efb605.ctex"
+uid="uid://cscxgfarlrqpc"
+path="res://.godot/imported/ground_leaves.png-bc2e400fae02d223813b4c7f719c8486.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/icons/portrait_sibling.png"
-dest_files=["res://.godot/imported/portrait_sibling.png-1fbb21fc13e77fa7818c960d44efb605.ctex"]
+source_file="res://assets/custom/ground_leaves.png"
+dest_files=["res://.godot/imported/ground_leaves.png-bc2e400fae02d223813b4c7f719c8486.ctex"]
 
 [params]
 
@@ -21,7 +21,7 @@ compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

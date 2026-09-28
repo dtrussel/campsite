@@ -9,7 +9,7 @@ Blender**. Blender is only needed to change or rebuild art.
 ```bash
 tools/setup_blender.sh                 # installs bpy 4.5 into .venv-blender/ (git-ignored)
 tools/build_art.sh                     # rebuild everything (Cycles CPU bakes; slow)
-tools/build_art.sh characters/boy      # rebuild one asset
+tools/build_art.sh characters/leo      # rebuild one asset
 ```
 
 Previews (Cycles renders) go to `build/art_previews/`, or to
@@ -25,8 +25,9 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 | `nature/` | Trees (3 variants + stump), autumn pines, rocks, berry bush |
 | `props/camp.py` | Campfire, tent, fence, watch post, torch, woodpile, crate, barrel, toadstools |
 | `characters/shadow_imp.py` | Brand-new imp body (metaballs along the Skeleton Minion rig, auto-weighted) with horns, wings, tail and glowing eyes |
-| `characters/boy.py`, `sibling.py` | KayKit Rogue/Mage reshaped into kids: subdivided, bigger heads, hair, scarf/backpack/axe, wizard hat/cape/wand |
-| `characters/kid_lib.py` | Shared steps for the kids |
+| `characters/leo.py`, `nela.py` | Leo and Nela, modelled from the concept art on the KayKit adventurer rig (all 76 clips) |
+| `characters/chibi.py` | Kit for the kids: fused, auto-weighted clothing; rigid gear; face decals (eyes, brows, smile); hair locks; boots, backpack parts. `QUICK=1` previews without baking |
+| `ground/textures.py` | Seamless hand-painted grass, dirt and leaf-litter textures (numpy brush stamps) for `painted_ground.gdshader` |
 
 ## Conventions
 

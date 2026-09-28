@@ -1,6 +1,6 @@
 # Campsite (working title)
 
-> A stylized 3D base-builder / survival defense game about a 7-year-old boy
+> A stylized 3D base-builder / survival defense game about Leo, a 7-year-old boy,
 > protecting his family campsite from evil forest mobs that emerge at night.
 
 ## Pitch
@@ -13,9 +13,11 @@ fragile camping trip into a magical woodland fortress.
 
 ## Status
 
-**Prototype, ready for first playtest (v0.3.0-playtest1).** Hand-painted,
-LoL-inspired 3D art: custom characters, trees, rocks and camp props are
-modelled and texture-baked by the Blender scripts in [`art/`](art/README.md).
+**Prototype, ready for first playtest (v0.4.0-playtest1).** Hand-painted,
+LoL-inspired 3D art: **Leo** (the big brother, played by you), his little
+sister **Nela**, the Shadow Imps, trees, rocks, camp props and the painted
+ground are modelled, painted and texture-baked by the scripts in
+[`art/`](art/README.md).
 The UI is icon-first for young players. See [`CREDITS.md`](CREDITS.md).
 
 A complete 3-night run is playable:

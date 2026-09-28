@@ -10,7 +10,7 @@
 [ext_resource type="Script" path="res://scripts/mobs/mob_spawner.gd" id="8_spawner"]
 [ext_resource type="PackedScene" uid="uid://b0campsitecompsibling01" path="res://scenes/companions/Sibling.tscn" id="9_sibling"]
 [ext_resource type="PackedScene" uid="uid://b0campsitepinetree01" path="res://scenes/resources/PineTree.tscn" id="11_pine"]
-[ext_resource type="Shader" path="res://shaders/painted_ground.gdshader" id="12_ground"]
+[ext_resource type="Material" path="res://assets/materials/painted_ground.tres" id="12_ground"]
 [ext_resource type="Script" path="res://scripts/world/style_director.gd" id="13_style"]
 [ext_resource type="Script" path="res://scripts/world/world_dressing.gd" id="14_dressing"]
 [ext_resource type="Script" path="res://scripts/world/navigation_baker.gd" id="15_nav"]
@@ -20,10 +20,6 @@
 size = Vector2(120, 120)
 subdivide_width = 8
 subdivide_depth = 8
-
-[sub_resource type="ShaderMaterial" id="StandardMaterial3D_ground"]
-render_priority = 0
-shader = ExtResource("12_ground")
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
 size = Vector3(120, 0.2, 120)
@@ -84,7 +80,7 @@ collision_mask = 1
 
 [node name="GroundMesh" type="MeshInstance3D" parent="Ground"]
 mesh = SubResource("PlaneMesh_ground")
-surface_material_override/0 = SubResource("StandardMaterial3D_ground")
+surface_material_override/0 = ExtResource("12_ground")
 
 [node name="GroundCollision" type="CollisionShape3D" parent="Ground"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
