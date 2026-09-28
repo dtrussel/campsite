@@ -19,7 +19,7 @@ import bmesh  # noqa: E402
 from mathutils import Matrix, Vector, noise  # noqa: E402
 
 from lib import common, paint_bake, preview  # noqa: E402
-from characters import chibi, face_paint, head_sculpt  # noqa: E402
+from characters import chibi, face_paint, head_loft, head_sculpt  # noqa: E402
 from characters.leo import render_previews, sculpt_previews  # noqa: E402
 
 SKIN = (0.98, 0.76, 0.62)
@@ -57,7 +57,7 @@ BRONZE = (0.58, 0.38, 0.18)
 BRONZE_DARK = (0.3, 0.17, 0.08)
 GLOW = (1.0, 0.8, 0.38)
 
-HEAD = chibi.HeadFrame((0, -0.01, 1.575), (0.268, 0.262, 0.262))
+HEAD = chibi.HeadFrame((0, -0.01, 1.57), (0.242, 0.252, 0.235))
 PROP = chibi.Proportions(legs=1.3, spine=1.1, arms=1.1)
 FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "nela_face.png")
 # From the concept art: a 3-year-old's face. A big round cranium with the
@@ -66,33 +66,33 @@ FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "nela_face.png")
 # full low cheeks with a strong rosy blush and a few freckles; and a
 # wide open laugh showing her top teeth.
 FACE = face_paint.FaceLayout(
-    size=0.36, eye_x=0.092, eye_z=-0.072, eye_w=0.047, eye_h=0.033, eye_tilt=0.03, lid=0.1, iris_r=0.028,
+    size=0.34, eye_x=0.09, eye_z=-0.055, eye_w=0.046, eye_h=0.032, eye_tilt=0.03, lid=0.1, iris_r=0.028,
     look=(0.002, 0.004), iris=(0.36, 0.64, 0.98), iris_dark=(0.04, 0.14, 0.44), lash=(0.14, 0.07, 0.05),
     lash_width=0.0085, wing=0.005, lower_lash=0.35, eyeshadow_alpha=0.0, socket=(0.84, 0.56, 0.5),
-    socket_alpha=0.25, lid_fold=0.4, nose_shadow=0.12, nostril_alpha=0.22, brows=((0.05, 0.04, 0.011, 0.012), (0.05, 0.04, 0.011, 0.012)),
-    brow_len=0.054, brow_colour=(0.66, 0.44, 0.22), brow_alpha=0.75, nose_z=-0.132, nose_w=0.014,
-    mouth_z=-0.17, mouth_w=0.046, smile=6.0, smirk=0.0, open_mouth=0.012, lip_upper=0.003, lip_lower=0.008,
-    lip_colour=(0.9, 0.48, 0.48), lip_dark=(0.52, 0.18, 0.18), tongue=(0.84, 0.38, 0.4), chin_z=-0.228,
-    skin_shadow=(0.78, 0.48, 0.42), blush=(1.0, 0.42, 0.42), blush_alpha=0.5, blush_pos=(0.125, -0.14),
+    socket_alpha=0.25, lid_fold=0.4, nose_shadow=0.12, nostril_alpha=0.22, brows=((0.03, 0.04, 0.011, 0.012), (0.03, 0.04, 0.011, 0.012)),
+    brow_len=0.054, brow_colour=(0.66, 0.44, 0.22), brow_alpha=0.75, nose_z=-0.114, nose_w=0.014,
+    mouth_z=-0.155, mouth_w=0.046, smile=6.0, smirk=0.0, open_mouth=0.012, lip_upper=0.003, lip_lower=0.008,
+    lip_colour=(0.9, 0.48, 0.48), lip_dark=(0.52, 0.18, 0.18), tongue=(0.84, 0.38, 0.4), chin_z=-0.215,
+    skin_shadow=(0.78, 0.48, 0.42), blush=(1.0, 0.42, 0.42), blush_alpha=0.5, blush_pos=(0.12, -0.115),
     contour=0.2, catch2=0.9, flush_alpha=0.1, highlight=(1.0, 0.93, 0.87), freckle_colour=(0.72, 0.4, 0.28),
-    freckles=[(sx * x, z) for sx in (-1, 1) for x, z in ((0.1, -0.135), (0.12, -0.15), (0.14, -0.132),
-                                                          (0.115, -0.165), (0.155, -0.155))])
-# Sculpt: a 3-year-old girl - related to Leo but not his head: a larger
-# forehead, the features set lower, a shorter lower face, rounder and
-# lower cheeks, a small soft chin and softer planes; a button nose with
-# almost no bridge and a small open smile.
-SHAPE = head_sculpt.HeadShape(
-    cranium_off=(0.0, 0.01, 0.05), occiput=((0.0, 0.1, 0.03), (0.2, 0.18, 0.19)), forehead=None,
-    face=((0.0, -0.09, -0.06), (0.195, 0.175, 0.19)),
-    zygoma=((0.12, -0.16, -0.09), (0.06, 0.07, 0.03)), cheek=((0.108, -0.172, -0.135), (0.085, 0.085, 0.068)),
-    jaw=((0.16, 0.02, -0.13), (0.14, -0.05, -0.18), (0.075, -0.165, -0.208), (0.026, -0.205, -0.222)),
-    jaw_r=(0.042, 0.04, 0.035, 0.026), chin=((0.0, -0.205, -0.21), (0.032, 0.03, 0.028)),
-    muzzle=((0.0, -0.2, -0.158), (0.064, 0.064, 0.05)),
-    brow=((0.12, -0.215, -0.045), (0.06, -0.245, -0.033), (0.0, -0.25, -0.04)), brow_r=0.01,
-    k_big=0.08, k_cheek=0.045, k_zygoma=0.035, k_jaw=0.04, k_chin=0.03, k_brow=0.04,
-    bridge_top=-0.095, bridge_h=0.001, bridge_r=(0.007, 0.01), tip=0.022, tip_r=(0.016, 0.015, 0.014),
-    alae_r=0.01, nostril=(0.004, 0.005, 0.003), ball_back=0.002,
-    lid_r=0.005, lower_lid_r=0.0034, upper_lip_r=0.005, lower_lip_r=0.0068, mentolabial=0.002)
+    freckles=[(sx * x, z) for sx in (-1, 1) for x, z in ((0.095, -0.11), (0.115, -0.125), (0.135, -0.108),
+                                                          (0.11, -0.14), (0.15, -0.13))])
+# Head (feature 014): a drawn, planar game head, related to Leo's but its
+# own shape - a young girl: a rounder, softer section, a larger cranium
+# relative to the face, a shorter lower face, round (not chubby) cheek
+# planes, a small chin and a tiny wedge nose. The face is painted (FACE).
+LOFT = head_loft.HeadLoft(
+    sections=((0.235, 0.02, -0.02, 0.02, 2.0, 2.0), (0.222, 0.11, -0.11, 0.13, 2.0, 2.0),
+              (0.19, 0.175, -0.175, 0.195, 2.0, 2.0), (0.14, 0.215, -0.218, 0.232, 2.1, 2.05),
+              (0.09, 0.232, -0.238, 0.244, 2.2, 2.1), (0.04, 0.238, -0.246, 0.24, 2.3, 2.1),
+              (0.0, 0.236, -0.248, 0.23, 2.35, 2.15), (-0.04, 0.23, -0.245, 0.215, 2.4, 2.2),
+              (-0.08, 0.218, -0.243, 0.195, 2.4, 2.2), (-0.12, 0.196, -0.238, 0.165, 2.4, 2.2),
+              (-0.155, 0.16, -0.228, 0.13, 2.4, 2.2), (-0.185, 0.112, -0.215, 0.095, 2.35, 2.15),
+              (-0.205, 0.066, -0.2, 0.06, 2.2, 2.1), (-0.22, 0.03, -0.165, 0.03, 2.1, 2.0)),
+    nose_top=-0.075, nose_tip_z=-0.106, nose_base_z=-0.117, nose_h=0.02, nose_bridge_h=0.002,
+    nose_w=(0.004, 0.009), nose_side=0.011, alae=0.0, cheek=0.009, cheek_pos=(0.115, -0.11),
+    eye_inset=0.004, eye_plate=(1.1, 1.35), brow_shelf=0.003,
+    upper_lip=0.0025, lower_lip=0.0035, chin=0.003)
 
 
 # ---------------------------------------------------------------- body
@@ -423,7 +423,7 @@ def ears():
 
 def head_piece():
     face_paint.paint_face(FACE, FACE_PNG)
-    head = head_sculpt.build_head(HEAD, FACE, SHAPE, SKIN, SKIN_SHADE, BLUSH, tris=30000)
+    head = head_loft.build_head(HEAD, FACE, LOFT, SKIN, SKIN_SHADE, BLUSH)
     chibi.face_uv(head, HEAD, FACE)
     ear_parts = ears()
     for part in ear_parts:

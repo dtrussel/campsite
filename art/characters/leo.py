@@ -18,7 +18,7 @@ import bmesh  # noqa: E402
 from mathutils import Matrix, Vector, noise  # noqa: E402
 
 from lib import common, paint_bake, preview  # noqa: E402
-from characters import chibi, face_paint, head_sculpt  # noqa: E402
+from characters import chibi, face_paint, head_loft, head_sculpt  # noqa: E402
 
 SKIN = (0.95, 0.7, 0.55)
 SKIN_SHADE = (0.76, 0.46, 0.36)
@@ -58,7 +58,7 @@ LEAF = (0.36, 0.62, 0.2)
 RED = (0.86, 0.16, 0.14)
 METAL = (0.72, 0.68, 0.6)
 
-HEAD = chibi.HeadFrame((0, -0.01, 1.565), (0.222, 0.228, 0.222))
+HEAD = chibi.HeadFrame((0, -0.01, 1.565), (0.214, 0.235, 0.225))
 PROP = chibi.Proportions(legs=1.85, spine=1.3, arms=1.25)
 FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "leo_face.png")
 # From the concept art: a round, open 7-year-old face. Big bright-blue
@@ -80,10 +80,22 @@ FACE = face_paint.FaceLayout(
                                                           (0.075, -0.09), (0.052, -0.088), (0.09, -0.1),
                                                           (0.11, -0.09), (0.1, -0.115), (0.022, -0.086))]
     + [(0.0, -0.072), (0.008, -0.08), (-0.009, -0.078)])
-# Sculpt: a 7-year-old boy. A slightly long face with narrower cheeks
-# than his sister, a clear jaw line and chin, a defined brow and nose
-# bridge, almond eyes set in sockets, and a modest grin with real lips.
-SHAPE = head_sculpt.HeadShape()
+# Head (feature 014): a drawn, planar game head lofted from the concept's
+# front outline and side profile - a 7-year-old boy: a slightly long face,
+# a squarish face front with defined cheek and jaw corners, a wedge nose
+# with an upturned tip, a clear chin. The face itself is painted (FACE).
+# Sections: (z, half-width, front depth, back depth, squareness front/back).
+LOFT = head_loft.HeadLoft(
+    sections=((0.228, 0.02, -0.02, 0.02, 2.0, 2.0), (0.215, 0.1, -0.1, 0.115, 2.0, 2.0),
+              (0.185, 0.16, -0.16, 0.18, 2.05, 2.05), (0.13, 0.2, -0.2, 0.222, 2.2, 2.1),
+              (0.08, 0.212, -0.222, 0.234, 2.35, 2.15), (0.03, 0.214, -0.232, 0.232, 2.5, 2.2),
+              (-0.01, 0.212, -0.236, 0.222, 2.65, 2.25), (-0.05, 0.207, -0.228, 0.205, 2.75, 2.3),
+              (-0.09, 0.196, -0.232, 0.185, 2.8, 2.3), (-0.13, 0.172, -0.233, 0.16, 2.8, 2.35),
+              (-0.165, 0.138, -0.226, 0.13, 2.9, 2.35), (-0.195, 0.095, -0.216, 0.095, 2.9, 2.3),
+              (-0.218, 0.055, -0.2, 0.06, 2.5, 2.2), (-0.235, 0.028, -0.155, 0.03, 2.2, 2.1)),
+    nose_top=-0.05, nose_tip_z=-0.092, nose_base_z=-0.108, nose_h=0.03, nose_bridge_h=0.004,
+    nose_w=(0.006, 0.012), nose_side=0.014, alae=0.0, cheek=0.006, cheek_pos=(0.11, -0.085),
+    eye_inset=0.004, eye_plate=(1.1, 1.35), brow_shelf=0.004)
 
 
 def camo(pos, normal):
@@ -450,7 +462,7 @@ def ears():
 
 def head_piece():
     face_paint.paint_face(FACE, FACE_PNG)
-    head = head_sculpt.build_head(HEAD, FACE, SHAPE, SKIN, SKIN_SHADE, BLUSH, tris=30000)
+    head = head_loft.build_head(HEAD, FACE, LOFT, SKIN, SKIN_SHADE, BLUSH)
     chibi.face_uv(head, HEAD, FACE)
     ear_parts = ears()
     for part in ear_parts:
