@@ -26,6 +26,16 @@ func _ready() -> void:
 	inventory_ready.emit()
 
 
+## Zeroes every counter (new run). Emits resource_changed per id so
+## any listening UI refreshes.
+func reset() -> void:
+	for id in _inventory.keys():
+		var previous: int = int(_inventory[id])
+		_inventory[id] = 0
+		if previous != 0:
+			resource_changed.emit(id, 0, -previous)
+
+
 func get_definitions() -> Array[ResourceDefinition]:
 	return _definitions
 

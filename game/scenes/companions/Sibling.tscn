@@ -25,8 +25,8 @@ albedo_color = Color(0.55, 0.32, 0.18, 1)
 roughness = 0.8
 
 [node name="Sibling" type="CharacterBody3D"]
-collision_layer = 1
-collision_mask = 1
+collision_layer = 16
+collision_mask = 7
 script = ExtResource("1_comp")
 definition = ExtResource("2_def")
 stats = ExtResource("3_stats")

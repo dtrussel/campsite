@@ -36,6 +36,12 @@ func register_character(character: Node, stats: CharacterStatsDefinition) -> voi
 		character.tree_exiting.connect(_on_character_exiting.bind(character))
 
 
+## Forgets every character (new run). Characters re-register in
+## their own _ready when the gameplay scene loads.
+func reset() -> void:
+	_state.clear()
+
+
 func unregister_character(character: Node) -> void:
 	_state.erase(character)
 

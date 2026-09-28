@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/crafting/crafting_recipe.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"torch"
+display_name = "Torch"
+description = "Plant it with Q. Shadow Imps hate the light: they slow down and get singed near a lit torch. Burns out at dawn."
+inputs = {
+&"wood": 1,
+&"resin": 1,
+&"leaves": 1
+}
+output_id = &"torch"
+output_amount = 1
+xp_reward = 3
+sort_order = 10

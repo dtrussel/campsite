@@ -95,7 +95,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("confirm_build"):
 		_try_confirm()
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("cancel_build") or event.is_action_pressed("quit_game"):
+	elif event.is_action_pressed("cancel_build") or event.is_action_pressed("pause"):
 		exit_build_mode()
 		get_viewport().set_input_as_handled()
 
@@ -171,7 +171,7 @@ func _spawn_ghost(definition: BuildingDefinition) -> bool:
 	_ghost_footprint = Area3D.new()
 	_ghost_footprint.name = FOOTPRINT_NODE_NAME
 	_ghost_footprint.collision_layer = 0
-	_ghost_footprint.collision_mask = 7
+	_ghost_footprint.collision_mask = 30  # resources, buildings, mobs, characters
 	_ghost_footprint.monitoring = true
 	_ghost_footprint.monitorable = false
 	var shape: CollisionShape3D = CollisionShape3D.new()

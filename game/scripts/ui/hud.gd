@@ -32,6 +32,17 @@ var _player: Node = null
 var _companion: Node = null
 var _level_up_flash_until: Dictionary = {}  # Node -> float (msec)
 
+const _BANNER_SECONDS: float = 3.5
+
+var _player_hp_bar: ProgressBar = null
+var _player_hp_text: Label = null
+var _companion_hp_bar: ProgressBar = null
+var _companion_hp_text: Label = null
+var _goal_label: Label = null
+var _imps_label: Label = null
+var _banner: Label = null
+var _banner_tween: Tween = null
+
 
 func _ready() -> void:
 	_populate_resources()
@@ -44,16 +55,153 @@ func _ready() -> void:
 	GameManager.companion_task_changed.connect(_on_companion_task_changed)
 	ProgressionManager.xp_gained.connect(_on_xp_gained)
 	ProgressionManager.level_up.connect(_on_level_up)
+	TimeManager.sunset_warning.connect(_on_sunset_warning)
+	TimeManager.night_started.connect(_on_night_started)
+	TimeManager.dawn_started.connect(_on_dawn_started)
+	TimeManager.day_started.connect(_on_day_started)
+	CraftingManager.crafted.connect(_on_crafted)
+	_build_dynamic_widgets()
 	call_deferred("_hook_base_core")
 	call_deferred("_refresh_companion_label")
 	call_deferred("_refresh_progress_labels")
+	call_deferred("_hook_health")
 	_apply_phase_color(TimeManager.current_phase)
+
+
+## Widgets added in code so HUD.tscn stays a simple skeleton.
+func _build_dynamic_widgets() -> void:
+	var vbox: VBoxContainer = $Panel/VBox
+	_goal_label = Label.new()
+	vbox.add_child(_goal_label)
+	vbox.move_child(_goal_label, time_label.get_index() + 1)
+	_imps_label = Label.new()
+	_imps_label.add_theme_color_override("font_color", Color(0.85, 0.6, 1.0))
+	_imps_label.visible = false
+	vbox.add_child(_imps_label)
+	vbox.move_child(_imps_label, _goal_label.get_index() + 1)
+
+	var player_row: Array = _make_hp_row("Boy", Color(0.95, 0.35, 0.3))
+	_player_hp_bar = player_row[0]
+	_player_hp_text = player_row[1]
+	vbox.add_child(player_row[2])
+	vbox.move_child(player_row[2], base_hp_label.get_index() + 1)
+	var companion_row: Array = _make_hp_row("Sibling", Color(0.45, 0.8, 0.45))
+	_companion_hp_bar = companion_row[0]
+	_companion_hp_text = companion_row[1]
+	vbox.add_child(companion_row[2])
+	vbox.move_child(companion_row[2], (player_row[2] as Control).get_index() + 1)
+
+	# Short hint at the bottom of the panel; the full list lives behind H.
+	var hint: Label = $Panel/VBox/Hint
+	hint.text = "H: controls & help    Esc: pause"
+	hint.add_theme_color_override("font_color", Color(1, 0.85, 0.5))
+
+	_banner = Label.new()
+	_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_banner.offset_top = 40
+	_banner.offset_left = -400
+	_banner.offset_right = 400
+	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_banner.add_theme_font_size_override("font_size", 34)
+	_banner.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
+	_banner.add_theme_constant_override("outline_size", 8)
+	_banner.modulate.a = 0.0
+	add_child(_banner)
+
+
+func _make_hp_row(title: String, color: Color) -> Array:
+	var row: HBoxContainer = HBoxContainer.new()
+	var name_label: Label = Label.new()
+	name_label.text = title
+	name_label.custom_minimum_size = Vector2(62, 0)
+	row.add_child(name_label)
+	var bar: ProgressBar = ProgressBar.new()
+	bar.custom_minimum_size = Vector2(120, 16)
+	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bar.show_percentage = false
+	var fill: StyleBoxFlat = StyleBoxFlat.new()
+	fill.bg_color = color
+	bar.add_theme_stylebox_override("fill", fill)
+	var background: StyleBoxFlat = StyleBoxFlat.new()
+	background.bg_color = Color(0.15, 0.15, 0.15, 0.9)
+	bar.add_theme_stylebox_override("background", background)
+	row.add_child(bar)
+	var text: Label = Label.new()
+	row.add_child(text)
+	return [bar, text, row]
+
+
+func _hook_health() -> void:
+	var player: Node = get_tree().get_first_node_in_group("player")
+	if player != null and player.has_signal("health_changed"):
+		player.health_changed.connect(_set_hp.bind(_player_hp_bar, _player_hp_text))
+		_set_hp(player.current_hp, player.max_hp, _player_hp_bar, _player_hp_text)
+	var companion: Node = get_tree().get_first_node_in_group("companions")
+	if companion != null and companion.has_signal("health_changed"):
+		companion.health_changed.connect(_set_hp.bind(_companion_hp_bar, _companion_hp_text))
+		companion.knocked_out_changed.connect(_on_companion_knocked_out)
+		_set_hp(companion.current_hp, companion.max_hp, _companion_hp_bar, _companion_hp_text)
+
+
+func _set_hp(current: int, maximum: int, bar: ProgressBar, text: Label) -> void:
+	bar.max_value = maximum
+	bar.value = current
+	text.text = " %d/%d" % [current, maximum]
+
+
+func show_banner(text: String, color: Color = Color(1, 1, 1)) -> void:
+	_banner.text = text
+	_banner.add_theme_color_override("font_color", color)
+	if _banner_tween != null:
+		_banner_tween.kill()
+	_banner.modulate.a = 1.0
+	_banner_tween = create_tween()
+	_banner_tween.tween_interval(_BANNER_SECONDS)
+	_banner_tween.tween_property(_banner, "modulate:a", 0.0, 0.6)
+
+
+func _on_day_started(day_number: int) -> void:
+	if day_number == 1:
+		show_banner("Day 1 - gather wood and fiber, build fences, craft torches", Color(1, 0.95, 0.8))
+	else:
+		show_banner("Day %d - repair your defences and prepare" % day_number, Color(1, 0.95, 0.8))
+
+
+func _on_sunset_warning(seconds: float) -> void:
+	show_banner("The sun is setting... imps in %ds! Get back to the fire." % int(seconds), _PHASE_COLOR_SUNSET)
+
+
+func _on_night_started(day_number: int) -> void:
+	var spawner: Node = get_tree().get_first_node_in_group("mob_spawner")
+	var count: int = spawner.get_wave_size(day_number) if spawner != null else 0
+	show_banner("Night %d - %d Shadow Imps are coming!" % [day_number, count], Color(0.85, 0.6, 1.0))
+
+
+func _on_dawn_started(day_number: int) -> void:
+	show_banner("Dawn! You survived night %d" % day_number, _PHASE_COLOR_DAWN)
+
+
+func _on_crafted(recipe: CraftingRecipe, _crafter: Node) -> void:
+	if recipe.output_id == &"torch":
+		show_banner("Torch crafted - press Q to plant it", Color(1, 0.75, 0.35))
+
+
+func _on_companion_knocked_out(is_down: bool) -> void:
+	if is_down:
+		show_banner("Your sibling is knocked out until dawn!", Color(1, 0.6, 0.4))
+	_refresh_companion_label()
 
 
 func _process(_delta: float) -> void:
 	var phase: String = TimeManager.get_phase_name()
 	var remaining: int = int(ceil(TimeManager.remaining_seconds))
 	time_label.text = "Day %d - %s (%ds)" % [TimeManager.day_number, phase, remaining]
+	_goal_label.text = "Goal: survive %d nights (%d done)" % [
+		GameManager.nights_to_win, int(GameManager.stats.get(&"nights_survived", 0))
+	]
+	var imps: int = get_tree().get_nodes_in_group("mobs").size()
+	_imps_label.visible = imps > 0
+	_imps_label.text = "Shadow Imps: %d" % imps
 	if _base_core != null and is_instance_valid(_base_core):
 		base_hp_label.text = "Base HP: %d / %d" % [
 			_base_core.current_hp, _base_core.max_hp
@@ -137,7 +285,9 @@ func _refresh_companion_label() -> void:
 		return
 	var first: Node = companions[0]
 	var task_name: String = "?"
-	if first.has_method("get_task_name"):
+	if first.get("is_knocked_out") == true:
+		task_name = "Knocked out"
+	elif first.has_method("get_task_name"):
 		task_name = first.get_task_name()
 	companion_task_label.text = "Companion: %s" % task_name
 

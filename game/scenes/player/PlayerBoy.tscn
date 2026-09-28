@@ -24,8 +24,8 @@ height = 0.32
 radius = 1.6
 
 [node name="PlayerBoy" type="CharacterBody3D"]
-collision_layer = 1
-collision_mask = 3
+collision_layer = 16
+collision_mask = 7
 script = ExtResource("1_player_script")
 stats = ExtResource("3_stats")
 

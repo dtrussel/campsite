@@ -21,8 +21,13 @@ const GATHER_XP_REWARD: int = 1
 @export var yield_amount: int = 1
 @export var gather_time_seconds: float = 1.5
 @export var respawn_seconds: float = 20.0
+## Optional second item granted on every gather (e.g. a tree also
+## drops Leaves). Leave empty for single-yield nodes.
+@export var bonus_definition: ResourceDefinition
+@export var bonus_amount: int = 1
 
 var is_gatherable: bool = true
+var _progress_label: Label3D = null
 
 var _active_gather_actor: Node = null
 var _gather_timer: Timer
@@ -42,6 +47,18 @@ func _ready() -> void:
 	_respawn_timer.timeout.connect(_on_respawn_complete)
 	add_child(_respawn_timer)
 
+	_progress_label = Fx.make_hp_label(self, 2.2)
+	_progress_label.visible = false
+	set_process(false)
+
+
+func _process(_delta: float) -> void:
+	if _active_gather_actor == null or gather_time_seconds <= 0.0:
+		return
+	var done: float = 1.0 - _gather_timer.time_left / gather_time_seconds
+	var filled: int = clampi(int(done * 10.0), 0, 10)
+	_progress_label.text = "Gathering %s%s" % ["|".repeat(filled), ".".repeat(10 - filled)]
+
 
 func begin_gather(actor: Node) -> bool:
 	if not is_gatherable:
@@ -53,6 +70,7 @@ func begin_gather(actor: Node) -> bool:
 		return false
 	_active_gather_actor = actor
 	_gather_timer.start(gather_time_seconds)
+	_show_progress(true)
 	return true
 
 
@@ -61,6 +79,7 @@ func cancel_gather(actor: Node) -> void:
 		return
 	_gather_timer.stop()
 	_active_gather_actor = null
+	_show_progress(false)
 
 
 func _on_gather_complete() -> void:
@@ -68,10 +87,24 @@ func _on_gather_complete() -> void:
 		return
 	var actor: Node = _active_gather_actor
 	_active_gather_actor = null
+	_show_progress(false)
 	ResourceManager.add(definition.id, yield_amount)
+	var pickup: String = "+%d %s" % [yield_amount, definition.display_name]
+	if bonus_definition != null and bonus_amount > 0:
+		ResourceManager.add(bonus_definition.id, bonus_amount)
+		pickup += "  +%d %s" % [bonus_amount, bonus_definition.display_name]
+	Fx.float_text(self, pickup, definition.ui_color, 1.8)
 	ProgressionManager.award_xp(actor, GATHER_XP_REWARD, &"gather")
 	gathered.emit(actor, definition.id, yield_amount)
 	_deplete()
+
+
+func _show_progress(is_shown: bool) -> void:
+	if _progress_label == null:
+		return
+	_progress_label.visible = is_shown
+	_progress_label.modulate = Color(1, 1, 0.8)
+	set_process(is_shown)
 
 
 func _deplete() -> void:

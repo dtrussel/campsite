@@ -12,6 +12,9 @@ extends Resource
 @export var move_speed: float = 2.2
 @export var attack_damage: int = 3
 @export var attack_range: float = 1.2
+## Characters (boy, companions) closer than this get chased instead
+## of the campfire.
+@export var aggro_radius: float = 4.0
 @export var attack_cooldown_seconds: float = 1.0
 @export var xp_reward: int = 5
 @export var ui_color: Color = Color(0.6, 0.4, 0.7, 1)

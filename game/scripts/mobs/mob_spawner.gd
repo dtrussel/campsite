@@ -6,12 +6,14 @@ extends Node3D
 ## wave of mobs from this node's Marker3D children (random pick per
 ## spawn). Stops if BaseCore is destroyed.
 
-signal wave_started(night_number: int)
+signal wave_started(night_number: int, mob_count: int)
 signal wave_ended
 
 @export var mob_definition: MobDefinition
-@export var base_spawn_count: int = 4
-@export var per_night_extra: int = 1
+## Mobs per night, indexed by night - 1. Nights past the end of the
+## list reuse the last entry plus per_night_extra for each extra night.
+@export var wave_sizes: PackedInt32Array = PackedInt32Array([4, 7, 11])
+@export var per_night_extra: int = 2
 @export var spawn_interval_seconds: float = 4.0
 @export var initial_delay_seconds: float = 2.0
 
@@ -24,6 +26,7 @@ var _base_destroyed: bool = false
 
 
 func _ready() -> void:
+	add_to_group("mob_spawner")
 	for child in get_children():
 		if child is Marker3D:
 			_spawn_points.append(child)
@@ -52,16 +55,29 @@ func _process(delta: float) -> void:
 		_alive_mobs = _alive_mobs.filter(func(m): return m != null and is_instance_valid(m))
 		if _alive_mobs.is_empty():
 			_end_wave()
+			# Whole wave defeated: dawn comes early (roadmap Phase 5 rule).
+			if TimeManager.is_night():
+				TimeManager.skip_phase()
 
 
 func _on_night_started(day_number: int) -> void:
 	if _base_destroyed or mob_definition == null:
 		return
 	_wave_active = true
-	_remaining_to_spawn = base_spawn_count + per_night_extra * max(0, day_number - 1)
+	_remaining_to_spawn = get_wave_size(day_number)
 	_next_spawn_in = initial_delay_seconds
 	_alive_mobs.clear()
-	wave_started.emit(day_number)
+	PlaytestLog.write("wave_started night=%d mobs=%d" % [day_number, _remaining_to_spawn])
+	wave_started.emit(day_number, _remaining_to_spawn)
+
+
+func get_wave_size(night: int) -> int:
+	if wave_sizes.is_empty():
+		return 3
+	var index: int = night - 1
+	if index < wave_sizes.size():
+		return wave_sizes[max(0, index)]
+	return wave_sizes[wave_sizes.size() - 1] + per_night_extra * (index - wave_sizes.size() + 1)
 
 
 func _on_dawn_started(_day_number: int) -> void:
@@ -109,6 +125,7 @@ func _end_wave() -> void:
 	if not _wave_active:
 		return
 	_wave_active = false
+	PlaytestLog.write("wave_ended")
 	wave_ended.emit()
 
 

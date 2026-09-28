@@ -14,24 +14,54 @@ signal phase_changed(new_phase: int)
 
 enum Phase { DAY, SUNSET, NIGHT, DAWN }
 
-@export var day_seconds: float = 90.0
-@export var sunset_seconds: float = 8.0
-@export var night_seconds: float = 60.0
+@export var day_seconds: float = 120.0
+@export var sunset_seconds: float = 10.0
+@export var night_seconds: float = 75.0
 @export var dawn_seconds: float = 5.0
 
 var current_phase: int = Phase.DAY
 var remaining_seconds: float = 0.0
 var day_number: int = 1
+## The clock only ticks during a run; the title screen and end screens
+## leave it stopped. GameManager drives start_run / stop.
+var is_running: bool = false
 
 
 func _ready() -> void:
+	reset()
+
+
+## Resets to the start of day 1 without emitting anything.
+func reset() -> void:
+	is_running = false
 	current_phase = Phase.DAY
 	remaining_seconds = day_seconds
+	day_number = 1
+
+
+## Starts ticking from day 1. Called once the gameplay scene is ready
+## so scene-side listeners hear the initial day_started.
+func start_run() -> void:
+	reset()
+	is_running = true
 	phase_changed.emit(current_phase)
 	day_started.emit(day_number)
 
 
+func stop() -> void:
+	is_running = false
+
+
+## Jumps to the end of the current phase. Used by the smoke test and
+## the debug skip key so testers do not have to wait out a full day.
+func skip_phase() -> void:
+	if is_running:
+		_advance_phase()
+
+
 func _process(delta: float) -> void:
+	if not is_running:
+		return
 	remaining_seconds -= delta
 	if remaining_seconds <= 0.0:
 		_advance_phase()

@@ -25,10 +25,10 @@ roughness = 0.4
 radius = 0.6
 
 [node name="CampfireCore" type="StaticBody3D" groups=["base_core"]]
-collision_layer = 1
-collision_mask = 1
+collision_layer = 4
+collision_mask = 0
 script = ExtResource("1_basecore")
-max_hp = 200
+max_hp = 150
 
 [node name="Logs" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.075, 0)
