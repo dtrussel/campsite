@@ -5,9 +5,12 @@ extends CharacterBody3D
 ##
 ## Task-driven AI used by family / pet companions. Always present in
 ## the world; the player assigns tasks via hotkeys (see HUD hint).
-## Companions are invulnerable in this feature; mobs ignore them.
+## Mobs can hurt companions; at 0 HP a companion is knocked out
+## until the next dawn, then gets back up at full health.
 
 signal task_changed(new_task: int)
+signal health_changed(current_hp: int, max_hp: int)
+signal knocked_out_changed(is_knocked_out: bool)
 
 enum Task { IDLE, FOLLOW_PLAYER, GUARD_BASE, GATHER_NEAREST }
 
@@ -16,10 +19,19 @@ enum Task { IDLE, FOLLOW_PLAYER, GUARD_BASE, GATHER_NEAREST }
 @export var follow_distance: float = 2.5
 @export var guard_radius: float = 3.5
 @export var detection_radius: float = 6.0
+@export var max_hp: int = 40
+@export var regen_per_second: float = 1.0
+@export var hurt_invulnerability_seconds: float = 0.5
 
 var current_task: int = Task.IDLE
+var current_hp: int = 0
+var is_knocked_out: bool = false
+var _invulnerable_remaining: float = 0.0
+var _regen_accumulator: float = 0.0
 
 @onready var _task_label: Label3D = $TaskLabel
+@onready var _visual: CharacterVisual = $Visual
+var _hp_bar: HealthBar3D = null
 
 var _player: Node3D = null
 var _base_core: Node3D = null
@@ -35,9 +47,64 @@ func _ready() -> void:
 	_current_attack_damage = definition.attack_damage if definition != null else 0
 	if stats != null:
 		_current_attack_damage = stats.base_attack_damage
+		max_hp = stats.base_max_health
+	current_hp = max_hp
 	ProgressionManager.register_character(self, stats)
 	if not ProgressionManager.level_up.is_connected(_on_level_up):
 		ProgressionManager.level_up.connect(_on_level_up)
+	TimeManager.dawn_started.connect(_on_dawn_started)
+	_hp_bar = HealthBar3D.attach(self, 2.1, "hero", 1.1)
+	health_changed.connect(func(hp: int, max_value: int) -> void: _hp_bar.set_value(hp, max_value))
+	_hp_bar.set_value.call_deferred(current_hp, max_hp)
+
+
+func take_damage(amount: int, _source: Node = null) -> void:
+	if amount <= 0 or is_knocked_out or _invulnerable_remaining > 0.0:
+		return
+	_invulnerable_remaining = hurt_invulnerability_seconds
+	current_hp = max(0, current_hp - amount)
+	health_changed.emit(current_hp, max_hp)
+	Fx.flash(self)
+	Fx.float_text(self, "-%d" % amount, Color(1, 0.6, 0.4))
+	if current_hp == 0:
+		_set_knocked_out(true)
+	elif not _visual.is_in_action():
+		_visual.play_action(&"hit", 1.4)
+
+
+func _set_knocked_out(value: bool) -> void:
+	if is_knocked_out == value:
+		return
+	is_knocked_out = value
+	if value:
+		_abort_active_gather()
+		velocity = Vector3.ZERO
+		_visual.play_final(&"death")
+		PlaytestLog.write("companion_knocked_out day=%d" % TimeManager.day_number)
+	else:
+		_visual.unlock(&"getup")
+		current_hp = max_hp
+		health_changed.emit(current_hp, max_hp)
+	knocked_out_changed.emit(is_knocked_out)
+	_update_task_label()
+
+
+func _on_dawn_started(_day_number: int) -> void:
+	if is_knocked_out:
+		_set_knocked_out(false)
+		Fx.burst(&"heal", global_position)
+
+
+func _tick_regen(delta: float) -> void:
+	if is_knocked_out or TimeManager.is_night() or current_hp >= max_hp:
+		_regen_accumulator = 0.0
+		return
+	_regen_accumulator += regen_per_second * delta
+	if _regen_accumulator >= 1.0:
+		var whole: int = int(_regen_accumulator)
+		_regen_accumulator -= whole
+		current_hp = min(max_hp, current_hp + whole)
+		health_changed.emit(current_hp, max_hp)
 
 
 func set_task(task: int) -> void:
@@ -62,6 +129,10 @@ func _physics_process(delta: float) -> void:
 	if definition == null:
 		return
 	_attack_cooldown_remaining = max(0.0, _attack_cooldown_remaining - delta)
+	_invulnerable_remaining = max(0.0, _invulnerable_remaining - delta)
+	_tick_regen(delta)
+	if is_knocked_out:
+		return
 
 	if _player == null or _base_core == null:
 		_refresh_world_refs()
@@ -75,6 +146,15 @@ func _physics_process(delta: float) -> void:
 			_tick_guard_base()
 		Task.GATHER_NEAREST:
 			_tick_gather_nearest()
+
+	var planar_speed: float = Vector2(velocity.x, velocity.z).length()
+	_visual.set_locomotion(planar_speed)
+	if planar_speed > 0.2 and not _visual.is_in_action():
+		_visual.face(velocity, delta)
+	elif _active_resource_node != null and is_instance_valid(_active_resource_node):
+		_visual.face((_active_resource_node as Node3D).global_position - global_position, delta)
+		if not _visual.is_in_action():
+			_visual.play_action(&"gather", 1.3)
 
 
 func _tick_idle() -> void:
@@ -191,7 +271,10 @@ func _on_resource_gathered(actor: Node, _id: StringName, _amount: int) -> void:
 func _attack_mob(mob: Node3D) -> void:
 	if not mob.has_method("take_damage"):
 		return
+	_visual.face_instantly(mob.global_position - global_position)
+	_visual.play_action(&"attack", 1.8)
 	mob.take_damage(_current_attack_damage, self)
+	Fx.burst(&"sparkle", mob.global_position + Vector3(0, 0.7, 0))
 	_attack_cooldown_remaining = definition.attack_cooldown_seconds
 
 
@@ -199,6 +282,11 @@ func _on_level_up(character: Node, _new_level: int) -> void:
 	if character != self or stats == null:
 		return
 	_current_attack_damage += stats.attack_damage_per_level
+	_hp_bar.set_level(_new_level)
+	max_hp += stats.max_health_per_level
+	current_hp = min(max_hp, current_hp + stats.max_health_per_level)
+	health_changed.emit(current_hp, max_hp)
+	Fx.float_text(self, "LEVEL UP!", Color(1.0, 0.85, 0.4), 2.7)
 
 
 func _find_nearest_mob(within: float) -> Node3D:
@@ -252,4 +340,5 @@ func _refresh_world_refs() -> void:
 
 func _update_task_label() -> void:
 	if _task_label != null:
-		_task_label.text = get_task_name()
+		# The HUD task buttons show the task; the label only shows sleep.
+		_task_label.text = "Zzz" if is_knocked_out else ""

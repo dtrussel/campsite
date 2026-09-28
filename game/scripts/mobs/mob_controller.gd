@@ -3,24 +3,43 @@ extends CharacterBody3D
 
 ## Mob
 ##
-## Shadow Imp (and future) AI. Walks toward the campfire each frame;
-## if a slide collision reports a Building or BaseCore in the way, the
-## mob switches to ATTACKING that target and damages it on a cooldown
-## until it dies, then resumes walking.
+## Shadow Imp (and future) AI. Default behaviour is to walk toward the
+## campfire and attack whatever blocks the way (fences first, then the
+## campfire itself). If the boy or a companion comes within
+## `aggro_radius`, the mob chases and attacks them instead until they
+## escape or are knocked out. Lit torches slow mobs down.
+##
+## Mobs rise out of the ground when spawned (they cannot move or be
+## targeted by their own AI until the rise finishes) and collapse into
+## purple smoke when defeated.
 
 signal defeated(mob: Node)
 
 enum State { MOVING_TO_TARGET, ATTACKING, DYING }
+
+const TORCH_GROUP: StringName = &"torches"
+const KNOCKBACK_DISTANCE: float = 0.5
+const KNOCKBACK_DECAY: float = 10.0
+## Extra reach against the campfire, whose collider is wider than a mob.
+const CAMPFIRE_REACH_BONUS: float = 0.7
+## Seconds a defeated mob lingers for its collapse animation.
+const CORPSE_SECONDS: float = 1.4
 
 @export var definition: MobDefinition
 
 var current_hp: int = 0
 var state: int = State.MOVING_TO_TARGET
 
-var _target_position: Vector3 = Vector3.ZERO
+var _base: Node3D = null
+var _chase_target: Node3D = null
 var _attack_target: Node = null
 var _attack_cooldown_remaining: float = 0.0
 var _last_damage_source: Node = null
+var _knockback: Vector3 = Vector3.ZERO
+var _spawn_remaining: float = 0.0
+var _hp_bar: HealthBar3D = null
+
+@onready var _visual: CharacterVisual = get_node_or_null("Visual") as CharacterVisual
 
 
 func _ready() -> void:
@@ -30,7 +49,21 @@ func _ready() -> void:
 	else:
 		push_warning("Mob '%s' has no definition" % name)
 		current_hp = 1
-	_refresh_target_position()
+	_refresh_base()
+	_hp_bar = HealthBar3D.attach(self, 1.75, "enemy", 0.9)
+	_hp_bar.set_value.call_deferred(current_hp, current_hp)
+	if _visual != null:
+		if _base != null:
+			_visual.face_instantly(_base.global_position - global_position)
+		_spawn_remaining = minf(_visual.play_action(&"spawn", 1.6), 2.0)
+	# Deferred: the spawner positions us right after add_child.
+	_play_spawn_fx.call_deferred()
+
+
+func _play_spawn_fx() -> void:
+	Fx.burst(&"shadow_spawn", global_position)
+	if _visual != null and _base != null:
+		_visual.face_instantly(_base.global_position - global_position)
 
 
 func take_damage(amount: int, source: Node = null) -> void:
@@ -39,11 +72,40 @@ func take_damage(amount: int, source: Node = null) -> void:
 	if source != null:
 		_last_damage_source = source
 	current_hp = max(0, current_hp - amount)
+	if _hp_bar != null and definition != null:
+		_hp_bar.set_value(current_hp, definition.max_hp)
+	Fx.flash(self, Color(1, 1, 1, 0.8))
+	Fx.float_text(self, "-%d" % amount, Color(1, 0.95, 0.6), 1.2)
+	if _visual != null and current_hp > 0 and _spawn_remaining <= 0.0 and not _visual.is_in_action():
+		_visual.play_action(&"hit", 1.5)
+	var source_3d: Node3D = source as Node3D
+	if source_3d != null:
+		var away: Vector3 = global_position - source_3d.global_position
+		away.y = 0.0
+		if away.length() > 0.01:
+			_knockback = away.normalized() * KNOCKBACK_DISTANCE * KNOCKBACK_DECAY
 	if current_hp == 0:
-		state = State.DYING
-		_award_kill_xp()
-		defeated.emit(self)
-		queue_free()
+		_die()
+
+
+func _die() -> void:
+	state = State.DYING
+	remove_from_group("mobs")
+	collision_layer = 0
+	collision_mask = 0
+	_award_kill_xp()
+	GameManager.record(&"kills")
+	defeated.emit(self)
+	if _hp_bar != null:
+		_hp_bar.visible = false
+	Fx.burst(&"shadow_death", global_position + Vector3(0, 0.5, 0))
+	if _visual != null:
+		_visual.play_final(&"death")
+	var tween: Tween = create_tween()
+	tween.tween_interval(CORPSE_SECONDS * 0.6)
+	tween.tween_property(self, "scale", Vector3(1.0, 0.02, 1.0), CORPSE_SECONDS * 0.4) \
+		.set_ease(Tween.EASE_IN)
+	tween.tween_callback(queue_free)
 
 
 func _award_kill_xp() -> void:
@@ -52,47 +114,126 @@ func _award_kill_xp() -> void:
 	if definition == null or definition.xp_reward <= 0:
 		return
 	ProgressionManager.award_xp(_last_damage_source, definition.xp_reward, &"kill")
+	var killer: Node3D = _last_damage_source as Node3D
+	if killer != null:
+		Fx.burst(&"sparkle", killer.global_position + Vector3(0, 1.6, 0))
 
 
 func _physics_process(delta: float) -> void:
 	if state == State.DYING or definition == null:
 		return
 	_attack_cooldown_remaining = max(0.0, _attack_cooldown_remaining - delta)
+	if _spawn_remaining > 0.0:
+		# Still clawing out of the ground.
+		_spawn_remaining -= delta
+		return
+	if _base == null or not is_instance_valid(_base):
+		_refresh_base()
 
-	# Always re-acquire the base position (campfire may have moved... it doesn't, but stays robust).
-	if _target_position == Vector3.ZERO:
-		_refresh_target_position()
-
-	# If the current attack target is gone, reset to walking.
-	if state == State.ATTACKING and (
-		_attack_target == null or not is_instance_valid(_attack_target)
-	):
+	# Drop an attack target that has been destroyed.
+	if _attack_target != null and not is_instance_valid(_attack_target):
 		_attack_target = null
 		state = State.MOVING_TO_TARGET
 
-	# Move toward the campfire each frame regardless of state — when
-	# the attack target is destroyed we want to immediately resume
-	# walking.
-	var to_target: Vector3 = _target_position - global_position
-	to_target.y = 0.0
-	var distance: float = to_target.length()
+	_update_chase_target()
 
-	if distance > 0.05:
-		var dir: Vector3 = to_target / distance
-		velocity = dir * definition.move_speed
+	var destination: Vector3 = global_position
+	if _chase_target != null:
+		destination = _chase_target.global_position
+	elif _base != null:
+		destination = _base.global_position
+
+	var to_dest: Vector3 = destination - global_position
+	to_dest.y = 0.0
+	var distance: float = to_dest.length()
+
+	# Close enough to hit a character or the campfire directly?
+	var reach: float = definition.attack_range
+	var direct_target: Node = null
+	if _chase_target != null and distance <= reach:
+		direct_target = _chase_target
+	elif _chase_target == null and _base != null and distance <= reach + CAMPFIRE_REACH_BONUS:
+		direct_target = _base
+
+	if direct_target != null:
+		velocity = _knockback
+		move_and_slide()
+		_try_attack(direct_target)
 	else:
-		velocity = Vector3.ZERO
-	velocity.y = 0.0
+		var speed: float = definition.move_speed * _torch_slow_factor()
+		velocity = (to_dest / distance) * speed if distance > 0.05 else Vector3.ZERO
+		velocity += _knockback
+		velocity.y = 0.0
+		move_and_slide()
+		# Bumped into a fence / the campfire on the way? Chew through it.
+		var blocker: Node = _find_blocker()
+		if blocker != null:
+			_try_attack(blocker)
+		elif state == State.ATTACKING:
+			state = State.MOVING_TO_TARGET
+			_attack_target = null
 
-	move_and_slide()
+	_knockback = _knockback.move_toward(Vector3.ZERO, KNOCKBACK_DECAY * KNOCKBACK_DISTANCE * delta * 4.0)
 
-	# After moving, check what we just bumped into.
-	var blocker: Node = _find_blocker()
-	if blocker != null:
-		_attack_target = blocker
-		state = State.ATTACKING
-		if _attack_cooldown_remaining <= 0.0:
-			_attack(blocker)
+	if _visual != null:
+		var planar_speed: float = Vector2(velocity.x, velocity.z).length()
+		_visual.set_locomotion(planar_speed)
+		if direct_target is Node3D:
+			_visual.face((direct_target as Node3D).global_position - global_position, delta)
+		elif planar_speed > 0.2:
+			_visual.face(velocity, delta)
+
+
+func _try_attack(target: Node) -> void:
+	_attack_target = target
+	state = State.ATTACKING
+	if _attack_cooldown_remaining > 0.0:
+		return
+	if _visual != null:
+		_visual.play_action(&"attack", 1.6)
+	if target.has_method("take_damage"):
+		target.take_damage(definition.attack_damage, self)
+	_attack_cooldown_remaining = definition.attack_cooldown_seconds
+
+
+func _update_chase_target() -> void:
+	# Keep chasing the current target until it escapes (with some
+	# hysteresis so targets do not flicker at the aggro edge).
+	if _chase_target != null:
+		if not _is_valid_character(_chase_target):
+			_chase_target = null
+		else:
+			var d: float = _chase_target.global_position.distance_to(global_position)
+			if d > definition.aggro_radius * 1.6:
+				_chase_target = null
+	if _chase_target != null:
+		return
+	var best: Node3D = null
+	var best_d: float = definition.aggro_radius
+	for group in [&"player", &"companions"]:
+		for node in get_tree().get_nodes_in_group(group):
+			var candidate: Node3D = node as Node3D
+			if not _is_valid_character(candidate):
+				continue
+			var d: float = candidate.global_position.distance_to(global_position)
+			if d < best_d:
+				best_d = d
+				best = candidate
+	_chase_target = best
+
+
+func _is_valid_character(node: Node3D) -> bool:
+	if node == null or not is_instance_valid(node) or not node.is_inside_tree():
+		return false
+	# Player and companions both expose an is_knocked_out property.
+	return node.get("is_knocked_out") != true
+
+
+func _torch_slow_factor() -> float:
+	for node in get_tree().get_nodes_in_group(TORCH_GROUP):
+		if node.has_method("affects") and node.affects(global_position):
+			return node.slow_factor
+	return 1.0
 
 
 func _find_blocker() -> Node:
@@ -106,19 +247,6 @@ func _find_blocker() -> Node:
 	return null
 
 
-func _attack(target: Node) -> void:
-	if definition == null:
-		return
-	if target.has_method("take_damage"):
-		target.take_damage(definition.attack_damage)
-	_attack_cooldown_remaining = definition.attack_cooldown_seconds
-
-
-func _refresh_target_position() -> void:
+func _refresh_base() -> void:
 	var nodes: Array = get_tree().get_nodes_in_group("base_core")
-	if nodes.is_empty():
-		_target_position = Vector3.ZERO
-		return
-	var base: Node3D = nodes[0] as Node3D
-	if base != null:
-		_target_position = base.global_position
+	_base = nodes[0] as Node3D if not nodes.is_empty() else null

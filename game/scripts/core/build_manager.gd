@@ -30,6 +30,7 @@ var _ghost_meshes: Array[MeshInstance3D] = []
 var _ghost_footprint: Area3D = null
 var _is_valid: bool = false
 var _has_ground_hit: bool = false
+var _ghost_yaw_degrees: float = 0.0  # kept between placements
 
 var _valid_material: StandardMaterial3D
 var _invalid_material: StandardMaterial3D
@@ -54,7 +55,7 @@ func is_in_build_mode() -> bool:
 
 
 func enter_build_mode(definition: BuildingDefinition) -> bool:
-	if definition == null or definition.scene == null:
+	if definition == null or definition.get_scene() == null:
 		return false
 	if is_in_build_mode():
 		_destroy_ghost()
@@ -76,6 +77,8 @@ func exit_build_mode() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not GameManager.is_playing():
+		return
 	if event.is_action_pressed("toggle_build_mode"):
 		if is_in_build_mode():
 			exit_build_mode()
@@ -88,14 +91,17 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not is_in_build_mode():
 		return
 
-	if event.is_action_pressed("select_building_1"):
+	if event.is_action_pressed("rotate_building"):
+		_ghost_yaw_degrees = fmod(_ghost_yaw_degrees + 90.0, 360.0)
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("select_building_1"):
 		_select_index(0)
 	elif event.is_action_pressed("select_building_2"):
 		_select_index(1)
 	elif event.is_action_pressed("confirm_build"):
 		_try_confirm()
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("cancel_build") or event.is_action_pressed("quit_game"):
+	elif event.is_action_pressed("cancel_build") or event.is_action_pressed("pause"):
 		exit_build_mode()
 		get_viewport().set_input_as_handled()
 
@@ -119,18 +125,17 @@ func _select_index(idx: int) -> void:
 func _try_confirm() -> void:
 	if not _is_valid:
 		return
-	if _active_definition == null or _active_definition.scene == null:
+	if _active_definition == null or _active_definition.get_scene() == null:
 		return
 	if not ResourceManager.spend_costs(_active_definition.cost):
 		return
-	var building: Node = _active_definition.scene.instantiate()
-	if _ghost != null:
-		(building as Node3D).global_transform = _ghost.global_transform
 	var scene_root: Node = get_tree().current_scene
 	if scene_root == null:
-		building.queue_free()
 		return
+	var building: Node = _active_definition.get_scene().instantiate()
 	scene_root.add_child(building)
+	if _ghost != null:
+		(building as Node3D).global_transform = _ghost.global_transform
 	building_placed.emit(building)
 	_award_build_xp()
 	# Force a validity re-eval so the ghost flips to red if the cost can
@@ -149,12 +154,13 @@ func _spawn_ghost(definition: BuildingDefinition) -> bool:
 	var scene_root: Node = get_tree().current_scene
 	if scene_root == null:
 		return false
-	var instance: Node = definition.scene.instantiate()
+	var instance: Node = definition.get_scene().instantiate()
 	var ghost: Node3D = instance as Node3D
 	if ghost == null:
 		instance.queue_free()
 		return false
 	ghost.name = GHOST_NODE_NAME
+	ghost.set_meta(&"build_ghost", true)
 
 	# Disable physics on the root so the ghost neither blocks nor is hit.
 	var sb: StaticBody3D = ghost as StaticBody3D
@@ -172,7 +178,7 @@ func _spawn_ghost(definition: BuildingDefinition) -> bool:
 	_ghost_footprint = Area3D.new()
 	_ghost_footprint.name = FOOTPRINT_NODE_NAME
 	_ghost_footprint.collision_layer = 0
-	_ghost_footprint.collision_mask = 7
+	_ghost_footprint.collision_mask = 30  # resources, buildings, mobs, characters
 	_ghost_footprint.monitoring = true
 	_ghost_footprint.monitorable = false
 	var shape: CollisionShape3D = CollisionShape3D.new()
@@ -231,6 +237,7 @@ func _update_ghost_transform() -> void:
 		return
 	_ghost.visible = true
 	_ghost.global_position = hit.position
+	_ghost.rotation_degrees.y = _ghost_yaw_degrees
 	_has_ground_hit = true
 
 
@@ -285,28 +292,17 @@ func _make_ghost_material(color: Color) -> StandardMaterial3D:
 func _load_definitions() -> void:
 	_definitions.clear()
 	_by_id.clear()
-	var dir: DirAccess = DirAccess.open(BUILDINGS_DIR)
-	if dir == null:
-		push_warning("BuildManager: cannot open %s" % BUILDINGS_DIR)
-		return
-	dir.list_dir_begin()
-	var file_name: String = dir.get_next()
-	while file_name != "":
-		if not dir.current_is_dir() and file_name.ends_with(".tres"):
-			var path: String = BUILDINGS_DIR + file_name
-			var loaded: Resource = load(path)
-			var def: BuildingDefinition = loaded as BuildingDefinition
-			if def == null:
-				push_warning("BuildManager: %s is not a BuildingDefinition" % path)
-			elif def.id == &"":
-				push_warning("BuildManager: %s has empty id; skipping" % path)
-			elif def.scene == null:
-				push_warning("BuildManager: %s has no scene; skipping" % path)
-			else:
-				_definitions.append(def)
-				_by_id[def.id] = def
-		file_name = dir.get_next()
-	dir.list_dir_end()
+	for loaded in DefinitionLoader.load_all(BUILDINGS_DIR):
+		var def: BuildingDefinition = loaded as BuildingDefinition
+		if def == null:
+			push_warning("BuildManager: %s is not a BuildingDefinition" % loaded.resource_path)
+		elif def.id == &"":
+			push_warning("BuildManager: %s has empty id; skipping" % loaded.resource_path)
+		elif def.get_scene() == null:
+			push_warning("BuildManager: %s has no scene; skipping" % loaded.resource_path)
+		else:
+			_definitions.append(def)
+			_by_id[def.id] = def
 	_definitions.sort_custom(_compare_definitions)
 
 

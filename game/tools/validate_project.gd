@@ -1,0 +1,151 @@
+extends Node
+
+## validate_project.gd
+##
+## Headless project validator (see docs/testing/test-strategy.md,
+## "Data validation"). Runs as a scene so autoloads exist. From the
+## repo root:
+##
+##   godot --headless --path game res://tools/validate_project.tscn
+##
+## 1. Loads every .gd, .tscn and .tres under res:// and fails on any
+##    that does not load (parse errors, broken references, cycles).
+## 2. Checks data integrity: ids are set and unique, scene paths
+##    resolve, and every cost / recipe input refers to a real item.
+## Exits 0 when clean, 1 otherwise.
+
+const SKIP_DIRS: Array[String] = ["res://.godot", "res://addons"]
+
+var _errors: PackedStringArray = PackedStringArray()
+
+
+func _ready() -> void:
+	var files: PackedStringArray = PackedStringArray()
+	_collect("res://", files)
+	for path in files:
+		var loaded: Resource = ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_REUSE)
+		if loaded == null:
+			_fail("failed to load %s" % path)
+		elif loaded is GDScript and not (loaded as GDScript).can_instantiate():
+			_fail("script does not compile: %s" % path)
+	_validate_data()
+	if _errors.is_empty():
+		print("validate_project: OK (%d files checked)" % files.size())
+		get_tree().quit(0)
+	else:
+		for message in _errors:
+			printerr("validate_project: " + message)
+		printerr("validate_project: FAILED with %d error(s)" % _errors.size())
+		get_tree().quit(1)
+
+
+func _validate_data() -> void:
+	var item_ids: Dictionary = {}
+	for res in DefinitionLoader.load_all("res://resources/items/"):
+		var item: ResourceDefinition = res as ResourceDefinition
+		if item == null:
+			_fail("%s is not a ResourceDefinition" % res.resource_path)
+			continue
+		_check_id(item.id, item.resource_path, item_ids)
+
+	var building_ids: Dictionary = {}
+	for res in DefinitionLoader.load_all("res://resources/buildings/"):
+		var building: BuildingDefinition = res as BuildingDefinition
+		if building == null:
+			_fail("%s is not a BuildingDefinition" % res.resource_path)
+			continue
+		_check_id(building.id, building.resource_path, building_ids)
+		_check_scene(building.scene_path, building.resource_path)
+		_check_items(building.cost, item_ids, building.resource_path)
+
+	var mob_ids: Dictionary = {}
+	for res in DefinitionLoader.load_all("res://resources/mobs/"):
+		var mob: MobDefinition = res as MobDefinition
+		if mob == null:
+			_fail("%s is not a MobDefinition" % res.resource_path)
+			continue
+		_check_id(mob.id, mob.resource_path, mob_ids)
+		_check_scene(mob.scene_path, mob.resource_path)
+
+	var recipe_ids: Dictionary = {}
+	for res in DefinitionLoader.load_all("res://resources/recipes/"):
+		var recipe: CraftingRecipe = res as CraftingRecipe
+		if recipe == null:
+			_fail("%s is not a CraftingRecipe" % res.resource_path)
+			continue
+		_check_id(recipe.id, recipe.resource_path, recipe_ids)
+		_check_items(recipe.inputs, item_ids, recipe.resource_path)
+		if not item_ids.has(recipe.output_id):
+			_fail("%s outputs unknown item '%s'" % [recipe.resource_path, recipe.output_id])
+
+	# Every item a building or recipe needs must be obtainable somewhere:
+	# as a resource node yield/bonus or as a recipe output.
+	var obtainable: Dictionary = {}
+	for res in DefinitionLoader.load_all("res://resources/recipes/"):
+		obtainable[(res as CraftingRecipe).output_id] = true
+	var node_scenes: PackedStringArray = PackedStringArray()
+	_collect("res://scenes/resources/", node_scenes)
+	for scene_path in node_scenes:
+		if not scene_path.ends_with(".tscn"):
+			continue
+		var node: ResourceNode = (load(scene_path) as PackedScene).instantiate() as ResourceNode
+		if node == null:
+			continue
+		if node.definition != null:
+			obtainable[node.definition.id] = true
+		if node.bonus_definition != null:
+			obtainable[node.bonus_definition.id] = true
+		node.free()
+	var needed: Dictionary = {}
+	for res in DefinitionLoader.load_all("res://resources/buildings/"):
+		needed.merge((res as BuildingDefinition).cost)
+	for res in DefinitionLoader.load_all("res://resources/recipes/"):
+		needed.merge((res as CraftingRecipe).inputs)
+	for key in needed.keys():
+		if not obtainable.has(StringName(key)):
+			_fail("item '%s' is needed by a cost/recipe but nothing produces it" % key)
+
+
+func _check_id(id: StringName, path: String, seen: Dictionary) -> void:
+	if id == &"":
+		_fail("%s has an empty id" % path)
+	elif seen.has(id):
+		_fail("%s duplicates id '%s' from %s" % [path, id, seen[id]])
+	else:
+		seen[id] = path
+
+
+func _check_scene(scene_path: String, owner_path: String) -> void:
+	if scene_path == "" or not ResourceLoader.exists(scene_path):
+		_fail("%s points at missing scene '%s'" % [owner_path, scene_path])
+
+
+func _check_items(costs: Dictionary, item_ids: Dictionary, owner_path: String) -> void:
+	for key in costs.keys():
+		if not item_ids.has(StringName(key)):
+			_fail("%s references unknown item '%s'" % [owner_path, key])
+		if int(costs[key]) <= 0:
+			_fail("%s has non-positive amount for '%s'" % [owner_path, key])
+
+
+func _collect(dir_path: String, out: PackedStringArray) -> void:
+	if dir_path.trim_suffix("/") in SKIP_DIRS:
+		return
+	var dir: DirAccess = DirAccess.open(dir_path)
+	if dir == null:
+		return
+	dir.list_dir_begin()
+	var name: String = dir.get_next()
+	while name != "":
+		var full: String = dir_path.path_join(name)
+		if dir.current_is_dir():
+			if not name.begins_with("."):
+				_collect(full, out)
+		elif name.ends_with(".gd") or name.ends_with(".tscn") or name.ends_with(".tres"):
+			out.append(full)
+		name = dir.get_next()
+	dir.list_dir_end()
+
+
+func _fail(message: String) -> void:
+	_errors.append(message)

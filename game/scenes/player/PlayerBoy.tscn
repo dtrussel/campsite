@@ -1,31 +1,21 @@
-[gd_scene load_steps=9 format=3 uid="uid://b0campsiteplayer01"]
+[gd_scene load_steps=8 format=3 uid="uid://b0campsiteplayer01"]
 
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_player_script"]
 [ext_resource type="Script" path="res://scripts/player/gather_interactor.gd" id="2_interactor_script"]
 [ext_resource type="Resource" uid="uid://b0campsitestatsplayer" path="res://resources/progression/player_stats.tres" id="3_stats"]
+[ext_resource type="Script" path="res://scripts/utilities/character_visual.gd" id="4_visual"]
+[ext_resource type="PackedScene" path="res://assets/custom/leo.glb" id="5_model"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
 radius = 0.35
 height = 1.2
 
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_player"]
-radius = 0.35
-height = 1.2
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_player"]
-albedo_color = Color(0.95, 0.82, 0.55, 1)
-roughness = 0.7
-
-[sub_resource type="SphereMesh" id="SphereMesh_hat"]
-radius = 0.32
-height = 0.32
-
 [sub_resource type="SphereShape3D" id="SphereShape3D_interactor"]
 radius = 1.6
 
 [node name="PlayerBoy" type="CharacterBody3D"]
-collision_layer = 1
-collision_mask = 3
+collision_layer = 16
+collision_mask = 7
 script = ExtResource("1_player_script")
 stats = ExtResource("3_stats")
 
@@ -33,14 +23,23 @@ stats = ExtResource("3_stats")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
 shape = SubResource("CapsuleShape3D_player")
 
-[node name="Body" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
-mesh = SubResource("CapsuleMesh_player")
-surface_material_override/0 = SubResource("StandardMaterial3D_player")
-
-[node name="Hat" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.5, 0, 0, 0, 1, 0, 1.35, 0)
-mesh = SubResource("SphereMesh_hat")
+[node name="Visual" type="Node3D" parent="."]
+script = ExtResource("4_visual")
+model_scene = ExtResource("5_model")
+model_scale = 0.7
+style = "hero"
+clips = {
+&"attack": "1H_Melee_Attack_Chop",
+&"cheer": "Cheer",
+&"chop": "1H_Melee_Attack_Chop",
+&"death": "Death_A",
+&"gather": "Interact",
+&"hit": "Hit_A",
+&"idle": "Idle",
+&"move": "Running_A",
+&"pick": "PickUp"
+}
+reference_speed = 7.0
 
 [node name="GatherInteractor" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)

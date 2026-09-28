@@ -1,0 +1,39 @@
+[gd_scene load_steps=6 format=3 uid="uid://b0campsitetorch01"]
+
+[ext_resource type="Script" path="res://scripts/buildings/torch.gd" id="1_torch"]
+[ext_resource type="Script" path="res://scripts/world/fire_effect.gd" id="2_fire"]
+[ext_resource type="PackedScene" path="res://assets/custom/torch.glb" id="m_lantern"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ring"]
+top_radius = 3.5
+bottom_radius = 3.5
+height = 0.02
+radial_segments = 48
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ring"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+albedo_color = Color(1, 0.62, 0.25, 0.08)
+
+[node name="Torch" type="Node3D"]
+script = ExtResource("1_torch")
+
+[node name="Model" parent="." instance=ExtResource("m_lantern")]
+transform = Transform3D(1.25, 0, 0, 0, 1.25, 0, 0, 0, 1.25, 0, 0, 0)
+
+[node name="Fire" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.42, 0)
+script = ExtResource("2_fire")
+size = 0.4
+light_energy = 0.8
+light_range = 6.0
+light_height = 2.5
+smoke = false
+flame_count = 1
+
+[node name="Radius" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+mesh = SubResource("CylinderMesh_ring")
+surface_material_override/0 = SubResource("StandardMaterial3D_ring")
+cast_shadow = 0

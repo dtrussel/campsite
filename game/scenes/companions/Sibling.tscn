@@ -1,32 +1,18 @@
-[gd_scene load_steps=8 format=3 uid="uid://b0campsitecompsibling01"]
+[gd_scene load_steps=7 format=3 uid="uid://b0campsitecompsibling01"]
 
 [ext_resource type="Script" path="res://scripts/companions/companion_controller.gd" id="1_comp"]
 [ext_resource type="Resource" uid="uid://b0campsitecompdefsibling" path="res://resources/companions/sibling.tres" id="2_def"]
 [ext_resource type="Resource" uid="uid://b0campsitestatssibling" path="res://resources/progression/sibling_stats.tres" id="3_stats"]
+[ext_resource type="Script" path="res://scripts/utilities/character_visual.gd" id="4_visual"]
+[ext_resource type="PackedScene" path="res://assets/custom/nela.glb" id="5_model"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_sibling"]
 radius = 0.35
-height = 1.3
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_sibling"]
-radius = 0.35
-height = 1.3
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sibling"]
-albedo_color = Color(0.55, 0.78, 0.6, 1)
-roughness = 0.75
-
-[sub_resource type="SphereMesh" id="SphereMesh_hair"]
-radius = 0.32
-height = 0.32
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hair"]
-albedo_color = Color(0.55, 0.32, 0.18, 1)
-roughness = 0.8
+height = 1.1
 
 [node name="Sibling" type="CharacterBody3D"]
-collision_layer = 1
-collision_mask = 1
+collision_layer = 16
+collision_mask = 7
 script = ExtResource("1_comp")
 definition = ExtResource("2_def")
 stats = ExtResource("3_stats")
@@ -35,24 +21,39 @@ guard_radius = 3.5
 detection_radius = 6.0
 
 [node name="Collision" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.65, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
 shape = SubResource("CapsuleShape3D_sibling")
 
-[node name="Body" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.65, 0)
-mesh = SubResource("CapsuleMesh_sibling")
-surface_material_override/0 = SubResource("StandardMaterial3D_sibling")
-
-[node name="Hair" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.55, 0, 0, 0, 1, 0, 1.45, 0)
-mesh = SubResource("SphereMesh_hair")
-surface_material_override/0 = SubResource("StandardMaterial3D_hair")
+[node name="Visual" type="Node3D" parent="."]
+script = ExtResource("4_visual")
+model_scene = ExtResource("5_model")
+model_scale = 0.65
+style = "hero"
+clips = {
+&"attack": "Spellcast_Shoot",
+&"cheer": "Cheer",
+&"death": "Death_A",
+&"gather": "Interact",
+&"getup": "Lie_StandUp",
+&"hit": "Hit_A",
+&"idle": "Idle",
+&"move": "Running_A"
+}
+reference_speed = 6.1
 
 [node name="TaskLabel" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.95, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
 billboard = 1
-text = "Idle"
+no_depth_test = true
+pixel_size = 0.009
+text = ""
 modulate = Color(0.9, 1, 0.8, 1)
 outline_modulate = Color(0, 0, 0, 1)
-font_size = 36
+font_size = 30
 outline_size = 8
+
+[node name="LanternLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.55, -0.15)
+light_color = Color(1, 0.78, 0.45, 1)
+light_energy = 0.7
+omni_range = 3.2

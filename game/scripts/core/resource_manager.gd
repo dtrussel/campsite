@@ -26,6 +26,16 @@ func _ready() -> void:
 	inventory_ready.emit()
 
 
+## Zeroes every counter (new run). Emits resource_changed per id so
+## any listening UI refreshes.
+func reset() -> void:
+	for id in _inventory.keys():
+		var previous: int = int(_inventory[id])
+		_inventory[id] = 0
+		if previous != 0:
+			resource_changed.emit(id, 0, -previous)
+
+
 func get_definitions() -> Array[ResourceDefinition]:
 	return _definitions
 
@@ -81,26 +91,15 @@ func spend_costs(costs: Dictionary) -> bool:
 func _load_definitions() -> void:
 	_definitions.clear()
 	_by_id.clear()
-	var dir: DirAccess = DirAccess.open(ITEM_DIR)
-	if dir == null:
-		push_warning("ResourceManager: cannot open %s" % ITEM_DIR)
-		return
-	dir.list_dir_begin()
-	var file_name: String = dir.get_next()
-	while file_name != "":
-		if not dir.current_is_dir() and file_name.ends_with(".tres"):
-			var path: String = ITEM_DIR + file_name
-			var loaded: Resource = load(path)
-			var def: ResourceDefinition = loaded as ResourceDefinition
-			if def == null:
-				push_warning("ResourceManager: %s is not a ResourceDefinition" % path)
-			elif def.id == &"":
-				push_warning("ResourceManager: %s has empty id; skipping" % path)
-			else:
-				_definitions.append(def)
-				_by_id[def.id] = def
-		file_name = dir.get_next()
-	dir.list_dir_end()
+	for loaded in DefinitionLoader.load_all(ITEM_DIR):
+		var def: ResourceDefinition = loaded as ResourceDefinition
+		if def == null:
+			push_warning("ResourceManager: %s is not a ResourceDefinition" % loaded.resource_path)
+		elif def.id == &"":
+			push_warning("ResourceManager: %s has empty id; skipping" % loaded.resource_path)
+		else:
+			_definitions.append(def)
+			_by_id[def.id] = def
 	_definitions.sort_custom(_compare_definitions)
 
 

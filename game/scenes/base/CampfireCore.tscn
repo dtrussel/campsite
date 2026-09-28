@@ -1,50 +1,30 @@
-[gd_scene load_steps=7 format=3 uid="uid://b0campsitebase01"]
+[gd_scene load_steps=5 format=3 uid="uid://b0campsitebase01"]
 
+[ext_resource type="PackedScene" path="res://assets/custom/campfire.glb" id="m_new"]
 [ext_resource type="Script" path="res://scripts/base/base_core.gd" id="1_basecore"]
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_logs"]
-top_radius = 0.5
-bottom_radius = 0.5
-height = 0.15
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_logs"]
-albedo_color = Color(0.36, 0.22, 0.12, 1)
-roughness = 0.95
-
-[sub_resource type="PrismMesh" id="PrismMesh_flame"]
-size = Vector3(0.5, 0.9, 0.5)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_flame"]
-albedo_color = Color(1, 0.55, 0.18, 1)
-emission_enabled = true
-emission = Color(1, 0.5, 0.15, 1)
-emission_energy_multiplier = 1.5
-roughness = 0.4
+[ext_resource type="Script" path="res://scripts/world/fire_effect.gd" id="2_fire"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_core"]
-radius = 0.6
+radius = 0.75
 
 [node name="CampfireCore" type="StaticBody3D" groups=["base_core"]]
-collision_layer = 1
-collision_mask = 1
+collision_layer = 4
+collision_mask = 0
 script = ExtResource("1_basecore")
-max_hp = 200
+max_hp = 150
 
-[node name="Logs" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.075, 0)
-mesh = SubResource("CylinderMesh_logs")
-surface_material_override/0 = SubResource("StandardMaterial3D_logs")
+[node name="Visual" type="Node3D" parent="."]
 
-[node name="Flame" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
-mesh = SubResource("PrismMesh_flame")
-surface_material_override/0 = SubResource("StandardMaterial3D_flame")
+[node name="Model" parent="Visual" instance=ExtResource("m_new")]
+transform = Transform3D(1, 0, -0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
-[node name="Light" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
-light_color = Color(1, 0.7, 0.4, 1)
-light_energy = 2.5
-omni_range = 8.0
+[node name="Fire" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)
+script = ExtResource("2_fire")
+size = 1.1
+light_energy = 3.0
+light_range = 11.0
+smoke = false
 
 [node name="Collision" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)

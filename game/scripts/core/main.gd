@@ -2,14 +2,10 @@ extends Node
 
 ## Main
 ##
-## Entry point. Phase 0 keeps this minimal: loads the test world and
-## HUD as scene instances, and handles the Esc-to-quit input action.
+## Gameplay scene root: the test world plus HUD and overlays. Once the
+## whole scene is in the tree it tells GameManager to start the run, so
+## every scene-side listener hears the first day_started.
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("quit_game"):
-		# BuildManager treats Esc as cancel while in build mode; don't
-		# also quit the game in that case.
-		if BuildManager.is_in_build_mode():
-			return
-		get_tree().quit()
+func _ready() -> void:
+	GameManager.on_game_scene_ready.call_deferred()
