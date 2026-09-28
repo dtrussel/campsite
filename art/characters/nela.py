@@ -22,8 +22,8 @@ from lib import common, paint_bake, preview  # noqa: E402
 from characters import chibi, face_paint, head_loft, head_sculpt  # noqa: E402
 from characters.leo import render_previews, sculpt_previews  # noqa: E402
 
-SKIN = (0.98, 0.76, 0.62)
-SKIN_SHADE = (0.86, 0.56, 0.46)
+SKIN = (0.99, 0.72, 0.56)
+SKIN_SHADE = (0.88, 0.5, 0.38)
 BLUSH = (1.0, 0.5, 0.48)
 HAIR_LIGHT = (1.0, 0.88, 0.56)
 HAIR = (0.88, 0.64, 0.3)
@@ -73,8 +73,8 @@ FACE = face_paint.FaceLayout(
     brow_len=0.054, brow_colour=(0.66, 0.44, 0.22), brow_alpha=0.75, nose_z=-0.114, nose_w=0.014,
     mouth_z=-0.152, mouth_w=0.052, smile=7.0, smirk=0.0, open_mouth=0.016, lip_upper=0.003, lip_lower=0.008,
     lip_colour=(0.9, 0.48, 0.48), lip_dark=(0.52, 0.18, 0.18), tongue=(0.84, 0.38, 0.4), chin_z=-0.215,
-    skin_shadow=(0.78, 0.48, 0.42), blush=(1.0, 0.42, 0.42), blush_alpha=0.6, blush_pos=(0.12, -0.115),
-    contour=0.1, plane_light=1.0, face_half_w=0.21, catch2=0.9, flush_alpha=0.1, highlight=(1.0, 0.93, 0.87), freckle_colour=(0.72, 0.4, 0.28),
+    skin_shadow=(0.8, 0.46, 0.38), light_colour=(1.0, 0.9, 0.78), blush=(1.0, 0.42, 0.42), blush_alpha=0.6, blush_pos=(0.12, -0.115),
+    contour=0.1, plane_light=1.0, face_half_w=0.21, catch2=0.9, flush_alpha=0.16, highlight=(1.0, 0.93, 0.87), freckle_colour=(0.72, 0.4, 0.28),
     freckles=[(sx * x, z) for sx in (-1, 1) for x, z in ((0.095, -0.11), (0.115, -0.125), (0.135, -0.108),
                                                           (0.11, -0.14), (0.15, -0.13))])
 # Head (feature 014): a drawn, planar game head, related to Leo's but its
@@ -92,7 +92,7 @@ LOFT = head_loft.HeadLoft(
     nose_top=-0.075, nose_tip_z=-0.106, nose_base_z=-0.117, nose_h=0.013, nose_bridge_h=0.002,
     nose_w=(0.004, 0.009), nose_side=0.011, alae=0.0, cheek=0.009, cheek_pos=(0.115, -0.11),
     eye_inset=0.004, eye_plate=(1.1, 1.35), brow_shelf=0.003,
-    upper_lip=0.0025, lower_lip=0.0035, chin=0.003)
+    upper_lip=0.0025, lower_lip=0.0035, chin=0.003, rings=90)
 
 
 # ---------------------------------------------------------------- body
@@ -341,15 +341,15 @@ def top_bun():
     tie = chibi.torus(base + Vector((0, 0.005, 0.012)), 0.062, 0.017, name="tie", segs=(18, 8))
     common.set_color(tie, TIE)
     parts.append(tie)
-    for k in range(7):
-        a = k / 7 * math.tau + rng.uniform(-0.3, 0.3)
+    for k in range(11):
+        a = k / 11 * math.tau + rng.uniform(-0.3, 0.3)
         out = Vector((math.cos(a), math.sin(a), 0.15)).normalized()
         root = base + Vector((0, 0.02, 0.08)) + out * 0.05
         side = Vector((-out.y, out.x, 0)).normalized()
         L = rng.uniform(0.07, 0.13)
         wavy(parts, root, side, [root + out * L * 0.5, root + out * L * 0.9 + side * 0.02 - U * 0.02,
                                  root + out * L + side * 0.05 - U * 0.06],
-             rng.uniform(0.02, 0.03), 0.01, side, thickness=0.32, steps=7, sharp=True, tier=2)
+             rng.uniform(0.012, 0.02), 0.012, side, thickness=0.3, steps=7, sharp=True, tier=2)
     return parts
 
 
@@ -380,15 +380,17 @@ def hair():
         yaw = -math.pi + (k + 0.5) / 12 * math.tau
         if abs(yaw) < 1.0:
             continue                                     # keep the forehead for the fringe
-        pulled(yaw, 0.25 + 0.08 * (k % 2), 0.11, 0, lift=0.006)
-    for k in range(14):
+        pulled(yaw, 0.25 + 0.08 * (k % 2), 0.085, 0, lift=0.006)
+    for k in range(22):
         yaw = rng.uniform(-2.9, 2.9)
         if abs(yaw) < 0.9:
             continue
-        pulled(yaw, rng.uniform(0.3, 0.55), rng.uniform(0.05, 0.07), 1, lift=0.012)
+        pulled(yaw, rng.uniform(0.28, 0.58), rng.uniform(0.032, 0.05), 1, lift=0.012)
     # Wispy side-swept fringe, parted a little off-centre; lifted toward the bun.
-    for yaw, drop, fan, width, tier in ((-0.42, 0.09, -0.08, 0.035, 2), (-0.12, 0.07, -0.1, 0.03, 2),
-                                        (0.2, 0.08, 0.1, 0.03, 2), (0.45, 0.1, 0.08, 0.035, 2)):
+    for yaw, drop, fan, width, tier in ((-0.5, 0.1, -0.07, 0.026, 2), (-0.34, 0.08, -0.09, 0.022, 2),
+                                        (-0.16, 0.065, -0.1, 0.02, 2), (0.02, 0.06, 0.08, 0.018, 2),
+                                        (0.2, 0.075, 0.1, 0.022, 2), (0.36, 0.09, 0.09, 0.024, 2),
+                                        (0.52, 0.11, 0.07, 0.026, 2)):
         root, n = HEAD.point(yaw, 0.8, 0.006)
         side = Vector((-math.cos(yaw), -math.sin(yaw), 0))
         wavy(parts, root, F, [root + F * 0.05 + U * 0.02, root + F * 0.06 - U * drop * 0.5 - side * fan * 0.5,
@@ -397,33 +399,36 @@ def hair():
     # Loose face-framing locks from the temples to the chin, curling out.
     for side in (-1, 1):
         out = Vector((side, 0, 0))
-        for k, (yaw, length, width) in enumerate(((0.85, 0.26, 0.05), (1.05, 0.3, 0.045))):
+        for k, (yaw, length, width) in enumerate(((0.82, 0.24, 0.03), (0.95, 0.3, 0.034), (1.1, 0.27, 0.022))):
             root, n = HEAD.point(side * yaw, 0.32 - 0.06 * k, 0.012)
             wavy(parts, root, n, [root + out * 0.02 - U * length * 0.35 + F * 0.01,
                                   root + out * 0.03 - U * length * 0.8 + F * 0.02,
                                   root + out * 0.08 - U * length + F * 0.015], width, 0.018, F,
                  thickness=0.34, steps=9, sharp=True, twist=side * 0.4, tier=1)
     # Loose locks at the nape.
-    for k, yaw in enumerate((2.6, 2.95, 3.3, 3.65)):
+    for k, yaw in enumerate((2.5, 2.75, 3.0, 3.25, 3.5, 3.75)):
         root, n = HEAD.point(yaw, -0.05, 0.01)
         flat = Vector((n.x, n.y, 0)).normalized()
-        length = rng.uniform(0.14, 0.22)
+        length = rng.uniform(0.12, 0.22)
         wavy(parts, root, n, [root - U * length * 0.4 + flat * 0.02, root - U * length * 0.85 + flat * 0.04,
-                              root - U * length + flat * 0.07], rng.uniform(0.05, 0.07), 0.015,
+                              root - U * length + flat * 0.07], rng.uniform(0.03, 0.045), 0.015,
              Vector((1, 0, 0)) * rng.choice((-1, 1)), thickness=0.36, sharp=True, tier=1)
     # Flyaways: thin strands curling off the mass (the messy outline).
-    for k in range(12):
+    for k in range(26):
         yaw = rng.uniform(-3.0, 3.0)
         if abs(yaw) < 0.8:
             yaw += 0.8 * math.copysign(1, yaw)
-        pitch = rng.uniform(0.2, 0.9)
-        root, n = HEAD.point(yaw, pitch, 0.03)
-        curl = Vector((math.cos(yaw), math.sin(yaw), 0)) * rng.choice((-1, 1))
-        length = rng.uniform(0.06, 0.1)
-        wavy(parts, root, n, [root + n * length * 0.2 + curl * length * 0.5,
-                              root + n * length * 0.35 + curl * length * 0.95,
-                              root + n * length * 0.25 + curl * length * 1.15 - U * 0.015],
-             rng.uniform(0.014, 0.022), 0.01, curl, thickness=0.3, steps=7, sharp=True, tier=2)
+        pitch = rng.uniform(0.1, 0.95)
+        root, n = HEAD.point(yaw, pitch, 0.028)
+        side = Vector((math.cos(yaw), math.sin(yaw), 0)) * rng.choice((-1, 1))
+        # Droop sideways-and-down along the mass, lifting off it a little,
+        # then curl back: a loose wisp, not a straw.
+        curl = (side * 0.7 - U * rng.uniform(0.4, 0.8)).normalized()
+        length = rng.uniform(0.08, 0.14)
+        wavy(parts, root, n, [root + n * length * 0.25 + curl * length * 0.45,
+                              root + n * length * 0.3 + curl * length * 0.9 + side * 0.015,
+                              root + n * length * 0.1 + curl * length * 1.1 + side * 0.04],
+             rng.uniform(0.01, 0.016), 0.02, side, thickness=0.3, steps=9, sharp=True, tier=2)
     parts += top_bun()
     return parts
 
@@ -657,7 +662,7 @@ def build():
         # Softer occlusion and a warm shadow tint on the head: the face keeps
         # the art's warm, bright skin instead of going violet-grey.
         extra = dict(ao_strength=0.4, ao_distance=0.05, overlay=(FACE_PNG, "FaceUV"), cavity=0.25,
-                     shadow=(0.8, 0.62, 0.62), light=(1.14, 1.06, 0.98), key_strength=0.35,
+                     shadow=(0.84, 0.58, 0.5), light=(1.12, 1.03, 0.94), key_strength=0.35,
                      curvature_tint=((0.9, 0.7, 0.64), (1.05, 1.03, 1.02), 0.45)) \
             if mesh is head else dict(cavity=0.3)
         paint_bake.paint(mesh, source="attribute", **dict(params, **extra))

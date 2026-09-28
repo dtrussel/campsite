@@ -98,9 +98,11 @@ static func _make_painted(base: StandardMaterial3D, profile: String) -> Standard
 	if profile in ["hero", "shadow"]:
 		var outline: ShaderMaterial = ShaderMaterial.new()
 		outline.shader = OUTLINE_SHADER
+		# Heroes: a thinner, warm dark-brown ink line (reads hand-drawn, not
+		# black-marker); the imps keep a heavier purple line.
 		outline.set_shader_parameter("outline_color",
-			Color(0.16, 0.03, 0.22) if profile == "shadow" else Color(0.08, 0.05, 0.06))
-		outline.set_shader_parameter("thickness", 0.022)
+			Color(0.16, 0.03, 0.22) if profile == "shadow" else Color(0.16, 0.08, 0.05))
+		outline.set_shader_parameter("thickness", 0.022 if profile == "shadow" else 0.013)
 		material.next_pass = outline
 	return material
 

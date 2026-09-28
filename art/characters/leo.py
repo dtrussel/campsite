@@ -20,8 +20,8 @@ from mathutils import Matrix, Vector, noise  # noqa: E402
 from lib import common, paint_bake, preview  # noqa: E402
 from characters import chibi, face_paint, head_loft, head_sculpt  # noqa: E402
 
-SKIN = (0.95, 0.7, 0.55)
-SKIN_SHADE = (0.76, 0.46, 0.36)
+SKIN = (0.97, 0.68, 0.5)
+SKIN_SHADE = (0.8, 0.44, 0.32)
 BLUSH = (0.98, 0.5, 0.44)
 HAIR_LIGHT = (1.0, 0.86, 0.5)
 HAIR = (0.84, 0.6, 0.26)
@@ -74,8 +74,8 @@ FACE = face_paint.FaceLayout(
     brow_len=0.056, brow_colour=(0.44, 0.25, 0.1), brow_alpha=1.0, nose_z=-0.098, nose_w=0.016,
     mouth_z=-0.145, mouth_w=0.054, smile=7.0, smirk=0.06, open_mouth=0.011, lip_upper=0.004, lip_lower=0.007,
     lip_colour=(0.88, 0.5, 0.44), lip_dark=(0.5, 0.2, 0.16), tongue=(0.8, 0.36, 0.36), chin_z=-0.228,
-    skin_shadow=(0.72, 0.42, 0.34), blush=(0.98, 0.46, 0.4), blush_alpha=0.45, blush_pos=(0.125, -0.1),
-    contour=0.12, plane_light=1.0, face_half_w=0.19, catch2=0.8, flush_alpha=0.16, freckle_colour=(0.66, 0.36, 0.22),
+    skin_shadow=(0.74, 0.4, 0.3), light_colour=(1.0, 0.88, 0.74), blush=(0.98, 0.46, 0.4), blush_alpha=0.45, blush_pos=(0.125, -0.1),
+    contour=0.12, plane_light=1.0, face_half_w=0.19, catch2=0.8, flush_alpha=0.22, freckle_colour=(0.66, 0.36, 0.22),
     freckles=[(sx * x, z) for sx in (-1, 1) for x, z in ((0.03, -0.075), (0.045, -0.07), (0.06, -0.078),
                                                           (0.075, -0.09), (0.052, -0.088), (0.09, -0.1),
                                                           (0.11, -0.09), (0.1, -0.115), (0.022, -0.086))]
@@ -669,7 +669,7 @@ def build():
         # Softer occlusion and a warm shadow tint on the head: the face keeps
         # the art's warm, bright skin instead of going violet-grey.
         extra = dict(ao_strength=0.45, ao_distance=0.05, overlay=(FACE_PNG, "FaceUV"), cavity=0.3,
-                     shadow=(0.8, 0.62, 0.62), light=(1.14, 1.06, 0.98), key_strength=0.35,
+                     shadow=(0.84, 0.58, 0.5), light=(1.12, 1.03, 0.94), key_strength=0.35,
                      curvature_tint=((0.9, 0.7, 0.64), (1.05, 1.03, 1.02), 0.45)) \
             if mesh is head else dict(cavity=0.3)
         paint_bake.paint(mesh, source="attribute", **dict(params, **extra))
