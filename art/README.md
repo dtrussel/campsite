@@ -27,6 +27,7 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 | `characters/shadow_imp.py` | Brand-new imp body (metaballs along the Skeleton Minion rig, auto-weighted) with horns, wings, tail and glowing eyes |
 | `characters/leo.py`, `nela.py` | Leo and Nela, modelled from the concept art on the KayKit adventurer rig (all 76 clips) |
 | `characters/chibi.py` | Kit for the kids: fused, auto-weighted clothing; rigid gear; face decals (eyes, brows, smile); hair locks; boots, backpack parts. `QUICK=1` previews without baking |
+| `characters/face_paint.py` | LoL-style **painted faces**: numpy paints eyes (lids, liner, iris, catchlight), brushed brows, nose/lip shading, contours and face paint into a front-projected image; `chibi.sculpt_features` carves matching relief from the same `FaceLayout`, and `paint_bake`'s `overlay` bakes it under the lighting |
 | `ground/textures.py` | Seamless hand-painted grass, dirt and leaf-litter textures (numpy brush stamps) for `painted_ground.gdshader` |
 
 ## Conventions

@@ -27,7 +27,7 @@ shape = SubResource("CapsuleShape3D_sibling")
 [node name="Visual" type="Node3D" parent="."]
 script = ExtResource("4_visual")
 model_scene = ExtResource("5_model")
-model_scale = 0.66
+model_scale = 0.65
 style = "hero"
 clips = {
 &"attack": "Spellcast_Shoot",
@@ -39,7 +39,7 @@ clips = {
 &"idle": "Idle",
 &"move": "Running_A"
 }
-reference_speed = 4.8
+reference_speed = 6.1
 
 [node name="TaskLabel" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)

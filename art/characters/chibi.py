@@ -528,12 +528,12 @@ def brow(head, yaw, pitch, side, colour, width=0.075, arch=0.012, thick=0.018, t
 
 def sculpt_head(head, skin, skin_shade, blush, jaw=0.3, chin_len=0.15, chin_fwd=0.08, cheeks=0.0,
                 cheekbone=0.0, face_flat=0.08, back_flat=0.08, blush_yaw=0.62, blush_pitch=-0.3,
-                blush_size=0.09, name="head"):
+                blush_size=0.09, name="head", layout=None, features=None, tris=11000):
     """A stylised head: an egg-shaped cranium with the lower face
     tapered to a chin (jaw), the chin pulled down/forward, optional
     chubby cheeks or cheekbones, a flatter face plane and back. Binds
     the HeadFrame to it so the face decals follow the real surface."""
-    obj = ellipsoid(head.c, head.r, name=name, segs=(48, 32))
+    obj = ellipsoid(head.c, head.r, name=name, segs=(176, 132) if layout else (48, 32))
     r = head.r
     for v in obj.data.vertices:
         rel = v.co - head.c
@@ -565,6 +565,9 @@ def sculpt_head(head, skin, skin_shade, blush, jaw=0.3, chin_len=0.15, chin_fwd=
     mod.iterations = 2
     mod.factor = 0.5
     common.apply_all_modifiers(obj)
+    if layout is not None:
+        sculpt_features(obj, head, layout, **(features or {}))
+        decimate_tris(obj, tris)
     common.shade_smooth(obj)
     head.bind(obj)
     cheek_pts = [head.point(side * blush_yaw, blush_pitch)[0] for side in (-1, 1)]
@@ -578,6 +581,62 @@ def sculpt_head(head, skin, skin_shade, blush, jaw=0.3, chin_len=0.15, chin_fwd=
         return c
     common.color_by(obj, colour)
     return obj
+
+
+def sculpt_features(obj, head, L, socket=0.012, eyeball=0.005, brow=0.01, nose=0.028, lips=0.008, chin=0.008,
+                    cheekbone=0.0):
+    """Carves LoL-style facial relief into the front of a head using the
+    same FaceLayout as the painted face: eye sockets with a slight
+    eyeball, brow ridge, nose bridge/tip/wings, lips, philtrum, chin and
+    optional cheekbones. Displaces along -Y (toward the viewer)."""
+    c, r = head.c, head.r
+
+    def g(u, w, cu, cw, su, sw):
+        return math.exp(-((u - cu) / su) ** 2 - ((w - cw) / sw) ** 2)
+
+    for v in obj.data.vertices:
+        rel = v.co - c
+        front = max(0.0, min(1.0, (-rel.y / r.y - 0.35) / 0.4))
+        if front <= 0.0:
+            continue
+        u, w = rel.x, rel.z
+        d = 0.0
+        for side in (-1, 1):
+            ex = side * L.eye_x
+            d -= socket * g(u, w, ex, L.eye_z + L.eye_h * 0.4, L.eye_w * 1.4, L.eye_h * 2.6)
+            d += eyeball * g(u, w, ex, L.eye_z, L.eye_w * 0.95, L.eye_h * 1.2)
+            d += brow * g(u, w, ex * 0.95, L.eye_z + L.eye_h * 2.8, L.eye_w * 1.7, L.eye_h * 1.1)
+            d += nose * 0.35 * g(u, w, side * L.nose_w * 0.8, L.nose_z - 0.002, L.nose_w * 0.5, 0.01)
+            if cheekbone:
+                d += cheekbone * g(u, w, side * (L.eye_x + L.eye_w * 0.7), L.eye_z - 0.05, 0.04, 0.028)
+        d += brow * 0.7 * g(u, w, 0.0, L.eye_z + L.eye_h * 2.2, L.eye_w * 0.8, L.eye_h * 1.2)
+        span = max(0.02, L.eye_z - L.nose_z)
+        d += nose * 0.55 * g(u, w, 0.0, (L.eye_z + L.nose_z) * 0.5, L.nose_w * 0.5, span * 0.55)
+        d += nose * g(u, w, 0.0, L.nose_z + 0.004, L.nose_w * 0.75, 0.014)
+        d -= 0.002 * g(u, w, 0.0, (L.nose_z + L.mouth_z) * 0.5, 0.006, 0.012)
+        d += lips * g(u, w, 0.0, L.mouth_z + L.lip_upper * 0.6, L.mouth_w * 0.95, L.lip_upper * 1.3)
+        d += lips * 1.2 * g(u, w, 0.0, L.mouth_z - L.lip_lower * 0.6, L.mouth_w * 0.85, L.lip_lower * 1.1)
+        d -= lips * 0.5 * g(u, w, 0.0, L.mouth_z, L.mouth_w * 1.1, 0.003)
+        d += chin * g(u, w, 0.0, L.chin_z + 0.02, 0.035, 0.03)
+        v.co.y -= d * front
+    obj.data.update()
+
+
+def face_uv(obj, head, L, name="FaceUV"):
+    """Front-projected UVs matching the face_paint image space."""
+    mesh = obj.data
+    layer = mesh.uv_layers.get(name) or mesh.uv_layers.new(name=name)
+    for loop in mesh.loops:
+        co = mesh.vertices[loop.vertex_index].co
+        layer.data[loop.index].uv = (0.5 + (co.x - head.c.x) / (2 * L.size), 0.5 + (co.z - head.c.z) / (2 * L.size))
+
+
+def no_face_uv(obj, name="FaceUV"):
+    """Parts that must not receive face paint sample the empty corner."""
+    mesh = obj.data
+    layer = mesh.uv_layers.get(name) or mesh.uv_layers.new(name=name)
+    for d in layer.data:
+        d.uv = (0.002, 0.002)
 
 
 def almond_eye(head, yaw, pitch, side, w, h, iris, iris_dark, lash, tilt=0.0, iris_r=None, look=(0.0, 0.0),
@@ -966,15 +1025,21 @@ def finish(rig, soft_pieces, rigid_pieces, name, prop=None, **paint):
     return body
 
 
-def quick_material(obj):
-    """Preview-only material showing the 'Col' attribute (no bake)."""
+def quick_material(obj, overlay=None):
+    """Preview-only material showing the 'Col' attribute (no bake), plus
+    an optional painted overlay (image_path, uv_name)."""
+    from lib import paint_bake
     mat = bpy.data.materials.new(obj.name + "_quick")
     mat.use_nodes = True
     tree = mat.node_tree
     bsdf = tree.nodes.get("Principled BSDF")
     attr = tree.nodes.new("ShaderNodeVertexColor")
     attr.layer_name = "Col"
-    tree.links.new(attr.outputs["Color"], bsdf.inputs["Base Color"])
+    colour = attr.outputs["Color"]
+    if overlay:
+        geo = tree.nodes.new("ShaderNodeNewGeometry")
+        colour = paint_bake.overlay_socket(tree, colour, geo, *overlay)
+    tree.links.new(colour, bsdf.inputs["Base Color"])
     bsdf.inputs["Roughness"].default_value = 0.8
     obj.data.materials.clear()
     obj.data.materials.append(mat)

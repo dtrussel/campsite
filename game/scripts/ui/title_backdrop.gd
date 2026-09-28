@@ -42,8 +42,8 @@ func _ready() -> void:
 		if child is HealthBar3D:
 			child.queue_free()
 
-	_character("custom/leo.glb", 0.72, "hero", Vector3(1.5, 0, 1.0), [], "Sit_Floor_Idle")
-	_character("custom/nela.glb", 0.66, "hero", Vector3(-1.4, 0, 1.2), [], "Sit_Floor_Idle")
+	_character("custom/leo.glb", 0.7, "hero", Vector3(1.5, 0, 1.0), [], "Sit_Floor_Idle")
+	_character("custom/nela.glb", 0.65, "hero", Vector3(-1.4, 0, 1.2), [], "Sit_Floor_Idle")
 	for spot in [Vector3(-7.5, 0, -8.0), Vector3(-5.0, 0, -9.5), Vector3(8.0, 0, -7.0)]:
 		_character("custom/shadow_imp.glb", 0.62, "shadow", spot, [], "Taunt")
 

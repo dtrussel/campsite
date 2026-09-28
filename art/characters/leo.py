@@ -17,10 +17,10 @@ import bmesh  # noqa: E402
 from mathutils import Matrix, Vector, noise  # noqa: E402
 
 from lib import common, paint_bake, preview  # noqa: E402
-from characters import chibi  # noqa: E402
+from characters import chibi, face_paint  # noqa: E402
 
-SKIN = (1.0, 0.8, 0.66)
-SKIN_SHADE = (0.94, 0.66, 0.54)
+SKIN = (0.96, 0.74, 0.6)
+SKIN_SHADE = (0.8, 0.52, 0.42)
 BLUSH = (1.0, 0.56, 0.52)
 HAIR_LIGHT = (1.0, 0.84, 0.48)
 HAIR = (0.86, 0.62, 0.28)
@@ -33,14 +33,14 @@ TEAL_DARK = (0.06, 0.38, 0.4)
 WRAP = (0.95, 0.92, 0.84)
 LASH = (0.2, 0.12, 0.08)
 FRECKLE = (0.9, 0.6, 0.45)
-TEE = (0.56, 0.76, 0.93)
-TEE_DARK = (0.4, 0.6, 0.82)
+TEE = (0.5, 0.66, 0.8)
+TEE_DARK = (0.3, 0.44, 0.6)
 BADGE = (0.16, 0.28, 0.52)
 BADGE_TREE = (0.35, 0.68, 0.3)
-SHORTS = (0.09, 0.4, 0.5)
-SHORTS_DARK = (0.06, 0.28, 0.38)
-LIME = (0.68, 0.88, 0.22)
-SHORTS_LIGHT = (0.32, 0.68, 0.78)
+SHORTS = (0.1, 0.34, 0.4)
+SHORTS_DARK = (0.05, 0.2, 0.27)
+LIME = (0.62, 0.78, 0.24)
+SHORTS_LIGHT = (0.3, 0.56, 0.62)
 SOCK = (0.72, 0.72, 0.74)
 BOOT = (0.22, 0.28, 0.4)
 BOOT_TOE = (0.5, 0.46, 0.4)
@@ -60,8 +60,28 @@ BARK_LIGHT = (0.64, 0.46, 0.28)
 LEAF = (0.4, 0.66, 0.26)
 RED = (0.88, 0.2, 0.18)
 
-HEAD = chibi.HeadFrame((0, -0.01, 1.61), (0.29, 0.28, 0.34))
-PROP = chibi.Proportions(legs=1.6, spine=1.2, arms=1.15)
+HEAD = chibi.HeadFrame((0, -0.01, 1.56), (0.25, 0.245, 0.3))
+PROP = chibi.Proportions(legs=1.85, spine=1.3, arms=1.25)
+GLOVE = (0.3, 0.22, 0.18)
+SHIN_WRAP = (0.34, 0.3, 0.28)
+FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "leo_face.png")
+# Ekko-style painted face: fairly small almond eyes under heavy, confident
+# lids, thick brows (his left one cocked), a firm sly smirk, freckles and
+# teal face-paint marks on the cheekbones.
+FACE = face_paint.FaceLayout(
+    size=0.3, eye_x=0.08, eye_z=-0.005, eye_w=0.039, eye_h=0.019, eye_tilt=0.1, lid=0.32, iris_r=0.017,
+    look=(0.004, 0.0), iris=(0.32, 0.68, 0.92), iris_dark=(0.04, 0.22, 0.42), lash=(0.14, 0.08, 0.06),
+    lash_width=0.008, wing=0.008, lower_lash=0.35, eyeshadow=(0.74, 0.5, 0.44), eyeshadow_alpha=0.25,
+    socket=(0.62, 0.38, 0.32), brows=((0.03, 0.3, 0.014, 0.008), (0.018, 0.12, 0.014, 0.003)), brow_len=0.058,
+    brow_colour=(0.3, 0.17, 0.08), nose_z=-0.078, nose_w=0.017, mouth_z=-0.142, mouth_w=0.036, smile=3.5,
+    smirk=-0.12, lip_upper=0.0045, lip_lower=0.0065, lip_colour=(0.86, 0.56, 0.5), lip_dark=(0.52, 0.26, 0.22),
+    chin_z=-0.235, skin_shadow=(0.58, 0.34, 0.28), blush_alpha=0.12, contour=0.6, blush_pos=(0.11, -0.07),
+    freckles=[(0.035, -0.06), (0.05, -0.052), (0.063, -0.062), (0.028, -0.07), (-0.035, -0.06), (-0.05, -0.052),
+              (-0.063, -0.062), (-0.028, -0.07), (0.012, -0.055), (-0.012, -0.055)],
+    marks=[([(side * 0.098, -0.036), (side * 0.108, -0.066)], [0.007, 0.0015], (0.1, 0.62, 0.6), 0.95)
+           for side in (-1, 1)] + [([(side * 0.12, -0.03), (side * 0.128, -0.052)], [0.005, 0.0012],
+                                    (0.1, 0.62, 0.6), 0.9) for side in (-1, 1)])
+FEATURES = dict(socket=0.016, eyeball=0.005, brow=0.016, nose=0.028, lips=0.007, chin=0.014, cheekbone=0.016)
 
 
 def camo(pos, normal):
@@ -115,17 +135,17 @@ def shirt_piece():
 def shorts_piece():
     parts = [chibi.ellipsoid((0, 0, 0.58), (0.24, 0.195, 0.14), name="hips")]
     for s in (-1, 1):
-        parts.append(chibi.tube([(s * 0.13, 0, 0.6), (s * 0.17, 0, 0.29)], [0.12, 0.118], name="shortleg", levels=2))
+        parts.append(chibi.tube([(s * 0.13, 0, 0.6), (s * 0.18, 0, 0.27)], [0.13, 0.135], name="shortleg", levels=2))
     shorts = chibi.fuse(parts, "Shorts", voxel=0.012, faces=2000)
-    chibi.cut_open(shorts, (0, 0, 0.31), (0, 0, -1))
+    chibi.cut_open(shorts, (0, 0, 0.285), (0, 0, -1))
 
     def colour(pos, normal):
         z = pos.z
-        if 0.39 < z < 0.42:
+        if 0.37 < z < 0.385:
             return LIME
-        if 0.43 < z < 0.445:
+        if 0.392 < z < 0.4:
             return SHORTS_LIGHT
-        if z < 0.34:
+        if z < 0.315:
             return SHORTS_DARK  # hem
         if abs(normal.x) > 0.85 and z > 0.46:
             return SHORTS_LIGHT  # side panel
@@ -153,13 +173,23 @@ def badge():
 def hands_and_feet():
     rigid = []
     for h, bone in chibi.hands(SKIN, radius=0.092):
+        # Fingerless gloves (Ekko): leather over the palm, skin fingertips.
+        common.color_by(h, lambda p, n: SKIN if abs(p.x) > 0.905 else GLOVE, smooth=False)
         rigid.append((h, bone))
     for s, bone in ((1, "foot.l"), (-1, "foot.r")):
         for part in chibi.boot(s, BOOT, SOLE, BOOT_TOE, LACE, accent=BOOT_ACCENT, scale=1.3):
             rigid.append((part, bone))
         sock = chibi.tube([(s * 0.17, 0.02, 0.27), (s * 0.17, 0.02, 0.14)], [0.07, 0.074], name="sock", levels=1)
-        common.color_by(sock, lambda p, n: common.lerp(SOCK, (1, 1, 1), 0.25) if p.z > 0.245 else SOCK)
+        common.set_color(sock, SOCK)
         rigid.append((sock, "lowerleg." + bone[-1]))
+        # Shin wraps criss-crossing above the shoes (Ekko).
+        for k in range(4):
+            z = 0.17 + k * 0.03
+            ring = chibi.torus((s * 0.17, 0.02, z), 0.076, 0.011, name="shinwrap", segs=(16, 6))
+            ring.data.transform(Matrix.Translation((s * 0.17, 0.02, z)) @ Matrix.Rotation(0.25 * (-1) ** k, 4, "X")
+                                @ Matrix.Translation((-s * 0.17, -0.02, -z)))
+            common.set_color(ring, SHIN_WRAP)
+            rigid.append((ring, "lowerleg." + bone[-1]))
     return rigid
 
 
@@ -238,8 +268,8 @@ def hair_and_cap():
     # Ekko-style upswept quiff bursting out of the (pushed-back) cap's
     # front opening: big clumps rising up and curling back, tallest in
     # the middle, plus one rebel strand falling over his forehead.
-    for k, (yaw, height, width) in enumerate(((0.5, 0.2, 0.09), (0.26, 0.29, 0.11), (0.02, 0.34, 0.115),
-                                              (-0.22, 0.31, 0.11), (-0.46, 0.23, 0.095))):
+    for k, (yaw, height, width) in enumerate(((0.42, 0.22, 0.075), (0.21, 0.31, 0.09), (0.0, 0.37, 0.095),
+                                              (-0.2, 0.33, 0.09), (-0.4, 0.24, 0.078))):
         root, n = HEAD.point(yaw, 0.7, -0.014)
         lean = 0.04 + 0.03 * k  # the swoosh leans to his right, more on that side
         controls = [root + F * 0.08 + U * height * 0.4,
@@ -251,9 +281,6 @@ def hair_and_cap():
         root, n = HEAD.point(yaw, 0.62, -0.01)
         clump(parts, root, F, [root + F * 0.08 + U * 0.08, root + F * 0.07 + U * height + R * 0.05,
                                root - F * 0.02 + U * (height + 0.02) + R * 0.12], 0.07, thickness=0.6)
-    root, n = HEAD.point(-0.3, 0.6, -0.01)
-    clump(parts, root, n, [root + F * 0.06 - U * 0.02 + R * 0.02, root + F * 0.06 + R * 0.07 - U * 0.08,
-                           root + F * 0.03 + R * 0.12 - U * 0.1], 0.042)
     # Tight sides over the ears and a short nape, flicking out at the tips.
     for side in (-1, 1):
         out = Vector((side, 0, 0))
@@ -325,54 +352,31 @@ def hair_and_cap():
     return parts
 
 
-def face():
-    """Ekko-style: heavy half-lidded confident eyes under thick angled
-    brows, a wide cocky grin and camp face-paint marks on the
-    cheekbones (echoing Ekko's markings)."""
-    parts = []
-    for side in (-1, 1):
-        parts += chibi.almond_eye(HEAD, side * 0.35, -0.03, side, 0.066, 0.046, IRIS, IRIS_DARK, LASH, tilt=0.12,
-                                  iris_r=0.04, look=(0.008, 0.0), name="eye", lid_drop=0.28, lid_scale=1.5,
-                                  pupil=0.4, big_highlight=0.34)
-        # One cocky raised brow (his left), one lower and determined.
-        cocky = side > 0
-        parts.append(chibi.brow(HEAD, side * 0.36, 0.33 if cocky else 0.22, side, BROW, width=0.09,
-                                arch=0.02 if cocky else 0.004, thick=0.032, tilt=0.3 if cocky else 0.18))
-        # Face-paint: two short teal stripes under each eye.
-        for k in range(2):
-            y0 = side * (0.36 + 0.07 * k)
-            parts.append(HEAD.ribbon(y0, -0.27 - 0.03 * k, [(0.0, 0.02), (0.012 * side, -0.02)], [0.012, 0.006],
-                                     0.0045, TEAL, name="paint"))
-    parts += chibi.smirk(HEAD, -0.56, 0.072, 0.004, side=-1, open_depth=0.032)
-    for yaw, pitch in ((-0.14, -0.22), (-0.2, -0.25), (0.14, -0.22), (0.2, -0.25), (-0.08, -0.2), (0.08, -0.2)):
-        parts.append(HEAD.ellipse(yaw, pitch, 0.005, 0.0045, 0.004, FRECKLE, name="freckle", nu=6, nv=2))
-    # A small, straight nose.
-    p, n = HEAD.point(0, -0.26)
-    nose = chibi.ellipsoid((0, 0, 0), (0.015, 0.02, 0.03), name="nose", segs=(14, 10))
-    nose.data.transform(Matrix.Translation(p - n * 0.008 + Vector((0, 0, 0.01))) @ Matrix.Rotation(-0.35, 4, "X"))
-    common.color_by(nose, lambda pos, nrm: common.lerp(SKIN, SKIN_SHADE, max(0.0, -nrm.z * 0.8)))
-    parts.append(nose)
-    return parts
-
-
 def ears():
     parts = []
     for side in (-1, 1):
         p, n = HEAD.point(side * 1.5, -0.08)
-        e = chibi.ellipsoid((0, 0, 0), (0.028, 0.045, 0.06), name="ear", segs=(16, 10))
+        e = chibi.ellipsoid((0, 0, 0), (0.024, 0.038, 0.052), name="ear", segs=(16, 10))
         e.data.transform(Matrix.Translation(p + n * 0.012) @ Matrix.Rotation(side * -0.35, 4, "Z")
                          @ Matrix.Rotation(-0.25, 4, "X"))
-        common.color_by(e, lambda pos, nrm, n=n: BLUSH if nrm.dot(n) > 0.6 else SKIN, smooth=False)
+        common.color_by(e, lambda pos, nrm, n=n: SKIN_SHADE if nrm.dot(n) > 0.6 else SKIN, smooth=False)
         parts.append(e)
     return parts
 
 
 def head_piece():
-    head = chibi.sculpt_head(HEAD, SKIN, SKIN_SHADE, BLUSH, jaw=0.28, chin_len=0.1, chin_fwd=0.08,
-                             cheekbone=0.14, face_flat=0.12, blush_yaw=0.5, blush_pitch=-0.3, blush_size=0.05)
-    parts = [head] + ears() + face() + hair_and_cap()
-    chibi.report(parts)
-    return common.join(parts, "Leo_Head")
+    face_paint.paint_face(FACE, FACE_PNG)
+    head = chibi.sculpt_head(HEAD, SKIN, SKIN_SHADE, BLUSH, jaw=0.17, chin_len=0.08, chin_fwd=0.1,
+                             cheekbone=0.12, face_flat=0.14, blush_yaw=0.5, blush_pitch=-0.3, blush_size=0.01,
+                             layout=FACE, features=FEATURES)
+    chibi.face_uv(head, HEAD, FACE)
+    ear_parts = ears()
+    for part in ear_parts:
+        chibi.no_face_uv(part)
+    hair = hair_and_cap()
+    chibi.report([head] + ear_parts + hair)
+    # Separate textures: the face gets most of the head's texels.
+    return common.join([head] + ear_parts, "Leo_Head"), common.join(hair, "Leo_Hair")
 
 
 # ----------------------------------------------------------------- gear
@@ -460,29 +464,31 @@ def build():
     collar = chibi.torus((0, 0, 1.2), 0.09, 0.022, name="collar")
     common.set_color(collar, TEE_DARK)
     rigid.append((collar, "chest"))
-    head = head_piece()
+    head, hair = head_piece()
     PROP.stretch_rig(rig)
     body = chibi.finish(rig, soft, rigid, "Leo", prop=PROP)
     PROP.stretch_mesh(head)
+    PROP.stretch_mesh(hair)
     walking_stick = stick(rig, chibi.idle_hand_height(rig))
-    for obj, bone in ((head, "head"), (walking_stick, "hand.r")):
+    for obj, bone in ((head, "head"), (hair, "head"), (walking_stick, "hand.r")):
         chibi.rigid(obj, bone)
         obj.parent = rig
         obj.modifiers.new("Armature", "ARMATURE").object = rig
 
-    meshes = [body, head, walking_stick]
+    meshes = [body, head, hair, walking_stick]
     if chibi.quick_mode():
         for mesh in meshes:
-            chibi.quick_material(mesh)
+            chibi.quick_material(mesh, overlay=(FACE_PNG, "FaceUV") if mesh is head else None)
         print("leo tris:", common.triangle_count(meshes))
         render_previews(rig, meshes, head, "leo", ("Running_A", 8), ("1H_Melee_Attack_Chop", 14), ("PickUp", 12), ("Death_A", 40))
         return
-    params = dict(size=1024, ao_distance=0.16, ao_strength=0.5, edge_strength=0.3, edge_radius=0.012,
-                  noise_scale=6.0, stroke_strength=0.05, light=(1.14, 1.06, 0.96), shadow=(0.5, 0.44, 0.66),
-                  foot_darken=0.32, foot_height=0.9)
+    params = dict(size=1024, ao_distance=0.18, ao_strength=0.65, edge_strength=0.3, edge_radius=0.012,
+                  noise_scale=6.0, stroke_strength=0.08, light=(1.12, 1.04, 0.94), shadow=(0.42, 0.36, 0.55),
+                  foot_darken=0.4, foot_height=1.1, key_light=(-0.4, -0.6, 0.8), key_strength=0.45)
     for mesh in meshes:
         # Softer occlusion on the head so the fringe doesn't smudge the face.
-        extra = dict(ao_strength=0.28, ao_distance=0.08) if mesh is head else {}
+        extra = dict(ao_strength=0.45, ao_distance=0.05, overlay=(FACE_PNG, "FaceUV"), cavity=0.3) \
+            if mesh is head else dict(cavity=0.2)
         paint_bake.paint(mesh, source="attribute", **dict(params, **extra))
     rig.data.pose_position = "POSE"
     common.export_glb(os.path.join(common.OUT_DIR, "leo.glb"), [rig] + meshes, animations=True)
@@ -493,7 +499,7 @@ def build():
 def render_previews(rig, meshes, head, name, *actions):
     rig.data.pose_position = "REST"
     preview.render(meshes, name, elevation=10, azimuth=25)
-    preview.render([head], name + "_face", elevation=4, azimuth=12, size=384)
+    preview.render([head], name + "_face", elevation=4, azimuth=12, size=512)
     preview.render(meshes, name + "_back", elevation=15, azimuth=160, size=384)
     rig.data.pose_position = "POSE"
     rig.animation_data_create()

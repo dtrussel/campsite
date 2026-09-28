@@ -18,7 +18,7 @@ import bmesh  # noqa: E402
 from mathutils import Matrix, Vector, noise  # noqa: E402
 
 from lib import common, paint_bake, preview  # noqa: E402
-from characters import chibi  # noqa: E402
+from characters import chibi, face_paint  # noqa: E402
 from characters.leo import render_previews  # noqa: E402
 
 SKIN = (1.0, 0.82, 0.7)
@@ -57,8 +57,24 @@ BRONZE = (0.64, 0.44, 0.22)
 BRONZE_DARK = (0.36, 0.22, 0.12)
 GLOW = (1.0, 0.8, 0.38)
 
-HEAD = chibi.HeadFrame((0, -0.01, 1.63), (0.39, 0.37, 0.38))
-PROP = chibi.Proportions(legs=1.1, spine=1.0, arms=1.0)
+HEAD = chibi.HeadFrame((0, -0.01, 1.58), (0.31, 0.3, 0.32))
+PROP = chibi.Proportions(legs=1.3, spine=1.1, arms=1.1)
+WARMER = (0.9, 0.5, 0.66)
+WARMER_DARK = (0.5, 0.2, 0.4)
+FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "nela_face.png")
+# Annie-style painted face: big eyes under heavy, sly lids with smoky
+# pink-violet shadow and a winged liner, brows angled in (mischief), a
+# small nose, small full rosy lips in a sly half-smile, strong blush.
+FACE = face_paint.FaceLayout(
+    size=0.36, eye_x=0.1, eye_z=-0.045, eye_w=0.058, eye_h=0.034, eye_tilt=0.06, lid=0.28, iris_r=0.03,
+    look=(0.0, 0.0), iris=(0.4, 0.74, 0.98), iris_dark=(0.08, 0.28, 0.55), lash=(0.12, 0.06, 0.08),
+    lash_width=0.0095, wing=0.011, lower_lash=0.5, eyeshadow=(0.66, 0.4, 0.58), eyeshadow_alpha=0.45,
+    socket=(0.7, 0.44, 0.48), brows=((0.022, 0.22, 0.01, 0.006), (0.022, 0.22, 0.01, 0.006)), brow_len=0.058,
+    brow_colour=(0.55, 0.36, 0.2), nose_z=-0.115, nose_w=0.014, mouth_z=-0.165, mouth_w=0.028, smile=6.0,
+    smirk=0.12, lip_upper=0.006, lip_lower=0.009, lip_colour=(0.86, 0.42, 0.48), lip_dark=(0.58, 0.22, 0.3),
+    chin_z=-0.24, skin_shadow=(0.7, 0.44, 0.42), blush=(1.0, 0.45, 0.5), blush_alpha=0.4, blush_pos=(0.125, -0.1),
+    contour=0.4, highlight=(1.0, 0.92, 0.86))
+FEATURES = dict(socket=0.012, eyeball=0.006, brow=0.008, nose=0.016, lips=0.007, chin=0.008)
 
 
 # ---------------------------------------------------------------- body
@@ -77,8 +93,8 @@ def skin_piece():
 
 def shirt_piece():
     parts = [
-        chibi.ellipsoid((0, 0, 1.01), (0.24, 0.2, 0.21), name="chest"),
-        chibi.ellipsoid((0, -0.03, 0.78), (0.28, 0.25, 0.27), name="belly"),
+        chibi.ellipsoid((0, 0, 1.01), (0.225, 0.19, 0.21), name="chest"),
+        chibi.ellipsoid((0, -0.02, 0.78), (0.245, 0.215, 0.27), name="belly"),
     ]
     for s in (-1, 1):
         parts.append(chibi.tube([(s * 0.13, 0, 1.1), (s * 0.37, 0, 1.1)], [0.11, 0.1], name="sleeve", levels=2))
@@ -119,12 +135,12 @@ def pants_piece():
     parts = [chibi.ellipsoid((0, 0, 0.57), (0.29, 0.235, 0.15), name="hips")]
     for s in (-1, 1):
         parts.append(chibi.tube([(s * 0.14, 0, 0.58), (s * 0.185, -0.01, 0.36), (s * 0.18, 0.015, 0.2)],
-                                [0.15, 0.158, 0.118], name="pantleg", levels=2))
+                                [0.15, 0.158, 0.13], name="pantleg", levels=2))
     pants = chibi.fuse(parts, "Pants", voxel=0.011, faces=5200)
-    chibi.cut_open(pants, (0, 0, 0.175), (0, 0, -1))
+    chibi.cut_open(pants, (0, 0, 0.33), (0, 0, -1))
 
     def colour(pos, normal):
-        if pos.z < 0.225:
+        if pos.z < 0.37:
             return PANTS_DARK  # gathered cuff
         leg_x = 0.17 if pos.x > 0 else -0.17
         return folk_pattern(pos, leg_x)
@@ -135,12 +151,14 @@ def pants_piece():
 def cuffs():
     parts = []
     for s, bone in ((1, "lowerleg.l"), (-1, "lowerleg.r")):
-        ring = chibi.torus((s * 0.175, 0.015, 0.2), 0.1, 0.03, name="cuff", segs=(22, 8))
+        ring = chibi.torus((s * 0.178, 0.005, 0.345), 0.115, 0.028, name="cuff", segs=(22, 8))
         common.set_color(ring, PANTS_DARK)
         parts.append((ring, bone))
-        sock = chibi.tube([(s * 0.17, 0.02, 0.22), (s * 0.17, 0.02, 0.13)], [0.074, 0.078], name="sock", levels=1)
-        common.set_color(sock, SOCK)
-        parts.append((sock, bone))
+        # Slouchy striped leg warmers (an Annie cue) above the boots.
+        warmer = chibi.tube([(s * 0.172, 0.01, 0.34), (s * 0.17, 0.02, 0.24), (s * 0.17, 0.02, 0.14)],
+                            [0.078, 0.09, 0.098], name="warmer", levels=2)
+        common.color_by(warmer, lambda p, n: WARMER if int((p.z - 0.12) / 0.028) % 2 == 0 else WARMER_DARK)
+        parts.append((warmer, bone))
     # Patch pocket on her right thigh.
     pocket = chibi.box((0.03, 0.12, 0.12), (-0.33, -0.01, 0.42), bevel=0.012, name="pocket")
     common.color_by(pocket, lambda p, n: PANTS_DARK if p.z > 0.45 else PANTS, smooth=False)
@@ -225,47 +243,71 @@ def pigtail(side):
 
 def hair():
     parts = [hair_cap()]
-    # Annie-style blunt fringe: straight clumps cut level across the brow.
-    for k in range(9):
-        yaw = -0.72 + k * 0.18
-        root, n = HEAD.point(yaw, 0.82, -0.005)
-        end_z = HEAD.point(yaw, 0.26)[0].z
-        tip, tn = HEAD.point(yaw, 0.26, 0.05)
-        controls = [root + F * 0.1 + U * 0.01, tip + tn * 0.02 + U * 0.05, Vector((tip.x, tip.y, end_z))]
-        clump(parts, root, n, controls, 0.085, thickness=0.4)
+    # Annie-style blunt fringe: a solid sheet following the forehead from
+    # the hairline down to just above the brows, cut straight across.
+    bm = bmesh.new()
+    cols, rows = 28, 10
+    grid = []
+    for i in range(cols + 1):
+        yaw = -0.95 + 1.9 * i / cols
+        column = []
+        for j in range(rows + 1):
+            pitch = 0.16 + (1.1 - 0.16) * j / rows
+            lift = 0.012 + 0.016 * (j / rows)
+            p, n = HEAD.point(yaw, pitch, lift)
+            column.append(bm.verts.new(p))
+        grid.append(column)
+    for i in range(cols):
+        for j in range(rows):
+            bm.faces.new((grid[i][j], grid[i + 1][j], grid[i + 1][j + 1], grid[i][j + 1]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    sheet = common.mesh_object("fringe", bm)
+    for f in sheet.data.polygons:
+        if f.normal.dot(f.center - HEAD.c) < 0:
+            f.flip()
+    mod = sheet.modifiers.new("Solid", "SOLIDIFY")
+    mod.thickness = 0.018
+    mod.offset = 1.0
+    sub = sheet.modifiers.new("Sub", "SUBSURF")
+    sub.levels = 1
+    common.apply_all_modifiers(sheet)
+    common.shade_smooth(sheet)
+
+    def strands(pos, normal):
+        rel = pos - HEAD.c
+        a = math.atan2(rel.x, -rel.y)
+        streak = math.sin(a * 60 + noise.noise(pos * 20) * 2.0) * 0.5 + 0.5
+        t = max(0.0, min(1.0, 0.55 + (rel.z / HEAD.r.z) * 0.5 + (streak - 0.5) * 0.4))
+        return common.lerp(HAIR_DARK, HAIR, t / 0.5) if t < 0.5 else common.lerp(HAIR, HAIR_LIGHT, (t - 0.5) / 0.5)
+    common.color_by(sheet, strands)
+    parts.append(sheet)
     for side in (-1, 1):
         parts += pigtail(side)
     return parts
 
 
-def face():
-    """Annie-style: a round face with huge, low-set, wide-apart eyes with
-    big dark pupils and sparkles, thin high brows, a tiny nose and a
-    small cheeky grin between big rosy cheeks."""
+def ears():
     parts = []
     for side in (-1, 1):
-        parts += chibi.almond_eye(HEAD, side * 0.41, -0.2, side, 0.088, 0.088, IRIS, IRIS_DARK, LASH, tilt=0.0,
-                                  iris_r=0.074, look=(0.0, 0.004), lower_lid=(0.85, 0.5, 0.52), flicks=3, name="eye",
-                                  pupil=0.55, big_highlight=0.38)
-        parts.append(HEAD.ellipse(side * 0.41, -0.2, 0.013, 0.013, 0.0095, (1.0, 1.0, 1.0),
-                                  du=0.03 * side, dv=-0.03, name="eye_hi2", nu=6, nv=2))
-        parts.append(chibi.brow(HEAD, side * 0.4, 0.2, side, BROW, width=0.07, arch=0.024, thick=0.011, tilt=-0.08))
-    parts += chibi.smile(HEAD, -0.6, 0.046, 0.036, 0.004, curve=4.5)
-    parts.append(chibi.nose(HEAD, SKIN, pitch=-0.4))
-    for side in (-1, 1):
         p, n = HEAD.point(side * 1.5, -0.15)
-        e = chibi.ellipsoid(p + n * 0.01, (0.035, 0.03, 0.05), name="ear", segs=(14, 8))
+        e = chibi.ellipsoid(p + n * 0.01, (0.03, 0.026, 0.044), name="ear", segs=(14, 8))
         common.set_color(e, SKIN)
         parts.append(e)
     return parts
 
 
 def head_piece():
-    head = chibi.sculpt_head(HEAD, SKIN, SKIN_SHADE, BLUSH, jaw=0.3, chin_len=0.03, chin_fwd=0.03, cheeks=0.2,
-                             face_flat=0.04, blush_yaw=0.62, blush_pitch=-0.46, blush_size=0.13)
-    parts = [head] + face() + hair()
-    chibi.report(parts)
-    return common.join(parts, "Nela_Head")
+    face_paint.paint_face(FACE, FACE_PNG)
+    head = chibi.sculpt_head(HEAD, SKIN, SKIN_SHADE, BLUSH, jaw=0.3, chin_len=0.04, chin_fwd=0.04, cheeks=0.16,
+                             face_flat=0.08, blush_yaw=0.62, blush_pitch=-0.46, blush_size=0.01,
+                             layout=FACE, features=FEATURES)
+    chibi.face_uv(head, HEAD, FACE)
+    ear_parts = ears()
+    for part in ear_parts:
+        chibi.no_face_uv(part)
+    hair_parts = hair()
+    chibi.report([head] + ear_parts + hair_parts)
+    return common.join([head] + ear_parts, "Nela_Head"), common.join(hair_parts, "Nela_Hair")
 
 
 # ----------------------------------------------------------------- gear
@@ -306,6 +348,15 @@ def bunny(hand):
     add(arm, BUNNY)
     add(chibi.ellipsoid(body_c + Vector((-0.08, -0.02, 0.02)), (0.03, 0.03, 0.05), name="bunny", segs=(12, 8)),
         BUNNY)
+    # Well-loved: a red button eye and a stitched patch on the tummy.
+    add(chibi.cylinder(head_c + Vector((0.042, -0.085, 0.02)), 0.02, 0.008, name="button", axis="Y", segments=12),
+        (0.82, 0.2, 0.2))
+    add(chibi.box((0.05, 0.012, 0.045), body_c + Vector((-0.015, -0.07, 0.01)), bevel=0.004, name="patch"),
+        (0.98, 0.76, 0.56))
+    for k in range(3):
+        stitch = chibi.box((0.03, 0.006, 0.005), body_c + Vector((-0.015, -0.078, -0.01 + k * 0.012)), bevel=0.0,
+                           name="stitch")
+        add(stitch, (0.4, 0.22, 0.2))
     # A little pink bow at the neck.
     add(chibi.ellipsoid(head_c + Vector((0, -0.06, -0.085)), (0.045, 0.02, 0.022), name="bow", segs=(12, 8)), TIE)
     obj = common.join(parts, "Nela_Bunny")
@@ -380,32 +431,34 @@ def build():
     collar = chibi.torus((0, 0, 1.2), 0.085, 0.02, name="collar")
     common.set_color(collar, TEE_DARK)
     rigid.append((collar, "chest"))
-    head = head_piece()
+    head, hair_obj = head_piece()
     PROP.stretch_rig(rig)
     body = chibi.finish(rig, soft, rigid, "Nela", prop=PROP)
     PROP.stretch_mesh(head)
+    PROP.stretch_mesh(hair_obj)
     lamp, glow = lantern(rig)
     plush = bunny(chibi.idle_bone_position(rig, "hand.l"))
     chibi.place_in_hand([plush], rig, "hand.l")
-    for obj, bone in ((head, "head"), (lamp, "hand.r"), (glow, "hand.r"), (plush, "hand.l")):
+    for obj, bone in ((head, "head"), (hair_obj, "head"), (lamp, "hand.r"), (glow, "hand.r"), (plush, "hand.l")):
         chibi.rigid(obj, bone)
         obj.parent = rig
         obj.modifiers.new("Armature", "ARMATURE").object = rig
 
-    meshes = [body, head, lamp, plush]
+    meshes = [body, head, hair_obj, lamp, plush]
     if chibi.quick_mode():
         for mesh in meshes:
-            chibi.quick_material(mesh)
+            chibi.quick_material(mesh, overlay=(FACE_PNG, "FaceUV") if mesh is head else None)
         paint_bake.flat_material(glow, GLOW, emission=3.0, name="lantern_glow")
         print("nela tris:", common.triangle_count(meshes + [glow]))
         render_previews(rig, meshes + [glow], head, "nela", ("Running_A", 8), ("Spellcast_Shoot", 12), ("PickUp", 12))
         return
-    params = dict(size=1024, ao_distance=0.16, ao_strength=0.5, edge_strength=0.3, edge_radius=0.012,
-                  noise_scale=6.0, stroke_strength=0.05, light=(1.14, 1.06, 0.96), shadow=(0.5, 0.44, 0.66),
-                  foot_darken=0.32, foot_height=0.9)
+    params = dict(size=1024, ao_distance=0.18, ao_strength=0.62, edge_strength=0.3, edge_radius=0.012,
+                  noise_scale=6.0, stroke_strength=0.08, light=(1.12, 1.04, 0.95), shadow=(0.45, 0.38, 0.58),
+                  foot_darken=0.38, foot_height=0.9, key_light=(-0.4, -0.6, 0.8), key_strength=0.4)
     for mesh in meshes:
         # Softer occlusion on the head so the fringe doesn't smudge the face.
-        extra = dict(ao_strength=0.28, ao_distance=0.08) if mesh is head else {}
+        extra = dict(ao_strength=0.4, ao_distance=0.05, overlay=(FACE_PNG, "FaceUV"), cavity=0.25) \
+            if mesh is head else dict(cavity=0.2)
         paint_bake.paint(mesh, source="attribute", **dict(params, **extra))
     paint_bake.flat_material(glow, GLOW, emission=3.0, name="lantern_glow")
     rig.data.pose_position = "POSE"

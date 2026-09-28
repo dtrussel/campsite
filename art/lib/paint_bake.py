@@ -28,6 +28,10 @@ DEFAULTS = {
     "stroke_strength": 0.06,
     "samples": 24,
     "margin": 8,
+    "overlay": None,     # (image_path, uv_name): painted face alpha-blended over the base colour
+    "key_light": None,   # (x, y, z) direction toward a baked key light
+    "key_strength": 0.0,
+    "cavity": 0.0,       # darken crevices (Geometry Pointiness)
     "foot_darken": 0.0,  # LoL-style: darker toward the feet (0 = off)
     "foot_height": 1.0,  # object-space height where the darkening fades out
 }
@@ -66,6 +70,35 @@ def _base_color_socket(tree, obj, source):
     return tex.outputs["Color"]
 
 
+def overlay_socket(tree, base, geo, image_path, uv_name, facing=-0.1):
+    """Alpha-blends a painted image (e.g. a face) over `base`, sampled on
+    the `uv_name` map and faded out on surfaces facing away from the
+    front (-Y)."""
+    image = bpy.data.images.load(image_path, check_existing=True)
+    image.alpha_mode = "STRAIGHT"
+    uv = _node(tree, "ShaderNodeUVMap", (-1300, 600))
+    uv.uv_map = uv_name
+    tex = _node(tree, "ShaderNodeTexImage", (-1100, 600))
+    tex.image = image
+    tex.extension = "CLIP"
+    tex.interpolation = "Cubic"
+    tree.links.new(uv.outputs["UV"], tex.inputs["Vector"])
+    sep = _node(tree, "ShaderNodeSeparateXYZ", (-1100, 800))
+    tree.links.new(geo.outputs["Normal"], sep.inputs["Vector"])
+    facing_mask = _node(tree, "ShaderNodeMapRange", (-900, 800))
+    facing_mask.inputs["From Min"].default_value = facing
+    facing_mask.inputs["From Max"].default_value = facing - 0.3
+    tree.links.new(sep.outputs["Y"], facing_mask.inputs["Value"])
+    fac = _node(tree, "ShaderNodeMath", (-900, 650), operation="MULTIPLY")
+    tree.links.new(tex.outputs["Alpha"], fac.inputs[0])
+    tree.links.new(facing_mask.outputs["Result"], fac.inputs[1])
+    mix = _node(tree, "ShaderNodeMix", (-700, 500), data_type="RGBA")
+    tree.links.new(fac.outputs["Value"], mix.inputs["Factor"])
+    tree.links.new(base, mix.inputs["A"])
+    tree.links.new(tex.outputs["Color"], mix.inputs["B"])
+    return mix.outputs["Result"]
+
+
 def _build_bake_material(obj, source, p):
     mat = bpy.data.materials.new(obj.name + "_bake")
     mat.use_nodes = True
@@ -77,6 +110,8 @@ def _build_bake_material(obj, source, p):
 
     base = _base_color_socket(tree, obj, source)
     geo = _node(tree, "ShaderNodeNewGeometry", (-1100, -200))
+    if p["overlay"]:
+        base = overlay_socket(tree, base, geo, *p["overlay"])
 
     # Top light: mix shadow->light tint by the normal's Z.
     sep = _node(tree, "ShaderNodeSeparateXYZ", (-900, -200))
@@ -94,6 +129,36 @@ def _build_bake_material(obj, source, p):
     lit.inputs["Factor"].default_value = 1.0
     tree.links.new(base, lit.inputs["A"])
     tree.links.new(tint.outputs["Result"], lit.inputs["B"])
+    if p["key_light"] and p["key_strength"] > 0:
+        # Baked key light (LoL textures carry strong painted lighting).
+        key_dot = _node(tree, "ShaderNodeVectorMath", (-700, 450), operation="DOT_PRODUCT")
+        tree.links.new(geo.outputs["Normal"], key_dot.inputs[0])
+        kl = p["key_light"]
+        length = sum(c * c for c in kl) ** 0.5
+        key_dot.inputs[1].default_value = tuple(c / length for c in kl)
+        key_map = _node(tree, "ShaderNodeMapRange", (-500, 450))
+        key_map.inputs["From Min"].default_value = -0.3
+        key_map.inputs["From Max"].default_value = 1.0
+        key_map.inputs["To Min"].default_value = 1.0 - p["key_strength"]
+        key_map.inputs["To Max"].default_value = 1.0 + p["key_strength"] * 0.35
+        tree.links.new(key_dot.outputs["Value"], key_map.inputs["Value"])
+        keyed = _node(tree, "ShaderNodeMix", (-200, 400), data_type="RGBA", blend_type="MULTIPLY")
+        keyed.inputs["Factor"].default_value = 1.0
+        tree.links.new(lit.outputs["Result"], keyed.inputs["A"])
+        tree.links.new(key_map.outputs["Result"], keyed.inputs["B"])
+        lit = keyed
+    if p["cavity"] > 0:
+        cav = _node(tree, "ShaderNodeMapRange", (-500, 650))
+        cav.inputs["From Min"].default_value = 0.44
+        cav.inputs["From Max"].default_value = 0.52
+        cav.inputs["To Min"].default_value = 1.0 - p["cavity"]
+        cav.inputs["To Max"].default_value = 1.0
+        tree.links.new(geo.outputs["Pointiness"], cav.inputs["Value"])
+        caved = _node(tree, "ShaderNodeMix", (-150, 600), data_type="RGBA", blend_type="MULTIPLY")
+        caved.inputs["Factor"].default_value = 1.0
+        tree.links.new(lit.outputs["Result"], caved.inputs["A"])
+        tree.links.new(cav.outputs["Result"], caved.inputs["B"])
+        lit = caved
 
     # Ambient occlusion darkens crevices.
     ao = _node(tree, "ShaderNodeAmbientOcclusion", (-500, -450))
