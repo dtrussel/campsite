@@ -19,69 +19,66 @@ from mathutils import Matrix, Vector, noise  # noqa: E402
 from lib import common, paint_bake, preview  # noqa: E402
 from characters import chibi, face_paint  # noqa: E402
 
-SKIN = (0.96, 0.74, 0.6)
-SKIN_SHADE = (0.8, 0.52, 0.42)
-BLUSH = (1.0, 0.56, 0.52)
-HAIR_LIGHT = (1.0, 0.84, 0.48)
-HAIR = (0.86, 0.62, 0.28)
-HAIR_DARK = (0.5, 0.32, 0.14)
-BROW = (0.5, 0.32, 0.15)
-IRIS = (0.28, 0.68, 0.92)
-IRIS_DARK = (0.04, 0.24, 0.46)
-TEAL = (0.12, 0.6, 0.58)
-TEAL_DARK = (0.06, 0.38, 0.4)
-WRAP = (0.95, 0.92, 0.84)
-LASH = (0.2, 0.12, 0.08)
-FRECKLE = (0.9, 0.6, 0.45)
-TEE = (0.5, 0.66, 0.8)
-TEE_DARK = (0.3, 0.44, 0.6)
-BADGE = (0.16, 0.28, 0.52)
-BADGE_TREE = (0.35, 0.68, 0.3)
-SHORTS = (0.1, 0.34, 0.4)
-SHORTS_DARK = (0.05, 0.2, 0.27)
-LIME = (0.62, 0.78, 0.24)
-SHORTS_LIGHT = (0.3, 0.56, 0.62)
-SOCK = (0.72, 0.72, 0.74)
-BOOT = (0.22, 0.28, 0.4)
-BOOT_TOE = (0.5, 0.46, 0.4)
-SOLE = (0.44, 0.34, 0.24)
-LACE = (0.86, 0.84, 0.8)
-BOOT_ACCENT = (0.85, 0.82, 0.22)
-CAP = (0.13, 0.17, 0.32)
-CAP_SEAM = (0.08, 0.1, 0.2)
-CAMO = [(0.32, 0.4, 0.2), (0.22, 0.28, 0.14), (0.46, 0.44, 0.28)]
-STRAP = (0.26, 0.2, 0.14)
-BEDROLL = (0.16, 0.22, 0.42)
-STEEL = (0.8, 0.82, 0.85)
-ROPE = (0.82, 0.68, 0.44)
-GOLD = (0.95, 0.74, 0.3)
-BARK = (0.46, 0.3, 0.17)
-BARK_LIGHT = (0.64, 0.46, 0.28)
-LEAF = (0.4, 0.66, 0.26)
-RED = (0.88, 0.2, 0.18)
+SKIN = (0.95, 0.7, 0.55)
+SKIN_SHADE = (0.76, 0.46, 0.36)
+BLUSH = (0.98, 0.5, 0.44)
+HAIR_LIGHT = (1.0, 0.86, 0.5)
+HAIR = (0.84, 0.6, 0.26)
+HAIR_DARK = (0.44, 0.27, 0.1)
+SCUFF = (0.62, 0.36, 0.26)       # grazed, dusty knees
+DIRT = (0.42, 0.32, 0.22)
+TEE = (0.46, 0.64, 0.84)
+TEE_DARK = (0.26, 0.4, 0.62)
+BADGE = (0.12, 0.22, 0.45)
+BADGE_TREE = (0.42, 0.72, 0.18)
+SHORTS = (0.07, 0.36, 0.5)
+SHORTS_DARK = (0.03, 0.18, 0.3)
+SHORTS_LIGHT = (0.18, 0.54, 0.7)
+LIME = (0.62, 0.84, 0.14)
+STITCH = (0.6, 0.8, 0.84)
+SOCK = (0.6, 0.6, 0.62)
+BOOT = (0.14, 0.19, 0.34)
+BOOT_TOE = (0.42, 0.34, 0.26)
+SOLE = (0.6, 0.48, 0.34)
+LACE = (0.92, 0.46, 0.14)
+BOOT_ACCENT = (0.62, 0.8, 0.2)
+MUD = (0.3, 0.22, 0.14)
+CAP = (0.1, 0.13, 0.28)
+CAP_SEAM = (0.05, 0.07, 0.16)
+CAMO = [(0.26, 0.33, 0.15), (0.14, 0.18, 0.09), (0.4, 0.37, 0.22)]
+STRAP = (0.34, 0.2, 0.1)
+BEDROLL = (0.12, 0.2, 0.42)
+STEEL = (0.74, 0.76, 0.8)
+ROPE = (0.78, 0.62, 0.38)
+GOLD = (0.92, 0.68, 0.26)
+BARK = (0.38, 0.23, 0.12)
+BARK_LIGHT = (0.58, 0.4, 0.22)
+LEAF = (0.36, 0.62, 0.2)
+RED = (0.86, 0.16, 0.14)
 
-HEAD = chibi.HeadFrame((0, -0.01, 1.56), (0.25, 0.245, 0.3))
+HEAD = chibi.HeadFrame((0, -0.01, 1.565), (0.27, 0.258, 0.272))
 PROP = chibi.Proportions(legs=1.85, spine=1.3, arms=1.25)
-GLOVE = (0.3, 0.22, 0.18)
-SHIN_WRAP = (0.34, 0.3, 0.28)
 FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "leo_face.png")
-# Ekko-style painted face: fairly small almond eyes under heavy, confident
-# lids, thick brows (his left one cocked), a firm sly smirk, freckles and
-# teal face-paint marks on the cheekbones.
+# From the concept art: a round, open 7-year-old face. Big bright-blue
+# eyes looking up and off to the side (two catchlights), soft raised
+# light-brown brows, a small upturned button nose, a wide happy grin
+# showing a hint of teeth, freckles over the nose and cheeks and a warm
+# sun-flush. Contouring is kept soft: children's faces are rounded.
 FACE = face_paint.FaceLayout(
-    size=0.3, eye_x=0.08, eye_z=-0.005, eye_w=0.039, eye_h=0.019, eye_tilt=0.1, lid=0.32, iris_r=0.017,
-    look=(0.004, 0.0), iris=(0.32, 0.68, 0.92), iris_dark=(0.04, 0.22, 0.42), lash=(0.14, 0.08, 0.06),
-    lash_width=0.008, wing=0.008, lower_lash=0.35, eyeshadow=(0.74, 0.5, 0.44), eyeshadow_alpha=0.25,
-    socket=(0.62, 0.38, 0.32), brows=((0.03, 0.3, 0.014, 0.008), (0.018, 0.12, 0.014, 0.003)), brow_len=0.058,
-    brow_colour=(0.3, 0.17, 0.08), nose_z=-0.078, nose_w=0.017, mouth_z=-0.142, mouth_w=0.036, smile=3.5,
-    smirk=-0.12, lip_upper=0.0045, lip_lower=0.0065, lip_colour=(0.86, 0.56, 0.5), lip_dark=(0.52, 0.26, 0.22),
-    chin_z=-0.235, skin_shadow=(0.58, 0.34, 0.28), blush_alpha=0.12, contour=0.6, blush_pos=(0.11, -0.07),
-    freckles=[(0.035, -0.06), (0.05, -0.052), (0.063, -0.062), (0.028, -0.07), (-0.035, -0.06), (-0.05, -0.052),
-              (-0.063, -0.062), (-0.028, -0.07), (0.012, -0.055), (-0.012, -0.055)],
-    marks=[([(side * 0.098, -0.036), (side * 0.108, -0.066)], [0.007, 0.0015], (0.1, 0.62, 0.6), 0.95)
-           for side in (-1, 1)] + [([(side * 0.12, -0.03), (side * 0.128, -0.052)], [0.005, 0.0012],
-                                    (0.1, 0.62, 0.6), 0.9) for side in (-1, 1)])
-FEATURES = dict(socket=0.016, eyeball=0.005, brow=0.016, nose=0.028, lips=0.007, chin=0.014, cheekbone=0.016)
+    size=0.3, eye_x=0.098, eye_z=-0.03, eye_w=0.052, eye_h=0.039, eye_tilt=0.03, lid=0.08, iris_r=0.033,
+    look=(0.009, 0.008), iris=(0.36, 0.72, 0.98), iris_dark=(0.03, 0.2, 0.46), lash=(0.2, 0.11, 0.06),
+    lash_width=0.0085, wing=0.003, lower_lash=0.3, eyeshadow_alpha=0.0, socket=(0.8, 0.52, 0.44),
+    socket_alpha=0.3, lid_fold=0.4, brows=((0.03, 0.08, 0.014, 0.012), (0.026, 0.06, 0.014, 0.01)),
+    brow_len=0.062, brow_colour=(0.44, 0.25, 0.1), brow_alpha=1.0, nose_z=-0.1, nose_w=0.017,
+    mouth_z=-0.14, mouth_w=0.052, smile=8.0, smirk=0.06, open_mouth=0.014, lip_upper=0.003, lip_lower=0.008,
+    lip_colour=(0.88, 0.5, 0.44), lip_dark=(0.5, 0.2, 0.16), tongue=(0.8, 0.36, 0.36), chin_z=-0.205,
+    skin_shadow=(0.72, 0.42, 0.34), blush=(0.98, 0.46, 0.4), blush_alpha=0.32, blush_pos=(0.125, -0.1),
+    contour=0.28, catch2=0.8, flush_alpha=0.16, freckle_colour=(0.66, 0.36, 0.22),
+    freckles=[(sx * x, z) for sx in (-1, 1) for x, z in ((0.03, -0.075), (0.045, -0.07), (0.06, -0.078),
+                                                          (0.075, -0.09), (0.052, -0.088), (0.09, -0.1),
+                                                          (0.11, -0.09), (0.1, -0.115), (0.022, -0.086))]
+    + [(0.0, -0.072), (0.008, -0.08), (-0.009, -0.078)])
+FEATURES = dict(socket=0.009, eyeball=0.007, brow=0.006, nose=0.02, lips=0.004, chin=0.006)
 
 
 def camo(pos, normal):
@@ -105,6 +102,10 @@ def skin_piece():
                                 [0.085, 0.082, 0.068], name="leg"))
     body = chibi.fuse(parts, "Skin", voxel=0.014, faces=1500)
     common.color_by(body, lambda p, n: common.lerp(SKIN, SKIN_SHADE, max(0.0, -n.z * 0.5)))
+    # Grazed, dusty knees and shins (an outdoors kid).
+    common.grime(body, SCUFF, lambda p, n: 0.7 * math.exp(-((p.z - 0.3) / 0.05) ** 2) * max(0.0, -n.y)
+                 * (0.5 + noise.noise(p * 40.0)))
+    common.grime(body, DIRT, lambda p, n: 0.35 * max(0.0, (0.26 - p.z) / 0.12) * (0.6 + noise.noise(p * 25.0)))
     return body
 
 
@@ -122,13 +123,19 @@ def shirt_piece():
 
     def colour(pos, normal):
         if abs(pos.x) > 0.345:
-            return TEE_DARK  # rolled sleeve cuff
+            return TEE_DARK  # sleeve hem
+        if abs(abs(pos.x) - 0.33) < 0.006 and int(pos.z * 90) % 2 == 0:
+            return common.lerp(TEE, (0.9, 0.95, 1.0), 0.5)  # stitched sleeve hem
         if pos.z < 0.6:
             return common.lerp(TEE, TEE_DARK, 0.5)  # hem band
-        # Painted fabric folds: soft diagonal creases at the waist.
-        fold = math.sin(pos.x * 38 + pos.z * 22) * max(0.0, 0.85 - pos.z) * 2.2
-        return common.lerp(TEE, TEE_DARK, max(0.0, min(0.5, fold * 0.5)))
+        # Painted fabric folds: diagonal creases at the waist and armpits,
+        # a lighter ridge on each crease.
+        fold = math.sin(pos.x * 38 + pos.z * 22) * max(0.0, 0.88 - pos.z) * 2.4
+        pit = math.exp(-((abs(pos.x) - 0.2) / 0.05) ** 2 - ((pos.z - 1.0) / 0.08) ** 2)
+        c = common.lerp(TEE, TEE_DARK, max(0.0, min(0.55, fold * 0.5 + pit * 0.5)))
+        return common.lerp(c, (0.66, 0.8, 0.94), max(0.0, min(0.35, -fold * 0.3)))
     common.color_by(shirt, colour)
+    common.grime(shirt, DIRT, lambda p, n: max(0.0, noise.noise(p * 9.0 + Vector((2, 7, 1))) - 0.25) * 0.8)
     return shirt
 
 
@@ -136,90 +143,83 @@ def shorts_piece():
     parts = [chibi.ellipsoid((0, 0, 0.58), (0.24, 0.195, 0.14), name="hips")]
     for s in (-1, 1):
         parts.append(chibi.tube([(s * 0.13, 0, 0.6), (s * 0.18, 0, 0.27)], [0.13, 0.135], name="shortleg", levels=2))
-    shorts = chibi.fuse(parts, "Shorts", voxel=0.012, faces=2000)
+    shorts = chibi.fuse(parts, "Shorts", voxel=0.01, faces=3600)
     chibi.cut_open(shorts, (0, 0, 0.285), (0, 0, -1))
 
     def colour(pos, normal):
         z = pos.z
-        if 0.37 < z < 0.385:
-            return LIME
-        if 0.392 < z < 0.4:
-            return SHORTS_LIGHT
-        if z < 0.315:
+        if z < 0.3:
             return SHORTS_DARK  # hem
+        if abs(z - 0.31) < 0.005 and int(pos.x * 120) % 2 == 0:
+            return STITCH  # stitched hem line
+        # Two parallel diagonal lime stripes across both legs,
+        # with a lighter blue band between them (the art's board shorts).
+        t = z - 0.3 * pos.x
+        if 0.49 < t < 0.53 or 0.555 < t < 0.58:
+            return LIME
+        if 0.53 <= t <= 0.555:
+            return SHORTS_LIGHT
         if abs(normal.x) > 0.85 and z > 0.46:
             return SHORTS_LIGHT  # side panel
-        return SHORTS
+        # Painted folds at the crotch and behind the knees.
+        fold = math.exp(-(pos.x / 0.05) ** 2 - ((z - 0.45) / 0.06) ** 2) + \
+            0.5 * max(0.0, math.sin(pos.x * 60 + z * 30)) * max(0.0, 0.45 - z) * 6
+        return common.lerp(SHORTS, SHORTS_DARK, min(0.6, fold * 0.6))
     common.color_by(shorts, colour)
+    common.grime(shorts, (0.5, 0.42, 0.3), lambda p, n: max(0.0, noise.noise(p * 12.0) - 0.3) * 0.6)
     return shorts
 
 
-def badge():
-    c = Vector((0.085, -0.215, 0.86))
-    disc = chibi.cylinder(c, 0.05, 0.012, name="badge", axis="Y", segments=24, bevel=0.004)
+def cargo_pockets():
+    """Flapped cargo pockets on the outside of each thigh."""
+    rigid = []
+    for s, bone in ((1, "upperleg.l"), (-1, "upperleg.r")):
+        pocket = chibi.box((0.03, 0.13, 0.12), (s * 0.305, -0.005, 0.4), bevel=0.012, name="pocket")
+        common.color_by(pocket, lambda p, n: SHORTS_DARK if abs(p.y + 0.005) > 0.055 or p.z < 0.35 else SHORTS,
+                        smooth=False)
+        flap = chibi.box((0.036, 0.14, 0.04), (s * 0.31, -0.005, 0.46), bevel=0.01, name="pocketflap")
+        common.color_by(flap, lambda p, n: SHORTS_DARK if n.z < 0.5 else SHORTS_LIGHT, smooth=False)
+        rigid += [(pocket, bone), (flap, bone)]
+    return rigid
 
-    def colour(pos, normal):
-        rel = pos - c
-        r = math.hypot(rel.x, rel.z)
-        if normal.y > -0.8 or r > 0.04:
-            return BADGE
-        if rel.z < 0.027 and abs(rel.x) < (0.027 - rel.z) * 0.55 and rel.z > -0.022:
-            return BADGE_TREE
-        return (0.92, 0.95, 0.98)
-    common.color_by(disc, colour, smooth=False)
-    return disc
+
+def badge():
+    """The camp logo on the tee: a navy ring, a pale sky disc, a green
+    hill and a dark pine (built from pieces so it reads without texels)."""
+    c = Vector((0.07, -0.212, 0.9))
+    parts = []
+
+    def piece(obj, colour):
+        common.set_color(obj, colour)
+        parts.append(obj)
+    piece(chibi.cylinder(c, 0.064, 0.008, name="badge", axis="Y", segments=24, bevel=0.003), BADGE)
+    piece(chibi.cylinder(c + Vector((0, -0.005, 0)), 0.05, 0.006, name="badge", axis="Y", segments=24),
+          (0.7, 0.84, 0.96))
+    hill = chibi.ellipsoid(c + Vector((0, -0.01, -0.035)), (0.05, 0.004, 0.022), name="badge", segs=(16, 6))
+    piece(hill, BADGE_TREE)
+    for dx, h in ((-0.015, 0.05), (0.018, 0.038)):
+        pine = chibi.cylinder(c + Vector((dx, -0.012, -0.012 + h * 0.5)), 0.018, h, name="badge", segments=3,
+                              radius2=0.0)
+        piece(pine, (0.08, 0.32, 0.18))
+    return common.join(parts, "badge")
 
 
 def hands_and_feet():
     rigid = []
-    for h, bone in chibi.hands(SKIN, radius=0.092):
-        # Fingerless gloves (Ekko): leather over the palm, skin fingertips.
-        common.color_by(h, lambda p, n: SKIN if abs(p.x) > 0.905 else GLOVE, smooth=False)
+    for h, bone in chibi.hands(SKIN, radius=0.085, mitten=True, crease=SKIN_SHADE):
         rigid.append((h, bone))
     for s, bone in ((1, "foot.l"), (-1, "foot.r")):
-        for part in chibi.boot(s, BOOT, SOLE, BOOT_TOE, LACE, accent=BOOT_ACCENT, scale=1.3):
+        for part in chibi.boot(s, BOOT, SOLE, BOOT_TOE, LACE, accent=None, scale=1.3):
+            # Muddy, scuffed hiking boots.
+            common.grime(part, MUD, lambda p, n: max(0.0, (0.09 - p.z) / 0.08) * 0.7 +
+                         max(0.0, noise.noise(p * 30.0) - 0.35) * 0.8)
             rigid.append((part, bone))
-        sock = chibi.tube([(s * 0.17, 0.02, 0.27), (s * 0.17, 0.02, 0.14)], [0.07, 0.074], name="sock", levels=1)
-        common.set_color(sock, SOCK)
+        # Slouchy grey socks folded over the boot tops.
+        sock = chibi.tube([(s * 0.17, 0.02, 0.33), (s * 0.17, 0.02, 0.26), (s * 0.17, 0.02, 0.18)], [0.094, 0.082, 0.09],
+                           name="sock", levels=1)
+        common.color_by(sock, lambda p, n: common.lerp(SOCK, (0.36, 0.36, 0.4),
+                                                       0.5 if int(p.z * 110) % 2 == 0 else 0.0))
         rigid.append((sock, "lowerleg." + bone[-1]))
-        # Shin wraps criss-crossing above the shoes (Ekko).
-        for k in range(4):
-            z = 0.17 + k * 0.03
-            ring = chibi.torus((s * 0.17, 0.02, z), 0.076, 0.011, name="shinwrap", segs=(16, 6))
-            ring.data.transform(Matrix.Translation((s * 0.17, 0.02, z)) @ Matrix.Rotation(0.25 * (-1) ** k, 4, "X")
-                                @ Matrix.Translation((-s * 0.17, -0.02, -z)))
-            common.set_color(ring, SHIN_WRAP)
-            rigid.append((ring, "lowerleg." + bone[-1]))
-    return rigid
-
-
-def accessories():
-    """Ekko-flavoured street details on the artwork's outfit: a teal
-    neckerchief knotted at the side, bandage wraps on both forearms, a
-    lime wrist band and one teal knee pad (asymmetry reads as attitude)."""
-    rigid = []
-    kerchief = chibi.tube([(0.11 * math.cos(a), 0.1 * math.sin(a) - 0.01, 1.2 - 0.03 * math.sin(a))
-                           for a in [k / 12 * math.tau for k in range(13)]], [0.03] * 13, name="kerchief", levels=1)
-    knot = chibi.ellipsoid((-0.085, -0.085, 1.16), (0.04, 0.035, 0.035), name="knot", segs=(12, 8))
-    tails = [chibi.curved_lock((-0.09, -0.1, 1.15), d, 0.12, 0.035, bend=(0, -0.02, 0.01), name="tail")
-             for d in ((-0.3, -0.4, -1.0), (0.15, -0.5, -1.0))]
-    for part in [kerchief, knot] + tails:
-        common.color_by(part, lambda p, n: common.lerp(TEAL, TEAL_DARK, max(0.0, -n.z) * 0.6))
-        rigid.append((part, "chest"))
-    for side, bone in ((1, "lowerarm.l"), (-1, "lowerarm.r")):
-        for k in range(6):
-            x = 0.5 + k * 0.042
-            ring = chibi.torus((side * x, 0, 1.11), 0.064, 0.013, name="wrap", axis="X", segs=(16, 6))
-            ring.data.transform(Matrix.Translation((side * x, 0, 1.11)) @ Matrix.Rotation(0.18 * (-1) ** k, 4, "Z")
-                                @ Matrix.Translation((-side * x, 0, -1.11)))
-            common.set_color(ring, WRAP)
-            rigid.append((ring, bone))
-    band = chibi.torus((0.77, 0, 1.11), 0.066, 0.02, name="band", axis="X", segs=(16, 6))
-    common.set_color(band, LIME)
-    rigid.append((band, "lowerarm.l"))
-    pad = chibi.ellipsoid((-0.17, -0.075, 0.27), (0.075, 0.035, 0.06), name="kneepad", segs=(14, 8))
-    common.color_by(pad, lambda p, n: TEAL if n.y < -0.3 else TEAL_DARK, smooth=False)
-    rigid.append((pad, "lowerleg.r"))
     return rigid
 
 
@@ -233,7 +233,7 @@ def clump(parts, root, up, controls, width, length_ratio=None, thickness=0.55, c
     widths = [width * (1.0 - (i / (steps - 1)) ** 1.6) * (0.85 + 0.3 * math.sin(math.pi * i / (steps - 1)))
               for i in range(steps)]
     widths[-1] = 0.0
-    obj = chibi.hair_clump(pts, widths, thickness, up, name="clump")
+    obj = chibi.hair_clump(pts, widths, thickness, up, name="clump", ring=6)
     length = sum((pts[i + 1] - pts[i]).length for i in range(steps - 1))
     common.color_by(obj, colour or chibi.lock_colour(root, length, HAIR_LIGHT, HAIR, HAIR_DARK))
     parts.append(obj)
@@ -265,30 +265,34 @@ def hair_and_cap():
     common.color_by(shell, chibi.hair_colour(HAIR_LIGHT, HAIR, HAIR_DARK, c, strands=30))
     parts.append(shell)
 
-    # Ekko-style upswept quiff bursting out of the (pushed-back) cap's
-    # front opening: big clumps rising up and curling back, tallest in
-    # the middle, plus one rebel strand falling over his forehead.
-    for k, (yaw, height, width) in enumerate(((0.42, 0.22, 0.075), (0.21, 0.31, 0.09), (0.0, 0.37, 0.095),
-                                              (-0.2, 0.33, 0.09), (-0.4, 0.24, 0.078))):
-        root, n = HEAD.point(yaw, 0.7, -0.014)
-        lean = 0.04 + 0.03 * k  # the swoosh leans to his right, more on that side
-        controls = [root + F * 0.08 + U * height * 0.4,
-                    root + F * 0.03 + U * height * 0.9 + R * lean,
-                    root - F * 0.12 + U * height * 0.95 + R * (lean + 0.08)]
-        clump(parts, root, F, controls, width, thickness=0.62)
-    # A couple of smaller spikes layered in front for depth.
-    for yaw, height in ((0.14, 0.22), (-0.1, 0.2)):
-        root, n = HEAD.point(yaw, 0.62, -0.01)
-        clump(parts, root, F, [root + F * 0.08 + U * 0.08, root + F * 0.07 + U * height + R * 0.05,
-                               root - F * 0.02 + U * (height + 0.02) + R * 0.12], 0.07, thickness=0.6)
+    # Messy fringe spilling out of the backwards cap's front opening:
+    # clumps poke out, then flop forward and down over the forehead,
+    # fanning outward, of uneven length (the tousled look in the art).
+    for yaw, drop, fan, width in ((-0.66, 0.14, -0.1, 0.06), (-0.42, 0.1, -0.1, 0.065), (-0.2, 0.07, -0.08, 0.06),
+                                  (0.02, 0.09, 0.05, 0.055), (0.22, 0.06, 0.1, 0.06), (0.44, 0.1, 0.12, 0.065),
+                                  (0.68, 0.14, 0.1, 0.06)):
+        root, n = HEAD.point(yaw, 0.66, -0.012)
+        side = Vector((-math.cos(yaw), -math.sin(yaw), 0))  # tangent toward his right
+        controls = [root + F * 0.06 + U * 0.045,
+                    root + F * 0.1 - U * drop * 0.45 - side * fan * 0.6,
+                    root + F * 0.075 - U * drop - side * fan * 1.5]
+        clump(parts, root, F, controls, width, thickness=0.42)
+    root, n = HEAD.point(0.1, 0.62, -0.01)
+    clump(parts, root, F, [root + F * 0.07 + U * 0.02, root + F * 0.09 - U * 0.09 + R * 0.03,
+                           root + F * 0.06 - U * 0.16 + R * 0.07], 0.04, thickness=0.4)
+    # A few short rebel flicks sticking up and out through the opening.
+    for yaw, lean in ((-0.34, -0.05),):
+        root, n = HEAD.point(yaw, 0.72, -0.01)
+        clump(parts, root, F, [root + F * 0.05 + U * 0.05, root + F * 0.08 + U * 0.04 - R * lean,
+                               root + F * 0.1 + U * 0.03 - R * lean * 2.2], 0.045, thickness=0.55, steps=6)
     # Tight sides over the ears and a short nape, flicking out at the tips.
     for side in (-1, 1):
         out = Vector((side, 0, 0))
         for yaw in (1.35, 1.6, 1.85, 2.1):
             root, n = HEAD.point(side * yaw, 0.38, -0.01)
             back = Vector((0, 1, 0)) * (0.02 + 0.03 * (yaw - 1.35))
-            clump(parts, root, n, [root - U * 0.05 + out * 0.02, root - U * 0.09 + out * 0.03 + back,
-                                   root - U * 0.1 + out * 0.05 + back * 1.5], 0.055)
+            clump(parts, root, n, [root - U * 0.05 + out * 0.03, root - U * 0.1 + out * 0.045 + back,
+                                   root - U * 0.12 + out * 0.08 + back * 1.5], 0.06)
     for yaw in (2.45, 2.8, 3.14, 3.48, 3.83):
         root, n = HEAD.point(yaw, 0.1, -0.01)
         outv = (root - c)
@@ -298,7 +302,7 @@ def hair_and_cap():
                                root - U * 0.15 + outv * 0.1], 0.065)
 
     # Backwards cap: snug crown, cut higher at the front.
-    cap_c = c + Vector((0, 0.012, 0.035))
+    cap_c = c + Vector((0, 0.018, 0.02))
     cr = (r.x + 0.042, r.y + 0.042, r.z + 0.03)
     dome = chibi.ellipsoid(cap_c, cr, name="cap", segs=(40, 24))
     normal = Vector((0, 0.42 / cr[1], 1 / cr[2])).normalized()
@@ -345,7 +349,7 @@ def hair_and_cap():
     common.set_color(strap, CAP_SEAM)
     # Push the whole cap back on his head so the quiff can burst out.
     pivot = c + Vector((0, r.y * 0.8, 0.0))
-    tilt = Matrix.Translation(pivot) @ Matrix.Rotation(math.radians(-10), 4, "X") @ Matrix.Translation(-pivot)
+    tilt = Matrix.Translation(pivot) @ Matrix.Rotation(math.radians(-6), 4, "X") @ Matrix.Translation(-pivot)
     for obj in (dome, button, brim, strap):
         obj.data.transform(tilt)
     parts.append(strap)
@@ -355,9 +359,9 @@ def hair_and_cap():
 def ears():
     parts = []
     for side in (-1, 1):
-        p, n = HEAD.point(side * 1.5, -0.08)
-        e = chibi.ellipsoid((0, 0, 0), (0.024, 0.038, 0.052), name="ear", segs=(16, 10))
-        e.data.transform(Matrix.Translation(p + n * 0.012) @ Matrix.Rotation(side * -0.35, 4, "Z")
+        p, n = HEAD.point(side * 1.52, -0.12)
+        e = chibi.ellipsoid((0, 0, 0), (0.026, 0.044, 0.058), name="ear", segs=(16, 10))
+        e.data.transform(Matrix.Translation(p + n * 0.016) @ Matrix.Rotation(side * -0.5, 4, "Z")
                          @ Matrix.Rotation(-0.25, 4, "X"))
         common.color_by(e, lambda pos, nrm, n=n: SKIN_SHADE if nrm.dot(n) > 0.6 else SKIN, smooth=False)
         parts.append(e)
@@ -366,9 +370,9 @@ def ears():
 
 def head_piece():
     face_paint.paint_face(FACE, FACE_PNG)
-    head = chibi.sculpt_head(HEAD, SKIN, SKIN_SHADE, BLUSH, jaw=0.17, chin_len=0.08, chin_fwd=0.1,
-                             cheekbone=0.12, face_flat=0.14, blush_yaw=0.5, blush_pitch=-0.3, blush_size=0.01,
-                             layout=FACE, features=FEATURES)
+    head = chibi.sculpt_head(HEAD, SKIN, SKIN_SHADE, BLUSH, jaw=0.1, chin_len=0.0, chin_fwd=0.05,
+                             cheeks=0.16, face_flat=0.12, blush_yaw=0.5, blush_pitch=-0.3, blush_size=0.01,
+                             layout=FACE, features=FEATURES, tris=6000)
     chibi.face_uv(head, HEAD, FACE)
     ear_parts = ears()
     for part in ear_parts:
@@ -376,7 +380,9 @@ def head_piece():
     hair = hair_and_cap()
     chibi.report([head] + ear_parts + hair)
     # Separate textures: the face gets most of the head's texels.
-    return common.join([head] + ear_parts, "Leo_Head"), common.join(hair, "Leo_Hair")
+    hair_obj = common.join(hair, "Leo_Hair")
+    chibi.decimate_tris(hair_obj, 6000)
+    return common.join([head] + ear_parts, "Leo_Head"), hair_obj
 
 
 # ----------------------------------------------------------------- gear
@@ -454,7 +460,7 @@ def build():
     rigid.append((badge(), "chest"))
     for part in chibi.compass((0, -0.228, 0.98), GOLD, neck_z=1.22, radius=0.042):
         rigid.append((part, "chest"))
-    rigid += accessories()
+    rigid += cargo_pockets()
     pack_c = Vector((0, 0.37, 1.0))
     for part in backpack():
         # Hug the leaner back and shrink a little so the silhouette reads.
@@ -501,6 +507,11 @@ def render_previews(rig, meshes, head, name, *actions):
     preview.render(meshes, name, elevation=10, azimuth=25)
     preview.render([head], name + "_face", elevation=4, azimuth=12, size=512)
     preview.render(meshes, name + "_back", elevation=15, azimuth=160, size=384)
+    rig.data.pose_position = "POSE"
+    rig.animation_data_create()
+    rig.animation_data.action = bpy.data.actions.get("Idle")
+    preview.render(meshes, name + "_front", frame=1, elevation=6, azimuth=15, size=768)
+    rig.data.pose_position = "REST"
     rig.data.pose_position = "POSE"
     rig.animation_data_create()
     for action_name, frame in (("Idle", 1),) + actions:

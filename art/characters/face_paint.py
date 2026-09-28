@@ -64,6 +64,11 @@ class FaceLayout:
     socket_alpha: float = 0.5
     contour: float = 0.35         # painted cheek/jaw/temple shading strength
     highlight: tuple = (1.0, 0.9, 0.8)
+    catch2: float = 0.0           # second, smaller catchlight (lower, opposite side)
+    flush_alpha: float = 0.0      # sun-flush across the nose tip and cheeks
+    flush: tuple = (0.95, 0.45, 0.38)
+    tongue: tuple = None          # rgb; painted in the bottom of an open mouth
+    lid_fold: float = 0.55        # lid crease opacity
 
 
 def _grid(layout):
@@ -169,6 +174,11 @@ def paint_face(layout, path):
         # Cheek blush.
         _over(canvas, L.blush, L.blush_alpha * _soft_ellipse(u, v, side * L.blush_pos[0], L.blush_pos[1],
                                                              0.045, 0.03, 1.5))
+    if L.flush_alpha:
+        # Sun-kissed band: across the cheeks and over the nose bridge/tip.
+        band = [(-L.blush_pos[0], L.blush_pos[1] + 0.01), (0.0, L.nose_z + 0.012), (L.blush_pos[0], L.blush_pos[1] + 0.01)]
+        _over(canvas, L.flush, L.flush_alpha * _stroke(u, v, band, [0.05, 0.03, 0.05], px, soft=0.02))
+        _over(canvas, L.flush, L.flush_alpha * _soft_ellipse(u, v, 0.0, L.nose_z + 0.002, L.nose_w * 1.2, 0.01, 1.2))
     # Nose: shadow down one side of the bridge and under the tip.
     _over(canvas, L.skin_shadow, 0.6 * _stroke(u, v, [(L.nose_w * 0.9, L.eye_z - L.eye_h),
                                                         (L.nose_w * 1.1, L.nose_z + 0.005)],
@@ -215,6 +225,11 @@ def paint_face(layout, path):
         _over(canvas, (1.0, 1.0, 1.0), _aa((1.0 - np.sqrt(((u - hu) / (L.iris_r * 0.28)) ** 2 +
                                                           ((v - hv) / (L.iris_r * 0.24)) ** 2)) * L.iris_r * 0.25, px)
               * eye_a)
+        if L.catch2:
+            hu2, hv2 = iu + side * L.iris_r * 0.35, iv - L.iris_r * 0.4
+            _over(canvas, (1.0, 1.0, 1.0), L.catch2 * _aa((1.0 - np.sqrt(((u - hu2) / (L.iris_r * 0.13)) ** 2 +
+                                                                       ((v - hv2) / (L.iris_r * 0.11)) ** 2))
+                                                           * L.iris_r * 0.1, px) * eye_a)
         # Upper lash line: thick, tapering in, with a wing at the outer corner.
         n = 14
         pts, widths = [], []
@@ -228,7 +243,7 @@ def paint_face(layout, path):
         # Lid crease above.
         crease = [(ex + side * d, L.eye_z + float(top(np.float32(d))) + L.eye_h * 0.9)
                   for d in np.linspace(-L.eye_w * 0.7, L.eye_w * 0.9, 8)]
-        _over(canvas, L.socket, 0.55 * _stroke(u, v, crease, [0.0025] * len(crease), px, soft=0.002))
+        _over(canvas, L.socket, L.lid_fold * _stroke(u, v, crease, [0.0025] * len(crease), px, soft=0.002))
         # Lower lash, outer two thirds.
         lower = [(ex + side * d, L.eye_z + float(bottom(np.float32(d))) - 0.0015)
                  for d in np.linspace(-L.eye_w * 0.3, L.eye_w * 0.95, 8)]
@@ -271,6 +286,9 @@ def paint_face(layout, path):
         _over(canvas, (0.3, 0.07, 0.08), _aa(opening, px) * (np.abs(mu) < L.mouth_w))
         teeth = np.minimum(line(mu) - v, v - (line(mu) - L.open_mouth * 0.45 * lipw ** 0.6))
         _over(canvas, (0.97, 0.95, 0.9), _aa(teeth, px) * (np.abs(mu) < L.mouth_w * 0.8))
+        if L.tongue is not None:
+            _over(canvas, L.tongue, _aa(opening, px) * _soft_ellipse(u, v, 0.0, line(0.0) - L.open_mouth * 0.95,
+                                                                      L.mouth_w * 0.55, L.open_mouth * 0.5, 0.4))
     pts = [(x, line(x)) for x in xs]
     _over(canvas, L.lip_dark, _stroke(u, v, pts, [0.0022] * len(pts), px))
     for side in (-1, 1):

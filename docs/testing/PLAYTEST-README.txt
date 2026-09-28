@@ -1,4 +1,4 @@
-CAMPSITE - Playtest build 0.8.0 (playtest 1)
+CAMPSITE - Playtest build 0.9.0 (playtest 1)
 ============================================
 
 Thanks for testing! This is an early prototype. There is no sound

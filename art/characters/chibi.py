@@ -873,13 +873,28 @@ def hair_colour(light, mid, dark, center, scale=6.0, strands=26):
 
 # --------------------------------------------------------------- limbs
 
-def hands(skin, radius=0.075):
+def hands(skin, radius=0.075, mitten=False, crease=None):
+    """Ball hands; mitten=True gives a readable game hand instead: a flat
+    palm, a curled finger mass and a strong thumb, with a painted
+    knuckle crease (crease colour, sRGB)."""
     parts = []
     for side, bone in ((1, "hand.l"), (-1, "hand.r")):
-        palm = ellipsoid((side * 0.855, -0.005, 1.105), (radius * 1.15, radius * 0.85, radius), name="hand")
-        thumb = ellipsoid((side * 0.8, -0.065, 1.115), (0.03, 0.028, 0.035), name="thumb", segs=(12, 8))
-        h = fuse([palm, thumb], "hand", voxel=0.01, smooth=2, faces=320)
-        common.set_color(h, skin)
+        if mitten:
+            r = radius
+            palm = ellipsoid((side * 0.84, -0.005, 1.11), (r * 0.95, r * 0.7, r * 0.95), name="hand")
+            fingers = ellipsoid((side * (0.84 + r * 0.9), -0.012, 1.095), (r * 0.75, r * 0.62, r * 0.85),
+                                name="fingers", rot=Matrix.Rotation(side * 0.35, 3, "Y"))
+            thumb = ellipsoid((side * (0.84 + r * 0.25), -0.005 - r * 0.8, 1.12), (r * 0.5, r * 0.38, r * 0.38),
+                              name="thumb", segs=(12, 8))
+            h = fuse([palm, fingers, thumb], "hand", voxel=0.009, smooth=2, faces=560)
+            knuckle = side * (0.84 + r * 0.55)
+            common.color_by(h, lambda p, n, k=knuckle: common.lerp(skin, crease, 0.55)
+                            if crease and abs(p.x - k) < r * 0.08 and n.z > -0.2 else skin)
+        else:
+            palm = ellipsoid((side * 0.855, -0.005, 1.105), (radius * 1.15, radius * 0.85, radius), name="hand")
+            thumb = ellipsoid((side * 0.8, -0.065, 1.115), (0.03, 0.028, 0.035), name="thumb", segs=(12, 8))
+            h = fuse([palm, thumb], "hand", voxel=0.01, smooth=2, faces=320)
+            common.set_color(h, skin)
         parts.append((h, bone))
     return parts
 

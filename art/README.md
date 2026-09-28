@@ -19,13 +19,13 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 
 | Path | What |
 |------|------|
-| `lib/common.py` | Scene reset, mesh helpers, sRGB→linear colours, per-vertex/face colouring, remesh/decimate, glTF export |
+| `lib/common.py` | Scene reset, mesh helpers, sRGB→linear colours, per-vertex/face colouring, painted grime, remesh/decimate, glTF export |
 | `lib/paint_bake.py` | **The painted look**: bakes base colour, a warm-top/cool-bottom tint, AO, edge highlights and brush noise into one texture (`<name>_painted` material) |
 | `lib/preview.py` | Preview renders |
 | `nature/` | Trees (3 variants + stump), autumn pines, rocks, berry bush |
 | `props/camp.py` | Campfire, tent, fence, watch post, torch, woodpile, crate, barrel, toadstools |
 | `characters/shadow_imp.py` | Brand-new imp body (metaballs along the Skeleton Minion rig, auto-weighted) with horns, wings, tail and glowing eyes |
-| `characters/leo.py`, `nela.py` | Leo and Nela, modelled from the concept art on the KayKit adventurer rig (all 76 clips) |
+| `characters/leo.py`, `nela.py` | Leo and Nela, modelled from the concept art on the KayKit adventurer rig (all 76 clips). The concept sheets are the reference for faces, outfits and gear (feature 012); each script's docstring lists what it follows |
 | `characters/chibi.py` | Kit for the kids: fused, auto-weighted clothing; rigid gear; face decals (eyes, brows, smile); hair locks; boots, backpack parts. `QUICK=1` previews without baking |
 | `characters/face_paint.py` | LoL-style **painted faces**: numpy paints eyes (lids, liner, iris, catchlight), brushed brows, nose/lip shading, contours and face paint into a front-projected image; `chibi.sculpt_features` carves matching relief from the same `FaceLayout`, and `paint_bake`'s `overlay` bakes it under the lighting |
 | `ground/textures.py` | Seamless hand-painted grass, dirt and leaf-litter textures (numpy brush stamps) for `painted_ground.gdshader` |
@@ -37,7 +37,8 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
   (`scripts/utilities/stylize.gd`). The hero and shadow profiles also add an
   ink outline.
 - **Emissive** flat materials (eyes, wand star, embers) render unshaded.
-- **Triangle budgets:** characters ≤ 12k, trees ≤ 3k, props ≤ 1.5k.
+- **Triangle budgets:** imps ≤ 12k; the hero kids ≤ 36k (head ~6k, hair decimated to 6–8k), trees ≤ 3k, props ≤ 1.5k.
+- **Painted wear:** `common.grime(obj, colour, amount_fn)` blends dirt, scuffs and mud over the colours already set, before the bake.
 - **Rigid gear** on characters is bound to one bone at weight 1.0.
   Weapons are built in the `handslot.r` bone frame: handle along +Y, blade
   toward -X.
