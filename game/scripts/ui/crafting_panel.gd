@@ -24,35 +24,34 @@ func _ready() -> void:
 	var panel: PanelContainer = UiKit.panel(16)
 	panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
 	panel.position = Vector2(-440, -170)
-	panel.custom_minimum_size = Vector2(420, 0)
+	panel.custom_minimum_size = Vector2(380, 0)
 	_root.add_child(panel)
 	var column: VBoxContainer = UiKit.vbox(8)
 	panel.add_child(column)
-	column.add_child(UiKit.title("Campfire crafting", 22))
+	var header: HBoxContainer = HBoxContainer.new()
+	header.add_theme_constant_override("separation", 10)
+	header.add_child(_icon_rect(Fx.icon("campfire"), 56))
+	var spacer: Control = Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(spacer)
+	header.add_child(HudWidgets.icon_button("close", "", close, Color(1.0, 0.45, 0.4), null, false))
+	column.add_child(header)
 	for recipe in CraftingManager.get_recipes():
-		column.add_child(UiKit.divider(380))
-		var header: HBoxContainer = HBoxContainer.new()
-		header.add_theme_constant_override("separation", 10)
-		var output: ResourceDefinition = ResourceManager.get_definition(recipe.output_id)
-		header.add_child(_icon_rect(output.icon if output != null else null, 52))
-		var name_column: VBoxContainer = VBoxContainer.new()
-		name_column.add_child(UiKit.title(recipe.display_name, 20, UiKit.COLOR_GOLD_LIGHT))
-		var inputs: HBoxContainer = HBoxContainer.new()
-		inputs.add_theme_constant_override("separation", 6)
+		column.add_child(UiKit.divider(360))
+		# [inputs x n] -> [output]  [make!]
+		var row: HBoxContainer = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
 		for key in recipe.inputs.keys():
 			var input_def: ResourceDefinition = ResourceManager.get_definition(StringName(key))
-			inputs.add_child(_icon_rect(input_def.icon if input_def != null else null, 26))
-			inputs.add_child(UiKit.label("x%d" % int(recipe.inputs[key]), 16))
-		name_column.add_child(inputs)
-		header.add_child(name_column)
-		column.add_child(header)
-		var description: Label = UiKit.label(recipe.description, 14, UiKit.COLOR_MUTED)
-		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		column.add_child(description)
-		var button: Button = UiKit.button("Craft %s" % recipe.display_name, _on_craft.bind(recipe), false)
+			row.add_child(HudWidgets.icon_count(input_def.icon if input_def != null else null, "star", "%d" % int(recipe.inputs[key]), 38))
+		row.add_child(HudWidgets.Glyph.new("arrow", UiKit.COLOR_GOLD, 34))
+		var output: ResourceDefinition = ResourceManager.get_definition(recipe.output_id)
+		row.add_child(_icon_rect(output.icon if output != null else null, 64))
+		column.add_child(row)
+		var button: Button = HudWidgets.icon_button("check", "Make!", _on_craft.bind(recipe), Color(0.5, 1.0, 0.55), null, false)
+		button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		column.add_child(button)
 		_rows.append({ "recipe": recipe, "button": button })
-	column.add_child(UiKit.label("C or Esc to close", 13, UiKit.COLOR_MUTED))
 	_root.visible = false
 	ResourceManager.resource_changed.connect(func(_id: StringName, _v: int, _d: int) -> void: _refresh())
 	GameManager.run_ended.connect(func(_won: bool, _reason: String) -> void: close())
@@ -91,7 +90,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if player == null:
 		return
 	if not _is_near_campfire(player):
-		Fx.float_text(player, "Go to the campfire to craft", Color(1, 0.85, 0.5), 2.0)
+		Fx.icon_popup(player, Fx.icon("campfire"), "", Color.WHITE, true)
 		return
 	open()
 
@@ -112,7 +111,8 @@ func _refresh() -> void:
 func _on_craft(recipe: CraftingRecipe) -> void:
 	var player: Node3D = _get_player()
 	if CraftingManager.craft(recipe, player) and player != null:
-		Fx.float_text(player, "+1 %s" % recipe.display_name, Color(1, 0.7, 0.3), 2.0)
+		var output: ResourceDefinition = ResourceManager.get_definition(recipe.output_id)
+		Fx.icon_popup(player, output.icon if output != null else null, "+1", Color(1, 0.9, 0.5))
 	_refresh()
 
 

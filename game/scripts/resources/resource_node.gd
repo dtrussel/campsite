@@ -95,11 +95,11 @@ func _on_gather_complete() -> void:
 	_active_gather_actor = null
 	_show_progress(false)
 	ResourceManager.add(definition.id, yield_amount)
-	var pickup: String = "+%d %s" % [yield_amount, definition.display_name]
+	var popup_anchor: Node3D = actor as Node3D if actor is Node3D else self
+	Fx.icon_popup(popup_anchor, definition.icon, "+%d" % yield_amount, Color(1, 1, 0.85), false, 2.6, -0.35)
 	if bonus_definition != null and bonus_amount > 0:
 		ResourceManager.add(bonus_definition.id, bonus_amount)
-		pickup += "  +%d %s" % [bonus_amount, bonus_definition.display_name]
-	Fx.float_text(self, pickup, definition.ui_color, 1.8)
+		Fx.icon_popup(popup_anchor, bonus_definition.icon, "+%d" % bonus_amount, Color(1, 1, 0.85), false, 2.1, 0.5)
 	Fx.burst(gather_burst, global_position + Vector3(0, 0.8, 0))
 	ProgressionManager.award_xp(actor, GATHER_XP_REWARD, &"gather")
 	gathered.emit(actor, definition.id, yield_amount)

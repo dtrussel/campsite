@@ -12,6 +12,7 @@ var _root: Control = null
 func _ready() -> void:
 	layer = 12
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	add_to_group("pause_menu")
 	_root = Control.new()
 	_root.theme = UiKit.theme()
 	UiKit.full_rect(_root)
@@ -23,15 +24,15 @@ func _ready() -> void:
 	center.add_child(panel)
 	var column: VBoxContainer = UiKit.vbox(10)
 	panel.add_child(column)
-	var title: Label = UiKit.title("Paused", 34)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var title: Control = HudWidgets.Glyph.new("pause", UiKit.COLOR_GOLD, 64)
+	title.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	column.add_child(title)
 	column.add_child(UiKit.divider(280))
-	column.add_child(UiKit.button("Resume", _resume, false))
-	column.add_child(UiKit.button("Controls", _show_controls, false))
-	column.add_child(UiKit.button("Restart run", _restart, false))
-	column.add_child(UiKit.button("Quit to title", _quit_to_title, false))
-	column.add_child(UiKit.button("Quit game", _quit_game, false))
+	column.add_child(HudWidgets.icon_button("play", "Play", _resume, Color(0.5, 1.0, 0.55), null, false))
+	column.add_child(HudWidgets.icon_button("help", "Help", _show_controls, UiKit.COLOR_GOLD, null, false))
+	column.add_child(HudWidgets.icon_button("restart", "Again", _restart, UiKit.COLOR_GOLD, null, false))
+	column.add_child(HudWidgets.icon_button("home", "Home", _quit_to_title, UiKit.COLOR_GOLD, null, false))
+	column.add_child(HudWidgets.icon_button("close", "Quit", _quit_game, Color(1.0, 0.45, 0.4), null, false))
 	_root.visible = false
 
 
@@ -54,6 +55,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	_root.visible = true
 	get_tree().paused = true
 	get_viewport().set_input_as_handled()
+
+
+## Opens the menu from the HUD pause button.
+func open_menu() -> void:
+	if _root.visible or not GameManager.is_playing() or get_tree().paused:
+		return
+	_root.visible = true
+	get_tree().paused = true
 
 
 func _resume() -> void:

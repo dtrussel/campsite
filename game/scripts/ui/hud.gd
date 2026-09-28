@@ -26,8 +26,8 @@ var _companion: Node = null
 var _base_core: Node = null
 
 var _clock: HudWidgets.DayClock = null
-var _phase_label: Label = null
-var _goal_label: Label = null
+var _moons: Array = []  # HudWidgets.Glyph per night to survive
+var _imps_row: Control = null
 var _campfire_bar: HudWidgets.StatBar = null
 var _imps_label: Label = null
 var _banner: Label = null
@@ -41,7 +41,8 @@ var _slots: Dictionary = {}  # StringName -> AbilitySlot
 
 var _sibling_portrait: HudWidgets.Portrait = null
 var _sibling_hp: HudWidgets.StatBar = null
-var _sibling_task: Label = null
+var _task_buttons: Array = []  # Button per companion task (index = task)
+var _build_row: HBoxContainer = null
 
 var _tray_labels: Dictionary = {}  # StringName -> Label
 var _tray_rows: Dictionary = {}    # StringName -> Control
@@ -61,7 +62,7 @@ func _ready() -> void:
 
 	ResourceManager.resource_changed.connect(_on_resource_changed)
 	BuildManager.build_mode_entered.connect(_on_build_mode_entered)
-	BuildManager.build_mode_exited.connect(func() -> void: _build_label.visible = false)
+	BuildManager.build_mode_exited.connect(func() -> void: (_build_label.get_meta(&"plate") as Control).visible = false)
 	BuildManager.placement_validity_changed.connect(_on_placement_validity_changed)
 	GameManager.companion_task_changed.connect(func(_c: Node, _t: int) -> void: _refresh_sibling())
 	ProgressionManager.xp_gained.connect(func(character: Node, _a: int, _s: StringName) -> void: _refresh_progress(character))
@@ -89,32 +90,41 @@ func _build_top(root: Control) -> void:
 
 	var plate: PanelContainer = _plate(12)
 	holder.add_child(plate)
+	var stack: VBoxContainer = VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 6)
+	plate.add_child(stack)
 	var row: HBoxContainer = HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 12)
-	plate.add_child(row)
+	stack.add_child(row)
 	_clock = HudWidgets.DayClock.new()
 	_clock.custom_minimum_size = Vector2(56, 56)
 	row.add_child(_clock)
-	var text_column: VBoxContainer = VBoxContainer.new()
-	text_column.alignment = BoxContainer.ALIGNMENT_CENTER
-	text_column.add_theme_constant_override("separation", 0)
-	row.add_child(text_column)
-	_phase_label = UiKit.title("Day 1", 22)
-	text_column.add_child(_phase_label)
-	_goal_label = UiKit.label("", 15, UiKit.COLOR_MUTED)
-	text_column.add_child(_goal_label)
+	# One moon per night to survive; they light up as nights are won.
+	for i in range(GameManager.nights_to_win):
+		var moon: HudWidgets.Glyph = HudWidgets.Glyph.new("moon_empty", Color(1.0, 0.92, 0.55), 46)
+		row.add_child(moon)
+		_moons.append(moon)
 
+	var fire_row: HBoxContainer = HBoxContainer.new()
+	fire_row.add_theme_constant_override("separation", 6)
+	fire_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	fire_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stack.add_child(fire_row)
+	fire_row.add_child(HudWidgets.Glyph.new("fire", Color(1.0, 0.55, 0.15), 30))
 	_campfire_bar = HudWidgets.StatBar.new(Color(0.88, 0.55, 0.12), Color(1.0, 0.82, 0.4))
-	_campfire_bar.custom_minimum_size = Vector2(380, 20)
+	_campfire_bar.custom_minimum_size = Vector2(300, 22)
+	_campfire_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_campfire_bar.tick_every = 25.0
-	holder.add_child(_campfire_bar)
+	_campfire_bar.show_text = false
+	fire_row.add_child(_campfire_bar)
 
-	_imps_label = UiKit.label("", 17, Color(0.85, 0.6, 1.0))
-	_imps_label.add_theme_font_override("font", Fx.bold_font())
-	_imps_label.add_theme_constant_override("outline_size", 6)
-	_imps_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_imps_label.visible = false
-	holder.add_child(_imps_label)
+	_imps_row = HudWidgets.icon_count(_icon("portrait_imp"), "", "0", 44)
+	_imps_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_imps_row.visible = false
+	_imps_label = _imps_row.get_child(1) as Label
+	_imps_label.add_theme_color_override("font_color", Color(0.9, 0.7, 1.0))
+	stack.add_child(_imps_row)
 
 
 func _build_sibling_frame(root: Control) -> void:
@@ -129,15 +139,33 @@ func _build_sibling_frame(root: Control) -> void:
 	row.add_child(_sibling_portrait)
 	var column: VBoxContainer = VBoxContainer.new()
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_theme_constant_override("separation", 3)
+	column.add_theme_constant_override("separation", 6)
 	row.add_child(column)
-	column.add_child(UiKit.title("Sibling", 16, UiKit.COLOR_GOLD))
 	_sibling_hp = HudWidgets.StatBar.new(Color(0.2, 0.7, 0.4), Color(0.5, 0.95, 0.65))
-	_sibling_hp.custom_minimum_size = Vector2(170, 14)
+	_sibling_hp.custom_minimum_size = Vector2(200, 14)
+	_sibling_hp.show_text = false
 	column.add_child(_sibling_hp)
-	_sibling_task = UiKit.label("Idle", 14, UiKit.COLOR_TEXT)
-	column.add_child(_sibling_task)
-	column.add_child(UiKit.label("F follow  G guard  T gather  Y idle", 12, UiKit.COLOR_MUTED))
+	# Task picker: idle, follow, guard, gather (Companion.Task order).
+	var tasks: HBoxContainer = HBoxContainer.new()
+	tasks.add_theme_constant_override("separation", 4)
+	column.add_child(tasks)
+	var specs: Array = [["zzz", "Y"], ["footsteps", "F"], ["shield", "G"], ["basket", "T"]]
+	for i in range(specs.size()):
+		var button: Button = Button.new()
+		button.custom_minimum_size = Vector2(46, 46)
+		button.focus_mode = Control.FOCUS_NONE
+		button.toggle_mode = true
+		button.tooltip_text = specs[i][1]
+		var glyph: HudWidgets.Glyph = HudWidgets.Glyph.new(specs[i][0], Color(0.95, 0.9, 0.75), 34)
+		glyph.position = Vector2(6, 6)
+		glyph.size = Vector2(34, 34)
+		button.add_child(glyph)
+		var key: Label = UiKit.label(specs[i][1], 11, UiKit.COLOR_GOLD)
+		key.position = Vector2(3, 0)
+		button.add_child(key)
+		button.pressed.connect(_on_task_button.bind(i))
+		tasks.add_child(button)
+		_task_buttons.append(button)
 
 
 func _build_tray(root: Control) -> void:
@@ -218,27 +246,31 @@ func _build_hero_bar(root: Control) -> void:
 	_hero_xp.show_text = false
 	column.add_child(_hero_xp)
 
-	_build_label = UiKit.label("", 16, Color(0.6, 1.0, 0.6))
-	_build_label.add_theme_font_override("font", Fx.bold_font())
-	_build_label.add_theme_constant_override("outline_size", 6)
-	_build_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_build_label.position = Vector2(-300, -176)
-	_build_label.custom_minimum_size = Vector2(600, 0)
-	_build_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_build_label.visible = false
-	root.add_child(_build_label)
+	# Build hint: what you are placing and what it costs, as icons.
+	var build_plate: PanelContainer = _plate(8)
+	build_plate.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	build_plate.position = Vector2(-150, -196)
+	build_plate.visible = false
+	root.add_child(build_plate)
+	_build_row = HBoxContainer.new()
+	_build_row.add_theme_constant_override("separation", 10)
+	build_plate.add_child(_build_row)
+	_build_label = Label.new()  # kept for the validity colour hook
+	build_plate.set_meta(&"is_build_plate", true)
+	_build_label.set_meta(&"plate", build_plate)
 
-	var hint: Label = UiKit.label("H  Help      Esc  Pause      Wheel  Zoom", 13, UiKit.COLOR_MUTED)
-	hint.add_theme_constant_override("outline_size", 4)
-	hint.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	hint.position = Vector2(-300, -26)
-	hint.custom_minimum_size = Vector2(286, 0)
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	root.add_child(hint)
+	# Help and pause as icon buttons (bottom right).
+	var corner: HBoxContainer = HBoxContainer.new()
+	corner.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	corner.position = Vector2(-150, -74)
+	corner.add_theme_constant_override("separation", 8)
+	root.add_child(corner)
+	corner.add_child(HudWidgets.icon_button("help", "", _on_help_pressed, UiKit.COLOR_GOLD, null, false))
+	corner.add_child(HudWidgets.icon_button("pause", "", _on_pause_pressed, UiKit.COLOR_GOLD, null, false))
 
 
 func _build_banner(root: Control) -> void:
-	_banner = UiKit.title("", 30, UiKit.COLOR_GOLD_LIGHT)
+	_banner = UiKit.title("", 44, UiKit.COLOR_GOLD_LIGHT)
 	_banner.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	_banner.offset_top = 150
 	_banner.offset_left = 120
@@ -286,19 +318,17 @@ func _hook_world() -> void:
 
 
 func _process(_delta: float) -> void:
-	var phase_name: String = TimeManager.get_phase_name()
-	var remaining: int = int(ceil(TimeManager.remaining_seconds))
-	_phase_label.text = "DAY %d  -  %s" % [TimeManager.day_number, phase_name.to_upper()]
-	_phase_label.add_theme_color_override("font_color", _phase_color(TimeManager.current_phase))
-	_goal_label.text = "Nights survived %d / %d      %d:%02d" % [
-		int(GameManager.stats.get(&"nights_survived", 0)), GameManager.nights_to_win,
-		remaining / 60, remaining % 60,
-	]
+	var survived: int = int(GameManager.stats.get(&"nights_survived", 0))
+	for i in range(_moons.size()):
+		var moon: HudWidgets.Glyph = _moons[i]
+		var kind: String = "moon" if i < survived else "moon_empty"
+		if moon.kind != kind:
+			moon.set_kind(kind)
 	var total: float = _phase_duration(TimeManager.current_phase)
 	_clock.set_phase_progress(TimeManager.current_phase, 1.0 - TimeManager.remaining_seconds / maxf(total, 0.01))
 	var imps: int = get_tree().get_nodes_in_group("mobs").size()
-	_imps_label.visible = imps > 0
-	_imps_label.text = "%d SHADOW IMP%s" % [imps, "" if imps == 1 else "S"]
+	_imps_row.visible = imps > 0
+	_imps_label.text = "x %d" % imps
 	_refresh_slots()
 
 
@@ -347,8 +377,10 @@ func _refresh_sibling() -> void:
 	if _companion == null or not is_instance_valid(_companion):
 		return
 	var knocked: bool = _companion.get("is_knocked_out") == true
-	_sibling_task.text = "Knocked out - back at dawn" if knocked else String(_companion.get_task_name())
-	_sibling_task.add_theme_color_override("font_color", Color(1, 0.55, 0.45) if knocked else UiKit.COLOR_TEXT)
+	var task: int = int(_companion.get("current_task"))
+	for i in range(_task_buttons.size()):
+		(_task_buttons[i] as Button).set_pressed_no_signal(i == task)
+		(_task_buttons[i] as Button).modulate = Color(0.5, 0.5, 0.55) if knocked else Color.WHITE
 	_sibling_portrait.dimmed = knocked
 	_sibling_portrait.set_level(ProgressionManager.get_level(_companion))
 
@@ -356,7 +388,6 @@ func _refresh_sibling() -> void:
 func _refresh_campfire() -> void:
 	if _base_core == null or not is_instance_valid(_base_core):
 		return
-	_campfire_bar.text_override = "CAMPFIRE  %d / %d" % [_base_core.current_hp, _base_core.max_hp]
 	_campfire_bar.set_values(_base_core.current_hp, _base_core.max_hp)
 
 
@@ -396,21 +427,34 @@ func _on_resource_changed(_id: StringName, _value: int, _delta: int) -> void:
 
 
 func _on_build_mode_entered(definition: BuildingDefinition) -> void:
-	_build_label.visible = true
+	(_build_label.get_meta(&"plate") as Control).visible = true
 	_refresh_build_label(definition)
 
 
 func _on_placement_validity_changed(is_valid: bool) -> void:
-	_build_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6) if is_valid else Color(1.0, 0.55, 0.5))
+	var plate: Control = _build_label.get_meta(&"plate")
+	plate.modulate = Color.WHITE if is_valid else Color(1.0, 0.6, 0.55)
 	_refresh_build_label(BuildManager.get_active_definition())
 
 
+## Build hint as pictures: [building] = [cost icons x n]  [1][2] [R].
 func _refresh_build_label(definition: BuildingDefinition) -> void:
 	if definition == null:
 		return
-	_build_label.text = "BUILDING %s  (%s)\n1 / 2 switch    R rotate    Left click place    Right click cancel" % [
-		definition.display_name.to_upper(), definition.cost_summary()
-	]
+	for child in _build_row.get_children():
+		child.queue_free()
+	var building_icon: String = "fence" if definition.id == &"wooden_fence" else "tower"
+	var picture: TextureRect = TextureRect.new()
+	picture.texture = _icon(building_icon)
+	picture.custom_minimum_size = Vector2(56, 56)
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_build_row.add_child(picture)
+	for key in definition.cost.keys():
+		var item: ResourceDefinition = ResourceManager.get_definition(StringName(key))
+		_build_row.add_child(HudWidgets.icon_count(item.icon if item != null else null, "star", "%d" % int(definition.cost[key]), 34))
+	_build_row.add_child(HudWidgets.Glyph.new("mouse_left", Color(0.4, 1.0, 0.5), 30))
+	_build_row.add_child(HudWidgets.Glyph.new("mouse_right", Color(1.0, 0.4, 0.35), 30))
 
 
 func _on_level_up(character: Node, new_level: int) -> void:
@@ -418,36 +462,48 @@ func _on_level_up(character: Node, new_level: int) -> void:
 	if character == _companion:
 		_refresh_sibling()
 	elif character == _player:
-		show_banner("Level %d!" % new_level, Color(1.0, 0.86, 0.45))
+		show_banner("Level up!", Color(1.0, 0.86, 0.45))
 
 
 func _on_day_started(day_number: int) -> void:
-	if day_number == 1:
-		show_banner("Day 1 - gather, build and craft before dark", _PHASE_COLOR_DAY)
-	else:
-		show_banner("Day %d - repair and prepare" % day_number, _PHASE_COLOR_DAY)
+	show_banner("Day %d" % day_number, _PHASE_COLOR_DAY)
 
 
 func _on_sunset_warning(seconds: float) -> void:
-	show_banner("The sun is setting - imps in %ds!" % int(seconds), _PHASE_COLOR_SUNSET)
+	show_banner("Back to the fire!", _PHASE_COLOR_SUNSET)
 
 
 func _on_night_started(day_number: int) -> void:
-	var spawner: Node = get_tree().get_first_node_in_group("mob_spawner")
-	var count: int = spawner.get_wave_size(day_number) if spawner != null else 0
-	show_banner("Night %d - %d Shadow Imps rise!" % [day_number, count], _PHASE_COLOR_NIGHT)
+	show_banner("Night %d!" % day_number, _PHASE_COLOR_NIGHT)
 
 
 func _on_dawn_started(day_number: int) -> void:
-	show_banner("Dawn - you survived night %d" % day_number, _PHASE_COLOR_DAWN)
+	show_banner("Good morning!", _PHASE_COLOR_DAWN)
 
 
 func _on_crafted(recipe: CraftingRecipe, _crafter: Node) -> void:
 	if recipe.output_id == &"torch":
-		show_banner("Torch crafted - press Q to plant it", Color(1, 0.75, 0.35))
+		show_banner("Torch!  Q", Color(1, 0.75, 0.35))
 
 
 func _on_companion_knocked_out(is_down: bool) -> void:
 	if is_down:
-		show_banner("Your sibling is knocked out until dawn!", Color(1, 0.6, 0.45))
+		show_banner("Ouch!", Color(1, 0.6, 0.45))
 	_refresh_sibling()
+
+
+func _on_task_button(task: int) -> void:
+	GameManager.assign_companion_task(task)
+	_refresh_sibling()
+
+
+func _on_help_pressed() -> void:
+	var overlay: Node = get_tree().get_first_node_in_group("controls_overlay")
+	if overlay != null and not get_tree().paused:
+		overlay.open()
+
+
+func _on_pause_pressed() -> void:
+	var menu: Node = get_tree().get_first_node_in_group("pause_menu")
+	if menu != null:
+		menu.open_menu()

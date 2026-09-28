@@ -8,8 +8,9 @@ extends CanvasLayer
 
 var _root: Control = null
 var _title: Label = null
-var _reason: Label = null
-var _stats: Label = null
+var _badge: CenterContainer = null
+var _stars: HBoxContainer = null
+var _stats_row: HBoxContainer = null
 var _log_path: Label = null
 
 
@@ -25,53 +26,70 @@ func _ready() -> void:
 	_root.add_child(center)
 	var panel: PanelContainer = UiKit.panel(28)
 	center.add_child(panel)
-	var column: VBoxContainer = UiKit.vbox(10)
+	var column: VBoxContainer = UiKit.vbox(14)
 	panel.add_child(column)
-	_title = UiKit.title("", 54)
+	_badge = CenterContainer.new()
+	column.add_child(_badge)
+	_title = UiKit.title("", 58)
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_title)
-	_reason = UiKit.label("", 22)
-	_reason.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(_reason)
+	_stars = HBoxContainer.new()
+	_stars.alignment = BoxContainer.ALIGNMENT_CENTER
+	_stars.add_theme_constant_override("separation", 10)
+	column.add_child(_stars)
 	var divider_row: CenterContainer = CenterContainer.new()
 	divider_row.add_child(UiKit.divider(420))
 	column.add_child(divider_row)
-	_stats = UiKit.label("", 18)
-	column.add_child(_stats)
-	column.add_child(HSeparator.new())
-	var buttons: VBoxContainer = UiKit.vbox(8)
-	buttons.add_child(UiKit.button("Play again", GameManager.start_run))
-	buttons.add_child(UiKit.button("Title screen", GameManager.go_to_title))
-	buttons.add_child(UiKit.button("Quit", get_tree().quit))
-	var row: CenterContainer = CenterContainer.new()
-	row.add_child(buttons)
-	column.add_child(row)
-	_log_path = UiKit.label("", 13, UiKit.COLOR_MUTED)
-	_log_path.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_log_path.custom_minimum_size = Vector2(460, 0)
+	_stats_row = HBoxContainer.new()
+	_stats_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_stats_row.add_theme_constant_override("separation", 28)
+	column.add_child(_stats_row)
+	var buttons: HBoxContainer = HBoxContainer.new()
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons.add_theme_constant_override("separation", 12)
+	var again: Button = HudWidgets.icon_button("restart", "Again", GameManager.start_run, Color(0.5, 1.0, 0.55))
+	buttons.add_child(again)
+	buttons.add_child(HudWidgets.icon_button("home", "", GameManager.go_to_title))
+	buttons.add_child(HudWidgets.icon_button("close", "", get_tree().quit, Color(1.0, 0.45, 0.4)))
+	column.add_child(buttons)
+	# Small print for playtest facilitators, not for kids.
+	_log_path = UiKit.label("", 11, Color(0.45, 0.45, 0.45))
+	_log_path.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_log_path)
 	_root.visible = false
 	GameManager.run_ended.connect(_on_run_ended)
 
 
-func _on_run_ended(won: bool, reason: String) -> void:
-	_title.text = "VICTORY" if won else "DEFEAT"
-	_title.add_theme_color_override("font_color", UiKit.COLOR_GOLD if won else Color(0.85, 0.25, 0.22))
-	_reason.text = reason
+func _on_run_ended(won: bool, _reason: String) -> void:
+	for child in _badge.get_children():
+		child.queue_free()
+	if won:
+		_badge.add_child(HudWidgets.Glyph.new("trophy", UiKit.COLOR_GOLD, 110))
+	else:
+		var fire: TextureRect = TextureRect.new()
+		fire.texture = load("res://assets/icons/campfire.png")
+		fire.custom_minimum_size = Vector2(110, 110)
+		fire.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		fire.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		fire.modulate = Color(0.45, 0.45, 0.55)
+		_badge.add_child(fire)
+	_title.text = "YOU WIN!" if won else "OH NO!"
+	_title.add_theme_color_override("font_color", UiKit.COLOR_GOLD if won else Color(0.9, 0.35, 0.3))
 	var stats: Dictionary = GameManager.stats
-	var lines: PackedStringArray = PackedStringArray()
-	lines.append("Reached day %d" % TimeManager.day_number)
-	lines.append("Nights survived: %d / %d" % [stats.get(&"nights_survived", 0), GameManager.nights_to_win])
-	lines.append("Shadow Imps defeated: %d" % stats.get(&"kills", 0))
-	lines.append("Resources gathered: %d" % stats.get(&"gathered", 0))
-	lines.append("Buildings placed: %d" % stats.get(&"built", 0))
-	lines.append("Items crafted: %d   Torches planted: %d" % [
-		stats.get(&"crafted", 0), stats.get(&"torches_placed", 0)
-	])
-	for node in get_tree().get_nodes_in_group("player") + get_tree().get_nodes_in_group("companions"):
-		var character_stats: CharacterStatsDefinition = ProgressionManager.get_stats(node)
-		var display: String = character_stats.display_name if character_stats != null else String(node.name)
-		lines.append("%s reached level %d" % [display, ProgressionManager.get_level(node)])
-	_stats.text = "\n".join(lines)
-	_log_path.text = "Playtest log: %s" % PlaytestLog.get_absolute_path()
+	for child in _stars.get_children():
+		child.queue_free()
+	var nights: int = int(stats.get(&"nights_survived", 0))
+	for i in range(GameManager.nights_to_win):
+		_stars.add_child(HudWidgets.Glyph.new("star" if i < nights else "star_empty", Color(1.0, 0.85, 0.3), 64))
+	for child in _stats_row.get_children():
+		child.queue_free()
+	_stats_row.add_child(HudWidgets.icon_count(load("res://assets/icons/portrait_imp.png"), "", str(stats.get(&"kills", 0))))
+	_stats_row.add_child(HudWidgets.icon_count(load("res://assets/icons/wood.png"), "", str(stats.get(&"gathered", 0))))
+	_stats_row.add_child(HudWidgets.icon_count(load("res://assets/icons/fence.png"), "", str(stats.get(&"built", 0))))
+	_stats_row.add_child(HudWidgets.icon_count(load("res://assets/icons/torch.png"), "", str(stats.get(&"torches_placed", 0))))
+	var player: Node = get_tree().get_first_node_in_group("player")
+	if player != null:
+		_stats_row.add_child(HudWidgets.icon_count(load("res://assets/icons/portrait_boy.png"), "",
+			"Lv %d" % ProgressionManager.get_level(player)))
+	_log_path.text = PlaytestLog.get_absolute_path()
 	_root.visible = true

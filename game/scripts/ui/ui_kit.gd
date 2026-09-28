@@ -182,6 +182,93 @@ static func button(text: String, on_pressed: Callable, focusable: bool = true) -
 	return result
 
 
+## A keyboard key cap, e.g. "Q".
+static func key_cap(text: String, size_px: int = 40) -> PanelContainer:
+	var cap: PanelContainer = PanelContainer.new()
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.92, 0.9, 0.84)
+	style.border_color = Color(0.35, 0.3, 0.25)
+	style.set_border_width_all(2)
+	style.border_width_bottom = 5
+	style.set_corner_radius_all(6)
+	style.set_content_margin_all(2)
+	cap.add_theme_stylebox_override("panel", style)
+	cap.custom_minimum_size = Vector2(size_px * maxf(1.0, text.length() * 0.55), size_px)
+	var l: Label = label(text, int(size_px * 0.55), Color(0.15, 0.12, 0.1))
+	l.add_theme_font_override("font", Fx.bold_font())
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	cap.add_child(l)
+	return cap
+
+
+## Picture-guide rows for kids: [input] -> [picture] word.
+## Each entry: [input kind ("mouse_right", "key:Q"), picture (icon name or
+## "glyph:<kind>"), word].
+const PICTURE_GUIDE: Array = [
+	["mouse_right", "glyph:footsteps", "Walk"],
+	["mouse_right", "portrait_imp", "Fight"],
+	["mouse_right", "tree", "Chop"],
+	["mouse_right", "bush", "Pick"],
+	["mouse_right", "campfire", "Craft"],
+	["key:Q", "torch", "Torch"],
+	["key:R", "berries", "Eat"],
+	["key:B", "fence", "Build"],
+	["key:F G T Y", "portrait_sibling", "Helper"],
+	["key:N", "glyph:moon", "Night"],
+]
+
+
+static func picture_guide(columns: int = 2) -> GridContainer:
+	var grid: GridContainer = GridContainer.new()
+	grid.columns = columns
+	grid.add_theme_constant_override("h_separation", 40)
+	grid.add_theme_constant_override("v_separation", 10)
+	for entry in PICTURE_GUIDE:
+		var row: HBoxContainer = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		var input: String = entry[0]
+		if input.begins_with("key:"):
+			for k in input.substr(4).split(" "):
+				row.add_child(key_cap(k, 38))
+		else:
+			row.add_child(HudWidgets.Glyph.new(input, Color(0.35, 0.9, 1.0), 42))
+		row.add_child(HudWidgets.Glyph.new("arrow", COLOR_GOLD_DARK, 28))
+		var picture: String = entry[1]
+		if picture.begins_with("glyph:"):
+			row.add_child(HudWidgets.Glyph.new(picture.substr(6), Color(1.0, 0.9, 0.55), 48))
+		else:
+			var rect: TextureRect = TextureRect.new()
+			rect.texture = load("res://assets/icons/%s.png" % picture)
+			rect.custom_minimum_size = Vector2(52, 52)
+			rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			row.add_child(rect)
+		var word: Label = label(entry[2], 22)
+		word.add_theme_font_override("font", Fx.bold_font())
+		word.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		row.add_child(word)
+		grid.add_child(row)
+	return grid
+
+
+## Goal as a picture: campfire + three moons.
+static func goal_picture(nights: int = 3) -> HBoxContainer:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 8)
+	var fire: TextureRect = TextureRect.new()
+	fire.texture = load("res://assets/icons/campfire.png")
+	fire.custom_minimum_size = Vector2(72, 72)
+	fire.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	fire.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	row.add_child(fire)
+	row.add_child(HudWidgets.Glyph.new("heart", Color(1.0, 0.4, 0.45), 40))
+	for i in range(nights):
+		row.add_child(HudWidgets.Glyph.new("moon", Color(1.0, 0.92, 0.55), 48))
+	return row
+
+
 static func controls_grid() -> GridContainer:
 	var grid: GridContainer = GridContainer.new()
 	grid.columns = 2

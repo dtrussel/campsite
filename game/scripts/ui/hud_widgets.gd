@@ -208,3 +208,195 @@ class DayClock extends Control:
 			draw_circle(center, radius * 0.38, Color(1.0, 0.85, 0.35))
 		draw_arc(center, radius, 0.0, TAU, 48, UiKit.COLOR_GOLD_DARK, 4.0, true)
 		draw_arc(center, radius + 1.5, 0.0, TAU, 48, UiKit.COLOR_GOLD, 1.5, true)
+
+
+## Vector pictograms for a text-light, kid-friendly UI. Drawn in code,
+## so they scale crisply and need no image assets.
+class Glyph extends Control:
+	var kind: String = "star"
+	var color: Color = Color(1, 0.85, 0.35)
+	var outline: Color = Color(0.06, 0.04, 0.03, 0.9)
+
+	func _init(glyph_kind: String = "star", glyph_color: Color = Color(1, 0.85, 0.35), min_size: float = 32.0) -> void:
+		kind = glyph_kind
+		color = glyph_color
+		custom_minimum_size = Vector2(min_size, min_size)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func set_kind(new_kind: String, new_color: Color = color) -> void:
+		kind = new_kind
+		color = new_color
+		queue_redraw()
+
+	func _poly(points: PackedVector2Array, fill: Color) -> void:
+		var outline_points: PackedVector2Array = points.duplicate()
+		outline_points.append(points[0])
+		draw_polyline(outline_points, outline, 3.0, true)
+		draw_colored_polygon(points, fill)
+
+	func _star(c: Vector2, r: float, fill: Color) -> void:
+		var pts: PackedVector2Array = PackedVector2Array()
+		for i in range(10):
+			var a: float = -PI / 2 + i * PI / 5
+			var rr: float = r if i % 2 == 0 else r * 0.45
+			pts.append(c + Vector2(cos(a), sin(a)) * rr)
+		_poly(pts, fill)
+
+	func _draw() -> void:
+		var s: float = minf(size.x, size.y)
+		var c: Vector2 = size * 0.5
+		var r: float = s * 0.42
+		match kind:
+			"star":
+				_star(c, r, color)
+			"star_empty":
+				_star(c, r, Color(0.2, 0.2, 0.25, 0.8))
+			"moon", "moon_empty":
+				var fill: Color = color if kind == "moon" else Color(0.22, 0.24, 0.35, 0.85)
+				draw_circle(c, r + 1.5, outline)
+				draw_circle(c, r, fill)
+				draw_circle(c + Vector2(r * 0.45, -r * 0.3), r * 0.8, Color(0, 0, 0, 0) if false else _bg())
+			"sun":
+				for i in range(8):
+					var a: float = i * TAU / 8
+					draw_line(c + Vector2(cos(a), sin(a)) * r * 0.62, c + Vector2(cos(a), sin(a)) * r, color, s * 0.08, true)
+				draw_circle(c, r * 0.5, color)
+			"heart":
+				var pts: PackedVector2Array = PackedVector2Array()
+				for i in range(40):
+					var t: float = i / 40.0 * TAU
+					var x: float = 16 * pow(sin(t), 3)
+					var y: float = -(13 * cos(t) - 5 * cos(2 * t) - 2 * cos(3 * t) - cos(4 * t))
+					pts.append(c + Vector2(x, y) * r / 17.0)
+				_poly(pts, color)
+			"play":
+				_poly(PackedVector2Array([c + Vector2(-r * 0.6, -r), c + Vector2(r, 0), c + Vector2(-r * 0.6, r)]), color)
+			"pause":
+				draw_rect(Rect2(c + Vector2(-r * 0.7, -r), Vector2(r * 0.5, r * 2)), color)
+				draw_rect(Rect2(c + Vector2(r * 0.2, -r), Vector2(r * 0.5, r * 2)), color)
+			"help":
+				draw_circle(c, r, color)
+				draw_arc(c + Vector2(0, -r * 0.2), r * 0.35, PI, TAU + PI * 0.4, 16, outline, s * 0.09, true)
+				draw_line(c + Vector2(0, r * 0.05), c + Vector2(0, r * 0.3), outline, s * 0.09)
+				draw_circle(c + Vector2(0, r * 0.55), s * 0.05, outline)
+			"home":
+				_poly(PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(r * 0.7, 0), c + Vector2(r * 0.7, r),
+					c + Vector2(-r * 0.7, r), c + Vector2(-r * 0.7, 0), c + Vector2(-r, 0)]), color)
+			"restart":
+				draw_arc(c, r * 0.8, -PI * 0.3, PI * 1.5, 24, color, s * 0.12, true)
+				_poly(PackedVector2Array([c + Vector2(r * 0.35, -r * 1.05), c + Vector2(r * 1.0, -r * 0.55), c + Vector2(r * 0.25, -r * 0.2)]), color)
+			"close":
+				draw_line(c + Vector2(-r, -r) * 0.75, c + Vector2(r, r) * 0.75, color, s * 0.16, true)
+				draw_line(c + Vector2(r, -r) * 0.75, c + Vector2(-r, r) * 0.75, color, s * 0.16, true)
+			"check":
+				draw_polyline(PackedVector2Array([c + Vector2(-r * 0.8, 0), c + Vector2(-r * 0.2, r * 0.6), c + Vector2(r * 0.85, -r * 0.6)]),
+					color, s * 0.16, true)
+			"shield":
+				_poly(PackedVector2Array([c + Vector2(0, -r), c + Vector2(r * 0.85, -r * 0.6), c + Vector2(r * 0.7, r * 0.3),
+					c + Vector2(0, r), c + Vector2(-r * 0.7, r * 0.3), c + Vector2(-r * 0.85, -r * 0.6)]), color)
+			"footsteps":
+				for side in [-1, 1]:
+					var fc: Vector2 = c + Vector2(side * r * 0.4, side * r * 0.35)
+					draw_set_transform(fc, side * 0.25, Vector2(0.55, 1.0))
+					draw_circle(Vector2.ZERO, r * 0.45, color)
+					draw_set_transform(Vector2.ZERO)
+			"basket":
+				draw_arc(c + Vector2(0, -r * 0.1), r * 0.6, PI, TAU, 16, color, s * 0.08, true)
+				_poly(PackedVector2Array([c + Vector2(-r, -r * 0.1), c + Vector2(r, -r * 0.1), c + Vector2(r * 0.7, r),
+					c + Vector2(-r * 0.7, r)]), color)
+			"zzz":
+				var font: Font = Fx.bold_font()
+				draw_string_outline(font, c + Vector2(-r * 0.9, r * 0.5), "z", HORIZONTAL_ALIGNMENT_LEFT, -1, int(s * 0.5), 4, outline)
+				draw_string(font, c + Vector2(-r * 0.9, r * 0.5), "z", HORIZONTAL_ALIGNMENT_LEFT, -1, int(s * 0.5), color)
+				draw_string_outline(font, c + Vector2(-r * 0.1, r * 0.0), "Z", HORIZONTAL_ALIGNMENT_LEFT, -1, int(s * 0.7), 4, outline)
+				draw_string(font, c + Vector2(-r * 0.1, r * 0.0), "Z", HORIZONTAL_ALIGNMENT_LEFT, -1, int(s * 0.7), color)
+			"mouse_left", "mouse_right":
+				# Rounded mouse with the pressed button lit up and a little cable.
+				var body: Rect2 = Rect2(c + Vector2(-r * 0.62, -r * 0.8), Vector2(r * 1.24, r * 1.8))
+				draw_line(c + Vector2(0, -r * 0.8), c + Vector2(r * 0.25, -r * 1.05), outline, 3.0)
+				var shell: StyleBoxFlat = StyleBoxFlat.new()
+				shell.bg_color = Color(0.93, 0.93, 0.96)
+				shell.set_corner_radius_all(int(r * 0.6))
+				shell.border_color = outline
+				shell.set_border_width_all(2)
+				draw_style_box(shell, body)
+				var button: StyleBoxFlat = StyleBoxFlat.new()
+				button.bg_color = color
+				var left: bool = kind == "mouse_left"
+				var radius: int = int(r * 0.58)
+				button.corner_radius_top_left = radius if left else 0
+				button.corner_radius_top_right = 0 if left else radius
+				var half: Rect2 = Rect2(body.position + Vector2(2 if left else body.size.x * 0.5, 2),
+					Vector2(body.size.x * 0.5 - 2, body.size.y * 0.42))
+				draw_style_box(button, half)
+				draw_line(body.position + Vector2(body.size.x * 0.5, 0), body.position + Vector2(body.size.x * 0.5, body.size.y * 0.44), outline, 2.0)
+				draw_line(body.position + Vector2(0, body.size.y * 0.44), body.position + Vector2(body.size.x, body.size.y * 0.44), outline, 2.0)
+			"arrow":
+				_poly(PackedVector2Array([c + Vector2(-r, -r * 0.25), c + Vector2(r * 0.2, -r * 0.25), c + Vector2(r * 0.2, -r * 0.65),
+					c + Vector2(r, 0), c + Vector2(r * 0.2, r * 0.65), c + Vector2(r * 0.2, r * 0.25), c + Vector2(-r, r * 0.25)]), color)
+			"trophy":
+				_poly(PackedVector2Array([c + Vector2(-r * 0.7, -r), c + Vector2(r * 0.7, -r), c + Vector2(r * 0.5, -r * 0.1),
+					c + Vector2(r * 0.15, r * 0.2), c + Vector2(r * 0.15, r * 0.6), c + Vector2(r * 0.55, r),
+					c + Vector2(-r * 0.55, r), c + Vector2(-r * 0.15, r * 0.6), c + Vector2(-r * 0.15, r * 0.2), c + Vector2(-r * 0.5, -r * 0.1)]), color)
+				draw_arc(c + Vector2(-r * 0.7, -r * 0.55), r * 0.3, PI * 0.5, PI * 1.5, 10, color, s * 0.06)
+				draw_arc(c + Vector2(r * 0.7, -r * 0.55), r * 0.3, -PI * 0.5, PI * 0.5, 10, color, s * 0.06)
+			"fire":
+				_poly(PackedVector2Array([c + Vector2(0, -r), c + Vector2(r * 0.55, -r * 0.1), c + Vector2(r * 0.7, r * 0.4),
+					c + Vector2(r * 0.35, r), c + Vector2(-r * 0.35, r), c + Vector2(-r * 0.7, r * 0.4), c + Vector2(-r * 0.3, -r * 0.2),
+					c + Vector2(-r * 0.1, r * 0.1)]), color)
+				_poly(PackedVector2Array([c + Vector2(0, -r * 0.1), c + Vector2(r * 0.3, r * 0.55), c + Vector2(0, r * 0.9),
+					c + Vector2(-r * 0.3, r * 0.55)]), Color(1.0, 0.92, 0.5))
+
+	func _bg() -> Color:
+		return Color(0.02, 0.05, 0.08, 1.0)
+
+
+## Button showing a glyph (or texture) with an optional short word.
+static func icon_button(glyph_kind: String, caption: String, on_pressed: Callable, color: Color = UiKit.COLOR_GOLD,
+		texture: Texture2D = null, focusable: bool = true) -> Button:
+	var button: Button = Button.new()
+	button.text = ("      " + caption.to_upper()) if caption != "" else ""
+	button.custom_minimum_size = Vector2(250 if caption != "" else 64, 58)
+	button.focus_mode = Control.FOCUS_ALL if focusable else Control.FOCUS_NONE
+	button.add_theme_font_size_override("font_size", 22)
+	button.pressed.connect(on_pressed)
+	var holder: Control = Control.new()
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.set_anchors_preset(Control.PRESET_CENTER_LEFT if caption != "" else Control.PRESET_CENTER)
+	holder.position = Vector2(14, -20) if caption != "" else Vector2(-20, -20)
+	if texture != null:
+		var rect: TextureRect = TextureRect.new()
+		rect.texture = texture
+		rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		rect.size = Vector2(40, 40)
+		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		holder.add_child(rect)
+	else:
+		var glyph: Glyph = Glyph.new(glyph_kind, color, 40)
+		glyph.size = Vector2(40, 40)
+		holder.add_child(glyph)
+	button.add_child(holder)
+	return button
+
+
+## Icon + number row (e.g. imp icon x 7) for stat lists.
+static func icon_count(texture: Texture2D, glyph_kind: String, count_text: String, size_px: float = 40.0) -> HBoxContainer:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if texture != null:
+		var rect: TextureRect = TextureRect.new()
+		rect.texture = texture
+		rect.custom_minimum_size = Vector2(size_px, size_px)
+		rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		row.add_child(rect)
+	else:
+		row.add_child(Glyph.new(glyph_kind, UiKit.COLOR_GOLD, size_px))
+	var label: Label = UiKit.label(count_text, int(size_px * 0.6))
+	label.add_theme_font_override("font", Fx.bold_font())
+	label.add_theme_constant_override("outline_size", 6)
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(label)
+	return row

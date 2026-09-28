@@ -99,6 +99,68 @@ static func float_text(anchor: Node3D, text: String, color: Color, height: float
 	tween.chain().tween_callback(label.queue_free)
 
 
+## Icon pop-up above a unit: a picture with "+2" (or a red X for "you
+## can't"). Replaces most in-world text so kids can read it at a glance.
+static func icon_popup(anchor: Node3D, icon: Texture2D, text: String = "", color: Color = Color.WHITE,
+		cross: bool = false, height: float = 2.4, offset_x: float = 0.0) -> void:
+	if anchor == null or not anchor.is_inside_tree() or icon == null:
+		return
+	var scene_root: Node = anchor.get_tree().current_scene
+	if scene_root == null:
+		return
+	var holder: Node3D = Node3D.new()
+	scene_root.add_child(holder)
+	holder.global_position = anchor.global_position + Vector3(offset_x, height, 0)
+	var sprite: Sprite3D = Sprite3D.new()
+	sprite.texture = icon
+	sprite.pixel_size = 0.0075
+	sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	sprite.no_depth_test = true
+	sprite.render_priority = 20
+	sprite.shaded = false
+	holder.add_child(sprite)
+	if cross:
+		var x: Label3D = Label3D.new()
+		x.text = "X"
+		x.font = bold_font()
+		x.font_size = 96
+		x.pixel_size = 0.008
+		x.modulate = Color(1.0, 0.2, 0.15)
+		x.outline_size = 16
+		x.outline_modulate = Color(0.1, 0.02, 0.02)
+		x.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		x.no_depth_test = true
+		x.render_priority = 22
+		x.outline_render_priority = 21
+		holder.add_child(x)
+	if text != "":
+		var label: Label3D = Label3D.new()
+		label.text = text
+		label.font = bold_font()
+		label.font_size = 60
+		label.pixel_size = 0.009
+		label.modulate = color
+		label.outline_size = 14
+		label.outline_modulate = Color(0.05, 0.03, 0.02)
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.no_depth_test = true
+		label.render_priority = 22
+		label.outline_render_priority = 21
+		label.position = Vector3(0.62, 0, 0)
+		holder.add_child(label)
+	holder.scale = Vector3.ONE * 0.4
+	var tween: Tween = holder.create_tween()
+	tween.tween_property(holder, "scale", Vector3.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(holder, "global_position:y", holder.global_position.y + 0.8, 1.0).set_ease(Tween.EASE_OUT)
+	tween.tween_property(holder, "scale", Vector3.ONE * 0.01, 0.2)
+	tween.tween_callback(holder.queue_free)
+
+
+static func icon(name: String) -> Texture2D:
+	var path: String = "res://assets/icons/%s.png" % name
+	return load(path) as Texture2D if ResourceLoader.exists(path) else null
+
+
 ## Creates an overhead HP label as a child of `owner_node`.
 static func make_hp_label(owner_node: Node3D, height: float) -> Label3D:
 	var label: Label3D = Label3D.new()

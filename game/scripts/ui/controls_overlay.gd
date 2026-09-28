@@ -27,18 +27,12 @@ func _ready() -> void:
 	center.add_child(panel)
 	var column: VBoxContainer = UiKit.vbox(10)
 	panel.add_child(column)
-	column.add_child(UiKit.title("How to play", 30))
-	column.add_child(UiKit.divider(520))
-	column.add_child(UiKit.label(UiKit.GOAL_TEXT, 20))
-	column.add_child(UiKit.label(
-		"Day: gather, build fences, craft torches at the campfire.\n"
-		+ "Night: Shadow Imps rise from the forest and attack the campfire - and you, if you get close.\n"
-		+ "Right-click to move. Click an imp to fight it, a tree or rock to gather. Clear the wave to bring dawn early.", 16, UiKit.COLOR_MUTED
-	))
-	column.add_child(HSeparator.new())
-	column.add_child(UiKit.controls_grid())
-	column.add_child(HSeparator.new())
-	_start_button = UiKit.button("Let's go!", close, false)
+	column.add_child(UiKit.goal_picture(GameManager.nights_to_win))
+	var divider_row: CenterContainer = CenterContainer.new()
+	divider_row.add_child(UiKit.divider(560))
+	column.add_child(divider_row)
+	column.add_child(UiKit.picture_guide(2))
+	_start_button = HudWidgets.icon_button("play", "Go!", close, Color(0.5, 1.0, 0.55), null, false)
 	var row: CenterContainer = CenterContainer.new()
 	row.add_child(_start_button)
 	column.add_child(row)

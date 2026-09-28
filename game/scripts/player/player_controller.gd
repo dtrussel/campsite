@@ -403,7 +403,7 @@ func _try_place_torch() -> void:
 	if _state == PlayerState.GATHERING:
 		return
 	if not ResourceManager.spend(TORCH_ITEM_ID, 1):
-		Fx.float_text(self, "No torch - craft one at the campfire (C)", Color(1, 0.85, 0.5), 2.0)
+		Fx.icon_popup(self, Fx.icon("torch"), "", Color.WHITE, true)
 		return
 	var torch: Node3D = TORCH_SCENE.instantiate() as Node3D
 	get_tree().current_scene.add_child(torch)
@@ -415,10 +415,10 @@ func _try_place_torch() -> void:
 
 func _try_eat_berries() -> void:
 	if current_hp >= max_hp:
-		Fx.float_text(self, "Not hungry", Color(0.9, 0.9, 0.9), 2.0)
+		Fx.icon_popup(self, Fx.icon("berries"), "", Color.WHITE, true)
 		return
 	if not ResourceManager.spend(BERRY_ITEM_ID, BERRIES_PER_MEAL):
-		Fx.float_text(self, "Need %d berries" % BERRIES_PER_MEAL, Color(1, 0.85, 0.5), 2.0)
+		Fx.icon_popup(self, Fx.icon("berries"), "", Color.WHITE, true)
 		return
 	heal(heal_per_meal)
 	Fx.float_text(self, "+%d HP" % heal_per_meal, Color(0.5, 1, 0.5))
@@ -444,7 +444,7 @@ func _on_level_up(character: Node, _new_level: int) -> void:
 	max_hp += stats.max_health_per_level
 	current_hp = min(max_hp, current_hp + stats.max_health_per_level)
 	health_changed.emit(current_hp, max_hp)
-	Fx.float_text(self, "LEVEL UP!", Color(1.0, 0.85, 0.4), 2.2)
+	Fx.float_text(self, "LEVEL UP!", Color(1.0, 0.85, 0.4), 2.8)
 	Fx.burst(&"level_up", global_position)
 
 

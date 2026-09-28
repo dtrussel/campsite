@@ -116,7 +116,7 @@ func _award_kill_xp() -> void:
 	ProgressionManager.award_xp(_last_damage_source, definition.xp_reward, &"kill")
 	var killer: Node3D = _last_damage_source as Node3D
 	if killer != null:
-		Fx.float_text(killer, "+%d XP" % definition.xp_reward, Color(0.6, 0.9, 1.0), 2.0)
+		Fx.burst(&"sparkle", killer.global_position + Vector3(0, 1.6, 0))
 
 
 func _physics_process(delta: float) -> void:

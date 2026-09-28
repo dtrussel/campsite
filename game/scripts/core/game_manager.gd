@@ -165,6 +165,11 @@ func _on_xp_gained(_character: Node, _amount: int, source: StringName) -> void:
 		record(&"built")
 
 
+## Public entry for the HUD's task buttons.
+func assign_companion_task(task: int) -> void:
+	_assign_to_all_companions(task)
+
+
 func _assign_to_all_companions(task: int) -> void:
 	for companion in get_tree().get_nodes_in_group("companions"):
 		if companion.has_method("set_task"):

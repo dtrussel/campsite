@@ -45,35 +45,29 @@ func _ready() -> void:
 	logo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	logo.add_theme_constant_override("outline_size", 14)
 	column.add_child(logo)
-	var tagline: Label = UiKit.title("A night in the haunted woods", 18, UiKit.COLOR_GOLD_LIGHT)
-	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(tagline)
-	var divider_row: CenterContainer = CenterContainer.new()
-	divider_row.add_child(UiKit.divider(360))
-	column.add_child(divider_row)
-	var goal: Label = UiKit.label(UiKit.GOAL_TEXT, 19)
-	goal.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	goal.add_theme_constant_override("outline_size", 6)
-	column.add_child(goal)
+	column.add_child(UiKit.goal_picture(3))
 
 	var buttons: VBoxContainer = UiKit.vbox(10)
 	buttons.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	buttons.position = Vector2(-140, -230)
 	add_child(buttons)
-	var play: Button = UiKit.button("Play", _on_play)
-	play.custom_minimum_size = Vector2(280, 56)
-	play.add_theme_font_size_override("font_size", 24)
+	var play: Button = HudWidgets.icon_button("play", "Play", _on_play, Color(0.5, 1.0, 0.55))
+	play.custom_minimum_size = Vector2(300, 72)
+	play.add_theme_font_size_override("font_size", 32)
 	buttons.add_child(play)
-	buttons.add_child(UiKit.button("How to play", _on_toggle_controls))
-	buttons.add_child(UiKit.button("Quit", _on_quit))
+	var small: HBoxContainer = HBoxContainer.new()
+	small.alignment = BoxContainer.ALIGNMENT_CENTER
+	small.add_theme_constant_override("separation", 12)
+	small.add_child(HudWidgets.icon_button("help", "", _on_toggle_controls))
+	small.add_child(HudWidgets.icon_button("close", "", _on_quit, Color(1.0, 0.45, 0.4)))
+	buttons.add_child(small)
 
 	_controls_panel = UiKit.panel(18)
 	var controls_column: VBoxContainer = UiKit.vbox(8)
-	controls_column.add_child(UiKit.title("How to play", 22))
-	controls_column.add_child(UiKit.controls_grid())
+	controls_column.add_child(UiKit.picture_guide(1))
 	_controls_panel.add_child(controls_column)
 	_controls_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	_controls_panel.position = Vector2(-560, -200)
+	_controls_panel.position = Vector2(-420, -300)
 	_controls_panel.visible = false
 	add_child(_controls_panel)
 

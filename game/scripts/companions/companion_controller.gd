@@ -92,7 +92,7 @@ func _set_knocked_out(value: bool) -> void:
 func _on_dawn_started(_day_number: int) -> void:
 	if is_knocked_out:
 		_set_knocked_out(false)
-		Fx.float_text(self, "Back up!", Color(0.6, 1, 0.6), 2.2)
+		Fx.burst(&"heal", global_position)
 
 
 func _tick_regen(delta: float) -> void:
@@ -286,7 +286,7 @@ func _on_level_up(character: Node, _new_level: int) -> void:
 	max_hp += stats.max_health_per_level
 	current_hp = min(max_hp, current_hp + stats.max_health_per_level)
 	health_changed.emit(current_hp, max_hp)
-	Fx.float_text(self, "LEVEL UP!", Color(0.6, 1, 0.6), 2.2)
+	Fx.float_text(self, "LEVEL UP!", Color(1.0, 0.85, 0.4), 2.7)
 
 
 func _find_nearest_mob(within: float) -> Node3D:
@@ -340,4 +340,5 @@ func _refresh_world_refs() -> void:
 
 func _update_task_label() -> void:
 	if _task_label != null:
-		_task_label.text = "Knocked out (back at dawn)" if is_knocked_out else get_task_name()
+		# The HUD task buttons show the task; the label only shows sleep.
+		_task_label.text = "Zzz" if is_knocked_out else ""
