@@ -210,7 +210,7 @@ def clump(parts, root, up, controls, width, thickness=0.45, steps=8):
     widths = [width * (1.0 - (i / (steps - 1)) ** 1.8) * (0.85 + 0.3 * math.sin(math.pi * i / (steps - 1)))
               for i in range(steps)]
     widths[-1] = 0.0
-    obj = chibi.hair_clump(pts, widths, thickness, up, name="curl", ring=6)
+    obj = chibi.hair_clump(pts, widths, thickness, up, name="curl", ring=8)
     length = sum((pts[i + 1] - pts[i]).length for i in range(steps - 1))
     common.color_by(obj, chibi.lock_colour(root, length, HAIR_LIGHT, HAIR, HAIR_DARK))
     parts.append(obj)
@@ -249,7 +249,7 @@ def wavy(parts, root, up, controls, width, wave, side, thickness=0.42, steps=9):
     widths = [width * (1.0 - (i / (steps - 1)) ** 1.8) * (0.85 + 0.3 * math.sin(math.pi * i / (steps - 1)))
               for i in range(steps)]
     widths[-1] = 0.0
-    obj = chibi.hair_clump(pts, widths, thickness, up, name="curl", ring=6)
+    obj = chibi.hair_clump(pts, widths, thickness, up, name="curl", ring=8)
     length = sum((pts[i + 1] - pts[i]).length for i in range(steps - 1))
     common.color_by(obj, chibi.lock_colour(root, length, HAIR_LIGHT, HAIR, HAIR_DARK))
     parts.append(obj)
@@ -334,7 +334,7 @@ def head_piece():
     face_paint.paint_face(FACE, FACE_PNG)
     head = chibi.sculpt_head(HEAD, SKIN, SKIN_SHADE, BLUSH, jaw=0.2, chin_len=0.0, chin_fwd=0.03, cheeks=0.22,
                              face_flat=0.1, blush_yaw=0.62, blush_pitch=-0.46, blush_size=0.01,
-                             layout=FACE, features=FEATURES, tris=6000)
+                             layout=FACE, features=FEATURES, tris=11000)
     chibi.face_uv(head, HEAD, FACE)
     ear_parts = ears()
     for part in ear_parts:
@@ -342,7 +342,7 @@ def head_piece():
     hair_parts = hair()
     chibi.report([head] + ear_parts + hair_parts)
     hair_obj = common.join(hair_parts, "Nela_Hair")
-    chibi.decimate_tris(hair_obj, 8000)
+    chibi.decimate_tris(hair_obj, 12000)
     return common.join([head] + ear_parts, "Nela_Head"), hair_obj
 
 

@@ -233,7 +233,7 @@ def clump(parts, root, up, controls, width, length_ratio=None, thickness=0.55, c
     widths = [width * (1.0 - (i / (steps - 1)) ** 1.6) * (0.85 + 0.3 * math.sin(math.pi * i / (steps - 1)))
               for i in range(steps)]
     widths[-1] = 0.0
-    obj = chibi.hair_clump(pts, widths, thickness, up, name="clump", ring=6)
+    obj = chibi.hair_clump(pts, widths, thickness, up, name="clump", ring=8)
     length = sum((pts[i + 1] - pts[i]).length for i in range(steps - 1))
     common.color_by(obj, colour or chibi.lock_colour(root, length, HAIR_LIGHT, HAIR, HAIR_DARK))
     parts.append(obj)
@@ -372,7 +372,7 @@ def head_piece():
     face_paint.paint_face(FACE, FACE_PNG)
     head = chibi.sculpt_head(HEAD, SKIN, SKIN_SHADE, BLUSH, jaw=0.1, chin_len=0.0, chin_fwd=0.05,
                              cheeks=0.16, face_flat=0.12, blush_yaw=0.5, blush_pitch=-0.3, blush_size=0.01,
-                             layout=FACE, features=FEATURES, tris=6000)
+                             layout=FACE, features=FEATURES, tris=11000)
     chibi.face_uv(head, HEAD, FACE)
     ear_parts = ears()
     for part in ear_parts:
@@ -381,7 +381,7 @@ def head_piece():
     chibi.report([head] + ear_parts + hair)
     # Separate textures: the face gets most of the head's texels.
     hair_obj = common.join(hair, "Leo_Hair")
-    chibi.decimate_tris(hair_obj, 6000)
+    chibi.decimate_tris(hair_obj, 10000)
     return common.join([head] + ear_parts, "Leo_Head"), hair_obj
 
 

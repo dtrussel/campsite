@@ -37,7 +37,7 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
   (`scripts/utilities/stylize.gd`). The hero and shadow profiles also add an
   ink outline.
 - **Emissive** flat materials (eyes, wand star, embers) render unshaded.
-- **Triangle budgets:** imps ≤ 12k; the hero kids ≤ 36k (head ~6k, hair decimated to 6–8k), trees ≤ 3k, props ≤ 1.5k.
+- **Triangle budgets:** imps ≤ 12k; the hero kids ≤ 50k (head ~11k, hair decimated to 10–12k), trees ≤ 3k, props ≤ 1.5k.
 - **Painted wear:** `common.grime(obj, colour, amount_fn)` blends dirt, scuffs and mud over the colours already set, before the bake.
 - **Rigid gear** on characters is bound to one bone at weight 1.0.
   Weapons are built in the `handslot.r` bone frame: handle along +Y, blade
