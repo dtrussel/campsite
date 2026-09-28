@@ -1,11 +1,9 @@
-[gd_scene load_steps=9 format=3 uid="uid://b0campsiterocknode01"]
+[gd_scene load_steps=6 format=3 uid="uid://b0campsiterocknode01"]
 
 [ext_resource type="Script" path="res://scripts/resources/resource_node.gd" id="1_rn"]
+[ext_resource type="PackedScene" path="res://assets/custom/rock_cluster.glb" id="c1"]
+[ext_resource type="PackedScene" path="res://assets/custom/rock_pebbles.glb" id="c2"]
 [ext_resource type="Resource" uid="uid://b0campsiteitemstone" path="res://resources/items/stone.tres" id="2_def"]
-[ext_resource type="PackedScene" path="res://assets/kaykit/hexagon/rock_single_E.gltf" id="m1"]
-[ext_resource type="PackedScene" path="res://assets/kaykit/hexagon/rock_single_C.gltf" id="m2"]
-[ext_resource type="PackedScene" path="res://assets/kaykit/hexagon/rock_single_B.gltf" id="m3"]
-[ext_resource type="PackedScene" path="res://assets/kaykit/hexagon/rock_single_A.gltf" id="m4"]
 
 
 [sub_resource type="CylinderShape3D" id="Shape_collision"]
@@ -24,23 +22,15 @@ gather_animation = &"chop"
 gather_burst = &"stone"
 
 [node name="Visual" type="Node3D" parent="."]
-metadata/style_tint = Color(0.62, 0.63, 0.7, 1)
 
-[node name="Model0" parent="Visual" instance=ExtResource("m1")]
-transform = Transform3D(3.24814, 0, -1.00477, 0, 3.4, 0, 1.00477, 0, 3.24814, 0, 0, 0)
-
-[node name="Model1" parent="Visual" instance=ExtResource("m2")]
-transform = Transform3D(0.94213, 0, -2.4233, 0, 2.6, 0, 2.4233, 0, 0.94213, 0.55, 0, 0.45)
-
-[node name="Model2" parent="Visual" instance=ExtResource("m3")]
-transform = Transform3D(-1.62227, 0, -1.48602, 0, 2.2, 0, 1.48602, 0, -1.62227, -0.6, 0, 0.35)
+[node name="Model0" parent="Visual" instance=ExtResource("c1")]
+transform = Transform3D(0.619002, 0, -0.423482, 0, 0.75, 0, 0.423482, 0, 0.619002, 0, 0, 0)
 
 [node name="DepletedVisual" type="Node3D" parent="."]
 visible = false
-metadata/style_tint = Color(0.62, 0.63, 0.7, 1)
 
-[node name="Model0" parent="DepletedVisual" instance=ExtResource("m4")]
-transform = Transform3D(1.74177, 0, -1.79339, 0, 2.5, 0, 1.79339, 0, 1.74177, 0, 0, 0)
+[node name="Model0" parent="DepletedVisual" instance=ExtResource("c2")]
+transform = Transform3D(1, 0, -0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
 [node name="Collision" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, -0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)

@@ -50,7 +50,7 @@ func _ready() -> void:
 		push_warning("Mob '%s' has no definition" % name)
 		current_hp = 1
 	_refresh_base()
-	_hp_bar = HealthBar3D.attach(self, 1.35, "enemy", 0.9)
+	_hp_bar = HealthBar3D.attach(self, 1.75, "enemy", 0.9)
 	_hp_bar.set_value.call_deferred(current_hp, current_hp)
 	if _visual != null:
 		if _base != null:

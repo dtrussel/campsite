@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scripts/mobs/mob_controller.gd" id="1_mob"]
 [ext_resource type="Resource" uid="uid://b0campsitemobdefshadowimp" path="res://resources/mobs/shadow_imp.tres" id="2_def"]
 [ext_resource type="Script" path="res://scripts/utilities/character_visual.gd" id="3_visual"]
-[ext_resource type="PackedScene" path="res://assets/kaykit/skeletons/Skeleton_Minion.glb" id="4_model"]
+[ext_resource type="PackedScene" path="res://assets/custom/shadow_imp.glb" id="4_model"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_mob"]
 radius = 0.32
@@ -22,7 +22,7 @@ shape = SubResource("CapsuleShape3D_mob")
 [node name="Visual" type="Node3D" parent="."]
 script = ExtResource("3_visual")
 model_scene = ExtResource("4_model")
-model_scale = 0.5
+model_scale = 0.62
 style = "shadow"
 clips = {
 &"attack": "Unarmed_Melee_Attack_Punch_A",

@@ -53,7 +53,7 @@ func _ready() -> void:
 	if not ProgressionManager.level_up.is_connected(_on_level_up):
 		ProgressionManager.level_up.connect(_on_level_up)
 	TimeManager.dawn_started.connect(_on_dawn_started)
-	_hp_bar = HealthBar3D.attach(self, 1.6, "hero", 1.1)
+	_hp_bar = HealthBar3D.attach(self, 2.3, "hero", 1.1)
 	health_changed.connect(func(hp: int, max_value: int) -> void: _hp_bar.set_value(hp, max_value))
 	_hp_bar.set_value.call_deferred(current_hp, max_hp)
 

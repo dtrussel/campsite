@@ -14,6 +14,7 @@ extends Node
 const OUT_DIR: String = "res://assets/icons/"
 const SIZE: int = 128
 const KAY: String = "res://assets/kaykit/"
+const CUSTOM: String = "res://assets/custom/"
 
 var _viewport: SubViewport = null
 var _camera: Camera3D = null
@@ -25,26 +26,28 @@ func _ready() -> void:
 	_setup_stage()
 	# name -> [builder Callable, camera distance, camera height, look height, yaw]
 	var jobs: Array = [
-		["wood", func() -> Node3D: return _model("hexagon/resource_lumber.gltf", 3.0), 2.6, 1.6, 0.25, 0.6],
-		["stone", func() -> Node3D: return _model("hexagon/resource_stone.gltf", 4.0, Stylize.TINT_ROCK), 2.6, 1.6, 0.4, 0.5],
+		["stone", func() -> Node3D: return _custom("rock_a.glb", 1.0), 2.6, 1.6, 0.4, 0.5],
 		["berries", _berries, 1.6, 1.0, 0.25, 0.0],
 		["fiber", _fiber, 1.8, 1.0, 0.35, 0.0],
 		["leaves", _leaves, 1.6, 1.1, 0.2, 0.0],
 		["resin", _resin, 1.4, 0.8, 0.25, 0.0],
-		["torch", func() -> Node3D: return _model("halloween/lantern_standing.gltf", 1.4), 2.4, 1.4, 0.65, 0.4],
-		["fence", func() -> Node3D: return _model("hexagon/fence_wood_straight.gltf", 2.2), 3.0, 1.6, 0.55, 1.2],
-		["tower", func() -> Node3D: return _model("hexagon/building_tower_A_green.gltf", 1.3), 5.2, 3.2, 1.35, 0.6],
+		["torch", func() -> Node3D: return _custom("torch.glb", 1.0), 2.4, 1.4, 0.65, 0.4],
+		["fence", func() -> Node3D: return _custom("fence.glb", 1.0), 3.0, 1.6, 0.55, 0.35],
+		["tower", func() -> Node3D: return _custom("watch_post.glb", 1.0), 5.2, 3.2, 1.35, 0.6],
 		["axe", func() -> Node3D: return _prop("adventurers/axe_1handed.gltf", 1.6, Vector3(0, 0, 0.6)), 2.2, 0.4, 0.4, 0.0],
-		["campfire", _campfire, 2.9, 2.2, 0.25, 0.3],
-		["tent", func() -> Node3D: return _model("hexagon/tent.gltf", 4.0), 4.6, 2.8, 0.9, 0.7],
+		["campfire", _campfire_custom, 2.9, 2.2, 0.25, 0.3],
+		["tent", func() -> Node3D: return _custom("tent.glb", 1.0), 4.6, 2.8, 0.9, 2.3],
+		["wood", func() -> Node3D: return _custom("woodpile.glb", 1.0), 2.6, 1.6, 0.25, 0.6],
+		["bush", func() -> Node3D: return _custom("berry_bush.glb", 1.0), 2.6, 1.8, 0.4, 0.3],
+		["tree", func() -> Node3D: return _custom("tree_a.glb", 1.0), 2.6, 1.2, 0.4, 0.3],
 		["pumpkin", func() -> Node3D: return _model("halloween/pumpkin_orange_jackolantern.gltf", 1.0), 2.4, 1.2, 0.6, 0.0],
 	]
 	for job in jobs:
 		await _render(job[0], (job[1] as Callable).call(), job[2], job[3], job[4], job[5])
 	# Portraits: head-and-shoulders of each character.
-	await _portrait("portrait_boy", "adventurers/Rogue.glb", "hero", ["Knife_Offhand", "1H_Crossbow", "2H_Crossbow", "Throwable", "Knife"])
-	await _portrait("portrait_sibling", "adventurers/Mage.glb", "hero", ["Spellbook", "Spellbook_open", "2H_Staff", "1H_Wand"])
-	await _portrait("portrait_imp", "skeletons/Skeleton_Minion.glb", "shadow", [])
+	await _portrait("portrait_boy", "custom/boy.glb", "hero", ["Boy_Axe"])
+	await _portrait("portrait_sibling", "custom/sibling.glb", "hero", ["Sibling_Wand", "Sibling_WandStar"], 0.35)
+	await _portrait("portrait_imp", "custom/shadow_imp.glb", "shadow", [], -0.12, 3.1)
 	print("render_icons: done")
 	get_tree().quit()
 
@@ -120,23 +123,39 @@ func _bounds(root: Node) -> AABB:
 	return result
 
 
-func _portrait(name: String, path: String, style: String, hidden: Array) -> void:
+func _portrait(name: String, path: String, style: String, hidden: Array, raise: float = 0.0, distance: float = 2.6) -> void:
 	var visual: CharacterVisual = CharacterVisual.new()
-	visual.model_scene = load(KAY + path)
+	visual.model_scene = load("res://assets/" + path)
 	visual.model_scale = 1.0
 	visual.hidden_parts = PackedStringArray(hidden)
 	visual.style = style
-	visual.rotation.y = 0.35
+	visual.rotation.y = 0.35 if distance < 3.0 else 0.15
 	for child in _stage.get_children():
 		child.queue_free()
 	_stage.add_child(visual)
-	_camera.position = Vector3(0.0, 1.95, 2.3)
-	_camera.look_at(Vector3(0, 1.55, 0))
+	_camera.position = Vector3(0.0, 1.95 + raise, distance)
+	_camera.look_at(Vector3(0, 1.62 + raise, 0))
 	for i in range(6):
 		await RenderingServer.frame_post_draw
 	var image: Image = _viewport.get_texture().get_image()
 	image.save_png(ProjectSettings.globalize_path(OUT_DIR + name + ".png"))
 	print("render_icons: ", name)
+
+
+func _custom(file: String, uniform_scale: float) -> Node3D:
+	var node: Node3D = (load(CUSTOM + file) as PackedScene).instantiate() as Node3D
+	node.scale = Vector3.ONE * uniform_scale
+	Stylize.apply(node, "prop")
+	return node
+
+
+func _campfire_custom() -> Node3D:
+	var root: Node3D = _custom("campfire.glb", 1.0)
+	var flame: MeshInstance3D = _sphere(0.26, Color(1.0, 0.55, 0.15), Vector3(0, 0.5, 0), 2.5)
+	flame.scale = Vector3(1.0, 1.8, 1.0)
+	root.add_child(flame)
+	root.add_child(_sphere(0.15, Color(1.0, 0.9, 0.5), Vector3(0, 0.45, 0.12), 3.0))
+	return root
 
 
 func _model(path: String, uniform_scale: float, tint: Color = Color.WHITE) -> Node3D:

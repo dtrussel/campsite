@@ -111,23 +111,24 @@ func _make_tuft_mesh() -> ArrayMesh:
 
 func _build_border() -> void:
 	var near_models: Array = [
-		["hexagon/tree_single_A.gltf", 3.0, 3.8],
-		["hexagon/tree_single_B.gltf", 3.0, 3.8],
-		["halloween/tree_pine_yellow_medium.gltf", 0.55, 0.75],
-		["halloween/tree_pine_orange_medium.gltf", 0.55, 0.7],
+		["custom/tree_a.glb", 0.85, 1.1],
+		["custom/tree_b.glb", 0.85, 1.1],
+		["custom/tree_c.glb", 0.85, 1.1],
+		["custom/pine_a.glb", 0.8, 1.05],
+		["custom/pine_b.glb", 0.8, 1.05],
 	]
 	var far_models: Array = [
-		["hexagon/trees_A_large.gltf", 4.0, 5.0],
-		["hexagon/trees_B_large.gltf", 4.0, 5.0],
-		["hexagon/trees_A_medium.gltf", 4.0, 5.0],
-		["hexagon/hills_A_trees.gltf", 4.5, 6.0],
-		["hexagon/hills_B_trees.gltf", 4.5, 6.0],
-		["halloween/tree_pine_yellow_large.gltf", 0.8, 1.0],
+		["custom/tree_a.glb", 1.1, 1.5],
+		["custom/tree_b.glb", 1.1, 1.5],
+		["custom/tree_c.glb", 1.1, 1.5],
+		["custom/pine_b.glb", 1.1, 1.4],
+		["kaykit/hexagon/hills_A_trees.gltf", 4.5, 6.0],
+		["kaykit/hexagon/hills_B_trees.gltf", 4.5, 6.0],
 	]
 	var backdrop: Array = [
-		["hexagon/mountain_A_grass_trees.gltf", 7.0, 9.0],
-		["hexagon/mountain_B_grass_trees.gltf", 7.0, 9.0],
-		["hexagon/hills_C_trees.gltf", 6.0, 8.0],
+		["kaykit/hexagon/mountain_A_grass_trees.gltf", 7.0, 9.0],
+		["kaykit/hexagon/mountain_B_grass_trees.gltf", 7.0, 9.0],
+		["kaykit/hexagon/hills_C_trees.gltf", 6.0, 8.0],
 	]
 	# Inner ring: individual trees just past the play boundary.
 	for i in range(70):
@@ -157,7 +158,7 @@ func _place_square_ring(models: Array, angle: float, radius: float) -> void:
 # --- Haunted edges near mob spawns ---------------------------------------
 
 func _build_haunted_edges() -> void:
-	var dead: Array = ["halloween/tree_dead_large.gltf", "halloween/tree_dead_medium.gltf", "halloween/tree_dead_small.gltf"]
+	var dead: Array = ["kaykit/halloween/tree_dead_large.gltf", "kaykit/halloween/tree_dead_medium.gltf", "kaykit/halloween/tree_dead_small.gltf"]
 	for spawn_angle in spawn_angles:
 		var base: float = deg_to_rad(spawn_angle)
 		var dir: Vector3 = Vector3(sin(base), 0, -cos(base))
@@ -169,7 +170,7 @@ func _build_haunted_edges() -> void:
 			_spawn_model(dead[_rng.randi() % dead.size()], pos, _rng.randf_range(0.9, 1.3), _rng.randf() * TAU)
 		# A glowing jack-o'-lantern marks each lane.
 		var lantern_pos: Vector3 = dir * 18.5 + side * _rng.randf_range(2.5, 3.5)
-		var pumpkin: Node3D = _spawn_model("halloween/pumpkin_orange_jackolantern.gltf", lantern_pos, 0.8, _rng.randf() * TAU)
+		var pumpkin: Node3D = _spawn_model("kaykit/halloween/pumpkin_orange_jackolantern.gltf", lantern_pos, 0.8, _rng.randf() * TAU)
 		if pumpkin != null:
 			var glow: OmniLight3D = OmniLight3D.new()
 			glow.light_color = Color(1.0, 0.5, 0.15)
@@ -177,25 +178,22 @@ func _build_haunted_edges() -> void:
 			glow.omni_range = 3.5
 			glow.position = Vector3(0, 0.6, 0)
 			pumpkin.add_child(glow)
-		_spawn_model("halloween/pumpkin_yellow_small.gltf", lantern_pos + side * 0.9 + dir * 0.4, 1.0, _rng.randf() * TAU)
+		_spawn_model("kaykit/halloween/pumpkin_yellow_small.gltf", lantern_pos + side * 0.9 + dir * 0.4, 1.0, _rng.randf() * TAU)
 
 
 # --- Camp ------------------------------------------------------------------
 
 func _build_camp() -> void:
-	var tent: Node3D = _spawn_model("hexagon/tent.gltf", Vector3(-3.3, 0, -2.6), 5.2, deg_to_rad(40.0))
-	_add_blocker(tent, Vector3(2.2, 2.0, 2.2))
-	var logs: Node3D = _spawn_model("hexagon/resource_lumber.gltf", Vector3(2.9, 0, -2.4), 3.2, deg_to_rad(-25.0))
-	_add_blocker(logs, Vector3(2.0, 0.7, 1.0))
-	_spawn_model("hexagon/crate_A_big.gltf", Vector3(-5.2, 0, -0.9), 4.2, 0.4)
-	_spawn_model("hexagon/crate_B_small.gltf", Vector3(-4.6, 0, -0.2), 4.2, 1.1)
-	_spawn_model("hexagon/barrel.gltf", Vector3(-5.6, 0, 0.3), 4.0, 0.0)
-	_spawn_model("hexagon/sack.gltf", Vector3(-1.2, 0, -4.2), 4.5, 0.8)
-	_spawn_model("hexagon/bucket_water.gltf", Vector3(1.6, 0, -3.6), 4.5, 0.0)
-	_spawn_model("hexagon/wheelbarrow.gltf", Vector3(4.2, 0, -1.2), 3.6, deg_to_rad(110.0))
-	_spawn_model("hexagon/flag_green.gltf", Vector3(-3.9, 1.95, -3.2), 3.0, deg_to_rad(40.0))
+	var tent: Node3D = _spawn_model("custom/tent.glb", Vector3(-3.4, 0, -2.7), 1.25, deg_to_rad(125.0))
+	_add_blocker(tent, Vector3(2.8, 2.0, 2.4))
+	var logs: Node3D = _spawn_model("custom/woodpile.glb", Vector3(3.0, 0, -2.5), 1.0, deg_to_rad(-25.0))
+	_add_blocker(logs, Vector3(1.3, 0.8, 0.8))
+	_spawn_model("custom/crate.glb", Vector3(-5.3, 0, -0.8), 0.9, 0.4)
+	_spawn_model("custom/crate.glb", Vector3(-4.7, 0, 0.1), 0.65, 1.1)
+	_spawn_model("custom/barrel.glb", Vector3(-5.8, 0, 0.5), 0.9, 0.0)
+	_spawn_model("kaykit/hexagon/bucket_water.gltf", Vector3(1.6, 0, -3.6), 4.5, 0.0)
 	for pos in [Vector3(-2.1, 0, 2.9), Vector3(3.1, 0, 1.2)]:
-		var lantern: Node3D = _spawn_model("halloween/lantern_standing.gltf", pos, 0.9, _rng.randf() * TAU)
+		var lantern: Node3D = _spawn_model("kaykit/halloween/lantern_standing.gltf", pos, 0.9, _rng.randf() * TAU)
 		if lantern != null:
 			var light: OmniLight3D = OmniLight3D.new()
 			light.light_color = Color(1.0, 0.75, 0.4)
@@ -203,7 +201,22 @@ func _build_camp() -> void:
 			light.omni_range = 4.0
 			light.position = Vector3(0, 0.75, 0)
 			lantern.add_child(light)
-	_spawn_model("halloween/candle_triple.gltf", Vector3(-2.4, 0, -1.2), 0.8, 0.5)
+	# Toadstool clusters dotted around the clearing edge and forest.
+	for i in range(14):
+		var angle: float = _rng.randf() * TAU
+		var r: float = _rng.randf_range(6.0, 19.0)
+		var p: Vector2 = Vector2(cos(angle), sin(angle)) * r
+		if _blocked(p, 0.8):
+			continue
+		_spawn_model("custom/toadstools.glb", Vector3(p.x, 0, p.y), _rng.randf_range(0.7, 1.2), _rng.randf() * TAU)
+	# A few loose boulders for texture.
+	for i in range(8):
+		var angle2: float = _rng.randf() * TAU
+		var p2: Vector2 = Vector2(cos(angle2), sin(angle2)) * _rng.randf_range(9.0, 19.0)
+		if _blocked(p2, 1.2):
+			continue
+		var rock: String = ["custom/rock_a.glb", "custom/rock_b.glb", "custom/rock_c.glb"][_rng.randi() % 3]
+		_spawn_model(rock, Vector3(p2.x, 0, p2.y), _rng.randf_range(0.5, 0.9), _rng.randf() * TAU)
 
 
 # --- Helpers -----------------------------------------------------------------
@@ -224,7 +237,7 @@ func _blocked(p: Vector2, margin: float) -> bool:
 
 func _spawn_model(path: String, position: Vector3, uniform_scale: float, yaw: float) -> Node3D:
 	if not _scene_cache.has(path):
-		_scene_cache[path] = load(KAY + path) as PackedScene
+		_scene_cache[path] = load("res://assets/" + path) as PackedScene
 	var scene: PackedScene = _scene_cache[path]
 	if scene == null:
 		push_warning("WorldDressing: missing %s" % path)
@@ -233,7 +246,7 @@ func _spawn_model(path: String, position: Vector3, uniform_scale: float, yaw: fl
 	node.position = position
 	node.rotation.y = yaw
 	node.scale = Vector3.ONE * uniform_scale
-	if path.begins_with("hexagon/tree") or path.contains("hills") or path.contains("mountain"):
+	if path.contains("hills") or path.contains("mountain"):
 		node.set_meta(Stylize.TINT_META, Stylize.TINT_FOLIAGE)
 	elif path.contains("rock"):
 		node.set_meta(Stylize.TINT_META, Stylize.TINT_ROCK)

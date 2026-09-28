@@ -1,23 +1,8 @@
-[gd_scene load_steps=9 format=3 uid="uid://b0campsitebase01"]
+[gd_scene load_steps=5 format=3 uid="uid://b0campsitebase01"]
 
+[ext_resource type="PackedScene" path="res://assets/custom/campfire.glb" id="m_new"]
 [ext_resource type="Script" path="res://scripts/base/base_core.gd" id="1_basecore"]
 [ext_resource type="Script" path="res://scripts/world/fire_effect.gd" id="2_fire"]
-[ext_resource type="PackedScene" path="res://assets/kaykit/hexagon/rock_single_B.gltf" id="m_rock0"]
-[ext_resource type="PackedScene" path="res://assets/kaykit/hexagon/rock_single_C.gltf" id="m_rock1"]
-[ext_resource type="PackedScene" path="res://assets/kaykit/hexagon/rock_single_D.gltf" id="m_rock2"]
-[ext_resource type="PackedScene" path="res://assets/kaykit/hexagon/resource_lumber.gltf" id="m_log"]
-
-[sub_resource type="CylinderMesh" id="Embers_bed"]
-top_radius = 0.42
-bottom_radius = 0.5
-height = 0.08
-radial_segments = 20
-
-[sub_resource type="StandardMaterial3D" id="Embers_mat"]
-albedo_color = Color(0.25, 0.08, 0.03, 1)
-emission_enabled = true
-emission = Color(1, 0.35, 0.08, 1)
-emission_energy_multiplier = 1.4
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_core"]
 radius = 0.75
@@ -29,51 +14,12 @@ script = ExtResource("1_basecore")
 max_hp = 150
 
 [node name="Visual" type="Node3D" parent="."]
-metadata/style_tint = Color(0.75, 0.74, 0.78, 1)
 
-[node name="EmberBed" type="MeshInstance3D" parent="Visual"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, 0)
-mesh = SubResource("Embers_bed")
-surface_material_override/0 = SubResource("Embers_mat")
-
-[node name="Stone0" parent="Visual" instance=ExtResource("m_rock0")]
-transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, -0, 0, 1.6, 0.72, 0, 0)
-
-[node name="Stone1" parent="Visual" instance=ExtResource("m_rock1")]
-transform = Transform3D(0.711753, 0, 1.76165, 0, 1.9, 0, -1.76165, 0, 0.711753, 0.551552, 0, 0.462807)
-
-[node name="Stone2" parent="Visual" instance=ExtResource("m_rock2")]
-transform = Transform3D(-1.15094, 0, 1.11145, 0, 1.6, 0, -1.11145, 0, -1.15094, 0.125027, 0, 0.709062)
-
-[node name="Stone3" parent="Visual" instance=ExtResource("m_rock0")]
-transform = Transform3D(-1.73574, 0, -0.7728, 0, 1.9, 0, 0.7728, 0, -1.73574, -0.36, 0, 0.623538)
-
-[node name="Stone4" parent="Visual" instance=ExtResource("m_rock1")]
-transform = Transform3D(0.0558392, 0, -1.59903, 0, 1.6, 0, 1.59903, 0, 0.0558392, -0.676579, 0, 0.246255)
-
-[node name="Stone5" parent="Visual" instance=ExtResource("m_rock2")]
-transform = Transform3D(1.78542, 0, -0.649838, 0, 1.9, 0, 0.649838, 0, 1.78542, -0.676579, 0, -0.246255)
-
-[node name="Stone6" parent="Visual" instance=ExtResource("m_rock0")]
-transform = Transform3D(1.07061, 0, 1.18903, 0, 1.6, 0, -1.18903, 0, 1.07061, -0.36, 0, -0.623538)
-
-[node name="Stone7" parent="Visual" instance=ExtResource("m_rock1")]
-transform = Transform3D(-0.832905, 0, 1.70771, 0, 1.9, 0, -1.70771, 0, -0.832905, 0.125027, 0, -0.709062)
-
-[node name="Stone8" parent="Visual" instance=ExtResource("m_rock2")]
-transform = Transform3D(-1.5961, 0, -0.11161, 0, 1.6, 0, 0.11161, 0, -1.5961, 0.551552, 0, -0.462807)
-
-[node name="Log0" parent="Visual" instance=ExtResource("m_log")]
-transform = Transform3D(0.859803, 0, 0.265968, 0, 0.9, 0, -0.265968, 0, 0.859803, 0.171961, 0.02, 0.0531936)
-
-[node name="Log1" parent="Visual" instance=ExtResource("m_log")]
-transform = Transform3D(-0.660237, 0, 0.611627, 0, 0.9, 0, -0.611627, 0, -0.660237, -0.132047, 0.02, 0.122325)
-
-[node name="Log2" parent="Visual" instance=ExtResource("m_log")]
-transform = Transform3D(-0.199566, 0, -0.877595, 0, 0.9, 0, 0.877595, 0, -0.199566, -0.0399132, 0.02, -0.175519)
+[node name="Model" parent="Visual" instance=ExtResource("m_new")]
+transform = Transform3D(1, 0, -0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
 [node name="Fire" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)
 script = ExtResource("2_fire")
 size = 1.1
 light_energy = 3.0

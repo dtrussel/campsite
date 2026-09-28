@@ -9,7 +9,7 @@ extends Node3D
 
 const GROUND_SHADER: Shader = preload("res://shaders/painted_ground.gdshader")
 const CAMPFIRE_SCENE: PackedScene = preload("res://scenes/base/CampfireCore.tscn")
-const KAY: String = "res://assets/kaykit/"
+const ASSETS: String = "res://assets/"
 
 @export var orbit_speed: float = 0.05
 @export var orbit_radius: float = 12.0
@@ -44,10 +44,10 @@ func _ready() -> void:
 		if child is HealthBar3D:
 			child.queue_free()
 
-	_character("adventurers/Rogue.glb", 0.55, "hero", Vector3(1.5, 0, 1.0), ["Knife_Offhand", "1H_Crossbow", "2H_Crossbow", "Throwable"], "Sit_Floor_Idle")
-	_character("adventurers/Mage.glb", 0.45, "hero", Vector3(-1.4, 0, 1.2), ["Spellbook", "Spellbook_open", "2H_Staff"], "Sit_Floor_Idle")
+	_character("custom/boy.glb", 0.72, "hero", Vector3(1.5, 0, 1.0), [], "Sit_Floor_Idle")
+	_character("custom/sibling.glb", 0.62, "hero", Vector3(-1.4, 0, 1.2), [], "Sit_Floor_Idle")
 	for spot in [Vector3(-7.5, 0, -8.0), Vector3(-5.0, 0, -9.5), Vector3(8.0, 0, -7.0)]:
-		_character("skeletons/Skeleton_Minion.glb", 0.5, "shadow", spot, [], "Idle_Combat")
+		_character("custom/shadow_imp.glb", 0.62, "shadow", spot, [], "Taunt")
 
 	_camera = Camera3D.new()
 	_camera.fov = 42.0
@@ -69,7 +69,7 @@ func _update_camera(delta: float) -> void:
 
 func _character(path: String, model_scale: float, profile: String, position: Vector3, hidden: Array, clip: String) -> void:
 	var visual: CharacterVisual = CharacterVisual.new()
-	visual.model_scene = load(KAY + path)
+	visual.model_scene = load(ASSETS + path)
 	visual.model_scale = model_scale
 	visual.hidden_parts = PackedStringArray(hidden)
 	visual.style = profile
