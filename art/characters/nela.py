@@ -499,8 +499,10 @@ def build():
                   noise_scale=6.0, stroke_strength=0.08, light=(1.12, 1.04, 0.95), shadow=(0.45, 0.38, 0.58),
                   foot_darken=0.38, foot_height=0.9, key_light=(-0.4, -0.6, 0.8), key_strength=0.4)
     for mesh in meshes:
-        # Softer occlusion on the head so the fringe doesn't smudge the face.
-        extra = dict(ao_strength=0.4, ao_distance=0.05, overlay=(FACE_PNG, "FaceUV"), cavity=0.25) \
+        # Softer occlusion and a warm shadow tint on the head: the face keeps
+        # the art's warm, bright skin instead of going violet-grey.
+        extra = dict(ao_strength=0.4, ao_distance=0.05, overlay=(FACE_PNG, "FaceUV"), cavity=0.25,
+                     shadow=(0.8, 0.62, 0.62), light=(1.14, 1.06, 0.98), key_strength=0.3) \
             if mesh is head else dict(cavity=0.2)
         paint_bake.paint(mesh, source="attribute", **dict(params, **extra))
     paint_bake.flat_material(glow, GLOW, emission=3.0, name="lantern_glow")
