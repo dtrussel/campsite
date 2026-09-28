@@ -10,6 +10,8 @@ then bakes it (EMIT) into one texture on a fresh UV map and swaps the
 material for a plain textured one ready for glTF export.
 """
 
+import os
+
 import bpy
 
 from . import common
@@ -267,6 +269,13 @@ def _build_bake_material(obj, source, p):
     return mat
 
 
+def draft_size():
+    """BAKE_SIZE=512 (or 1024...) makes every painted bake a fast, low-res
+    draft for reviewing paint. Drafts are never exported to the game."""
+    value = os.environ.get("BAKE_SIZE")
+    return int(value) if value else None
+
+
 def paint(obj, source="attribute", name=None, emissive=None, **params):
     """Bakes the painted look into a new texture on `obj`.
 
@@ -276,6 +285,10 @@ def paint(obj, source="attribute", name=None, emissive=None, **params):
     """
     p = dict(DEFAULTS)
     p.update(params)
+    if draft_size():
+        p["size"] = draft_size()
+        p["samples"] = min(p["samples"], 8)
+        p["margin"] = max(2, p["margin"] * draft_size() // 1024)
     name = name or obj.name
     scene = bpy.context.scene
     scene.cycles.samples = p["samples"]
