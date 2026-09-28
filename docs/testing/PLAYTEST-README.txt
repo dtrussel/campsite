@@ -1,8 +1,8 @@
-CAMPSITE - Playtest build 0.1.0 (playtest 1)
+CAMPSITE - Playtest build 0.2.0 (playtest 1)
 ============================================
 
-Thanks for testing! This is an early prototype: everything is
-placeholder shapes, and there is no sound yet.
+Thanks for testing! This is an early prototype. There is no sound
+yet, and the game needs a reasonably recent graphics driver.
 
 HOW TO START
 ------------
@@ -20,20 +20,22 @@ Survive 3 nights. Keep the campfire burning!
   campfire, and they will attack YOU if you get close.
 - You lose if the campfire goes out or if the boy is knocked out.
 
-CONTROLS
+CONTROLS (like League of Legends)
 --------
-  W A S D / arrows ..... move
-  E .................... gather (stand next to a tree, pine, rock, bush)
-  Left click / Space ... swing at nearby imps
-  B .................... build mode (1 = fence, 2 = watch post)
-     R rotate, left click place, right click / Esc cancel
-  C .................... crafting (stand near the campfire)
+  Right click .......... move / attack an imp / gather / use the campfire
+  Left click ........... attack or use what you click
+  Mouse wheel .......... zoom
+  Space ................ attack the nearest imp
+  E .................... gather the nearest resource
   Q .................... plant a torch
   R .................... eat 2 berries to heal
+  C .................... crafting (near the campfire)
+  B .................... build mode (1 = fence, 2 = watch post)
+     R rotate, left click place, right click / Esc cancel
   F / G / T / Y ........ sibling: follow / guard camp / gather / idle
   N .................... call the night early (daytime only)
-  H .................... help
-  Esc / P .............. pause (restart / quit from there)
+  W A S D .............. walk directly (optional)
+  H / Esc .............. help / pause
 
 AFTER PLAYING
 -------------

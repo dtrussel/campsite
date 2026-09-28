@@ -1,6 +1,6 @@
 # Playtest 001: first human playtest
 
-> Build: `Campsite-0.1.0-playtest1-windows.zip` (produced by
+> Build: `Campsite-0.2.0-playtest1-windows.zip` (produced by
 > `tools/export_playtest.sh`). Target session length: **20–30 minutes**
 > (about 10 minutes per run, 2 runs).
 
@@ -39,18 +39,20 @@ Run 1 is **free play**: no instructions beyond the README.
 Run 2 is **guided**. Try each of these at least once and tick what
 worked:
 
-- [ ] Gather from a round tree (Wood + Leaves), a pine (Resin + Wood),
-      a bush (Berries + Fiber) and a rock (Stone) with **E**.
+- [ ] Right-click the ground to walk; right-click a tree (Wood + Leaves),
+      an orange pine (Resin + Wood), a berry bush (Berries + Fiber) and a
+      rock (Stone) to walk over and gather.
+- [ ] Mouse-wheel zoom in and out.
 - [ ] Press **B**, place a Wooden Fence with left click, and rotate
       one with **R** before placing.
 - [ ] Press **2** in build mode and place a Watch Post (4 Wood,
       2 Stone, 1 Fiber).
-- [ ] Walk to the campfire, press **C**, and craft a Torch
+- [ ] Right-click the campfire (or press **C** next to it) and craft a Torch
       (1 Wood, 1 Resin, 1 Leaves).
 - [ ] Plant the torch with **Q** somewhere imps will pass.
 - [ ] Send the sibling to guard the camp with **G**.
 - [ ] Press **N** to call the night early.
-- [ ] Fight imps with **left click / Space**.
+- [ ] Right-click an imp to attack it (the boy keeps swinging until it dies); also try **Space**.
 - [ ] Eat berries with **R** when hurt.
 - [ ] Pause with **Esc** and resume.
 - [ ] Finish the run (win or lose) and use **Play again**.
@@ -60,6 +62,8 @@ worked:
 | Area | Question | Notes |
 |------|----------|-------|
 | Onboarding | Did they read the help screen? Did they reopen it (H)? | |
+| Controls | Did right-click movement feel natural? Did they try WASD? | |
+| Look & feel | First reaction to the art, effects and UI? Anything hard to read? | |
 | Gathering | Did they find all four resource kinds without being told? | |
 | Building | Did they understand why the ghost is red or green? | |
 | Crafting | Did they discover crafting on their own? At the campfire? | |
@@ -85,9 +89,10 @@ Rate 1 (bad) to 5 (great) and add a sentence where you can.
 9. Did you notice **leveling up**? Did it feel like it mattered?
 10. What was the **most confusing** moment?
 11. What was the **best** moment?
-12. Did anything **break**: bugs, getting stuck, crashes? When?
-13. If you could change **one thing**, what would it be?
-14. Would you play a longer version? (yes / maybe / no)
+12. How did the game **look and feel** (art, effects, menus)? (1–5)
+13. Did anything **break**: bugs, getting stuck, crashes? When?
+14. If you could change **one thing**, what would it be?
+15. Would you play a longer version? (yes / maybe / no)
 
 Please return: the answers, `playtest_log.txt`, and (optionally)
 screenshots or a video of anything odd.

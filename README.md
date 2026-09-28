@@ -13,7 +13,9 @@ fragile camping trip into a magical woodland fortress.
 
 ## Status
 
-**Prototype, ready for first playtest (v0.1.0-playtest1).**
+**Prototype, ready for first playtest (v0.2.0-playtest1).** Stylized 3D art
+(CC0 KayKit models + custom shaders, VFX and a LoL-inspired UI); see
+[`CREDITS.md`](CREDITS.md).
 
 A complete 3-night run is playable:
 
@@ -56,27 +58,30 @@ The reasoning is captured in
 
 **Goal:** survive 3 nights and keep the campfire burning.
 
-Controls (also shown in-game with **H**):
+Controls (LoL-style; also shown in-game with **H**):
 
-| Key | Action |
-|-----|--------|
-| W A S D / arrows | Move |
-| E | Gather (tree, pine, rock, bush) |
-| Left click / Space | Swing at nearby Shadow Imps |
-| B, then 1 / 2 | Build mode: Wooden Fence / Watch Post (R rotate, LMB place, RMB/Esc cancel) |
-| C | Crafting panel (near the campfire) |
+| Input | Action |
+|-------|--------|
+| Right click | Move / attack an imp / gather a resource / use the campfire |
+| Left click | Attack or use what you click (never moves) |
+| Mouse wheel | Zoom |
+| Space | Attack the nearest imp |
+| E | Gather the nearest resource |
 | Q | Plant a crafted torch |
 | R | Eat 2 berries to heal |
+| C | Crafting panel (near the campfire) |
+| B, then 1 / 2 | Build: Wooden Fence / Watch Post (R rotate, LMB place, RMB/Esc cancel) |
 | F / G / T / Y | Sibling: follow / guard camp / gather / idle |
 | N | Call the night early (daytime) |
-| H | Help |
-| Esc / P | Pause menu |
+| W A S D | Walk directly (optional) |
+| H / Esc | Help / Pause menu |
 
 ## Checks and builds
 
 ```
 tools/check.sh            # headless: import, validate all data, full smoke run
 tools/export_playtest.sh  # Windows zip + self-tested Linux export in build/
+tools/fetch_assets.sh     # re-vendor the CC0 models and fonts (only when the list changes)
 ```
 
 Both scripts use `godot` on PATH, or `$GODOT`. Exports need the Godot

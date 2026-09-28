@@ -4,7 +4,9 @@
 > slice. Each phase is independently shippable: the project should build
 > and run at the end of every phase.
 >
-> **Status (2026-09):** Phases 0&ndash;7 done; Playtest 1 is next.
+> **Status (2026-09):** Phases 0&ndash;7 done, plus an art &amp; feel pass
+> (feature 006: stylized KayKit art, VFX, LoL-style UI and controls).
+> Playtest 1 is next.
 
 ## Phase 0 &mdash; Project foundation
 
