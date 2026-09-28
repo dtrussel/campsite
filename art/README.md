@@ -27,7 +27,8 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 | `characters/shadow_imp.py` | Brand-new imp body (metaballs along the Skeleton Minion rig, auto-weighted) with horns, wings, tail and glowing eyes |
 | `characters/leo.py`, `nela.py` | Leo and Nela, modelled from the concept art on the KayKit adventurer rig (all 76 clips). The concept sheets are the reference for faces, outfits and gear (feature 012); each script's docstring lists what it follows |
 | `characters/chibi.py` | Kit for the kids: fused, auto-weighted clothing; rigid gear; face decals (eyes, brows, smile); hair locks; boots, backpack parts. `QUICK=1` previews without baking |
-| `characters/face_paint.py` | LoL-style **painted faces**: numpy paints eyes (lids, liner, iris, catchlight), brushed brows, nose/lip shading, contours and face paint into a front-projected image; `chibi.sculpt_features` carves matching relief from the same `FaceLayout`, and `paint_bake`'s `overlay` bakes it under the lighting |
+| `characters/head_sculpt.py` | **Sculpted heads** (feature 013): numpy displacement fields on a face-dense sphere. Skull (occiput, forehead, mid-face), cheek pads, a soft-clamped jaw plane and jaw line, and `FaceLayout`-driven sockets, eyeballs, lid bands, brow, a constructed nose, lips with an open-mouth cavity, corner pits, smile apples, philtrum and chin pad. Also sculpted ears. Tune with a `HeadShape` per character |
+| `characters/face_paint.py` | LoL-style **painted faces**: numpy paints eyes (lids, liner, iris, catchlight), brushed brows, nose/lip shading, contours and face paint into a front-projected image; `head_sculpt` carves matching relief from the same `FaceLayout`, and `paint_bake`'s `overlay` bakes it under the lighting |
 | `ground/textures.py` | Seamless hand-painted grass, dirt and leaf-litter textures (numpy brush stamps) for `painted_ground.gdshader` |
 
 ## Conventions
@@ -37,7 +38,10 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
   (`scripts/utilities/stylize.gd`). The hero and shadow profiles also add an
   ink outline.
 - **Emissive** flat materials (eyes, wand star, embers) render unshaded.
-- **Triangle budgets:** imps ≤ 12k; the hero kids ≤ 50k (head ~11k, hair decimated to 10–12k), trees ≤ 3k, props ≤ 1.5k.
+- **Triangle budgets:** imps ≤ 12k; the hero kids ≤ 120k (head ~24k, hair ~10–25k, body and clothes ~50–60k, gear ~15–20k; Godot makes distance LODs on import), trees ≤ 3k, props ≤ 1.5k. The kids bake at 2048 and export WebP textures.
+- **Sculpt review:** `SCULPT=1 QUICK=1 .venv-blender/bin/python art/characters/leo.py` renders matte clay views (front, 3/4, side, back), game-size silhouettes and clay animation frames, without baking (`preview.render_clay`, `preview.render_silhouette`).
+- **Shape kit (chibi):** `limb` (elliptical lofted sections for anatomy), `fold` (sculpted cloth folds: parallel or radiating), `hem_ring` (rolled hems), `sculpted_hand`, `sculpted_boot`, `webbing`, `buckle`, `bedroll_detail`, `hair_clump(sharp=, twist=)`.
+- **Patterned cloth** (stripes, folk patterns) is voxel-remeshed without decimation, so painted bands stay crisp.
 - **Painted wear:** `common.grime(obj, colour, amount_fn)` blends dirt, scuffs and mud over the colours already set, before the bake.
 - **Rigid gear** on characters is bound to one bone at weight 1.0.
   Weapons are built in the `handslot.r` bone frame: handle along +Y, blade

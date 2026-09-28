@@ -9,7 +9,7 @@ config_version=5
 [application]
 
 config/name="Campsite"
-config/version="0.9.0-playtest1"
+config/version="0.10.0-playtest1"
 config/description="Stylized 3D base-builder / survival defense prototype. See README.md and docs/."
 run/main_scene="res://scenes/ui/TitleScreen.tscn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
