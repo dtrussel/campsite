@@ -70,6 +70,7 @@ class FaceLayout:
     tongue: tuple = None          # rgb; painted in the bottom of an open mouth
     lid_fold: float = 0.55        # lid crease opacity
     nose_shadow: float = 0.6      # shadow down one side of the nose bridge
+    nostril_alpha: float = 0.55
 
 
 def _grid(layout):
@@ -186,7 +187,7 @@ def paint_face(layout, path):
                                                 [0.008, 0.012], px, soft=0.006))
     _over(canvas, L.skin_shadow, 0.45 * _soft_ellipse(u, v, 0.0, L.nose_z - 0.012, L.nose_w * 1.4, 0.008, 1.2))
     for side in (-1, 1):
-        _over(canvas, L.lip_dark, 0.55 * _soft_ellipse(u, v, side * L.nose_w * 0.55, L.nose_z - 0.006, 0.0055,
+        _over(canvas, L.lip_dark, L.nostril_alpha * _soft_ellipse(u, v, side * L.nose_w * 0.55, L.nose_z - 0.006, 0.0055,
                                                        0.0035, 0.8))
     _over(canvas, (1.0, 0.92, 0.85), 0.35 * _soft_ellipse(u, v, 0.0, L.nose_z + 0.004, 0.008, 0.007, 1.2))
     # Philtrum and under-lip / chin shading.

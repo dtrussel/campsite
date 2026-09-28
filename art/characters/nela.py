@@ -69,7 +69,7 @@ FACE = face_paint.FaceLayout(
     size=0.36, eye_x=0.108, eye_z=-0.07, eye_w=0.058, eye_h=0.05, eye_tilt=0.0, lid=0.04, iris_r=0.041,
     look=(0.002, 0.004), iris=(0.36, 0.64, 0.98), iris_dark=(0.04, 0.14, 0.44), lash=(0.14, 0.07, 0.05),
     lash_width=0.0105, wing=0.006, lower_lash=0.35, eyeshadow_alpha=0.0, socket=(0.84, 0.56, 0.5),
-    socket_alpha=0.25, lid_fold=0.4, nose_shadow=0.12, brows=((0.05, 0.04, 0.011, 0.012), (0.05, 0.04, 0.011, 0.012)),
+    socket_alpha=0.25, lid_fold=0.4, nose_shadow=0.12, nostril_alpha=0.22, brows=((0.05, 0.04, 0.011, 0.012), (0.05, 0.04, 0.011, 0.012)),
     brow_len=0.06, brow_colour=(0.66, 0.44, 0.22), brow_alpha=0.75, nose_z=-0.14, nose_w=0.015,
     mouth_z=-0.18, mouth_w=0.06, smile=7.5, smirk=0.0, open_mouth=0.026, lip_upper=0.003, lip_lower=0.008,
     lip_colour=(0.9, 0.48, 0.48), lip_dark=(0.52, 0.18, 0.18), tongue=(0.84, 0.38, 0.4), chin_z=-0.245,
@@ -159,8 +159,8 @@ def folk_pattern(pos, leg_x):
     """Bold cream zigzag bands and dotted rows on plum, wrapped around
     the leg (big enough to read at game scale)."""
     a = math.atan2(pos.y, pos.x - leg_x)
-    u = a / math.tau * 9.0  # 9 repeats around the leg
-    band = 0.09
+    u = a / math.tau * 12.0  # 12 repeats around the leg
+    band = 0.065
     v = (pos.z % band) / band
     zig = abs((u % 1.0) * 2.0 - 1.0)
     if abs(v - (0.12 + zig * 0.3)) < 0.1:
@@ -181,7 +181,7 @@ def pants_piece():
                                 name="pantleg"))
     # Low, saggy harem crotch.
     parts.append(chibi.ellipsoid((0, 0.0, 0.45), (0.14, 0.15, 0.1), name="crotch"))
-    pants = chibi.fuse(parts, "Pants", voxel=0.006, faces=14000)
+    pants = chibi.fuse(parts, "Pants", voxel=0.0105)  # even quads: crisp pattern
     chibi.cut_open(pants, (0, 0, 0.235), (0, 0, -1))
     # Harem drape: vertical folds down each leg, gathered into accordion
     # folds at the ankle cuffs; a gathered elastic waist; crotch sag folds.
@@ -353,7 +353,7 @@ def hair():
         out = Vector((side, 0, 0))
         full = 0.03 if side > 0 else 0.0
         # Primary masses: big, thick, wavy, puffing out to the shoulders.
-        for k, yaw in enumerate((1.0, 1.45, 1.9, 2.4)):
+        for k, yaw in enumerate((1.35, 1.75, 2.15, 2.55)):
             root, n = HEAD.point(side * yaw, 0.5, -0.005)
             flat = Vector((n.x, n.y, 0)).normalized()
             puff = 0.1 + 0.03 * (k % 2) + full
@@ -365,7 +365,7 @@ def hair():
         # Secondary locks layered over the masses.
         for k in range(8):
             yaw = 0.9 + k * 0.24 + rng.uniform(-0.05, 0.05)
-            pitch = rng.uniform(0.3, 0.68)
+            pitch = rng.uniform(0.3, 0.55)
             root, n = HEAD.point(side * yaw, pitch, 0.01)
             flat = Vector((n.x, n.y, 0)).normalized()
             puff = rng.uniform(0.1, 0.17) + full
@@ -401,8 +401,9 @@ def hair():
         root, n = HEAD.point(yaw, pitch, 0.03)
         curl = Vector((math.cos(yaw), math.sin(yaw), 0)) * rng.choice((-1, 1))
         length = rng.uniform(0.08, 0.16)
-        wavy(parts, root, curl, [root + n * length * 0.5, root + n * length * 0.9 + curl * 0.03,
-                                 root + n * length + curl * 0.07 - U * 0.03],
+        wavy(parts, root, n, [root + n * length * 0.3 + curl * length * 0.4,
+                              root + n * length * 0.45 + curl * length * 0.85,
+                              root + n * length * 0.35 + curl * length * 1.1 - U * 0.03],
              rng.uniform(0.018, 0.028), 0.01, curl, thickness=0.3, steps=7, sharp=True, tier=2)
     parts += top_bun()
     return parts
@@ -638,7 +639,7 @@ def build():
         # the art's warm, bright skin instead of going violet-grey.
         extra = dict(ao_strength=0.4, ao_distance=0.05, overlay=(FACE_PNG, "FaceUV"), cavity=0.25,
                      shadow=(0.8, 0.62, 0.62), light=(1.14, 1.06, 0.98), key_strength=0.35,
-                     curvature_tint=((0.86, 0.6, 0.55), (1.06, 1.04, 1.02), 0.8)) \
+                     curvature_tint=((0.9, 0.7, 0.64), (1.05, 1.03, 1.02), 0.45)) \
             if mesh is head else dict(cavity=0.3)
         paint_bake.paint(mesh, source="attribute", **dict(params, **extra))
     paint_bake.flat_material(glow, GLOW, emission=3.0, name="lantern_glow")

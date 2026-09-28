@@ -1337,6 +1337,12 @@ def finish(rig, soft_pieces, rigid_pieces, name, prop=None, **paint):
     for obj, bone in rigid_pieces:
         rigid(obj, bone)
     body = common.join(list(soft_pieces) + [o for o, _ in rigid_pieces], name)
+    # Drop zero-area faces left by squashed or coincident parts.
+    bm = bmesh.new()
+    bm.from_mesh(body.data)
+    bmesh.ops.dissolve_degenerate(bm, dist=1e-6, edges=bm.edges[:])
+    bm.to_mesh(body.data)
+    bm.free()
     if body.parent is None:
         body.parent = rig
     if not any(m.type == "ARMATURE" for m in body.modifiers):
