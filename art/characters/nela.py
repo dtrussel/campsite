@@ -356,12 +356,12 @@ def hair():
         for k, yaw in enumerate((1.0, 1.45, 1.9, 2.4)):
             root, n = HEAD.point(side * yaw, 0.5, -0.005)
             flat = Vector((n.x, n.y, 0)).normalized()
-            puff = 0.12 + 0.03 * (k % 2) + full
+            puff = 0.1 + 0.03 * (k % 2) + full
             length = 0.38 + 0.05 * (k % 2)
             wavy(parts, root, n, [root + flat * puff * 0.7 - U * length * 0.25, root + flat * puff - U * length * 0.7,
                                   root + flat * puff * 0.8 - U * length + out * 0.02],
-                 0.16, 0.035, Vector((-flat.y, flat.x, 0)) * (1 if k % 2 else -1), thickness=0.55, ring=10,
-                 tier=0)
+                 0.12, 0.035, Vector((-flat.y, flat.x, 0)) * (1 if k % 2 else -1), thickness=0.45, ring=10,
+                 tier=0, sharp=True, twist=0.3 * side)
         # Secondary locks layered over the masses.
         for k in range(8):
             yaw = 0.9 + k * 0.24 + rng.uniform(-0.05, 0.05)
@@ -454,6 +454,13 @@ def bunny():
         (0.72, 0.16, 0.16))
     add(chibi.box((0.05, 0.012, 0.045), head_c + Vector((0.05, -0.07, 0.07)), bevel=0.004, name="patch"),
         (0.72, 0.56, 0.4))
+    for k in range(4):
+        st = chibi.box((0.004, 0.006, 0.016), head_c + Vector((0.03 + k * 0.013, -0.078, 0.07)), bevel=0.001,
+                       name="stitch", segments=1)
+        st.data.transform(Matrix.Translation(head_c + Vector((0.03 + k * 0.013, -0.078, 0.07)))
+                          @ Matrix.Rotation(0.5, 4, "Y") @ Matrix.Translation(-(head_c + Vector((0.03 + k * 0.013,
+                                                                                                -0.078, 0.07)))))
+        add(st, (0.3, 0.16, 0.12))
     for s in (-1, 1):
         ear = chibi.ellipsoid((0, 0, 0.14), (0.04, 0.018, 0.14), name="bunny_ear", segs=(14, 8))
         common.color_by(ear, lambda p, n: BUNNY_INNER if n.y < -0.5 and abs(p.x) < 0.024 else BUNNY, smooth=False)
@@ -484,55 +491,97 @@ def scarf(anchor):
 
 
 def backpack():
-    """Olive canvas pack with dark leather straps and brass buckles, a
-    green bedroll strapped underneath, the purple scarf and a leaf sprig."""
+    """Olive canvas pack (the art): a wrinkled bag, a leather-trimmed flap
+    sagging over the front, a front pocket, two vertical leather straps
+    with brass buckles, the green bedroll cinched underneath, the purple
+    scarf, a leaf sprig and padded leather shoulder straps."""
     parts = []
     canvas = lambda p, n: common.lerp(PACK, PACK_DARK, max(0.0, -n.z) * 0.5 +
                                       max(0.0, noise.noise(p * 14.0) - 0.2) * 0.5)
-    bag = chibi.box((0.5, 0.28, 0.5), (0, 0.4, 0.98), bevel=0.1, name="pack")
+    bag = chibi.fuse([chibi.box((0.48, 0.26, 0.48), (0, 0.4, 0.98), bevel=0.1, name="pack", segments=4),
+                      chibi.ellipsoid((0, 0.45, 0.88), (0.23, 0.13, 0.17), name="sag")], "pack", voxel=0.008,
+                     faces=5000)
+    chibi.fold(bag, (0, 0.52, 0.98), (0.28, 0.2, 0.3), 0.006, wavelength=0.07, across=(-0.3, 0, 1), twist=1.0,
+               seed=51)
     common.color_by(bag, canvas)
     parts.append(bag)
-    flap = chibi.box((0.52, 0.3, 0.12), (0, 0.405, 1.2), bevel=0.05, name="flap")
-    common.color_by(flap, lambda p, n: common.lerp(canvas(p, n), PACK_DARK, 0.35))
+    flap = chibi.box((0.5, 0.3, 0.06), (0, 0.405, 1.22), bevel=0.025, name="flap", segments=3)
+    for v in flap.data.vertices:
+        front = max(0.0, (v.co.y - 0.43) / 0.13)
+        v.co.z -= 0.1 * front ** 2 + 0.025 * front * (abs(v.co.x) / 0.25) ** 2
+    common.color_by(flap, lambda p, n: LEATHER if p.y > 0.53 or abs(p.x) > 0.22 else common.lerp(canvas(p, n), PACK_DARK, 0.3))
     parts.append(flap)
-    pocket = chibi.box((0.32, 0.1, 0.22), (0, 0.56, 0.9), bevel=0.04, name="pocket")
-    common.color_by(pocket, lambda p, n: LEATHER if p.z > 0.97 else canvas(p, n), smooth=False)
+    pocket = chibi.box((0.3, 0.09, 0.22), (0, 0.56, 0.9), bevel=0.035, name="pocket", segments=3)
+    common.color_by(pocket, lambda p, n: LEATHER if p.z > 0.98 else canvas(p, n))
     parts.append(pocket)
-    for sx in (-0.12, 0.12):
-        strap = chibi.box((0.045, 0.13, 0.26), (sx, 0.57, 1.06), bevel=0.01, name="buckle")
-        common.color_by(strap, lambda p, n: BRASS if 1.0 < p.z < 1.035 else LEATHER, smooth=False)
-        parts.append(strap)
-    parts.append(chibi.bedroll((0, 0.4, 0.68), 0.52, 0.085, BEDROLL, LEATHER))
+    for sx in (-0.11, 0.11):
+        path = [Vector((sx, 0.45, 1.24)), Vector((sx, 0.53, 1.19)), Vector((sx, 0.6, 1.05)), Vector((sx, 0.61, 0.9)),
+                Vector((sx, 0.6, 0.8))]
+        st = chibi.webbing(path, [(0, 0, 1), (0, 0.6, 0.8), (0, 1, 0.1), (0, 1, 0), (0, 1, 0)], width=0.022,
+                           thick=0.007, name="packstrap")
+        common.set_color(st, LEATHER)
+        parts.append(st)
+        parts.append(chibi.buckle((sx, 0.622, 1.0), (0, 1, 0), width=0.05, height=0.04, colour=BRASS))
+    roll_c = (0.0, 0.4, 0.7)
+    parts.append(chibi.bedroll(roll_c, 0.54, 0.085, BEDROLL, LEATHER))
+    parts += chibi.bedroll_detail(roll_c, 0.54, 0.085, BEDROLL, LEATHER, metal=BRASS)
     parts += scarf((0.24, 0.5, 1.02))
     for ang in (0.4, -0.5):
         leaf = chibi.ellipsoid((0, 0, 0.05), (0.022, 0.006, 0.05), name="leaf", segs=(10, 6))
-        leaf.data.transform(Matrix.Translation((-0.12, -0.235, 1.1)) @ Matrix.Rotation(ang, 4, "Y"))
+        for v in leaf.data.vertices:
+            v.co.y -= abs(v.co.x) * 0.4
+        leaf.data.transform(Matrix.Translation((-0.12, -0.262, 1.1)) @ Matrix.Rotation(ang, 4, "Y"))
         common.set_color(leaf, LEAF)
         parts.append(leaf)
-    parts += chibi.straps(LEATHER, top_y=0.22, front_y=-0.225, xs=(-0.15, 0.15), shoulder_z=1.21, bottom_z=0.74)
-    chest_strap = chibi.box((0.3, 0.02, 0.028), (0, -0.225, 1.04), bevel=0.006, name="sternum")
-    common.color_by(chest_strap, lambda p, n: BRASS if abs(p.x) < 0.03 else LEATHER, smooth=False)
-    parts.append(chest_strap)
+    parts += chibi.straps(LEATHER, top_y=0.22, front_y=-0.255, xs=(-0.15, 0.15), shoulder_z=1.23, bottom_z=0.74,
+                          width=0.032, thick=0.01, metal=BRASS)
+    chest = chibi.webbing([(-0.17, -0.262, 1.04), (0, -0.27, 1.04), (0.17, -0.262, 1.04)], [(0, -1, 0)] * 3,
+                          width=0.013, thick=0.006, name="sternum")
+    common.set_color(chest, LEATHER)
+    parts.append(chest)
+    parts.append(chibi.buckle((0, -0.278, 1.04), (0, -1, 0), width=0.045, height=0.035, colour=BRASS))
     return parts
 
 
 def lantern(rig):
     """A little camping lantern in the handslot.r frame; its local +X
-    points down in the idle pose, so it hangs from her hand."""
+    points down in the idle pose, so it hangs from her hand. Layered: a
+    bail with side loops, a vented chimney and top ring, a flared cap, a
+    glass frame of six bars between two rings, and a thick stepped base
+    with a fuel knob."""
     to_world = chibi.bone_frame(rig, "handslot.r")
     metal = []
-    bail = chibi.torus((0.04, 0, 0), 0.055, 0.009, name="bail", axis="Y", segs=(18, 6))
+    bail = chibi.torus((0.04, 0, 0), 0.06, 0.008, name="bail", axis="Y", segs=(22, 6))
+    for v in bail.data.vertices:
+        v.co.x = min(v.co.x, 0.075)
     metal.append(bail)
-    metal.append(chibi.cylinder((0.12, 0, 0), 0.045, 0.05, name="cap", axis="X", radius2=0.075, bevel=0.01))
-    metal.append(chibi.cylinder((0.155, 0, 0), 0.085, 0.025, name="rim", axis="X", bevel=0.008))
-    metal.append(chibi.cylinder((0.33, 0, 0), 0.09, 0.04, name="base", axis="X", bevel=0.01))
-    for k in range(4):
-        a = k / 4 * math.tau + math.pi / 4
-        bar = chibi.cylinder((0.24, math.cos(a) * 0.076, math.sin(a) * 0.076), 0.009, 0.16, name="bar", axis="X",
-                             segments=8)
-        metal.append(bar)
+    for sy in (-1, 1):
+        metal.append(chibi.torus((0.075, sy * 0.06, 0), 0.014, 0.005, name="bailloop", axis="Y", segs=(10, 5)))
+    metal.append(chibi.torus((0.06, 0, 0), 0.018, 0.006, name="topring", axis="X", segs=(12, 5)))
+    metal.append(chibi.cylinder((0.08, 0, 0), 0.028, 0.04, name="chimney", axis="X", bevel=0.004, segments=16))
+    metal.append(chibi.cylinder((0.12, 0, 0), 0.045, 0.05, name="cap", axis="X", radius2=0.08, bevel=0.008,
+                                segments=20))
+    metal.append(chibi.torus((0.1, 0, 0), 0.033, 0.006, name="vent", axis="X", segs=(16, 5)))
+    metal.append(chibi.cylinder((0.155, 0, 0), 0.088, 0.022, name="rim", axis="X", bevel=0.006, segments=24))
+    for x in (0.165, 0.315):
+        metal.append(chibi.torus((x, 0, 0), 0.078, 0.008, name="framering", axis="X", segs=(24, 6)))
+    for k in range(6):
+        a = k / 6 * math.tau
+        metal.append(chibi.cylinder((0.24, math.cos(a) * 0.078, math.sin(a) * 0.078), 0.007, 0.16, name="bar",
+                                    axis="X", segments=6))
+    metal.append(chibi.cylinder((0.335, 0, 0), 0.092, 0.03, name="base", axis="X", bevel=0.008, segments=24))
+    metal.append(chibi.cylinder((0.36, 0, 0), 0.098, 0.022, name="base", axis="X", bevel=0.007, segments=24))
+    metal.append(chibi.cylinder((0.335, 0.1, 0), 0.014, 0.022, name="knob", axis="Y", bevel=0.004, segments=10))
     body = common.join(metal, "Nela_Lantern")
-    common.color_by(body, lambda p, n: BRONZE if n.x > -0.3 or p.x > 0.3 else BRONZE_DARK, smooth=False)
+
+    def metal_colour(p, n):
+        c = BRONZE if n.x > -0.3 or p.x > 0.3 else BRONZE_DARK
+        if 0.085 < p.x < 0.11 and abs(math.atan2(p.z, p.y) * 4 % 1.0 - 0.5) < 0.2:
+            c = (0.12, 0.07, 0.04)      # vent slots
+        if n.dot(Vector((0, 0.5, 0.8)).normalized()) > 0.75:
+            c = common.lerp(c, (1.0, 0.85, 0.55), 0.35)   # polished highlights
+        return c
+    common.color_by(body, metal_colour, smooth=False)
     glass = chibi.cylinder((0.24, 0, 0), 0.07, 0.16, name="Nela_LanternGlow", axis="X", segments=20)
     flame = chibi.ellipsoid((0.25, 0, 0), (0.045, 0.028, 0.028), name="flame", segs=(10, 8))
     glass = common.join([glass, flame], "Nela_LanternGlow")
@@ -546,7 +595,7 @@ def build():
     soft = [skin_piece(), shirt_piece(), pants_piece()]
     rigid = hands_and_feet() + cuffs()
     # Compass clipped to her left shoulder strap, hanging at the hip (art).
-    for part in chibi.compass((0.15, -0.24, 0.84), GOLD, neck_z=0.95, radius=0.04):
+    for part in chibi.compass((0.16, -0.265, 0.84), GOLD, neck_z=0.95, radius=0.04):
         rigid.append((part, "chest"))
     for part in backpack():
         part.data.transform(Matrix.Translation((0, -0.04, 0)))
@@ -580,19 +629,21 @@ def build():
         print("nela tris:", common.triangle_count(meshes + [glow]))
         render_previews(rig, meshes + [glow], head, "nela", ("Running_A", 8), ("Spellcast_Shoot", 12), ("PickUp", 12))
         return
-    params = dict(size=1024, ao_distance=0.18, ao_strength=0.62, edge_strength=0.3, edge_radius=0.012,
+    params = dict(size=2048, ao_distance=0.18, ao_strength=0.62, edge_strength=0.3, edge_radius=0.012,
                   noise_scale=6.0, stroke_strength=0.08, light=(1.12, 1.04, 0.95), shadow=(0.45, 0.38, 0.58),
-                  foot_darken=0.38, foot_height=0.9, key_light=(-0.4, -0.6, 0.8), key_strength=0.4)
+                  foot_darken=0.38, foot_height=0.9, key_light=(-0.4, -0.6, 0.8), key_strength=0.55,
+                  curvature_tint=((0.72, 0.55, 0.5), (1.1, 1.08, 1.12), 0.85))
     for mesh in meshes:
         # Softer occlusion and a warm shadow tint on the head: the face keeps
         # the art's warm, bright skin instead of going violet-grey.
         extra = dict(ao_strength=0.4, ao_distance=0.05, overlay=(FACE_PNG, "FaceUV"), cavity=0.25,
-                     shadow=(0.8, 0.62, 0.62), light=(1.14, 1.06, 0.98), key_strength=0.3) \
-            if mesh is head else dict(cavity=0.2)
+                     shadow=(0.8, 0.62, 0.62), light=(1.14, 1.06, 0.98), key_strength=0.35,
+                     curvature_tint=((0.86, 0.6, 0.55), (1.06, 1.04, 1.02), 0.8)) \
+            if mesh is head else dict(cavity=0.3)
         paint_bake.paint(mesh, source="attribute", **dict(params, **extra))
     paint_bake.flat_material(glow, GLOW, emission=3.0, name="lantern_glow")
     rig.data.pose_position = "POSE"
-    common.export_glb(os.path.join(common.OUT_DIR, "nela.glb"), [rig] + meshes + [glow], animations=True)
+    common.export_glb(os.path.join(common.OUT_DIR, "nela.glb"), [rig] + meshes + [glow], animations=True, image_format="WEBP")
     print("nela tris:", common.triangle_count(meshes + [glow]))
     render_previews(rig, meshes + [glow], head, "nela", ("Running_A", 8), ("Spellcast_Shoot", 12), ("PickUp", 12))
 

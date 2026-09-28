@@ -32,6 +32,7 @@ DEFAULTS = {
     "key_light": None,   # (x, y, z) direction toward a baked key light
     "key_strength": 0.0,
     "cavity": 0.0,       # darken crevices (Geometry Pointiness)
+    "curvature_tint": None,  # (concave_rgb, convex_rgb, strength): warm dark valleys, cool light crests
     "foot_darken": 0.0,  # LoL-style: darker toward the feet (0 = off)
     "foot_height": 1.0,  # object-space height where the darkening fades out
 }
@@ -159,6 +160,24 @@ def _build_bake_material(obj, source, p):
         tree.links.new(lit.outputs["Result"], caved.inputs["A"])
         tree.links.new(cav.outputs["Result"], caved.inputs["B"])
         lit = caved
+
+    if p["curvature_tint"]:
+        # Painted form: fold valleys and creases warm and dark, crests and
+        # plane edges cooler and lighter (hand-painted, not plastic).
+        concave, convex, strength = p["curvature_tint"]
+        curv = _node(tree, "ShaderNodeMapRange", (-500, 850))
+        curv.inputs["From Min"].default_value = 0.46
+        curv.inputs["From Max"].default_value = 0.54
+        tree.links.new(geo.outputs["Pointiness"], curv.inputs["Value"])
+        ctint = _node(tree, "ShaderNodeMix", (-350, 850), data_type="RGBA")
+        ctint.inputs["A"].default_value = (*concave, 1)
+        ctint.inputs["B"].default_value = (*convex, 1)
+        tree.links.new(curv.outputs["Result"], ctint.inputs["Factor"])
+        tinted = _node(tree, "ShaderNodeMix", (-150, 800), data_type="RGBA", blend_type="MULTIPLY")
+        tinted.inputs["Factor"].default_value = strength
+        tree.links.new(lit.outputs["Result"], tinted.inputs["A"])
+        tree.links.new(ctint.outputs["Result"], tinted.inputs["B"])
+        lit = tinted
 
     # Ambient occlusion darkens crevices.
     ao = _node(tree, "ShaderNodeAmbientOcclusion", (-500, -450))

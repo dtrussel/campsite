@@ -654,18 +654,20 @@ def build():
         print("leo tris:", common.triangle_count(meshes))
         render_previews(rig, meshes, head, "leo", ("Running_A", 8), ("1H_Melee_Attack_Chop", 14), ("PickUp", 12), ("Death_A", 40))
         return
-    params = dict(size=1024, ao_distance=0.18, ao_strength=0.65, edge_strength=0.3, edge_radius=0.012,
+    params = dict(size=2048, ao_distance=0.18, ao_strength=0.65, edge_strength=0.3, edge_radius=0.012,
                   noise_scale=6.0, stroke_strength=0.08, light=(1.12, 1.04, 0.94), shadow=(0.42, 0.36, 0.55),
-                  foot_darken=0.4, foot_height=1.1, key_light=(-0.4, -0.6, 0.8), key_strength=0.45)
+                  foot_darken=0.4, foot_height=1.1, key_light=(-0.4, -0.6, 0.8), key_strength=0.55,
+                  curvature_tint=((0.72, 0.55, 0.5), (1.1, 1.08, 1.12), 0.85))
     for mesh in meshes:
         # Softer occlusion and a warm shadow tint on the head: the face keeps
         # the art's warm, bright skin instead of going violet-grey.
         extra = dict(ao_strength=0.45, ao_distance=0.05, overlay=(FACE_PNG, "FaceUV"), cavity=0.3,
-                     shadow=(0.8, 0.62, 0.62), light=(1.14, 1.06, 0.98), key_strength=0.3) \
-            if mesh is head else dict(cavity=0.2)
+                     shadow=(0.8, 0.62, 0.62), light=(1.14, 1.06, 0.98), key_strength=0.35,
+                     curvature_tint=((0.86, 0.6, 0.55), (1.06, 1.04, 1.02), 0.8)) \
+            if mesh is head else dict(cavity=0.3)
         paint_bake.paint(mesh, source="attribute", **dict(params, **extra))
     rig.data.pose_position = "POSE"
-    common.export_glb(os.path.join(common.OUT_DIR, "leo.glb"), [rig] + meshes, animations=True)
+    common.export_glb(os.path.join(common.OUT_DIR, "leo.glb"), [rig] + meshes, animations=True, image_format="WEBP")
     print("leo tris:", common.triangle_count(meshes))
     render_previews(rig, meshes, head, "leo", ("Running_A", 8), ("1H_Melee_Attack_Chop", 14))
 

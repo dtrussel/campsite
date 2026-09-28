@@ -211,7 +211,7 @@ def metaball_object(name, elements, resolution=0.05, threshold=0.6):
     return result
 
 
-def export_glb(path, objects, animations=False):
+def export_glb(path, objects, animations=False, image_format="AUTO"):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     select_only(objects)
     bpy.ops.export_scene.gltf(
@@ -223,7 +223,8 @@ def export_glb(path, objects, animations=False):
         export_texcoords=True,
         export_normals=True,
         export_materials="EXPORT",
-        export_image_format="AUTO",
+        export_image_format=image_format,
+        export_image_quality=92,
         export_animations=animations,
         export_animation_mode="ACTIONS",
         export_skins=True,
