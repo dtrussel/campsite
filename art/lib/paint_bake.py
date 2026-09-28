@@ -28,6 +28,8 @@ DEFAULTS = {
     "stroke_strength": 0.06,
     "samples": 24,
     "margin": 8,
+    "foot_darken": 0.0,  # LoL-style: darker toward the feet (0 = off)
+    "foot_height": 1.0,  # object-space height where the darkening fades out
 }
 
 
@@ -161,7 +163,23 @@ def _build_bake_material(obj, source, p):
     tree.links.new(jitter2.outputs["Value"], center.inputs[0])
     center.inputs[1].default_value = p["stroke_strength"]
     tree.links.new(center.outputs["Value"], final.inputs["B"])
-    tree.links.new(final.outputs["Result"], emit.inputs["Color"])
+    result = final.outputs["Result"]
+    if p["foot_darken"] > 0.0:
+        pos = _node(tree, "ShaderNodeSeparateXYZ", (-100, -1300))
+        tree.links.new(coord.outputs["Object"], pos.inputs["Vector"])
+        fade = _node(tree, "ShaderNodeMapRange", (100, -1300))
+        fade.inputs["From Min"].default_value = 0.0
+        fade.inputs["From Max"].default_value = p["foot_height"]
+        fade.inputs["To Min"].default_value = 1.0 - p["foot_darken"]
+        fade.inputs["To Max"].default_value = 1.0
+        # Object Z: the characters are exported Z-up in Blender space.
+        tree.links.new(pos.outputs["Z"], fade.inputs["Value"])
+        feet = _node(tree, "ShaderNodeMix", (600, 200), data_type="RGBA", blend_type="MULTIPLY")
+        feet.inputs["Factor"].default_value = 1.0
+        tree.links.new(result, feet.inputs["A"])
+        tree.links.new(fade.outputs["Result"], feet.inputs["B"])
+        result = feet.outputs["Result"]
+    tree.links.new(result, emit.inputs["Color"])
     return mat
 
 

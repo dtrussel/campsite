@@ -1,6 +1,6 @@
 # Playtest 001: first human playtest
 
-> Build: `Campsite-0.4.0-playtest1-windows.zip` (produced by
+> Build: `Campsite-0.5.0-playtest1-windows.zip` (produced by
 > `tools/export_playtest.sh`). Target session length: **20–30 minutes**
 > (about 10 minutes per run, 2 runs).
 

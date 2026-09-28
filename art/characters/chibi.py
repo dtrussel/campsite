@@ -45,6 +45,92 @@ def load_rig():
     return rig
 
 
+class Proportions:
+    """Longer legs / torso / arms than the chibi KayKit rig (LoL kid-
+    champion proportions). Everything is modelled in the original rig
+    space, then `remap` moves both the bones and the meshes. Bones keep
+    their directions, so the rotation-driven animations still work."""
+
+    FOOT_TOP, HIP_TOP, NECK = 0.15, 0.52, 1.22
+    ARM_IN, ARM_OUT = 0.21, 0.79
+
+    def __init__(self, legs=1.0, spine=1.0, arms=1.0):
+        self.legs, self.spine, self.arms = legs, spine, arms
+
+    def z(self, z):
+        if z <= self.FOOT_TOP:
+            return z
+        hip = self.FOOT_TOP + (self.HIP_TOP - self.FOOT_TOP) * self.legs
+        if z <= self.HIP_TOP:
+            return self.FOOT_TOP + (z - self.FOOT_TOP) * self.legs
+        neck = hip + (self.NECK - self.HIP_TOP) * self.spine
+        if z <= self.NECK:
+            return hip + (z - self.HIP_TOP) * self.spine
+        return neck + (z - self.NECK)
+
+    def x(self, x, z):
+        ax = abs(x)
+        if ax <= self.ARM_IN:
+            return x
+        stretched = self.ARM_IN + (min(ax, self.ARM_OUT) - self.ARM_IN) * self.arms + max(0.0, ax - self.ARM_OUT)
+        w = max(0.0, min(1.0, (z - 0.88) / 0.1))
+        w = w * w * (3 - 2 * w)
+        return math.copysign(ax + (stretched - ax) * w, x)
+
+    def remap(self, v):
+        return Vector((self.x(v.x, v.z), v.y, self.z(v.z)))
+
+    @property
+    def lift(self):
+        """How much higher the neck (and so the head) sits."""
+        return self.z(self.NECK + 0.01) - (self.NECK + 0.01)
+
+    def stretch_mesh(self, obj):
+        mw = obj.matrix_world.copy()
+        inv = mw.inverted()
+        for v in obj.data.vertices:
+            v.co = inv @ self.remap(mw @ v.co)
+        obj.data.update()
+
+    def stretch_rig(self, rig):
+        common.select_only([rig])
+        bpy.context.view_layer.objects.active = rig
+        bpy.ops.object.mode_set(mode="EDIT")
+        inv = rig.matrix_world.inverted()
+        for eb in rig.data.edit_bones:
+            head = self.remap(rig.matrix_world @ eb.head)
+            tail = self.remap(rig.matrix_world @ eb.tail)
+            roll = eb.roll
+            eb.head, eb.tail = inv @ head, inv @ tail
+            eb.roll = roll
+        bpy.ops.object.mode_set(mode="OBJECT")
+        # Scale the hips/root translation keys with the legs so crouches
+        # and hops still meet the ground.
+        for action in bpy.data.actions:
+            for fc in action.fcurves:
+                if fc.data_path.endswith("location") and ('"hips"' in fc.data_path or '"root"' in fc.data_path):
+                    for kp in fc.keyframe_points:
+                        kp.co.y *= self.legs
+                        kp.handle_left.y *= self.legs
+                        kp.handle_right.y *= self.legs
+        bpy.context.view_layer.update()
+
+
+def idle_hand_height(rig, bone="handslot.r"):
+    """World height of a bone in the first frame of Idle (e.g. how long
+    a walking stick must be to reach the ground)."""
+    rig.data.pose_position = "POSE"
+    rig.animation_data_create()
+    rig.animation_data.action = bpy.data.actions.get("Idle")
+    bpy.context.scene.frame_set(1)
+    bpy.context.view_layer.update()
+    z = (rig.matrix_world @ rig.pose.bones[bone].matrix).translation.z
+    rig.animation_data.action = None
+    rig.data.pose_position = "REST"
+    bpy.context.view_layer.update()
+    return z
+
+
 def bone_frame(rig, name):
     return rig.matrix_world @ rig.data.bones[name].matrix_local
 
@@ -234,12 +320,28 @@ class HeadFrame:
     def __init__(self, center, radii):
         self.c = Vector(center)
         self.r = Vector(radii)
+        self.bvh = None
+
+    def bind(self, obj):
+        """Project onto a sculpted head mesh (ray-cast) from now on."""
+        from mathutils.bvhtree import BVHTree
+        mesh = obj.data
+        verts = [obj.matrix_world @ v.co for v in mesh.vertices]
+        polys = [tuple(p.vertices) for p in mesh.polygons]
+        self.bvh = BVHTree.FromPolygons(verts, polys)
 
     def point(self, yaw, pitch, lift=0.0):
         d = Vector((math.sin(yaw) * math.cos(pitch), -math.cos(yaw) * math.cos(pitch), math.sin(pitch)))
         p = self.c + Vector((d.x * self.r.x, d.y * self.r.y, d.z * self.r.z))
         n = Vector(((p.x - self.c.x) / self.r.x ** 2, (p.y - self.c.y) / self.r.y ** 2,
                     (p.z - self.c.z) / self.r.z ** 2)).normalized()
+        if self.bvh is not None:
+            origin = self.c + (p - self.c) * 3.0
+            hit, normal, _, _ = self.bvh.ray_cast(origin, (self.c - origin).normalized())
+            if hit is not None:
+                if normal.dot(p - self.c) < 0:
+                    normal = -normal
+                return hit + normal * lift, normal
         return p + n * lift, n
 
     def uv_point(self, yaw0, pitch0, u, v, lift):
@@ -377,16 +479,224 @@ def smile(head, pitch, width, depth, lift, lip=(0.5, 0.12, 0.14), inner=(0.35, 0
     return parts
 
 
-def brow(head, yaw, pitch, side, colour, width=0.075, arch=0.012, thick=0.018):
+def brow(head, yaw, pitch, side, colour, width=0.075, arch=0.012, thick=0.018, tilt=0.0):
+    """tilt > 0 raises the outer end (confident / cheeky)."""
     pts = []
     widths = []
     for k in range(7):
         t = k / 6
         u = (t - 0.5) * width
-        v = arch * math.sin(math.pi * t) + (0.006 * (t - 0.5) * side * -1.0)
+        v = arch * math.sin(math.pi * t) + (0.006 * (t - 0.5) * side * -1.0) + tilt * u * side
         pts.append((u, v))
         widths.append(thick * (0.4 + 0.6 * math.sin(math.pi * (0.2 + 0.7 * t))))
     return head.ribbon(yaw, pitch, pts, widths, 0.006, colour, name="brow")
+
+
+def sculpt_head(head, skin, skin_shade, blush, jaw=0.3, chin_len=0.15, chin_fwd=0.08, cheeks=0.0,
+                cheekbone=0.0, face_flat=0.08, back_flat=0.08, blush_yaw=0.62, blush_pitch=-0.3,
+                blush_size=0.09, name="head"):
+    """A stylised head: an egg-shaped cranium with the lower face
+    tapered to a chin (jaw), the chin pulled down/forward, optional
+    chubby cheeks or cheekbones, a flatter face plane and back. Binds
+    the HeadFrame to it so the face decals follow the real surface."""
+    obj = ellipsoid(head.c, head.r, name=name, segs=(48, 32))
+    r = head.r
+    for v in obj.data.vertices:
+        rel = v.co - head.c
+        nx, ny, nz = rel.x / r.x, rel.y / r.y, rel.z / r.z
+        lower = max(0.0, -nz)
+        front = max(0.0, -ny)
+        # Jaw taper toward the chin.
+        rel.x *= 1.0 - jaw * lower ** 1.4
+        # Chin: longer and a little forward at the front centre.
+        centre = max(0.0, 1.0 - abs(nx) * 1.6)
+        rel.z -= chin_len * r.z * lower ** 2 * front ** 0.5 * centre
+        rel.y -= chin_fwd * r.y * lower ** 2 * front * centre
+        # Flatter face plane and back of the head.
+        if ny < 0:
+            rel.y *= 1.0 - face_flat * front ** 2
+        else:
+            rel.y *= 1.0 - back_flat * ny ** 2
+        # Chubby cheeks (lower front sides) or cheekbones (mid sides).
+        side = abs(nx)
+        if cheeks:
+            k = math.exp(-((nz + 0.35) ** 2) / 0.08) * math.exp(-((side - 0.65) ** 2) / 0.1) * front
+            rel.x *= 1.0 + cheeks * k
+            rel.y -= cheeks * 0.5 * k * r.y
+        if cheekbone:
+            k = math.exp(-((nz + 0.05) ** 2) / 0.03) * math.exp(-((side - 0.8) ** 2) / 0.05) * front
+            rel.x *= 1.0 + cheekbone * k
+        v.co = head.c + rel
+    mod = obj.modifiers.new("Smooth", "SMOOTH")
+    mod.iterations = 2
+    mod.factor = 0.5
+    common.apply_all_modifiers(obj)
+    common.shade_smooth(obj)
+    head.bind(obj)
+    cheek_pts = [head.point(side * blush_yaw, blush_pitch)[0] for side in (-1, 1)]
+
+    def colour(pos, normal):
+        c = common.lerp(skin, skin_shade, max(0.0, min(1.0, -normal.z * 0.7)))
+        for ch in cheek_pts:
+            d = (pos - ch).length
+            if d < blush_size:
+                c = common.lerp(c, blush, (1.0 - d / blush_size) ** 1.5 * 0.7)
+        return c
+    common.color_by(obj, colour)
+    return obj
+
+
+def almond_eye(head, yaw, pitch, side, w, h, iris, iris_dark, lash, tilt=0.0, iris_r=None, look=(0.0, 0.0),
+               lower_lid=(0.55, 0.32, 0.26), flicks=0, sclera=(0.99, 0.98, 0.96), name="eye"):
+    """A LoL-style almond eye: pointed corners, an arched top and flatter
+    bottom, a big iris clipped to the eye shape, a thick tapered upper lid
+    that wings past the outer corner, a thin lower lid and one highlight.
+    side: +1 = the character's left eye (screen right). tilt > 0 lifts
+    the outer corner."""
+    out = side  # outward direction in face-plane u (the head is viewed from the front)
+    ir = iris_r or h * 0.95
+
+    def top(u):
+        t = max(0.0, 1.0 - (u / w) ** 2)
+        return h * t ** 0.62 + tilt * u * out
+
+    def bottom(u):
+        t = max(0.0, 1.0 - (u / w) ** 2)
+        return -h * 0.62 * t ** 0.85 + tilt * u * out
+
+    parts = []
+    parts.append(head.patch(yaw, pitch, -w - 0.006, w + 0.006, lambda u: bottom(u) - 0.005, lambda u: top(u) + 0.005,
+                            0.003, lash, name=name + "_liner", nu=16, nv=3))
+    parts.append(head.patch(yaw, pitch, -w, w, bottom, top, 0.005, sclera, name=name + "_white", nu=16, nv=4))
+    iu, iv = look[0] * out, look[1]
+
+    def iris_colour(u, v):
+        d = math.hypot(u - iu, v - iv) / ir
+        t = max(0.0, min(1.0, (v - iv) / ir * 0.5 + 0.5))
+        c = common.lerp(iris, iris_dark, t * 0.85)
+        return common.lerp(c, iris_dark, max(0.0, (d - 0.7) / 0.3))
+
+    def clipped(radius, dz=0.0):
+        lo, hi = max(-w, iu - radius), min(w, iu + radius)
+        return (lo, hi,
+                lambda u: max(bottom(u), iv - radius * math.sqrt(max(0.0, 1 - ((u - iu) / radius) ** 2))),
+                lambda u: min(top(u), iv + radius * math.sqrt(max(0.0, 1 - ((u - iu) / radius) ** 2))))
+    lo, hi, b, t = clipped(ir)
+    parts.append(head.patch(yaw, pitch, lo, hi, b, t, 0.0065, iris_colour, name=name + "_iris", nu=12, nv=5))
+    lo, hi, b, t = clipped(ir * 0.45)
+    parts.append(head.patch(yaw, pitch, lo, hi, b, t, 0.0078, (0.04, 0.05, 0.1), name=name + "_pupil", nu=8, nv=3))
+    hr = ir * 0.3
+    parts.append(head.ellipse(yaw, pitch, hr, hr, 0.009, (1.0, 1.0, 1.0), du=iu - ir * 0.35 * out * -1.0,
+                              dv=iv + ir * 0.35, name=name + "_hi", nu=8, nv=3))
+    # Thick upper lid: tapered at the inner corner, winged at the outer.
+    pts, widths = [], []
+    for k in range(11):
+        u = -w + 2 * w * k / 10
+        uu = u * out  # inner (-) to outer (+)
+        pts.append((u, top(u) + 0.004))
+        widths.append(0.006 + 0.014 * max(0.0, min(1.0, (uu / w + 1.0) * 0.6)))
+    order = sorted(range(len(pts)), key=lambda i: pts[i][0] * out)
+    pts = [pts[i] for i in order]
+    widths = [widths[i] for i in order]
+    wing = (pts[-1][0] + 0.022 * out, pts[-1][1] + 0.012 + tilt * 0.02)
+    pts.append(wing)
+    widths.append(0.004)
+    parts.append(head.ribbon(yaw, pitch, pts, widths, 0.0085, lash, name=name + "_lid"))
+    for f in range(flicks):
+        base = pts[-3 - f * 2]
+        parts.append(head.ribbon(yaw, pitch, [base, (base[0] + 0.014 * out, base[1] + 0.02)], [0.006, 0.002],
+                                 0.0086, lash, name=name + "_lash"))
+    # Thin lower lid on the outer half.
+    lower = [(u, bottom(u) - 0.003) for u in [w * out * k / 6 for k in range(1, 7)]]
+    lower.sort(key=lambda p: p[0] * out)
+    parts.append(head.ribbon(yaw, pitch, lower, [0.004] * len(lower), 0.0082, lower_lid, name=name + "_lower"))
+    return parts
+
+
+def smirk(head, pitch, width, lift, lip=(0.55, 0.16, 0.16), inner=(0.32, 0.06, 0.09), side=-1, open_depth=0.018):
+    """A confident lopsided grin: a curved mouth line rising to one side,
+    open on that side with a flash of teeth."""
+    parts = []
+    curve = lambda u: 1.4 * u * u + 0.18 * u * side  # noqa: E731
+    lo, hi = -width, width
+    # Opening, biased to the raised side.
+    cu = width * 0.25 * side
+
+    def top(u):
+        return curve(u) + 0.002
+
+    def bottom(u):
+        t = max(0.0, 1.0 - ((u - cu) / (width * 0.8)) ** 2)
+        return curve(u) - open_depth * math.sqrt(t)
+    parts.append(head.patch(0, pitch, lo, hi, lambda u: bottom(u) - 0.004, lambda u: top(u) + 0.003, lift, lip,
+                            name="mouth_lip", nu=20, nv=3))
+    parts.append(head.patch(0, pitch, lo * 0.95, hi * 0.95, bottom, top, lift + 0.002, inner, name="mouth", nu=20, nv=3))
+    parts.append(head.patch(0, pitch, cu - width * 0.6, cu + width * 0.6, lambda u: top(u) - open_depth * 0.45, top,
+                            lift + 0.004, (1.0, 0.98, 0.95), name="teeth", nu=10, nv=2))
+    # Dimple crease at the raised corner.
+    end = (hi * side if side > 0 else lo, curve(hi * side if side > 0 else lo))
+    parts.append(head.ribbon(0, pitch, [end, (end[0] + 0.012 * side, end[1] + 0.014)], [0.005, 0.002], lift + 0.001,
+                             (0.78, 0.45, 0.38), name="dimple"))
+    return parts
+
+
+def hair_clump(points, widths, thickness, up, name="clump", ring=8, crescent=0.45):
+    """A big sculpted LoL hair clump: a flattened, slightly cupped
+    ribbon-tube along points, tapering to a sharp tip.
+    widths/thickness: per point (or scalar thickness ratio)."""
+    up = Vector(up).normalized()
+    bm = bmesh.new()
+    rings = []
+    n = len(points)
+    pts = [Vector(p) for p in points]
+    for i, p in enumerate(pts):
+        t = (pts[min(n - 1, i + 1)] - pts[max(0, i - 1)]).normalized()
+        b = t.cross(up)
+        if b.length < 1e-4:
+            b = t.orthogonal()
+        b.normalize()
+        nrm = b.cross(t).normalized()
+        w = widths[i]
+        th = w * (thickness if not isinstance(thickness, (list, tuple)) else thickness[i])
+        if i == n - 1 or w < 1e-4:
+            rings.append([bm.verts.new(p)])
+            continue
+        ring_verts = []
+        for k in range(ring):
+            a = k / ring * math.tau
+            ca, sa = math.cos(a), math.sin(a)
+            off = b * (ca * w) + nrm * (sa * th - crescent * th * ca * ca)
+            ring_verts.append(bm.verts.new(p + off))
+        rings.append(ring_verts)
+    for i in range(n - 1):
+        a, c = rings[i], rings[i + 1]
+        for k in range(ring):
+            k2 = (k + 1) % ring
+            if len(c) == 1:
+                bm.faces.new((a[k], a[k2], c[0]))
+            else:
+                bm.faces.new((a[k], a[k2], c[k2], c[k]))
+    bm.faces.new(list(reversed(rings[0])))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    obj = common.mesh_object(name, bm)
+    sub = obj.modifiers.new("Sub", "SUBSURF")
+    sub.levels = 1
+    common.apply_all_modifiers(obj)
+    common.shade_smooth(obj)
+    return obj
+
+
+def sweep(root, controls, steps=7):
+    """Points along a quadratic/cubic Bezier from root through controls."""
+    pts = [Vector(root)] + [Vector(c) for c in controls]
+    out = []
+    for i in range(steps):
+        t = i / (steps - 1)
+        work = [p.copy() for p in pts]
+        while len(work) > 1:
+            work = [work[j].lerp(work[j + 1], t) for j in range(len(work) - 1)]
+        out.append(work[0])
+    return out
 
 
 def head_mesh(head, skin, skin_shade, blush, jaw=0.14, name="head"):
@@ -600,9 +910,13 @@ def report(objects):
     print("parts tris:", sorted(counts.items(), key=lambda kv: -kv[1])[:14])
 
 
-def finish(rig, soft_pieces, rigid_pieces, name, **paint):
-    """Auto-skin the soft pieces, bind the rigid ones, join, paint-bake."""
+def finish(rig, soft_pieces, rigid_pieces, name, prop=None, **paint):
+    """Stretch to the character's proportions, auto-skin the soft pieces,
+    bind the rigid ones and join. The rig must already be stretched."""
     report(list(soft_pieces) + [o for o, _ in rigid_pieces])
+    if prop is not None:
+        for obj in list(soft_pieces) + [o for o, _ in rigid_pieces]:
+            prop.stretch_mesh(obj)
     for piece in soft_pieces:
         auto_skin(piece, rig)
     for obj, bone in rigid_pieces:
