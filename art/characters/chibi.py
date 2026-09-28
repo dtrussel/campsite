@@ -222,6 +222,38 @@ def tube(points, radii, name="tube", levels=1, sides=None):
     return obj
 
 
+def limb(points, radii, up=(0, 0, 1), name="limb", ring=16, cap=True):
+    """A lofted limb: elliptical sections along a polyline, per-point radii
+    (w, d): w across `up` x tangent, d along the section's up direction.
+    For stylised anatomy (flattened wrists, calf and forearm swells) that
+    tubes can't do. Ends are capped (to be fused/remeshed afterwards)."""
+    up = Vector(up).normalized()
+    pts = [Vector(p) for p in points]
+    bm = bmesh.new()
+    rings = []
+    n = len(pts)
+    for i, p in enumerate(pts):
+        t = (pts[min(n - 1, i + 1)] - pts[max(0, i - 1)]).normalized()
+        b = t.cross(up)
+        if b.length < 1e-5:
+            b = t.orthogonal()
+        b.normalize()
+        nrm = b.cross(t).normalized()
+        rw, rd = radii[i] if isinstance(radii[i], (tuple, list)) else (radii[i], radii[i])
+        rings.append([bm.verts.new(p + b * math.cos(k / ring * math.tau) * rw + nrm * math.sin(k / ring * math.tau) * rd)
+                      for k in range(ring)])
+    for a, c in zip(rings, rings[1:]):
+        for k in range(ring):
+            bm.faces.new((a[k], a[(k + 1) % ring], c[(k + 1) % ring], c[k]))
+    if cap:
+        bm.faces.new(list(reversed(rings[0])))
+        bm.faces.new(rings[-1])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    obj = common.mesh_object(name, bm)
+    common.shade_smooth(obj)
+    return obj
+
+
 def cylinder(center, radius, depth, name="cyl", segments=24, axis="Z", radius2=None, bevel=0.0):
     bm = bmesh.new()
     bmesh.ops.create_cone(bm, cap_ends=True, segments=segments, radius1=radius,
@@ -303,6 +335,68 @@ def fuse(parts, name, voxel=0.014, smooth=2, faces=None):
         decimate_tris(obj, faces)
     common.shade_smooth(obj)
     return obj
+
+
+def fold(obj, centre, radii, depth, wavelength=0.05, across=None, radial_axis=None, count=6, sharp=2.5,
+         twist=0.0, seed=0):
+    """Sculpts cloth folds into a mesh (MOBA style: crisp crests, soft
+    valleys), along vertex normals, inside a soft ellipsoid region.
+    across: ridges alternate along this direction (compression folds,
+    sleeve rings). radial_axis: ridges radiate around this axis through
+    `centre` (armpits, crotch, gathered cuffs). twist bends ridges."""
+    import numpy as np
+    mesh = obj.data
+    n = len(mesh.vertices)
+    co = np.empty(n * 3)
+    nr = np.empty(n * 3)
+    mesh.vertices.foreach_get("co", co)
+    mesh.vertices.foreach_get("normal", nr)
+    co = co.reshape(n, 3)
+    nr = nr.reshape(n, 3)
+    rel = co - np.array(centre)
+    d2 = ((rel / np.array(radii)) ** 2).sum(1)
+    mask = np.clip(1.0 - d2, 0.0, 1.0) ** 2
+    rng = np.random.default_rng(seed)
+    if radial_axis is not None:
+        ax = np.array(Vector(radial_axis).normalized())
+        ref = np.array(Vector(radial_axis).orthogonal().normalized())
+        ref2 = np.cross(ax, ref)
+        ang = np.arctan2(rel @ ref2, rel @ ref)
+        dist = np.linalg.norm(rel - np.outer(rel @ ax, ax), axis=1)
+        phase = ang * count + twist * dist / max(radii) * math.pi
+        # Radiating folds fade in away from the pinch point.
+        mask = mask * np.clip(dist / (min(radii) * 0.35), 0.0, 1.0)
+    else:
+        a = np.array(Vector(across).normalized())
+        along = rel @ a
+        side = np.linalg.norm(rel - np.outer(along, a), axis=1)
+        phase = along / wavelength * math.tau + twist * np.sin(side / max(radii) * math.pi)
+    phase = phase + rng.uniform(0, math.tau)
+    wave = np.cos(phase)
+    crest = np.clip(wave, 0.0, 1.0) ** sharp
+    valley = np.clip(-wave, 0.0, 1.0) ** 1.2
+    amp = 0.75 + 0.25 * np.sin(phase * 0.37 + 1.3)
+    disp = depth * (crest - 0.35 * valley) * mask * amp
+    mesh.vertices.foreach_set("co", (co + nr * disp[:, None]).ravel())
+    mesh.update()
+
+
+def hem_ring(center, radii, minor, name="hem", axis="Z", segs=(28, 8)):
+    """A rolled hem: an elliptical torus (radii along the two in-plane axes)."""
+    t = torus(center, 1.0, minor, name=name, axis=axis, segs=segs)
+    c = Vector(center)
+    ax = {"X": (1, 2), "Y": (0, 2), "Z": (0, 1)}[axis]
+    for v in t.data.vertices:
+        rel = v.co - c
+        # Scale the ring (not the tube) to the ellipse radii.
+        ring = Vector([rel[i] if i in ax else 0.0 for i in range(3)])
+        L = ring.length or 1.0
+        unit = ring / L
+        tube = rel - unit * 1.0
+        target = Vector([unit[i] * (radii[ax.index(i)] if i in ax else 0.0) for i in range(3)])
+        v.co = c + target + tube
+    t.data.update()
+    return t
 
 
 def cut_open(obj, point, normal):
@@ -885,13 +979,56 @@ def hair_colour(light, mid, dark, center, scale=6.0, strands=26):
 
 # --------------------------------------------------------------- limbs
 
-def hands(skin, radius=0.075, mitten=False, crease=None):
+def sculpted_hand(side, skin, crease, size=1.0):
+    """A stylised game hand in the T-pose (palm down, along +-X): a palm
+    block with a thenar pad, fingers as two curled groups (index+middle,
+    ring+little) that wrap the rig's grip slot, a two-segment thumb and
+    knuckle bumps. No individual fingers - they'd be noise at game size."""
+    s, k = side, size
+    wx, z0 = 0.77, 1.107
+
+    def X(x):
+        return s * (wx + (x - wx) * k)
+    parts = [limb([(X(0.765), 0, z0), (X(0.81), 0, z0 - 0.002), (X(0.858), 0, z0 - 0.004)],
+                  [(0.046 * k, 0.026 * k), (0.056 * k, 0.027 * k), (0.058 * k, 0.024 * k)], up=(0, 0, 1),
+                  name="palm")]
+    parts.append(ellipsoid((X(0.805), -0.022 * k, z0 - 0.012), (0.03 * k, 0.022 * k, 0.018 * k), name="thenar",
+                           segs=(12, 8)))
+    for y, length, w in ((-0.016, 1.0, 0.03), (0.018, 0.88, 0.027)):
+        pts = [(X(0.852), y * k, z0 - 0.004), (X(0.855 + 0.045 * length), y * k, z0 - 0.01),
+               (X(0.86 + 0.07 * length), y * k, z0 - 0.034 * length), (X(0.852 + 0.07 * length), y * k,
+                                                                        z0 - 0.058 * length)]
+        parts.append(limb(pts, [(w * k * 0.62, 0.017 * k), (w * k * 0.6, 0.016 * k), (w * k * 0.55, 0.015 * k),
+                                (w * k * 0.48, 0.013 * k)], up=(0, 1, 0), name="fingers"))
+        parts.append(ellipsoid((X(0.855), y * k, z0 + 0.012 * k), (0.014 * k, w * k * 0.5, 0.009 * k), name="knuckle",
+                               segs=(10, 6)))
+    parts.append(limb([(X(0.79), -0.03 * k, z0 - 0.004), (X(0.825), -0.052 * k, z0 - 0.012),
+                       (X(0.855), -0.062 * k, z0 - 0.03)], [(0.017 * k, 0.017 * k), (0.015 * k, 0.015 * k),
+                                                           (0.012 * k, 0.012 * k)], up=(0, 0, 1), name="thumb"))
+    h = fuse(parts, "hand", voxel=0.0035 * k, smooth=1, faces=2400)
+    gap_x = X(0.9)
+
+    def colour(p, n):
+        c = skin
+        # Painted crease between the finger groups and at the knuckles.
+        if crease and abs(p.y - 0.001 * k) < 0.004 * k and abs(p.x) > abs(X(0.86)):
+            c = common.lerp(skin, crease, 0.6)
+        if crease and abs(abs(p.x) - abs(X(0.858))) < 0.004 * k and n.z > 0.3:
+            c = common.lerp(c, crease, 0.35)
+        return c
+    common.color_by(h, colour)
+    return h
+
+
+def hands(skin, radius=0.075, mitten=False, crease=None, sculpted=False, size=1.0):
     """Ball hands; mitten=True gives a readable game hand instead: a flat
     palm, a curled finger mass and a strong thumb, with a painted
     knuckle crease (crease colour, sRGB)."""
     parts = []
     for side, bone in ((1, "hand.l"), (-1, "hand.r")):
-        if mitten:
+        if sculpted:
+            h = sculpted_hand(side, skin, crease, size)
+        elif mitten:
             r = radius
             palm = ellipsoid((side * 0.84, -0.005, 1.11), (r * 0.95, r * 0.7, r * 0.95), name="hand")
             fingers = ellipsoid((side * (0.84 + r * 0.9), -0.012, 1.095), (r * 0.75, r * 0.62, r * 0.85),
@@ -908,6 +1045,78 @@ def hands(skin, radius=0.075, mitten=False, crease=None):
             h = fuse([palm, thumb], "hand", voxel=0.01, smooth=2, faces=320)
             common.set_color(h, skin)
         parts.append((h, bone))
+    return parts
+
+
+def sculpted_boot(side, upper, sole, toe, lace, collar=None, scale=1.0, tread=None, eyelet=(0.75, 0.72, 0.65),
+                  height=1.0):
+    """A chunky stylised hiking boot: shaft, vamp and heel fused into one
+    upper, a padded ankle collar, a tongue, a rubber toe cap, a thick sole
+    with toe spring and a darker tread lip, and crossed laces with eyelets.
+    Sharp-ish sole edges against the softer upper."""
+    x = side * 0.17
+    k = scale
+    parts = []
+    up_parts = [limb([(x, 0.012 * k, 0.215 * k), (x, 0.0, 0.14 * k), (x, -0.01 * k, 0.085 * k)],
+                     [(0.078 * k, 0.086 * k), (0.086 * k, 0.098 * k), (0.092 * k, 0.108 * k)], up=(0, -1, 0),
+                     name="shaft"),
+                ellipsoid((x, -0.1 * k, 0.07 * k), (0.086 * k, 0.13 * k, 0.062 * k), name="vamp"),
+                ellipsoid((x, 0.055 * k, 0.068 * k), (0.08 * k, 0.07 * k, 0.068 * k), name="heel")]
+    body = fuse(up_parts, "boot", voxel=0.006 * k, smooth=2, faces=2600)
+
+    def upper_colour(p, n):
+        c = upper
+        # Painted panel seam around the foot and a darker heel counter.
+        if abs(p.z - 0.105 * k) < 0.006 * k:
+            c = common.lerp(upper, (0, 0, 0), 0.35)
+        if p.y > 0.06 * k and p.z < 0.13 * k:
+            c = common.lerp(upper, (0, 0, 0), 0.2)
+        return c
+    common.color_by(body, upper_colour)
+    parts.append(body)
+    ring = hem_ring((x, 0.012 * k, 0.212 * k), (0.082 * k, 0.09 * k), 0.017 * k, name="collar")
+    common.set_color(ring, collar or common.lerp(upper, (0, 0, 0), 0.25))
+    parts.append(ring)
+    tongue = ellipsoid((0, 0, 0), (0.038 * k, 0.012 * k, 0.06 * k), name="tongue", segs=(12, 8))
+    tongue.data.transform(Matrix.Translation((x, -0.082 * k, 0.19 * k)) @ Matrix.Rotation(-0.35, 4, "X"))
+    common.set_color(tongue, common.lerp(upper, (1, 1, 1), 0.08))
+    parts.append(tongue)
+    cap = ellipsoid((x, -0.175 * k, 0.058 * k), (0.082 * k, 0.07 * k, 0.05 * k), name="toecap", segs=(18, 12))
+    common.set_color(cap, toe)
+    parts.append(cap)
+    # Thick sole with a toe spring, and a darker tread lip below it.
+    for thick, grow, z, colour in ((0.042, 0.0, 0.028, sole), (0.02, 0.008, 0.01, tread or
+                                                                common.lerp(sole, (0, 0, 0), 0.45))):
+        slab = box((0.19 * k + grow, 0.35 * k + grow, thick * k), (x, -0.055 * k, z * k), bevel=0.012 * k,
+                   name="sole", segments=2)
+        for v in slab.data.vertices:
+            front = max(0.0, (-v.co.y - 0.12 * k) / (0.11 * k))
+            v.co.z += 0.03 * k * front ** 2
+        common.color_by(slab, lambda p, n, c=colour: c if n.z > -0.5 else common.lerp(c, (0, 0, 0), 0.3),
+                        smooth=False)
+        parts.append(slab)
+    # Laces: crossed bars up the tongue, with eyelets either side.
+    for i in range(4):
+        t = i / 3
+        y = (-0.13 + 0.06 * t) * k
+        zz = (0.105 + 0.1 * t) * k
+        for sgn in (-1, 1):
+            bar = box((0.07 * k, 0.012 * k, 0.012 * k), (x, y - 0.012 * k, zz), bevel=0.004 * k, name="lace",
+                      segments=1)
+            bar.data.transform(Matrix.Translation((x, y - 0.012 * k, zz)) @ Matrix.Rotation(sgn * 0.45, 4, "Y")
+                               @ Matrix.Translation((-x, -(y - 0.012 * k), -zz)))
+            common.set_color(bar, lace)
+            parts.append(bar)
+            eye = torus((x + sgn * 0.04 * k, y - 0.006 * k, zz), 0.009 * k, 0.003 * k, name="eyelet", axis="Y",
+                        segs=(10, 4))
+            common.set_color(eye, eyelet)
+            parts.append(eye)
+    if height != 1.0:
+        # Mid-cut vs high-top: squash the boot vertically (the footprint stays).
+        for part in parts:
+            for v in part.data.vertices:
+                v.co.z *= height
+            part.data.update()
     return parts
 
 

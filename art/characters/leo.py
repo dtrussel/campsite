@@ -103,13 +103,30 @@ def camo(pos, normal):
 # ---------------------------------------------------------------- body
 
 def skin_piece():
-    parts = [chibi.tube([(0, 0, 1.1), (0, 0.01, 1.4)], [0.075, 0.07], name="neck")]
+    """Skin with stylised landmarks (rest pose, before the proportions
+    stretch): shoulder at x 0.21, elbow 0.45, wrist 0.75; hip z 0.52,
+    knee 0.29, ankle 0.145."""
+    parts = [chibi.limb([(0, 0.005, 1.08), (0, 0.01, 1.25), (0, 0.012, 1.4)], [(0.078, 0.074), (0.07, 0.066),
+                                                                             (0.068, 0.064)], up=(0, -1, 0),
+                        name="neck")]
     for s in (-1, 1):
-        parts.append(chibi.tube([(s * 0.3, 0, 1.11), (s * 0.55, 0, 1.11), (s * 0.8, 0, 1.11)], [0.07, 0.066, 0.058],
-                                name="arm"))
-        parts.append(chibi.tube([(s * 0.16, 0, 0.46), (s * 0.17, -0.01, 0.29), (s * 0.17, 0.02, 0.14)],
-                                [0.085, 0.082, 0.068], name="leg"))
-    body = chibi.fuse(parts, "Skin", voxel=0.014, faces=1500)
+        # Arm: widths are (front-back, up-down). Bicep swell, a narrower
+        # elbow, the forearm widest just below it, a flat narrow wrist.
+        xs = (0.3, 0.38, 0.45, 0.5, 0.58, 0.66, 0.72, 0.78)
+        rr = ((0.08, 0.082), (0.078, 0.08), (0.066, 0.064), (0.074, 0.068), (0.068, 0.061), (0.059, 0.051),
+              (0.052, 0.041), (0.05, 0.039))
+        parts.append(chibi.limb([(s * x, 0, 1.107) for x in xs], rr, up=(0, 0, 1), name="arm"))
+        parts.append(chibi.ellipsoid((s * 0.455, 0.036, 1.107), (0.024, 0.02, 0.022), name="elbow", segs=(12, 8)))
+        parts.append(chibi.ellipsoid((s * 0.37, -0.024, 1.117), (0.05, 0.034, 0.036), name="bicep", segs=(14, 10)))
+        # Leg: thigh (under the shorts), knee, calf swell behind, a tapering
+        # shin and a narrow ankle.
+        zs = (0.47, 0.38, 0.3, 0.25, 0.2, 0.16, 0.13)
+        rr = ((0.086, 0.086), (0.078, 0.08), (0.068, 0.07), (0.066, 0.07), (0.058, 0.056), (0.05, 0.05),
+              (0.052, 0.056))
+        parts.append(chibi.limb([(s * 0.17, 0.0, z) for z in zs], rr, up=(0, -1, 0), name="leg"))
+        parts.append(chibi.ellipsoid((s * 0.17, -0.052, 0.296), (0.04, 0.024, 0.036), name="knee", segs=(12, 8)))
+        parts.append(chibi.ellipsoid((s * 0.172, 0.03, 0.235), (0.052, 0.045, 0.062), name="calf", segs=(14, 10)))
+    body = chibi.fuse(parts, "Skin", voxel=0.008, faces=9000)
     common.color_by(body, lambda p, n: common.lerp(SKIN, SKIN_SHADE, max(0.0, -n.z * 0.5)))
     # Grazed, dusty knees and shins (an outdoors kid).
     common.grime(body, SCUFF, lambda p, n: 0.7 * math.exp(-((p.z - 0.3) / 0.05) ** 2) * max(0.0, -n.y)
@@ -119,16 +136,40 @@ def skin_piece():
 
 
 def shirt_piece():
-    # Lean V-shaped torso: broader chest, narrower waist.
+    # Lean V-shaped torso: broader chest, narrower waist; deltoid caps, a
+    # trapezius slope from the neck, shoulder blades; flared sleeves.
     parts = [
         chibi.ellipsoid((0, 0, 1.01), (0.27, 0.2, 0.23), name="chest"),
         chibi.ellipsoid((0, -0.005, 0.78), (0.225, 0.19, 0.27), name="belly"),
     ]
     for s in (-1, 1):
-        parts.append(chibi.tube([(s * 0.14, 0, 1.1), (s * 0.41, 0, 1.1)], [0.12, 0.108], name="sleeve", levels=2))
-    shirt = chibi.fuse(parts, "Shirt", voxel=0.013, faces=2200)
+        parts.append(chibi.limb([(s * 0.14, 0, 1.1), (s * 0.3, 0, 1.1), (s * 0.4, 0, 1.098)],
+                                [(0.12, 0.12), (0.112, 0.112), (0.118, 0.115)], up=(0, 0, 1), name="sleeve"))
+        parts.append(chibi.ellipsoid((s * 0.22, 0.0, 1.13), (0.1, 0.11, 0.09), name="deltoid", segs=(16, 12)))
+        parts.append(chibi.ellipsoid((s * 0.11, 0.025, 1.19), (0.11, 0.08, 0.05), name="trap", segs=(16, 10)))
+        parts.append(chibi.ellipsoid((s * 0.1, 0.14, 1.03), (0.085, 0.05, 0.1), name="blade", segs=(14, 10)))
+        # Rolled sleeve hem.
+        parts.append(chibi.hem_ring((s * 0.372, 0, 1.098), (0.118, 0.115), 0.013, name="hem", axis="X"))
+    # Loose bottom hanging over the shorts' waist, with a rolled hem.
+    parts.append(chibi.limb([(0, -0.005, 0.74), (0, -0.005, 0.64), (0, -0.005, 0.56)],
+                            [(0.215, 0.185), (0.245, 0.205), (0.255, 0.212)], up=(0, -1, 0), name="skirt"))
+    parts.append(chibi.hem_ring((0, -0.005, 0.565), (0.255, 0.212), 0.009, name="hem", axis="Z"))
+    shirt = chibi.fuse(parts, "Shirt", voxel=0.0065, faces=12000)
     for s in (-1, 1):
         chibi.cut_open(shirt, (s * 0.39, 0, 0), (s, 0, 0))
+    chibi.cut_open(shirt, (0, 0, 0.555), (0, 0, -1))
+    # Sculpted folds: tension folds radiating from the armpits, rings on
+    # the sleeves, compression folds at the waist, a drag fold from the
+    # pack straps.
+    for s in (-1, 1):
+        chibi.fold(shirt, (s * 0.2, -0.06, 1.02), (0.13, 0.2, 0.14), 0.014, radial_axis=(0, 1, 0), count=6,
+                   twist=0.4 * s, seed=3 + s)
+        chibi.fold(shirt, (s * 0.2, 0.08, 1.02), (0.13, 0.2, 0.14), 0.012, radial_axis=(0, 1, 0), count=5,
+                   seed=5 + s)
+        chibi.fold(shirt, (s * 0.32, 0, 1.1), (0.09, 0.16, 0.16), 0.01, wavelength=0.05, across=(1, 0, 0),
+                   twist=0.8, seed=7 + s)
+    chibi.fold(shirt, (0, 0, 0.66), (0.32, 0.3, 0.12), 0.013, wavelength=0.055, across=(0, 0, 1), twist=1.2, seed=2)
+    chibi.fold(shirt, (0.02, -0.18, 0.84), (0.2, 0.12, 0.14), 0.01, wavelength=0.06, across=(1, 0, 0.6), seed=4)
 
     def colour(pos, normal):
         if abs(pos.x) > 0.345:
@@ -151,15 +192,27 @@ def shirt_piece():
 def shorts_piece():
     parts = [chibi.ellipsoid((0, 0, 0.58), (0.24, 0.195, 0.14), name="hips")]
     for s in (-1, 1):
-        parts.append(chibi.tube([(s * 0.13, 0, 0.6), (s * 0.18, 0, 0.27)], [0.13, 0.135], name="shortleg", levels=2))
-    shorts = chibi.fuse(parts, "Shorts", voxel=0.01, faces=3600)
-    chibi.cut_open(shorts, (0, 0, 0.285), (0, 0, -1))
+        parts.append(chibi.limb([(s * 0.13, 0, 0.6), (s * 0.165, -0.004, 0.44), (s * 0.178, 0, 0.32)],
+                                [(0.128, 0.126), (0.133, 0.128), (0.136, 0.128)], up=(0, -1, 0), name="shortleg"))
+        parts.append(chibi.hem_ring((s * 0.178, 0, 0.34), (0.136, 0.128), 0.012, name="hem", axis="Z"))
+    shorts = chibi.fuse(parts, "Shorts", voxel=0.006, faces=12000)
+    chibi.cut_open(shorts, (0, 0, 0.325), (0, 0, -1))
+    # Crotch folds radiating from the fork, drag folds on the legs, and
+    # bunching above the hems.
+    chibi.fold(shorts, (0, -0.12, 0.47), (0.16, 0.2, 0.13), 0.014, radial_axis=(0, 1, 0), count=5, twist=0.3,
+               seed=11)
+    chibi.fold(shorts, (0, 0.12, 0.47), (0.16, 0.2, 0.13), 0.011, radial_axis=(0, 1, 0), count=4, seed=12)
+    for s in (-1, 1):
+        chibi.fold(shorts, (s * 0.18, 0, 0.38), (0.16, 0.16, 0.07), 0.01, wavelength=0.04, across=(0, 0, 1),
+                   twist=1.0, seed=13 + s)
+        chibi.fold(shorts, (s * 0.2, -0.1, 0.42), (0.12, 0.08, 0.1), 0.009, wavelength=0.05, across=(s, 0, 1),
+                   seed=15 + s)
 
     def colour(pos, normal):
         z = pos.z
-        if z < 0.3:
+        if z < 0.345:
             return SHORTS_DARK  # hem
-        if abs(z - 0.31) < 0.005 and int(pos.x * 120) % 2 == 0:
+        if abs(z - 0.355) < 0.005 and int(pos.x * 120) % 2 == 0:
             return STITCH  # stitched hem line
         # Two parallel diagonal lime stripes across both legs,
         # with a lighter blue band between them (the art's board shorts).
@@ -183,10 +236,10 @@ def cargo_pockets():
     """Flapped cargo pockets on the outside of each thigh."""
     rigid = []
     for s, bone in ((1, "upperleg.l"), (-1, "upperleg.r")):
-        pocket = chibi.box((0.03, 0.13, 0.12), (s * 0.305, -0.005, 0.4), bevel=0.012, name="pocket")
+        pocket = chibi.box((0.03, 0.13, 0.12), (s * 0.305, -0.005, 0.44), bevel=0.012, name="pocket")
         common.color_by(pocket, lambda p, n: SHORTS_DARK if abs(p.y + 0.005) > 0.055 or p.z < 0.35 else SHORTS,
                         smooth=False)
-        flap = chibi.box((0.036, 0.14, 0.04), (s * 0.31, -0.005, 0.46), bevel=0.01, name="pocketflap")
+        flap = chibi.box((0.036, 0.14, 0.04), (s * 0.31, -0.005, 0.5), bevel=0.01, name="pocketflap")
         common.color_by(flap, lambda p, n: SHORTS_DARK if n.z < 0.5 else SHORTS_LIGHT, smooth=False)
         rigid += [(pocket, bone), (flap, bone)]
     return rigid
@@ -215,17 +268,20 @@ def badge():
 
 def hands_and_feet():
     rigid = []
-    for h, bone in chibi.hands(SKIN, radius=0.085, mitten=True, crease=SKIN_SHADE):
+    for h, bone in chibi.hands(SKIN, sculpted=True, crease=SKIN_SHADE, size=1.12):
         rigid.append((h, bone))
     for s, bone in ((1, "foot.l"), (-1, "foot.r")):
-        for part in chibi.boot(s, BOOT, SOLE, BOOT_TOE, LACE, accent=None, scale=1.3):
+        for part in chibi.sculpted_boot(s, BOOT, SOLE, BOOT_TOE, LACE, collar=(0.1, 0.12, 0.22), scale=1.22,
+                                        height=0.8):
             # Muddy, scuffed hiking boots.
             common.grime(part, MUD, lambda p, n: max(0.0, (0.09 - p.z) / 0.08) * 0.7 +
                          max(0.0, noise.noise(p * 30.0) - 0.35) * 0.8)
             rigid.append((part, bone))
         # Slouchy grey socks folded over the boot tops.
-        sock = chibi.tube([(s * 0.17, 0.02, 0.33), (s * 0.17, 0.02, 0.26), (s * 0.17, 0.02, 0.18)], [0.094, 0.082, 0.09],
-                           name="sock", levels=1)
+        sock = chibi.limb([(s * 0.17, 0.01, 0.235), (s * 0.17, 0.012, 0.2), (s * 0.17, 0.012, 0.15)],
+                          [(0.056, 0.058), (0.062, 0.066), (0.07, 0.078)], up=(0, -1, 0), name="sock")
+        roll = chibi.hem_ring((s * 0.17, 0.01, 0.228), (0.058, 0.06), 0.011, name="sock")
+        sock = common.join([sock, roll], "sock")
         common.color_by(sock, lambda p, n: common.lerp(SOCK, (0.36, 0.36, 0.4),
                                                        0.5 if int(p.z * 110) % 2 == 0 else 0.0))
         rigid.append((sock, "lowerleg." + bone[-1]))
@@ -508,6 +564,10 @@ def build():
         obj.modifiers.new("Armature", "ARMATURE").object = rig
 
     meshes = [body, head, hair, walking_stick]
+    if os.environ.get("SCULPT"):
+        print("leo tris:", common.triangle_count(meshes))
+        sculpt_previews(rig, meshes, "leo", ("Running_A", 8), ("1H_Melee_Attack_Chop", 14))
+        return
     if chibi.quick_mode():
         for mesh in meshes:
             chibi.quick_material(mesh, overlay=(FACE_PNG, "FaceUV") if mesh is head else None)
@@ -528,6 +588,20 @@ def build():
     common.export_glb(os.path.join(common.OUT_DIR, "leo.glb"), [rig] + meshes, animations=True)
     print("leo tris:", common.triangle_count(meshes))
     render_previews(rig, meshes, head, "leo", ("Running_A", 8), ("1H_Melee_Attack_Chop", 14))
+
+
+def sculpt_previews(rig, meshes, name, *actions):
+    """SCULPT=1: clay views of the Idle pose, silhouettes at game size and
+    clay animation frames, for judging forms without paint."""
+    rig.data.pose_position = "POSE"
+    rig.animation_data_create()
+    rig.animation_data.action = bpy.data.actions.get("Idle")
+    bpy.context.scene.frame_set(1)
+    preview.render_clay(meshes, name, size=720)
+    preview.render_silhouette(meshes, name)
+    for action_name, frame in actions:
+        rig.animation_data.action = bpy.data.actions.get(action_name)
+        preview.render_clay(meshes, name + "_" + action_name, views=(("34", 30, 8),), size=480, frame=frame)
 
 
 def render_previews(rig, meshes, head, name, *actions):
