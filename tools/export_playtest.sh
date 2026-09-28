@@ -35,4 +35,17 @@ ZIP="$BUILD_DIR/Campsite-$VERSION-windows.zip"
 rm -f "$ZIP"
 (cd "$BUILD_DIR/windows" && zip -q -9 "$ZIP" Campsite.exe PLAYTEST-README.txt)
 ls -la "$ZIP"
-echo "Playtest package ready: $ZIP"
+
+# Also ship as two smaller zips (program + data) for channels with an
+# upload size limit: the stock runtime loads Campsite.pck from the
+# exe's folder.
+SPLIT="$BUILD_DIR/split"
+rm -rf "$SPLIT" && mkdir -p "$SPLIT"
+TEMPLATES="${GODOT_TEMPLATES:-$HOME/.local/share/godot/export_templates/$(cat "$(dirname "$0")/godot_version.txt")}"
+cp "$TEMPLATES/windows_release_x86_64.exe" "$SPLIT/Campsite.exe"
+"$GODOT" --headless --path "$GAME_DIR" --export-pack "Windows Desktop" "$SPLIT/Campsite.pck" >/dev/null 2>&1
+cp "$ROOT/docs/testing/PLAYTEST-README.txt" "$SPLIT/"
+(cd "$SPLIT" && zip -q -9 "Campsite-$VERSION-part1-program.zip" Campsite.exe \
+	&& zip -q -9 "Campsite-$VERSION-part2-data.zip" Campsite.pck PLAYTEST-README.txt)
+ls -la "$SPLIT"/*.zip
+echo "Playtest package ready: $ZIP (or the two parts in $SPLIT)"
