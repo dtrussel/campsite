@@ -1,30 +1,31 @@
-"""Sculpted stylised heads (MOBA-style), procedurally.
+"""Sculpted stylised heads (MOBA-style) as signed distance fields.
 
-The head starts as an ellipsoid whose vertices are redistributed so they
-crowd the face (fine enough for eyelids and lip lines), then:
+A head is blocked in the way a sculptor does it - from anatomical forms -
+but every form is a distance field combined with a *smooth* union, so
+forms flow into each other where they should (cheeks into jaw) and keep
+crisp plane changes where the blend radius is small (lid rims, lips,
+the jaw line):
 
-  1. skull shaping: occipital bulge, flatter face front, temples;
-  2. cheek fat pads and cheekbones (pushed outward, radially);
-  3. a jaw: a soft clamp gives a jaw-underside plane from the chin back
-     to the jaw corners and narrows the lower face into a jaw line;
-  4. facial features as displacement fields toward the viewer, driven
-     by the *same* FaceLayout curves the painted face uses (so relief
-     and paint line up): eye sockets, eyeballs, an upper-lid band with a
-     crease, lower lids, brow masses, a constructed nose (bridge planes,
-     tip, alae, nostrils), lips with an open-mouth cavity, mouth-corner
-     pits, smile apples, philtrum, mentolabial fold and chin pad.
+  cranium and occiput, forehead, a face mask, zygomatic arches, cheek
+  fat, jaw bars to a defined chin, the mouth mound (maxilla), a brow
+  bar, a nose (bridge, tip ball, alae) with carved nostrils;
+  then, placed on that surface by ray-marching: eye sockets carved in,
+  eyeballs set behind the openings, upper/lower lid rims wrapping them,
+  lips as volumes, and carved details - the mouth opening, corner pits,
+  nasolabial folds, philtrum, lid creases and the mentolabial fold.
 
-Everything is vectorised with numpy; units are metres, head-local
-(x = the character's left, -y = forward, z = up). Fields use compact
-smooth bumps so plane changes stay crisp where wanted.
+The surface is extracted with marching cubes (scikit-image) and
+decimated. Coordinates are head-local metres relative to HeadFrame.c
+(x = the character's left, -y = forward, z = up). Facial landmarks come
+from the FaceLayout the painted face uses, so paint and forms line up.
 """
 
 import math
 from dataclasses import dataclass
 
 import bmesh
-import bpy
 import numpy as np
+from mathutils import Vector
 
 from lib import common
 from characters import chibi, face_paint
@@ -32,232 +33,334 @@ from characters import chibi, face_paint
 
 @dataclass
 class HeadShape:
-    # Skull
-    occiput: float = 0.05          # back-of-head bulge (fraction of ry)
-    face_flat: float = 0.1         # flatten the face front (fraction of ry)
-    mid_face: float = 0.03         # lower/mid-face mass forward (a vertical, not dished, profile)
-    forehead: float = 0.02         # rounded child forehead bulge
-    temple: float = 0.006          # temple hollow depth (m)
-    # Jaw and chin (head-local metres)
-    jaw_w: float = 0.17            # half-width at the jaw corners
-    jaw_y: float = 0.02            # jaw corner depth (0 = head centre)
-    jaw_z: float = -0.17           # jaw corner height
-    chin_w: float = 0.05           # half-width at the chin
-    chin_z: float = -0.245         # chin bottom
-    chin_fwd: float = 0.0          # extra chin push forward (m)
-    jaw_soft: float = 0.012        # soft-clamp width: small = crisp jaw line
-    jaw_top: float = -0.04         # the jaw narrowing fades out above this height
-    # Cheeks (child fat pads) and cheekbones
-    cheek: float = 0.014
-    cheek_pos: tuple = (0.105, -0.095)
-    cheek_size: tuple = (0.06, 0.055)
-    cheekbone: float = 0.006
-    # Eyes
-    socket: float = 0.022          # socket depth
-    eyeball: float = 0.016         # eyeball dome height back out of the socket
-    lid: float = 0.006             # upper-lid band thickness
-    lid_band: float = 0.008        # upper-lid band height (lid edge to crease)
-    crease: float = 0.003
-    lower_lid: float = 0.0025
-    brow: float = 0.012
-    # Nose
-    bridge: float = 0.006          # bridge height between the eyes
-    bridge_top: float = 0.3        # where the bridge starts, in eye heights above the eye centre
-    tip: float = 0.03              # nose tip protrusion
-    tip_lift: float = 0.004        # upturned tip (tip centre above nose_z)
-    alae: float = 0.014
-    nostril: float = 0.006
-    # Mouth
-    muzzle: float = 0.012          # the rounded mouth area in front of the teeth
-    upper_lip: float = 0.005
-    lower_lip: float = 0.007
-    mouth_depth: float = 0.018     # open-mouth cavity depth
-    corner: float = 0.005          # mouth-corner pits
-    apple: float = 0.01            # smile cheeks beside the mouth corners
-    philtrum: float = 0.0025
-    mentolabial: float = 0.004
-    chin_pad: float = 0.01
+    # Forms: (centre, radii) head-local; k = blend radius of the smooth union.
+    cranium_off: tuple = (0.0, 0.0, 0.035)       # cranium radii are HeadFrame.r
+    occiput: tuple = ((0.0, 0.1, 0.02), (0.17, 0.16, 0.17))
+    forehead: tuple = None
+    face: tuple = ((0.0, -0.07, -0.035), (0.18, 0.165, 0.205))
+    zygoma: tuple = ((0.13, -0.125, -0.045), (0.055, 0.07, 0.028))
+    cheek: tuple = ((0.1, -0.15, -0.1), (0.066, 0.075, 0.06))
+    jaw: tuple = ((0.155, 0.03, -0.1), (0.14, -0.03, -0.165), (0.08, -0.155, -0.208), (0.03, -0.198, -0.228))
+    jaw_r: tuple = (0.035, 0.032, 0.028, 0.022)
+    chin: tuple = ((0.0, -0.208, -0.222), (0.038, 0.036, 0.032))
+    muzzle: tuple = ((0.0, -0.172, -0.145), (0.06, 0.064, 0.055))
+    brow: tuple = ((0.13, -0.195, 0.0), (0.065, -0.225, 0.012), (0.0, -0.232, 0.005))
+    brow_r: float = 0.014
+    k_big: float = 0.07        # cranium / forehead / face
+    k_cheek: float = 0.035
+    k_zygoma: float = 0.025
+    k_jaw: float = 0.04
+    k_chin: float = 0.02
+    k_brow: float = 0.04
+    # Nose.
+    bridge_top: float = -0.02  # z where the bridge starts, between the eyes
+    bridge_h: float = 0.004    # bridge height above the face there
+    bridge_r: tuple = (0.008, 0.011)
+    tip: float = 0.032         # tip protrusion above the face
+    tip_r: tuple = (0.018, 0.017, 0.016)
+    alae_r: float = 0.011
+    nostril: tuple = (0.005, 0.006, 0.0035)
+    # Eyes.
+    socket: tuple = (1.3, 0.03, 1.4)     # under-brow shadow: x in eye_w, depth (m), z in eye_h
+    socket_cut: float = 0.003
+    socket_k: float = 0.012
+    ball_depth: float = 0.022  # eyeball bulge depth (m)
+    ball_r: float = 1.3        # eyeball radius in eye half-widths
+    ball_back: float = 0.002    # bulge proud of the skin
+    ball_k: float = 0.012  # eyeball front behind the original skin
+    lid_r: float = 0.0055
+    lower_lid_r: float = 0.0036
+    lid_k: float = 0.004
+    lower_lid_k: float = 0.009
+    crease: float = 0.0008
+    # Mouth.
+    upper_lip_r: float = 0.006
+    lower_lip_r: float = 0.0085
+    lip_k: float = 0.004
+    corner_r: float = 0.0045
+    corner_depth: float = 0.0025
+    mouth_depth: float = 0.014
+    nasolabial: float = 0.0
+    philtrum: float = 0.0008
+    mentolabial: float = 0.0025
+    # Mesh.
+    voxel: float = 0.0022
+    draft_voxel: float = 0.003     # SCULPT review renders
 
 
-def _smoothstep(e0, e1, x):
-    t = np.clip((x - e0) / (e1 - e0), 0.0, 1.0)
-    return t * t * (3 - 2 * t)
+# --- distance-field primitives (vectorised over (N, 3) points) --------------
+
+def _ell(P, c, r):
+    q = (P - np.asarray(c)) / np.asarray(r)
+    k0 = np.linalg.norm(q, axis=1)
+    k1 = np.linalg.norm(q / np.asarray(r), axis=1)
+    return k0 * (k0 - 1.0) / np.maximum(k1, 1e-9)
 
 
-def _bump(u, w, cu, cw, au, aw):
-    """Compact smooth bump: 1 at the centre, 0 outside the ellipse."""
-    d2 = ((u - cu) / au) ** 2 + ((w - cw) / aw) ** 2
-    return np.clip(1.0 - d2, 0.0, 1.0) ** 2
+def _chain(P, pts, radii):
+    """Tapered capsule chain through pts with per-point radii."""
+    d = np.full(len(P), 1e9)
+    for (a, b), (ra, rb) in zip(zip(pts[:-1], pts[1:]), zip(radii[:-1], radii[1:])):
+        a, b = np.asarray(a), np.asarray(b)
+        ab = b - a
+        t = np.clip(((P - a) @ ab) / max(ab @ ab, 1e-12), 0.0, 1.0)
+        dist = np.linalg.norm(P - (a + t[:, None] * ab), axis=1) - (ra + (rb - ra) * t)
+        d = np.minimum(d, dist)
+    return d
 
 
-def _ridge(dist, width):
-    return np.clip(1.0 - (dist / width) ** 2, 0.0, 1.0) ** 2
-
-
-def _soft_min(a, b, k):
+def _smin(a, b, k):
+    if k <= 0:
+        return np.minimum(a, b)
     h = np.clip(0.5 + 0.5 * (b - a) / k, 0.0, 1.0)
     return b + (a - b) * h - k * h * (1.0 - h)
 
 
-def _soft_max(a, b, k):
-    return -_soft_min(-a, -b, k)
+def _ssub(a, b, k):
+    """a minus b, smoothly."""
+    return -_smin(-a, b, k)
 
 
-def _warped_sphere(name, nu=320, nv=240, front_bias=0.6, face_pitch_bias=0.45):
-    """A UV sphere whose vertices crowd the front (yaw 0 = -Y) and the
-    face band, so small facial forms resolve without a huge mesh."""
+class Prim:
+    """A distance function with an axis-aligned bounding box."""
+
+    def __init__(self, fn, lo, hi):
+        self.fn, self.lo, self.hi = fn, np.asarray(lo, float), np.asarray(hi, float)
+
+
+class Field:
+    """An ordered list of (op, primitive, k); evaluate() folds them. Each
+    primitive is only evaluated inside its box grown by the blend radius
+    plus `margin` - outside it can't move the zero level set."""
+
+    margin = 0.008
+
+    def __init__(self):
+        self.ops = []
+
+    def add(self, prim, k=0.0):
+        self.ops.append(("add", prim, k))
+
+    def sub(self, prim, k=0.0):
+        self.ops.append(("sub", prim, k))
+
+    def evaluate(self, P):
+        d = np.full(len(P), 1e3)
+        plo, phi = P.min(0), P.max(0)
+        for op, prim, k in self.ops:
+            grow = k + self.margin
+            lo, hi = prim.lo - grow, prim.hi + grow
+            if np.any(hi < plo) or np.any(lo > phi):
+                continue
+            m = np.all((P >= lo) & (P <= hi), axis=1)
+            if not m.any():
+                continue
+            idx = np.nonzero(m)[0]
+            v = prim.fn(P[idx])
+            d[idx] = _smin(d[idx], v, k) if op == "add" else _ssub(d[idx], v, k)
+        return d
+
+    def front_y(self, x, z, y0=-0.45, y1=0.1, step=0.0008):
+        """y where a ray along +y at (x, z) first enters the surface."""
+        ys = np.arange(y0, y1, step)
+        P = np.stack([np.full_like(ys, x), ys, np.full_like(ys, z)], 1)
+        d = self.evaluate(P)
+        inside = np.nonzero(d < 0)[0]
+        if not len(inside):
+            return None
+        i = inside[0]
+        if i == 0:
+            return ys[0]
+        return ys[i - 1] + (ys[i] - ys[i - 1]) * d[i - 1] / (d[i - 1] - d[i])
+
+
+def ell(c, r):
+    c, r = np.asarray(c, float), np.asarray(r, float)
+    return Prim(lambda P: _ell(P, c, r), c - r, c + r)
+
+
+def chain(pts, radii):
+    arr = np.asarray(pts, float)
+    big = max(radii)
+    return Prim(lambda P: _chain(P, pts, radii), arr.min(0) - big, arr.max(0) + big)
+
+
+def carve_y(surface_y, radius, depth):
+    """Centre y for a carving primitive of `radius` that cuts `depth` into
+    a surface at `surface_y` (the primitive sits mostly in front)."""
+    return surface_y - radius + depth
+
+
+def _mirror(q, side):
+    return (side * q[0], q[1], q[2])
+
+
+def build_field(head, L, S):
+    F = Field()
+    r = tuple(head.r)
+    F.add(ell(S.cranium_off, r))
+    F.add(ell(*S.occiput), S.k_big)
+    if S.forehead:
+        F.add(ell(*S.forehead), S.k_big)
+    F.add(ell(*S.face), S.k_big)
+    F.add(ell(*S.muzzle), S.k_cheek)
+    for side in (-1, 1):
+        F.add(ell(_mirror(S.zygoma[0], side), S.zygoma[1]), S.k_zygoma)
+        F.add(ell(_mirror(S.cheek[0], side), S.cheek[1]), S.k_cheek)
+        F.add(chain([_mirror(q, side) for q in S.jaw], S.jaw_r), S.k_jaw)
+    F.add(ell(*S.chin), S.k_chin)
+    brow = [_mirror(q, -1) for q in S.brow] + list(reversed(S.brow[:-1]))
+    F.add(chain(brow, [S.brow_r] * len(brow)), S.k_brow)
+
+    # Nose, standing on the face.
+    tip_z = L.nose_z + 0.004
+    y_top = F.front_y(0.0, S.bridge_top)
+    y_tip = F.front_y(0.0, tip_z)
+    F.add(chain([(0.0, y_top - S.bridge_h + S.bridge_r[0], S.bridge_top),
+                 (0.0, y_tip - S.tip * 0.72 + S.bridge_r[1], tip_z + 0.012)], S.bridge_r), 0.012)
+    F.add(ell((0.0, y_tip - S.tip + S.tip_r[1], tip_z), S.tip_r), 0.01)
+    for side in (-1, 1):
+        ya = F.front_y(side * L.nose_w * 1.1, L.nose_z - 0.002)
+        F.add(ell((side * L.nose_w * 1.05, ya - S.alae_r * 0.45, L.nose_z - 0.002), (S.alae_r,) * 3), 0.008)
+    for side in (-1, 1):
+        F.sub(ell((side * L.nose_w * 0.52, y_tip - S.tip * 0.45, L.nose_z - 0.011), S.nostril), 0.003)
+
+    # Eyes, the stylised-game way: a shallow shadow under the brow, the
+    # eyeball as a soft bulge continuous with the face (the painted eye sits
+    # on it), a crisp upper-lid fold and a subtle lower-lid roll.
+    for side in (-1, 1):
+        ex = side * L.eye_x
+        skin = F.front_y(ex, L.eye_z)
+        # Under-brow shadow: a well-proportioned volume sunk so it only
+        # carves `socket_cut` (flat ellipsoids break the distance estimate).
+        F.sub(ell((ex - side * L.eye_w * 0.15, carve_y(skin, S.socket[1], S.socket_cut), L.eye_z + L.eye_h * 1.2),
+                  (L.eye_w * S.socket[0], S.socket[1], L.eye_h * S.socket[2])), S.socket_k)
+        globe = (L.eye_w * S.ball_r, S.ball_depth, L.eye_h * S.ball_r * 1.4)
+        centre = (ex, skin - S.ball_back + globe[1], L.eye_z + L.eye_h * 0.1)
+        F.add(ell(centre, globe), S.ball_k)
+
+        def on_ball(x, z, lift, centre=centre, globe=globe):
+            q = 1.0 - ((x - centre[0]) / globe[0]) ** 2 - ((z - centre[2]) / globe[2]) ** 2
+            return centre[1] - globe[1] * math.sqrt(max(q, 0.0)) - lift
+        top, bottom = face_paint._eye_curves(L, side)
+        for curve, rad, off, kk in ((top, S.lid_r, 0.0012, S.lid_k), (bottom, S.lower_lid_r, -0.0008, S.lower_lid_k)):
+            pts, radii = [], []
+            for k in range(13):
+                d = -L.eye_w * 1.03 + 2.06 * L.eye_w * k / 12
+                x = ex + side * d
+                z = L.eye_z + float(curve(np.float64(d))) + off
+                taper = 0.6 + 0.4 * math.sin(math.pi * k / 12) ** 0.6
+                pts.append((x, on_ball(x, z, rad * 0.25), z))
+                radii.append(rad * taper)
+            F.add(chain(pts, radii), kk)
+        # Lid crease above the rim.
+        pts = []
+        for k in range(9):
+            d = -L.eye_w * 0.85 + 1.8 * L.eye_w * k / 8
+            x = ex + side * d
+            z = L.eye_z + float(top(np.float64(d))) + L.eye_h * 0.62
+            y = F.front_y(x, z)
+            if y is not None:
+                pts.append((x, carve_y(y, 0.003, S.crease), z))
+        if len(pts) > 1 and S.crease > 0:
+            F.sub(chain(pts, [0.003] * len(pts)), 0.004)
+
+    # Lips on the muzzle, then the carved mouth.
+    def line(x):
+        x = max(-L.mouth_w, min(L.mouth_w, x))
+        return L.mouth_z + L.smile * x * x + L.smirk * x
+
+    for rad, dz in ((S.upper_lip_r, S.upper_lip_r * 0.7), (S.lower_lip_r, -(L.open_mouth + S.lower_lip_r * 0.8))):
+        pts, radii = [], []
+        for k in range(15):
+            x = -L.mouth_w * 1.04 + 2.08 * L.mouth_w * k / 14
+            z = line(x) + dz
+            y = F.front_y(x, z)
+            taper = 0.3 + 0.7 * math.sin(math.pi * k / 14) ** 0.6
+            pts.append((x, y + rad * 0.55 * taper, z))
+            radii.append(rad * taper)
+        F.add(chain(pts, radii), S.lip_k)
+    pts, radii = [], []
+    for k in range(13):
+        x = -L.mouth_w * 0.98 + 1.96 * L.mouth_w * k / 12
+        z = line(x) - L.open_mouth * 0.5
+        y = F.front_y(x, z)
+        taper = 0.7 + 0.3 * math.sin(math.pi * k / 12) ** 0.5
+        rad = max(0.0042, L.open_mouth * 0.6) * taper
+        pts.append((x, y, z))
+        radii.append(rad)
+    # A slot along the mouth line, then the cavity behind it.
+    F.sub(chain([(q[0], carve_y(q[1], rr, rr * 1.2), q[2]) for q, rr in zip(pts, radii)], radii), 0.003)
+    if L.open_mouth > 0:
+        F.sub(chain([(q[0] * 0.85, q[1] + S.mouth_depth * 0.5, q[2]) for q in pts],
+                    [rr * 1.3 for rr in radii]), 0.004)
+    for side in (-1, 1):
+        cz = line(side * L.mouth_w)
+        y = F.front_y(side * L.mouth_w * 1.08, cz)
+        F.sub(ell((side * L.mouth_w * 1.08, carve_y(y, S.corner_r, S.corner_depth), cz - L.open_mouth * 0.3),
+                  (S.corner_r,) * 3), 0.004)
+        # Nasolabial fold from beside the ala toward the mouth corner.
+        path = [(side * L.nose_w * 2.1, L.nose_z + 0.006), (side * (L.mouth_w + 0.012), cz + 0.014),
+                (side * (L.mouth_w + 0.017), cz - 0.012)]
+        pts = []
+        for i in range(len(path) - 1):
+            for t in np.linspace(0, 1, 5, endpoint=i == len(path) - 2):
+                x = path[i][0] + (path[i + 1][0] - path[i][0]) * t
+                z = path[i][1] + (path[i + 1][1] - path[i][1]) * t
+                y = F.front_y(x, z)
+                if y is not None:
+                    pts.append((x, carve_y(y, 0.008, S.nasolabial), z))
+        if len(pts) > 1 and S.nasolabial > 0:
+            F.sub(chain(pts, [0.008] * len(pts)), 0.012)
+    y = F.front_y(0.0, (L.nose_z + line(0.0)) * 0.5)
+    F.sub(chain([(0.0, carve_y(y, 0.0034, S.philtrum), L.nose_z - 0.014),
+                 (0.0, carve_y(y, 0.0034, S.philtrum), line(0.0) + 0.008)],
+                [0.0034, 0.0034]), 0.004)
+    pts = []
+    for k in range(7):
+        x = -L.mouth_w * 0.7 + 1.4 * L.mouth_w * k / 6
+        z = line(x) - L.open_mouth - S.lower_lip_r * 2.2 - 0.006
+        y = F.front_y(x, z)
+        if y is not None:
+            pts.append((x, carve_y(y, 0.006, S.mentolabial), z))
+    if len(pts) > 1:
+        F.sub(chain(pts, [0.006] * len(pts)), 0.008)
+    return F
+
+
+def sculpt(head, L, S, name="head"):
+    from skimage.measure import marching_cubes
+    F = build_field(head, L, S)
+    r = np.array(head.r)
+    lo = np.array([-r[0] - 0.05, -r[1] - 0.1, -r[2] - 0.08])
+    hi = np.array([r[0] + 0.05, r[1] + 0.12, r[2] + 0.08])
+    import os
+    v = S.draft_voxel if os.environ.get("HEAD_DRAFT") else S.voxel
+    nx, ny, nz = (np.ceil((hi - lo) / v)).astype(int) + 1
+    xs = lo[0] + np.arange(nx) * v
+    ys = lo[1] + np.arange(ny) * v
+    zs = lo[2] + np.arange(nz) * v
+    vol = np.empty((nx, ny, nz), dtype=np.float32)
+    X, Y = np.meshgrid(xs, ys, indexing="ij")
+    for k, z in enumerate(zs):
+        P = np.stack([X.ravel(), Y.ravel(), np.full(X.size, z)], 1)
+        vol[:, :, k] = F.evaluate(P).reshape(nx, ny)
+    verts, faces, _, _ = marching_cubes(vol, level=0.0, spacing=(v, v, v))
+    verts = verts + lo + np.array(head.c)
     bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=nu, v_segments=nv, radius=1.0)
-    for v in bm.verts:
-        x, y, z = v.co
-        yaw = math.atan2(x, -y)
-        pitch = math.asin(max(-1.0, min(1.0, z)))
-        yaw = yaw - front_bias * math.sin(yaw)
-        # Denser around the equator (the face band), sparser at the poles.
-        pitch = pitch - face_pitch_bias * math.sin(2 * pitch) / 2
-        v.co = (math.sin(yaw) * math.cos(pitch), -math.cos(yaw) * math.cos(pitch), math.sin(pitch))
+    bv = [bm.verts.new(tuple(p)) for p in verts]
+    for f in faces:
+        try:
+            bm.faces.new((bv[f[0]], bv[f[1]], bv[f[2]]))
+        except ValueError:
+            pass
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=v * 0.05)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     obj = common.mesh_object(name, bm)
     return obj
 
 
-def _polyline_dist(u, w, pts):
-    best = np.full(u.shape, 1e9)
-    for (x0, y0), (x1, y1) in zip(pts[:-1], pts[1:]):
-        dx, dy = x1 - x0, y1 - y0
-        seg = dx * dx + dy * dy or 1e-12
-        t = np.clip(((u - x0) * dx + (w - y0) * dy) / seg, 0.0, 1.0)
-        best = np.minimum(best, np.hypot(u - (x0 + t * dx), w - (y0 + t * dy)))
-    return best
-
-
-def sculpt(head, L, S, name="head"):
-    """Returns the sculpted head mesh (untriangulated, not yet coloured)."""
-    obj = _warped_sphere(name)
-    mesh = obj.data
-    n = len(mesh.vertices)
-    co = np.empty(n * 3)
-    mesh.vertices.foreach_get("co", co)
-    d = co.reshape(n, 3)                      # unit directions
-    r = np.array(head.r)
-    p = d * r                                  # ellipsoid, head-local
-    nx, ny, nz = d[:, 0], d[:, 1], d[:, 2]
-    front = np.clip(-ny, 0.0, 1.0)
-
-    # --- 1. skull ---------------------------------------------------------
-    back = np.clip(ny, 0.0, 1.0)
-    occ = S.occiput * r[1] * back ** 1.5 * np.exp(-((nz - 0.15) / 0.55) ** 2)
-    p[:, 1] += occ
-    p[:, 2] += occ * 0.3
-    # A flatter face front, strongest across the mid-face.
-    flat = S.face_flat * r[1] * front ** 2 * np.exp(-((nz + 0.2) / 0.6) ** 2)
-    p[:, 1] += flat
-    u, w = p[:, 0], p[:, 2]
-    # Mid/lower-face mass (maxilla + mandible) so the mouth and chin don't
-    # fall back along the ellipsoid.
-    p[:, 1] -= S.mid_face * _bump(u, w, 0.0, L.mouth_z + 0.01, 0.17, 0.15) ** 0.7 * front
-    p[:, 1] -= S.forehead * _bump(u, w, 0.0, L.eye_z + 0.14, 0.22, 0.15) * front
-
-    # --- 2. cheeks, cheekbones, temples (radial) ---------------------------
-    radial = np.zeros(n)
-    for side in (-1, 1):
-        cx, cz = S.cheek_pos
-        radial += S.cheek * _bump(u, w, side * cx, cz, *S.cheek_size) * front ** 0.5
-        radial += S.cheekbone * _bump(u, w, side * (L.eye_x + L.eye_w * 0.9), L.eye_z - L.eye_h - 0.02, 0.05,
-                                      0.022) * front ** 0.5
-        radial -= S.temple * _bump(u, w, side * (L.eye_x + L.eye_w + 0.05), L.eye_z + 0.05, 0.04, 0.05)
-    p += d * radial[:, None]
-
-    # --- 3. jaw ------------------------------------------------------------
-    x, y, z = p[:, 0], p[:, 1], p[:, 2]
-    chin_y = -r[1] * 0.9
-    t = np.clip((y - S.jaw_y) / (chin_y - S.jaw_y), 0.0, 1.0)
-    # Jaw-underside plane from the jaw corners down to the chin.
-    floor = S.jaw_z + (S.chin_z - S.jaw_z) * t ** 1.2
-    z_new = _soft_max(z, floor, S.jaw_soft)
-    lower = _smoothstep(S.jaw_top, S.jaw_top - 0.1, z)       # 0 above jaw_top .. 1 well below
-    # Narrow the lower face toward the chin (jaw line), front half only.
-    limit = S.jaw_w + (S.chin_w - S.jaw_w) * t ** 1.1
-    fronthalf = _smoothstep(S.jaw_y + 0.06, S.jaw_y - 0.02, y)
-    ax = np.abs(x)
-    ax_new = ax + (_soft_min(ax, limit, S.jaw_soft * 1.5) - ax) * lower * fronthalf
-    p[:, 0] = np.sign(x) * ax_new
-    p[:, 2] = z + (z_new - z) * fronthalf
-    # Chin forward.
-    p[:, 1] -= S.chin_fwd * _bump(p[:, 0], p[:, 2], 0.0, S.chin_z + 0.035, 0.07, 0.06) * front
-
-    # --- 4. features (toward the viewer) ------------------------------------
-    u, w = p[:, 0], p[:, 2]
-    dy = np.zeros(n)
-    for side in (-1, 1):
-        ex = side * L.eye_x
-        top, bottom = face_paint._eye_curves(L, side)
-        du = (u - ex) * side
-        dv = w - L.eye_z
-        env = np.clip(1.0 - (du / (L.eye_w * 1.12)) ** 2, 0.0, 1.0)
-        # Socket, then the eyeball dome back out of it.
-        dy -= S.socket * _bump(u, w, ex - side * L.eye_w * 0.1, L.eye_z + L.eye_h * 0.9, L.eye_w * 1.6, L.eye_h * 1.9)
-        dy += S.eyeball * _bump(u, w, ex, L.eye_z + L.eye_h * 0.1, L.eye_w * 1.55, L.eye_h * 2.0)
-        # Upper-lid band: thickest at the lid edge, ends at a crease.
-        above = dv - top(du)
-        band = (1.0 - _smoothstep(S.lid_band * 0.6, S.lid_band, above)) * _smoothstep(-0.003, 0.0, above)
-        dy += S.lid * band * env ** 0.5
-        dy -= S.crease * _ridge(above - S.lid_band, 0.0035) * env
-        # Lower lid roll.
-        below = bottom(du) - dv
-        dy += S.lower_lid * _ridge(below - 0.0015, 0.004) * env
-        # Brow mass, fading toward the temple.
-        dy += S.brow * _bump(u, w, ex - side * 0.004, L.eye_z + L.eye_h + 0.03, L.eye_w * 1.55, 0.028)
-
-    # Nose: bridge (angular trapezoid section), tip, alae, nostrils.
-    tip_w = L.nose_z + S.tip_lift
-    top_w = L.eye_z + L.eye_h * S.bridge_top
-    tb = np.clip((top_w - w) / max(1e-4, top_w - tip_w), 0.0, 1.0)
-    half = 0.009 + (L.nose_w * 0.75 - 0.009) * tb
-    section = np.clip((half - np.abs(u)) / (half * 0.55), 0.0, 1.0)
-    section = section * section * (3 - 2 * section)
-    height = S.bridge + (S.tip * 0.72 - S.bridge) * tb ** 1.6
-    under = _smoothstep(tip_w - 0.014, tip_w - 0.002, w)       # sharp drop under the tip
-    dy += height * section * (w <= top_w + 0.01) * under
-    dy += S.tip * 0.35 * _bump(u, w, 0.0, tip_w, L.nose_w * 0.9, L.nose_w * 0.85)
-    for side in (-1, 1):
-        dy += S.alae * _bump(u, w, side * L.nose_w * 1.0, L.nose_z - 0.003, L.nose_w * 0.6, L.nose_w * 0.55)
-        dy -= S.nostril * _bump(u, w, side * L.nose_w * 0.5, L.nose_z - 0.009, 0.005, 0.0032)
-
-    # Mouth.
-    def line(xx):
-        xx = np.clip(xx, -L.mouth_w, L.mouth_w)
-        return L.mouth_z + L.smile * xx * xx + L.smirk * xx
-
-    lipw = np.clip(1.0 - (u / (L.mouth_w * 1.08)) ** 2, 0.0, 1.0)
-    a = w - line(u)                 # + above the mouth line
-    b = -a                          # + below
-    dy += S.muzzle * _bump(u, w, 0.0, L.mouth_z + 0.005, L.mouth_w * 1.7, 0.055)
-    dy += S.upper_lip * _ridge(a - 0.004, 0.0065) * lipw ** 0.5
-    opening = L.open_mouth * lipw ** 0.6
-    dy += S.lower_lip * _ridge(b - opening - 0.0065, 0.0075) * lipw ** 0.6
-    if L.open_mouth > 0:
-        inside = _smoothstep(-0.0012, 0.0012, np.minimum(b, opening - b)) * (lipw > 0.02)
-        dy -= S.mouth_depth * inside
-    else:
-        dy -= 0.004 * _ridge(a, 0.0022) * lipw
-    for side in (-1, 1):
-        cw = float(line(np.float64(side * L.mouth_w)))
-        dy -= S.corner * _bump(u, w, side * L.mouth_w * 1.04, cw - L.open_mouth * 0.2, 0.0075, 0.0085)
-        dy += S.apple * _bump(u, w, side * (L.mouth_w + 0.032), cw + 0.03, 0.036, 0.032)
-    phil = (w > line(u) + 0.006) & (w < L.nose_z - 0.012)
-    dy -= S.philtrum * _ridge(u, 0.0045) * phil
-    dy += S.philtrum * 0.6 * (_ridge(np.abs(u) - 0.0065, 0.003)) * phil
-    dy -= S.mentolabial * _ridge(b - opening - 0.018, 0.0055) * lipw ** 0.5
-    dy += S.chin_pad * _bump(u, w, 0.0, S.chin_z + 0.032, 0.036, 0.03)
-
-    face = np.clip((-p[:, 1] / r[1] - 0.2) / 0.45, 0.0, 1.0)
-    p[:, 1] -= dy * face
-    mesh.vertices.foreach_set("co", (p + np.array(head.c)).ravel())
-    mesh.update()
-    return obj
-
-
-def build_head(head, L, S, skin, skin_shade, blush, tris=24000, name="head", blush_pts=None, blush_size=0.05):
+def build_head(head, L, S, skin, skin_shade, blush, tris=30000, name="head", blush_pts=None, blush_size=0.05):
     """Sculpts, decimates, binds the HeadFrame and colours the head."""
     obj = sculpt(head, L, S, name=name)
     chibi.decimate_tris(obj, tris)
@@ -266,15 +369,14 @@ def build_head(head, L, S, skin, skin_shade, blush, tris=24000, name="head", blu
     pts = blush_pts or []
 
     def colour(pos, normal):
-        c = common.lerp(skin, skin_shade, max(0.0, min(1.0, -normal.z * 0.7)))
+        cc = common.lerp(skin, skin_shade, max(0.0, min(1.0, -normal.z * 0.7)))
         for ch in pts:
             dist = (pos - ch).length
             if dist < blush_size:
-                c = common.lerp(c, blush, (1.0 - dist / blush_size) ** 1.5 * 0.5)
-        return c
+                cc = common.lerp(cc, blush, (1.0 - dist / blush_size) ** 1.5 * 0.5)
+        return cc
     common.color_by(obj, colour)
     return obj
-
 
 def ear(head, side, yaw=1.52, pitch=-0.12, size=1.0, tilt=0.35, out=0.018, colour=None, shade=None):
     """A stylised sculpted ear: a flattened shell with a rolled helix rim,

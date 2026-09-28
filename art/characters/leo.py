@@ -58,7 +58,7 @@ LEAF = (0.36, 0.62, 0.2)
 RED = (0.86, 0.16, 0.14)
 METAL = (0.72, 0.68, 0.6)
 
-HEAD = chibi.HeadFrame((0, -0.01, 1.565), (0.27, 0.258, 0.272))
+HEAD = chibi.HeadFrame((0, -0.01, 1.565), (0.222, 0.228, 0.222))
 PROP = chibi.Proportions(legs=1.85, spine=1.3, arms=1.25)
 FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "leo_face.png")
 # From the concept art: a round, open 7-year-old face. Big bright-blue
@@ -67,28 +67,23 @@ FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "leo_face.png")
 # showing a hint of teeth, freckles over the nose and cheeks and a warm
 # sun-flush. Contouring is kept soft: children's faces are rounded.
 FACE = face_paint.FaceLayout(
-    size=0.3, eye_x=0.098, eye_z=-0.03, eye_w=0.052, eye_h=0.039, eye_tilt=0.03, lid=0.08, iris_r=0.033,
-    look=(0.009, 0.008), iris=(0.36, 0.72, 0.98), iris_dark=(0.03, 0.2, 0.46), lash=(0.2, 0.11, 0.06),
-    lash_width=0.0085, wing=0.003, lower_lash=0.3, eyeshadow_alpha=0.0, socket=(0.8, 0.52, 0.44),
-    socket_alpha=0.3, lid_fold=0.4, nose_shadow=0.22, nostril_alpha=0.25, brows=((0.03, 0.08, 0.014, 0.012), (0.026, 0.06, 0.014, 0.01)),
-    brow_len=0.062, brow_colour=(0.44, 0.25, 0.1), brow_alpha=1.0, nose_z=-0.1, nose_w=0.017,
-    mouth_z=-0.14, mouth_w=0.052, smile=8.0, smirk=0.06, open_mouth=0.014, lip_upper=0.003, lip_lower=0.008,
-    lip_colour=(0.88, 0.5, 0.44), lip_dark=(0.5, 0.2, 0.16), tongue=(0.8, 0.36, 0.36), chin_z=-0.205,
+    size=0.3, eye_x=0.084, eye_z=-0.03, eye_w=0.042, eye_h=0.026, eye_tilt=0.05, lid=0.14, iris_r=0.023,
+    look=(0.006, 0.005), iris=(0.36, 0.72, 0.98), iris_dark=(0.03, 0.2, 0.46), lash=(0.2, 0.11, 0.06),
+    lash_width=0.0065, wing=0.004, lower_lash=0.3, eyeshadow_alpha=0.0, socket=(0.8, 0.52, 0.44),
+    socket_alpha=0.3, lid_fold=0.4, nose_shadow=0.22, nostril_alpha=0.25, brows=((0.024, 0.08, 0.012, 0.01), (0.02, 0.06, 0.012, 0.009)),
+    brow_len=0.056, brow_colour=(0.44, 0.25, 0.1), brow_alpha=1.0, nose_z=-0.098, nose_w=0.016,
+    mouth_z=-0.148, mouth_w=0.044, smile=5.0, smirk=0.06, open_mouth=0.007, lip_upper=0.004, lip_lower=0.007,
+    lip_colour=(0.88, 0.5, 0.44), lip_dark=(0.5, 0.2, 0.16), tongue=(0.8, 0.36, 0.36), chin_z=-0.228,
     skin_shadow=(0.72, 0.42, 0.34), blush=(0.98, 0.46, 0.4), blush_alpha=0.32, blush_pos=(0.125, -0.1),
     contour=0.28, catch2=0.8, flush_alpha=0.16, freckle_colour=(0.66, 0.36, 0.22),
     freckles=[(sx * x, z) for sx in (-1, 1) for x, z in ((0.03, -0.075), (0.045, -0.07), (0.06, -0.078),
                                                           (0.075, -0.09), (0.052, -0.088), (0.09, -0.1),
                                                           (0.11, -0.09), (0.1, -0.115), (0.022, -0.086))]
     + [(0.0, -0.072), (0.008, -0.08), (-0.009, -0.078)])
-# Sculpt: a 7-year-old's head. A round cranium, full cheeks set low, a
-# small but clear jaw line and chin, big eyes set into sockets under a
-# soft brow, a short upturned nose and a wide grin with smile apples.
-SHAPE = head_sculpt.HeadShape(
-    occiput=0.06, face_flat=0.03, mid_face=0.035, forehead=0.028, temple=0.002, jaw_w=0.2, jaw_y=0.06, jaw_z=-0.16,
-    chin_w=0.07, chin_z=-0.235, chin_fwd=0.03, jaw_soft=0.022, jaw_top=-0.13, cheek=0.022, cheek_pos=(0.11, -0.1),
-    cheek_size=(0.07, 0.065), cheekbone=0.004, socket=0.012, eyeball=0.016, lid=0.008, lid_band=0.009,
-    crease=0.001, lower_lid=0.0015, brow=0.009, bridge=0.002, bridge_top=-0.6, tip=0.03, tip_lift=0.006,
-    alae=0.012, nostril=0.003, muzzle=0.014, upper_lip=0.004, lower_lip=0.006, apple=0.012, chin_pad=0.009)
+# Sculpt: a 7-year-old boy. A slightly long face with narrower cheeks
+# than his sister, a clear jaw line and chin, a defined brow and nose
+# bridge, almond eyes set in sockets, and a modest grin with real lips.
+SHAPE = head_sculpt.HeadShape()
 
 
 def camo(pos, normal):
@@ -455,7 +450,7 @@ def ears():
 
 def head_piece():
     face_paint.paint_face(FACE, FACE_PNG)
-    head = head_sculpt.build_head(HEAD, FACE, SHAPE, SKIN, SKIN_SHADE, BLUSH, tris=24000)
+    head = head_sculpt.build_head(HEAD, FACE, SHAPE, SKIN, SKIN_SHADE, BLUSH, tris=30000)
     chibi.face_uv(head, HEAD, FACE)
     ear_parts = ears()
     for part in ear_parts:

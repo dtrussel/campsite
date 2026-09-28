@@ -9,5 +9,5 @@ if [[ ! -x "$VENV/bin/python" ]]; then
 	python3.11 -m venv "$VENV"
 fi
 "$VENV/bin/pip" install -q --upgrade pip
-"$VENV/bin/pip" install -q "bpy==4.5.4"
+"$VENV/bin/pip" install -q "bpy==4.5.4" "scikit-image" "pillow"
 "$VENV/bin/python" -c "import bpy; print('bpy', bpy.app.version_string)"
