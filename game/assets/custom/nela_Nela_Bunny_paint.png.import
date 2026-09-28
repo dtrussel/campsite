@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d01wsojwjxn1a"
-path="res://.godot/imported/nela_Nela_Lantern_paint.png-52f8d33b081fa0b8e13ee1ce33e305bf.ctex"
+uid="uid://b3tuqpgs0ofr"
+path="res://.godot/imported/nela_Nela_Bunny_paint.png-f29b377a89c8dfb9712dde21f344ed08.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "3b113ec494b1394040d9c42cf01d2910"
+"md5": "2ee19ca7fe11e19d838dc863fa5e193d"
 }
 
 [deps]
 
-source_file="res://assets/custom/nela_Nela_Lantern_paint.png"
-dest_files=["res://.godot/imported/nela_Nela_Lantern_paint.png-52f8d33b081fa0b8e13ee1ce33e305bf.ctex"]
+source_file="res://assets/custom/nela_Nela_Bunny_paint.png"
+dest_files=["res://.godot/imported/nela_Nela_Bunny_paint.png-f29b377a89c8dfb9712dde21f344ed08.ctex"]
 
 [params]
 

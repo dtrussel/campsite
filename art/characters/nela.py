@@ -57,8 +57,8 @@ BRONZE = (0.64, 0.44, 0.22)
 BRONZE_DARK = (0.36, 0.22, 0.12)
 GLOW = (1.0, 0.8, 0.38)
 
-HEAD = chibi.HeadFrame((0, -0.01, 1.6), (0.34, 0.32, 0.34))
-PROP = chibi.Proportions(legs=1.15, spine=1.05, arms=1.0)
+HEAD = chibi.HeadFrame((0, -0.01, 1.63), (0.39, 0.37, 0.38))
+PROP = chibi.Proportions(legs=1.1, spine=1.0, arms=1.0)
 
 
 # ---------------------------------------------------------------- body
@@ -174,106 +174,81 @@ def clump(parts, root, up, controls, width, thickness=0.45, steps=8):
     parts.append(obj)
 
 
-def curl_cloud():
-    """A big soft cloud of curls around the sides, back and top: many
-    overlapping balls fused into one shape (the face stays open)."""
-    import random
-    rnd = random.Random(5)
+def hair_cap():
+    """Smooth rounded hair over the crown, open for the face."""
     c, r = HEAD.c, HEAD.r
-    balls = []
-    for pitch_i in range(9):
-        pitch = -0.85 + pitch_i * 0.27
-        count = max(4, int(15 * math.cos(pitch)))
-        for k in range(count):
-            yaw = -math.pi + (k + rnd.random() * 0.5) / count * math.tau
-            # Keep the face open (and a little of the forehead for the bangs).
-            if abs(yaw) < 1.0 and pitch < 0.62:
-                continue
-            if abs(yaw) < 1.35 and pitch < -0.3:
-                continue
-            p, n = HEAD.point(yaw, max(-0.6, pitch), 0.0)
-            if pitch < -0.6:
-                p = p + Vector((0, 0, (pitch + 0.6) * 0.25))  # hang lower at the back/sides
-            size = 0.075 + rnd.random() * 0.035
-            puff = 0.015 + 0.035 * max(0.0, 1.0 - abs(abs(yaw) - 1.6))  # widest at the sides
-            balls.append(chibi.ellipsoid(p + n * (puff + size * 0.2), (size, size, size * 0.92), name="ball",
-                                         segs=(14, 10)))
-    balls.append(chibi.ellipsoid(c + Vector((0, 0.02, 0.02)), (r.x + 0.02, r.y + 0.03, r.z + 0.02), name="core",
-                                 segs=(24, 16)))
-    cloud = chibi.fuse(balls, "cloud", voxel=0.016, smooth=3, faces=3800)
-    # Cut the face opening back out of the core.
+    shell_r = (r.x + 0.03, r.y + 0.03, r.z + 0.025)
+    shell = chibi.ellipsoid(c + Vector((0, 0.01, 0.015)), shell_r, name="hairshell", segs=(40, 26))
     bm = bmesh.new()
-    bm.from_mesh(cloud.data)
+    bm.from_mesh(shell.data)
     kill = []
     for v in bm.verts:
         d = v.co - c
-        d = Vector((d.x / r.x, d.y / r.y, d.z / r.z))
-        if d.y < -0.55 and d.z < 0.6:
+        d = Vector((d.x / shell_r[0], d.y / shell_r[1], d.z / shell_r[2]))
+        keep = d.z > 0.5 or (d.y > -0.3 and d.z > -0.2) or (d.y > 0.3 and d.z > -0.55)
+        if not keep:
             kill.append(v)
     bmesh.ops.delete(bm, geom=kill, context="VERTS")
-    bm.to_mesh(cloud.data)
+    bm.to_mesh(shell.data)
     bm.free()
-    common.shade_smooth(cloud)
+    mod = shell.modifiers.new("Solid", "SOLIDIFY")
+    mod.thickness = 0.025
+    common.apply_all_modifiers(shell)
+    common.shade_smooth(shell)
+    common.color_by(shell, chibi.hair_colour(HAIR_LIGHT, HAIR, HAIR_DARK, c, scale=5.0, strands=34))
+    return shell
 
-    def colour(pos, normal):
-        base = chibi.hair_colour(HAIR_LIGHT, HAIR, HAIR_DARK, c, scale=9.0, strands=40)(pos, normal)
-        # Painted curl shading: darker between curls, sheen on their tops.
-        n = noise.noise(pos * 18.0)
-        return common.lerp(base, HAIR_DARK, max(0.0, -n) * 0.6) if n < 0 else common.lerp(base, HAIR_LIGHT, n * 0.5)
-    common.color_by(cloud, colour)
-    return cloud
+
+def pigtail(side):
+    """A big puffy pigtail set high on the side of the head, with a pink
+    tie and a few curly ends."""
+    parts = []
+    root, n = HEAD.point(side * 1.45, 0.42, 0.02)
+    out = Vector((side, 0.15, 0)).normalized()
+    centres = [root + out * 0.08 + Vector((0, 0.02, 0.0)),
+               root + out * 0.17 + Vector((0, 0.04, -0.07)),
+               root + out * 0.21 + Vector((0, 0.05, -0.18)),
+               root + out * 0.19 + Vector((0, 0.05, -0.28))]
+    sizes = [0.075, 0.12, 0.125, 0.09]
+    puffs = [chibi.ellipsoid(cc, (sz, sz * 0.9, sz), name="puff", segs=(18, 12)) for cc, sz in zip(centres, sizes)]
+    tail = chibi.fuse(puffs, "pigtail", voxel=0.014, smooth=2, faces=1200)
+    common.color_by(tail, chibi.hair_colour(HAIR_LIGHT, HAIR, HAIR_DARK, centres[1], scale=10.0, strands=14))
+    parts.append(tail)
+    tie = chibi.torus((0, 0, 0), 0.07, 0.028, name="tie", segs=(18, 8))
+    for v in tie.data.vertices:
+        v.co.z += 0.007 * math.sin(math.atan2(v.co.y, v.co.x) * 7)  # scrunchie
+    tie.data.transform(Matrix.Translation(root + out * 0.05) @ out.to_track_quat("Z", "Y").to_matrix().to_4x4())
+    common.set_color(tie, TIE)
+    parts.append(tie)
+    return parts
 
 
 def hair():
-    c = HEAD.c
-    parts = [curl_cloud()]
-    # Curly bangs: short clumps that hook back up at the tips.
-    for k, (yaw, length, width) in enumerate(((-0.6, 0.9, 0.06), (-0.34, 1.1, 0.072), (-0.1, 0.8, 0.066),
-                                               (0.16, 1.15, 0.074), (0.42, 0.95, 0.066), (0.64, 0.8, 0.056))):
-        root, n = HEAD.point(yaw, 0.74, -0.005)
-        side = Vector((math.sin(yaw) + 0.25, 0, 0))
-        controls = [root + F * 0.09 + U * 0.02 + side * 0.03,
-                    root + F * 0.09 - U * 0.13 * length + side * 0.06,
-                    root + F * 0.14 - U * 0.14 * length + side * 0.09,
-                    root + F * 0.13 - U * 0.07 * length + side * 0.1]
+    parts = [hair_cap()]
+    # Short soft fringe with rounded, slightly hooked ends.
+    for k, (yaw, length, width) in enumerate(((-0.58, 0.8, 0.07), (-0.32, 1.0, 0.085), (-0.06, 0.85, 0.08),
+                                               (0.2, 1.0, 0.085), (0.46, 0.85, 0.075), (0.68, 0.7, 0.06))):
+        root, n = HEAD.point(yaw, 0.78, -0.005)
+        side = Vector((math.sin(yaw) * 0.5 + 0.1, 0, 0))
+        controls = [root + F * 0.1 + U * 0.02 + side * 0.03,
+                    root + F * 0.1 - U * 0.1 * length + side * 0.06,
+                    root + F * 0.12 - U * 0.13 * length + side * 0.08]
         clump(parts, root, n, controls, width)
-    # Springy corkscrew curls hanging at her sides.
     for side in (-1, 1):
-        for yaw, drop in ((1.25, 0.2), (1.6, 0.26), (1.95, 0.22)):
-            root, n = HEAD.point(side * yaw, -0.45, 0.06)
-            out = Vector((side, 0, 0))
-            controls = [root - U * drop * 0.3 + out * 0.07, root - U * drop * 0.6 - out * 0.02,
-                        root - U * drop * 0.85 + out * 0.07, root - U * drop + out * 0.02]
-            clump(parts, root, n, controls, 0.06)
-    # Flyaways.
-    for yaw, pitch, d in ((-1.0, 0.95, (-0.14, 0.02, 0.1)), (1.1, 0.9, (0.14, 0.04, 0.08)), (0.4, 1.2, (0.06, -0.04, 0.12))):
-        root, n = HEAD.point(yaw, pitch, 0.05)
-        dv = Vector(d)
-        clump(parts, root, n, [root + dv * 0.5 + U * 0.03, root + dv, root + dv * 1.2 - U * 0.04], 0.028)
-    # Top bun with a pink scrunchie.
-    root, n = HEAD.point(math.pi, 1.05, 0.08)
-    bun_c = root + n * 0.1
-    bun = chibi.fuse([chibi.ellipsoid(bun_c + Vector(o), (0.075, 0.075, 0.07), name="bun", segs=(16, 10))
-                      for o in ((0, 0, 0), (0.05, 0.02, 0.03), (-0.05, 0.01, 0.02), (0, -0.04, 0.05))],
-                     "bun", voxel=0.012, smooth=1, faces=900)
-    common.color_by(bun, chibi.hair_colour(HAIR_LIGHT, HAIR, HAIR_DARK, bun_c, scale=12.0, strands=18))
-    parts.append(bun)
-    tie = chibi.torus((0, 0, 0), 0.06, 0.026, name="tie", segs=(18, 8))
-    for v in tie.data.vertices:
-        v.co.z += 0.006 * math.sin(math.atan2(v.co.y, v.co.x) * 7)  # scrunched
-    tie.data.transform(Matrix.Translation(root + n * 0.03) @ n.to_track_quat("Z", "Y").to_matrix().to_4x4())
-    common.set_color(tie, TIE)
-    parts.append(tie)
+        parts += pigtail(side)
     return parts
 
 
 def face():
     parts = []
     for side in (-1, 1):
-        parts += chibi.almond_eye(HEAD, side * 0.37, -0.1, side, 0.066, 0.056, IRIS, IRIS_DARK, LASH, tilt=0.02,
-                                  iris_r=0.047, look=(0.0, 0.006), lower_lid=(0.8, 0.45, 0.45), flicks=2, name="eye")
-        parts.append(chibi.brow(HEAD, side * 0.37, 0.34, side, BROW, width=0.065, arch=0.02, thick=0.012, tilt=-0.08))
-    parts += chibi.smile(HEAD, -0.5, 0.058, 0.042, 0.004, curve=3.2)
+        parts += chibi.almond_eye(HEAD, side * 0.36, -0.12, side, 0.078, 0.074, IRIS, IRIS_DARK, LASH, tilt=0.0,
+                                  iris_r=0.062, look=(0.0, 0.008), lower_lid=(0.85, 0.5, 0.52), flicks=3, name="eye")
+        # A second, small sparkle for the big Annie-style eyes.
+        parts.append(HEAD.ellipse(side * 0.36, -0.12, 0.011, 0.011, 0.0095, (1.0, 1.0, 1.0),
+                                  du=0.022 * side, dv=-0.022, name="eye_hi2", nu=6, nv=2))
+        parts.append(chibi.brow(HEAD, side * 0.36, 0.3, side, BROW, width=0.07, arch=0.022, thick=0.013, tilt=-0.06))
+    parts += chibi.smile(HEAD, -0.5, 0.065, 0.048, 0.004, curve=3.4)
     parts.append(chibi.nose(HEAD, SKIN, pitch=-0.3))
     for side in (-1, 1):
         p, n = HEAD.point(side * 1.5, -0.15)
@@ -284,8 +259,8 @@ def face():
 
 
 def head_piece():
-    head = chibi.sculpt_head(HEAD, SKIN, SKIN_SHADE, BLUSH, jaw=0.42, chin_len=0.1, chin_fwd=0.05, cheeks=0.14,
-                             face_flat=0.06, blush_yaw=0.55, blush_pitch=-0.38, blush_size=0.1)
+    head = chibi.sculpt_head(HEAD, SKIN, SKIN_SHADE, BLUSH, jaw=0.38, chin_len=0.06, chin_fwd=0.04, cheeks=0.16,
+                             face_flat=0.05, blush_yaw=0.6, blush_pitch=-0.4, blush_size=0.12)
     parts = [head] + face() + hair()
     chibi.report(parts)
     return common.join(parts, "Nela_Head")
@@ -293,32 +268,47 @@ def head_piece():
 
 # ----------------------------------------------------------------- gear
 
-def bunny():
-    """Her plush bunny peeking out of the backpack (her right side)."""
+def bunny(hand):
+    """Her big plush bunny, held by one paw and dangling from her left
+    hand (like a favourite toy that goes everywhere). Built in world
+    space below where the hand is in the idle pose."""
     parts = []
-    c = Vector((-0.17, 0.4, 1.36))
-    head = chibi.ellipsoid(c, (0.1, 0.09, 0.09), name="bunny", segs=(20, 12))
-    common.set_color(head, BUNNY)
-    parts.append(head)
-    muzzle = chibi.ellipsoid(c + Vector((0, -0.075, -0.02)), (0.05, 0.03, 0.035), name="bunny", segs=(14, 8))
-    common.set_color(muzzle, (1.0, 0.95, 0.9))
-    parts.append(muzzle)
-    nose = chibi.ellipsoid(c + Vector((0, -0.105, 0.0)), (0.015, 0.01, 0.01), name="bunny_nose", segs=(8, 6))
-    common.set_color(nose, BUNNY_INNER)
-    parts.append(nose)
+    grip = Vector(hand) + Vector((0.02, -0.04, -0.03))
+    body_c = grip + Vector((0.03, -0.03, -0.24))
+    head_c = body_c + Vector((0.01, -0.01, 0.17))
+
+    def add(obj, colour):
+        common.color_by(obj, colour if callable(colour) else (lambda p, n: colour))
+        parts.append(obj)
+    add(chibi.ellipsoid(body_c, (0.085, 0.07, 0.11), name="bunny", segs=(18, 12)), BUNNY)
+    add(chibi.ellipsoid(body_c + Vector((0, -0.05, -0.01)), (0.055, 0.03, 0.07), name="bunny", segs=(14, 8)),
+        (1.0, 0.95, 0.9))
+    add(chibi.ellipsoid(head_c, (0.1, 0.09, 0.09), name="bunny", segs=(20, 12)), BUNNY)
+    add(chibi.ellipsoid(head_c + Vector((0, -0.075, -0.025)), (0.05, 0.03, 0.035), name="bunny", segs=(14, 8)),
+        (1.0, 0.95, 0.9))
+    add(chibi.ellipsoid(head_c + Vector((0, -0.105, -0.005)), (0.016, 0.01, 0.011), name="bunny", segs=(8, 6)),
+        BUNNY_INNER)
     for s in (-1, 1):
-        eye = chibi.ellipsoid(c + Vector((s * 0.04, -0.078, 0.025)), (0.012, 0.008, 0.014), name="bunny_eye", segs=(8, 6))
-        common.set_color(eye, (0.08, 0.05, 0.05))
-        parts.append(eye)
-        ear = chibi.ellipsoid((0, 0, 0.12), (0.032, 0.015, 0.12), name="bunny_ear", segs=(14, 8))
-        common.color_by(ear, lambda p, n: BUNNY_INNER if n.y < -0.5 and abs(p.x) < 0.02 else BUNNY, smooth=False)
-        ear.data.transform(Matrix.Translation(c + Vector((s * 0.045, 0.01, 0.05)))
-                           @ Matrix.Rotation(s * -0.35 + (0.9 if s < 0 else 0.0), 4, "Y"))
+        add(chibi.ellipsoid(head_c + Vector((s * 0.042, -0.08, 0.02)), (0.013, 0.008, 0.016), name="bunny",
+                            segs=(8, 6)), (0.08, 0.05, 0.05))
+        ear = chibi.ellipsoid((0, 0, 0.13), (0.035, 0.016, 0.13), name="bunny_ear", segs=(14, 8))
+        common.color_by(ear, lambda p, n: BUNNY_INNER if n.y < -0.5 and abs(p.x) < 0.022 else BUNNY, smooth=False)
+        # One ear up, one flopped over.
+        rot = Matrix.Rotation(s * -0.3, 4, "Y") if s > 0 else Matrix.Rotation(1.3, 4, "Y") @ Matrix.Rotation(0.3, 4, "X")
+        ear.data.transform(Matrix.Translation(head_c + Vector((s * 0.045, 0.01, 0.06))) @ rot)
         parts.append(ear)
-    for part in parts:
-        part.data.transform(Matrix.Translation(c) @ Matrix.Scale(1.35, 4) @ Matrix.Translation(-c))
-        part.data.transform(Matrix.Translation((0, 0, 0.04)))
-    return parts
+        # Legs dangling, and the raised paw she holds it by.
+        add(chibi.ellipsoid(body_c + Vector((s * 0.05, -0.02, -0.11)), (0.035, 0.035, 0.05), name="bunny",
+                            segs=(12, 8)), BUNNY)
+    arm = chibi.tube([body_c + Vector((0.06, 0, 0.06)), grip], [0.03, 0.028], name="bunny", levels=1)
+    add(arm, BUNNY)
+    add(chibi.ellipsoid(body_c + Vector((-0.08, -0.02, 0.02)), (0.03, 0.03, 0.05), name="bunny", segs=(12, 8)),
+        BUNNY)
+    # A little pink bow at the neck.
+    add(chibi.ellipsoid(head_c + Vector((0, -0.06, -0.085)), (0.045, 0.02, 0.022), name="bow", segs=(12, 8)), TIE)
+    obj = common.join(parts, "Nela_Bunny")
+    obj.data.transform(Matrix.Translation(grip) @ Matrix.Scale(1.4, 4) @ Matrix.Translation(-grip))
+    return obj
 
 
 def backpack():
@@ -337,7 +327,6 @@ def backpack():
         common.color_by(strap, lambda p, n: BRASS if 0.98 < p.z < 1.01 else LEATHER, smooth=False)
         parts.append(strap)
     parts.append(chibi.bedroll((0.06, 0.38, 1.3), 0.5, 0.09, BEDROLL, LEATHER))
-    parts += bunny()
     cup = chibi.cylinder((0.3, 0.42, 0.8), 0.055, 0.1, name="cup", bevel=0.01)
     common.set_color(cup, STEEL)
     parts.append(cup)
@@ -394,12 +383,14 @@ def build():
     body = chibi.finish(rig, soft, rigid, "Nela", prop=PROP)
     PROP.stretch_mesh(head)
     lamp, glow = lantern(rig)
-    for obj, bone in ((head, "head"), (lamp, "hand.r"), (glow, "hand.r")):
+    plush = bunny(chibi.idle_bone_position(rig, "hand.l"))
+    chibi.place_in_hand([plush], rig, "hand.l")
+    for obj, bone in ((head, "head"), (lamp, "hand.r"), (glow, "hand.r"), (plush, "hand.l")):
         chibi.rigid(obj, bone)
         obj.parent = rig
         obj.modifiers.new("Armature", "ARMATURE").object = rig
 
-    meshes = [body, head, lamp]
+    meshes = [body, head, lamp, plush]
     if chibi.quick_mode():
         for mesh in meshes:
             chibi.quick_material(mesh)

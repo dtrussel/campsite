@@ -131,6 +131,40 @@ def idle_hand_height(rig, bone="handslot.r"):
     return z
 
 
+def place_in_hand(objects, rig, bone, action="Idle", frame=1):
+    """Props modelled in world space around where the hand is in the
+    idle pose (e.g. a plush dangling below it) are moved into the rest
+    pose, so that rigidly bound to `bone` they hang right in idle and
+    swing with the arm. Call after the rig is stretched."""
+    rest = rig.matrix_world @ rig.data.bones[bone].matrix_local
+    rig.data.pose_position = "POSE"
+    rig.animation_data_create()
+    rig.animation_data.action = bpy.data.actions.get(action)
+    bpy.context.scene.frame_set(frame)
+    bpy.context.view_layer.update()
+    posed = rig.matrix_world @ rig.pose.bones[bone].matrix
+    rig.animation_data.action = None
+    rig.data.pose_position = "REST"
+    bpy.context.view_layer.update()
+    m = rest @ posed.inverted()
+    for obj in objects:
+        obj.data.transform(m)
+    return posed.translation.copy()
+
+
+def idle_bone_position(rig, bone, action="Idle", frame=1):
+    rig.data.pose_position = "POSE"
+    rig.animation_data_create()
+    rig.animation_data.action = bpy.data.actions.get(action)
+    bpy.context.scene.frame_set(frame)
+    bpy.context.view_layer.update()
+    pos = (rig.matrix_world @ rig.pose.bones[bone].matrix).translation.copy()
+    rig.animation_data.action = None
+    rig.data.pose_position = "REST"
+    bpy.context.view_layer.update()
+    return pos
+
+
 def bone_frame(rig, name):
     return rig.matrix_world @ rig.data.bones[name].matrix_local
 

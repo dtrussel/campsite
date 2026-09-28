@@ -9,6 +9,11 @@ torch, woodpile, crate, barrel, toadstools) are original to this project.
 They are generated and hand-paint-baked by the Blender scripts in `art/`
 (`tools/build_art.sh`) and written to `game/assets/custom/`.
 
+Leo's and Nela's art style is inspired by League of Legends' young
+champions (Ekko and Annie): proportions, silhouettes and face style.
+The designs themselves are original, based on the project's own concept
+art; no Riot Games assets are used.
+
 **KayKit.** The characters still use KayKit skeletons and animations:
 Leo and Nela are new models on the Adventurers rig, and the imp is a new
 body on the Skeleton Minion rig. Hills, mountains, dead trees,
