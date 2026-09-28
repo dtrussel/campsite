@@ -1,4 +1,4 @@
-CAMPSITE - Playtest build 0.2.0 (playtest 1)
+CAMPSITE - Playtest build 0.3.0 (playtest 1)
 ============================================
 
 Thanks for testing! This is an early prototype. There is no sound
@@ -10,7 +10,8 @@ HOW TO START
 2. Double-click Campsite.exe.
 3. Windows may show "Windows protected your PC" because the game is
    not signed. Click "More info", then "Run anyway".
-4. Click Play. A help screen shows the controls; click "Let's go!".
+4. Click the big Play button. A picture help screen shows the
+   controls; click "Go!". Press H or the ? button to see it again.
 
 GOAL
 ----
@@ -36,6 +37,19 @@ CONTROLS (like League of Legends)
   N .................... call the night early (daytime only)
   W A S D .............. walk directly (optional)
   H / Esc .............. help / pause
+
+THE SCREEN (made for kids: mostly pictures, few words)
+----------
+  Top middle ........... sun/moon clock, one moon per night to survive
+                         (they light up as nights are won), campfire
+                         bar, and "imp x N" while imps are out
+  Top left ............. the sibling; click a picture to give a task
+                         (zzz idle, footsteps follow, shield guard,
+                         basket gather)
+  Top right ............ what you are carrying
+  Bottom ............... the boy: health, XP and action keys
+  Small pictures pop up over the boy, e.g. a torch with a red X
+  means "no torch left".
 
 AFTER PLAYING
 -------------

@@ -72,7 +72,7 @@ func _ready() -> void:
 	add_child(_controls_panel)
 
 	var version: Label = UiKit.label(
-		"v%s  -  playtest build  -  art: KayKit (CC0) by Kay Lousberg" % ProjectSettings.get_setting("application/config/version", "dev"),
+		"v%s  -  playtest build  -  see CREDITS.md" % ProjectSettings.get_setting("application/config/version", "dev"),
 		13, UiKit.COLOR_MUTED
 	)
 	version.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)

@@ -13,9 +13,10 @@ fragile camping trip into a magical woodland fortress.
 
 ## Status
 
-**Prototype, ready for first playtest (v0.2.0-playtest1).** Stylized 3D art
-(CC0 KayKit models + custom shaders, VFX and a LoL-inspired UI); see
-[`CREDITS.md`](CREDITS.md).
+**Prototype, ready for first playtest (v0.3.0-playtest1).** Hand-painted,
+LoL-inspired 3D art: custom characters, trees, rocks and camp props are
+modelled and texture-baked by the Blender scripts in [`art/`](art/README.md).
+The UI is icon-first for young players. See [`CREDITS.md`](CREDITS.md).
 
 A complete 3-night run is playable:
 
@@ -118,7 +119,8 @@ Both scripts use `godot` on PATH, or `$GODOT`. Exports need the Godot
     utilities/        Math, helpers, reusable bits
   assets/             Art, audio, materials, fonts
     placeholder/      Throwaway placeholder content
-    art/              Final art (later)
+    custom/           Original models + painted textures (built from art/)
+    kaykit/           Vendored CC0 KayKit packs (rigs, animations, backdrop)
     audio/            Sound effects and music
     materials/        Shared materials
     fonts/            Fonts
