@@ -30,6 +30,8 @@ var _invulnerable_remaining: float = 0.0
 var _regen_accumulator: float = 0.0
 
 @onready var _task_label: Label3D = $TaskLabel
+@onready var _visual: CharacterVisual = $Visual
+var _hp_bar: HealthBar3D = null
 
 var _player: Node3D = null
 var _base_core: Node3D = null
@@ -51,6 +53,9 @@ func _ready() -> void:
 	if not ProgressionManager.level_up.is_connected(_on_level_up):
 		ProgressionManager.level_up.connect(_on_level_up)
 	TimeManager.dawn_started.connect(_on_dawn_started)
+	_hp_bar = HealthBar3D.attach(self, 1.6, "hero", 1.1)
+	health_changed.connect(func(hp: int, max_value: int) -> void: _hp_bar.set_value(hp, max_value))
+	_hp_bar.set_value.call_deferred(current_hp, max_hp)
 
 
 func take_damage(amount: int, _source: Node = null) -> void:
@@ -63,6 +68,8 @@ func take_damage(amount: int, _source: Node = null) -> void:
 	Fx.float_text(self, "-%d" % amount, Color(1, 0.6, 0.4))
 	if current_hp == 0:
 		_set_knocked_out(true)
+	elif not _visual.is_in_action():
+		_visual.play_action(&"hit", 1.4)
 
 
 func _set_knocked_out(value: bool) -> void:
@@ -72,10 +79,10 @@ func _set_knocked_out(value: bool) -> void:
 	if value:
 		_abort_active_gather()
 		velocity = Vector3.ZERO
-		rotation_degrees.z = 80.0
+		_visual.play_final(&"death")
 		PlaytestLog.write("companion_knocked_out day=%d" % TimeManager.day_number)
 	else:
-		rotation_degrees.z = 0.0
+		_visual.unlock(&"getup")
 		current_hp = max_hp
 		health_changed.emit(current_hp, max_hp)
 	knocked_out_changed.emit(is_knocked_out)
@@ -139,6 +146,15 @@ func _physics_process(delta: float) -> void:
 			_tick_guard_base()
 		Task.GATHER_NEAREST:
 			_tick_gather_nearest()
+
+	var planar_speed: float = Vector2(velocity.x, velocity.z).length()
+	_visual.set_locomotion(planar_speed)
+	if planar_speed > 0.2 and not _visual.is_in_action():
+		_visual.face(velocity, delta)
+	elif _active_resource_node != null and is_instance_valid(_active_resource_node):
+		_visual.face((_active_resource_node as Node3D).global_position - global_position, delta)
+		if not _visual.is_in_action():
+			_visual.play_action(&"gather", 1.3)
 
 
 func _tick_idle() -> void:
@@ -255,7 +271,10 @@ func _on_resource_gathered(actor: Node, _id: StringName, _amount: int) -> void:
 func _attack_mob(mob: Node3D) -> void:
 	if not mob.has_method("take_damage"):
 		return
+	_visual.face_instantly(mob.global_position - global_position)
+	_visual.play_action(&"attack", 1.8)
 	mob.take_damage(_current_attack_damage, self)
+	Fx.burst(&"sparkle", mob.global_position + Vector3(0, 0.7, 0))
 	_attack_cooldown_remaining = definition.attack_cooldown_seconds
 
 
@@ -263,6 +282,7 @@ func _on_level_up(character: Node, _new_level: int) -> void:
 	if character != self or stats == null:
 		return
 	_current_attack_damage += stats.attack_damage_per_level
+	_hp_bar.set_level(_new_level)
 	max_hp += stats.max_health_per_level
 	current_hp = min(max_hp, current_hp + stats.max_health_per_level)
 	health_changed.emit(current_hp, max_hp)

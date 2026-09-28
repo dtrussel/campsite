@@ -16,14 +16,14 @@ signal destroyed
 
 var current_hp: int = 0
 var is_destroyed: bool = false
-var _hp_label: Label3D = null
+var _hp_bar: HealthBar3D = null
 var _last_logged_quarter: int = 4
 
 
 func _ready() -> void:
 	current_hp = max_hp
-	_hp_label = Fx.make_hp_label(self, 1.7)
-	_refresh_hp_label()
+	_hp_bar = HealthBar3D.attach(self, 2.3, "structure", 1.8)
+	_refresh_hp_label.call_deferred()
 
 
 func take_damage(amount: int, _source: Node = null) -> void:
@@ -40,10 +40,8 @@ func take_damage(amount: int, _source: Node = null) -> void:
 
 
 func _refresh_hp_label() -> void:
-	if _hp_label == null:
-		return
-	_hp_label.text = "Campfire " + Fx.hp_bar_text(current_hp, max_hp)
-	_hp_label.modulate = Fx.hp_color(current_hp, max_hp)
+	if _hp_bar != null:
+		_hp_bar.set_value(current_hp, max_hp)
 
 
 func _log_quarters() -> void:

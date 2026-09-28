@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://b0campsiteworld01"]
+[gd_scene load_steps=20 format=3 uid="uid://b0campsiteworld01"]
 
 [ext_resource type="PackedScene" uid="uid://b0campsitebase01" path="res://scenes/base/CampfireCore.tscn" id="1_campfire"]
 [ext_resource type="PackedScene" uid="uid://b0campsiteplayer01" path="res://scenes/player/PlayerBoy.tscn" id="2_player"]
@@ -10,14 +10,20 @@
 [ext_resource type="Script" path="res://scripts/mobs/mob_spawner.gd" id="8_spawner"]
 [ext_resource type="PackedScene" uid="uid://b0campsitecompsibling01" path="res://scenes/companions/Sibling.tscn" id="9_sibling"]
 [ext_resource type="PackedScene" uid="uid://b0campsitepinetree01" path="res://scenes/resources/PineTree.tscn" id="11_pine"]
+[ext_resource type="Shader" path="res://shaders/painted_ground.gdshader" id="12_ground"]
+[ext_resource type="Script" path="res://scripts/world/style_director.gd" id="13_style"]
+[ext_resource type="Script" path="res://scripts/world/world_dressing.gd" id="14_dressing"]
+[ext_resource type="Script" path="res://scripts/world/navigation_baker.gd" id="15_nav"]
 [ext_resource type="Resource" uid="uid://b0campsitemobdefshadowimp" path="res://resources/mobs/shadow_imp.tres" id="10_mobdef"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 size = Vector2(120, 120)
+subdivide_width = 8
+subdivide_depth = 8
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
-albedo_color = Color(0.32, 0.45, 0.25, 1)
-roughness = 1.0
+[sub_resource type="ShaderMaterial" id="StandardMaterial3D_ground"]
+render_priority = 0
+shader = ExtResource("12_ground")
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
 size = Vector3(120, 0.2, 120)
@@ -34,9 +40,26 @@ sky_material = SubResource("ProceduralSkyMaterial_sky")
 [sub_resource type="Environment" id="Environment_world"]
 background_mode = 2
 sky = SubResource("Sky_world")
-ambient_light_source = 3
-ambient_light_color = Color(0.65, 0.7, 0.78, 1)
-ambient_light_energy = 0.6
+ambient_light_source = 2
+ambient_light_color = Color(0.62, 0.68, 0.78, 1)
+ambient_light_energy = 0.55
+tonemap_mode = 2
+tonemap_exposure = 0.95
+tonemap_white = 2.2
+glow_enabled = true
+glow_intensity = 0.45
+glow_strength = 0.8
+glow_bloom = 0.0
+glow_blend_mode = 2
+glow_hdr_threshold = 1.2
+fog_enabled = true
+fog_light_color = Color(0.72, 0.82, 0.9, 1)
+fog_density = 0.006
+fog_sky_affect = 0.3
+adjustment_enabled = true
+adjustment_brightness = 1.02
+adjustment_contrast = 1.1
+adjustment_saturation = 1.18
 
 [node name="TestWorld" type="Node3D"]
 
@@ -44,10 +67,16 @@ ambient_light_energy = 0.6
 environment = SubResource("Environment_world")
 
 [node name="SunLight" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.866025, -0.353553, 0.353553, 0, 0.707107, 0.707107, -0.5, -0.612372, 0.612372, 0, 12, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12, 0)
+rotation_degrees = Vector3(-52, 35, 0)
+shadow_blur = 1.5
+directional_shadow_max_distance = 45.0
 light_color = Color(1, 0.96, 0.86, 1)
 light_energy = 1.1
 shadow_enabled = true
+
+[node name="StyleDirector" type="Node" parent="."]
+script = ExtResource("13_style")
 
 [node name="Ground" type="StaticBody3D" parent="." groups=["ground"]]
 collision_layer = 1
@@ -73,9 +102,9 @@ smoothing = 6.0
 offset = Vector3(0, 0, 0)
 
 [node name="Camera3D" type="Camera3D" parent="CameraRig"]
-transform = Transform3D(0.707107, -0.353553, 0.612372, 0, 0.866025, 0.5, -0.707107, -0.353553, 0.612372, 10, 12, 10)
-projection = 0
-fov = 45.0
+transform = Transform3D(1, 0, 0, 0, 0.559, 0.829, 0, -0.829, 0.559, 0, 12.4, 8.4)
+fov = 42.0
+far = 200.0
 
 [node name="Resources" type="Node3D" parent="."]
 
@@ -122,6 +151,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, -9)
 script = ExtResource("7_worldlight")
 sun_path = NodePath("../SunLight")
 environment_path = NodePath("../WorldEnvironment")
+campfire_path = NodePath("../CampfireCore")
+
+[node name="WorldDressing" type="Node3D" parent="."]
+script = ExtResource("14_dressing")
+
+[node name="Navigation" type="NavigationRegion3D" parent="."]
+script = ExtResource("15_nav")
 
 [node name="Sibling" parent="." instance=ExtResource("9_sibling")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 1.5)

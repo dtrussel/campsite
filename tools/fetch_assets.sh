@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Vendors the CC0 KayKit models and OFL fonts the game uses into
+# game/assets/. The results are committed, so this only needs to be
+# re-run when the asset list below changes.
+#
+# Sources (all CC0 1.0, by Kay Lousberg - https://kaylousberg.com):
+#   github.com/KayKit-Game-Assets/<pack>, pinned to the commits below.
+# Fonts (SIL OFL 1.1): github.com/google/fonts
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+DEST="$ROOT/game/assets"
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+
+# pack name | pinned commit | folder under game/assets/kaykit | models (basenames)
+PACKS=(
+	"KayKit-Character-Pack-Adventures-1.0|672074b73ba276876a19e8816ecdc5241817ab47|adventurers|Rogue.glb Mage.glb axe_1handed.gltf wand.gltf"
+	"KayKit-Character-Pack-Skeletons-1.0|15b62b9bad122f72926c10fb14d622c73819fa54|skeletons|Skeleton_Minion.glb"
+	"KayKit-Halloween-Bits-1.0|6dc69bf6b2fa766a985754f35ec6a0324090e6c6|halloween|tree_pine_orange_large.gltf tree_pine_orange_medium.gltf tree_pine_yellow_large.gltf tree_pine_yellow_medium.gltf tree_dead_large.gltf tree_dead_medium.gltf tree_dead_small.gltf pumpkin_orange.gltf pumpkin_orange_jackolantern.gltf pumpkin_yellow_small.gltf lantern_standing.gltf post_lantern.gltf candle_triple.gltf"
+	"KayKit-Medieval-Hexagon-Pack-1.0|84fa4e91af6a88989be7c99e0891cede11f2ca38|hexagon|tree_single_A.gltf tree_single_A_cut.gltf tree_single_B.gltf tree_single_B_cut.gltf trees_A_large.gltf trees_A_medium.gltf trees_B_large.gltf trees_B_medium.gltf rock_single_A.gltf rock_single_B.gltf rock_single_C.gltf rock_single_D.gltf rock_single_E.gltf hills_A_trees.gltf hills_B_trees.gltf hills_C_trees.gltf mountain_A_grass_trees.gltf mountain_B_grass_trees.gltf tent.gltf barrel.gltf crate_A_big.gltf crate_B_small.gltf sack.gltf resource_lumber.gltf resource_stone.gltf bucket_water.gltf wheelbarrow.gltf fence_wood_straight.gltf building_tower_A_green.gltf flag_green.gltf cloud_big.gltf cloud_small.gltf"
+)
+
+for entry in "${PACKS[@]}"; do
+	IFS='|' read -r pack commit folder models <<<"$entry"
+	echo "== $pack"
+	repo="$WORK/$pack"
+	git clone -q --filter=blob:none --no-checkout "https://github.com/KayKit-Game-Assets/$pack" "$repo"
+	git -C "$repo" checkout -q "$commit" -- LICENSE.txt 2>/dev/null || true
+	out="$DEST/kaykit/$folder"
+	mkdir -p "$out"
+	cp "$repo/LICENSE.txt" "$out/LICENSE.txt" 2>/dev/null || true
+	all_files="$(git -C "$repo" ls-tree -r --name-only "$commit" | grep -E '/(gltf|Characters/gltf)/|/gltf/' | grep -v 'fbx')"
+	for model in $models; do
+		path="$(grep -E "/${model//./\\.}$" <<<"$all_files" | head -1)"
+		if [[ -z "$path" ]]; then
+			echo "missing: $model" >&2
+			exit 1
+		fi
+		dir="$(dirname "$path")"
+		stem="${model%.*}"
+		# The model, its buffer (for .gltf) and every texture in its folder.
+		wanted=("$path")
+		[[ "$model" == *.gltf ]] && wanted+=("$dir/$stem.bin")
+		while IFS= read -r tex; do wanted+=("$tex"); done < <(grep -E "^${dir//./\\.}/[^/]+\.png$" <<<"$all_files")
+		git -C "$repo" checkout -q "$commit" -- "${wanted[@]}"
+		for f in "${wanted[@]}"; do cp "$repo/$f" "$out/"; done
+	done
+	# Only keep textures a copied model actually references.
+	for tex in "$out"/*.png; do
+		name="$(basename "$tex")"
+		if ! grep -lq "$name" "$out"/*.gltf "$out"/*.glb 2>/dev/null; then
+			rm -f "$tex"
+		fi
+	done
+done
+
+echo "== fonts"
+mkdir -p "$DEST/fonts"
+FONTS=https://raw.githubusercontent.com/google/fonts/main/ofl
+curl -sSfL -o "$DEST/fonts/Cinzel.ttf" "$FONTS/cinzel/Cinzel%5Bwght%5D.ttf"
+curl -sSfL -o "$DEST/fonts/Cinzel-OFL.txt" "$FONTS/cinzel/OFL.txt"
+curl -sSfL -o "$DEST/fonts/NunitoSans.ttf" "$FONTS/nunitosans/NunitoSans%5BYTLC,opsz,wdth,wght%5D.ttf"
+curl -sSfL -o "$DEST/fonts/NunitoSans-OFL.txt" "$FONTS/nunitosans/OFL.txt"
+
+du -sh "$DEST/kaykit"/* "$DEST/fonts"
+echo "Assets fetched."

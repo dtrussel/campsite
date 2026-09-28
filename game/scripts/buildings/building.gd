@@ -26,7 +26,7 @@ signal destroyed
 var _auto_attack_timer: float = 0.0
 
 var current_hp: int = 0
-var _hp_label: Label3D = null
+var _hp_bar: HealthBar3D = null
 
 
 func _ready() -> void:
@@ -34,8 +34,10 @@ func _ready() -> void:
 		current_hp = definition.max_hp
 	else:
 		push_warning("Building '%s' has no definition" % name)
-	_hp_label = Fx.make_hp_label(self, hp_label_height)
-	_refresh_hp_label()
+	if not has_meta(&"build_ghost"):
+		_hp_bar = HealthBar3D.attach(self, hp_label_height, "structure", 1.1)
+		_hp_bar.hide_when_full = true
+		_refresh_hp_label.call_deferred()
 	# The build-mode ghost is a real instance; keep it inert.
 	set_physics_process(auto_attack_damage > 0 and not has_meta(&"build_ghost"))
 
@@ -67,6 +69,7 @@ func take_damage(amount: int, _source: Node = null) -> void:
 	Fx.flash(self)
 	_refresh_hp_label()
 	if current_hp == 0:
+		Fx.burst(&"build", global_position + Vector3(0, 0.5, 0))
 		destroyed.emit()
 		PlaytestLog.write("building_destroyed id=%s day=%d" % [
 			definition.id if definition != null else &"?", TimeManager.day_number
@@ -75,12 +78,9 @@ func take_damage(amount: int, _source: Node = null) -> void:
 
 
 func _refresh_hp_label() -> void:
-	if _hp_label == null or definition == null:
+	if _hp_bar == null or definition == null:
 		return
-	# Only show the bar once the building has been hit.
-	_hp_label.visible = current_hp < definition.max_hp
-	_hp_label.text = Fx.hp_bar_text(current_hp, definition.max_hp)
-	_hp_label.modulate = Fx.hp_color(current_hp, definition.max_hp)
+	_hp_bar.set_value(current_hp, definition.max_hp)
 
 
 func repair(amount: int) -> void:

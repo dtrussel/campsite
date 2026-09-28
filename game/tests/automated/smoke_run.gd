@@ -75,6 +75,43 @@ func _run_win_scenario() -> void:
 	fence.take_damage(5)
 	_check(fence.current_hp == fence_def.max_hp - 5, "fence takes damage")
 
+	# LoL-style commands: navmesh, move, gather, attack.
+	var nav: NavigationRegion3D = get_tree().current_scene.find_child("Navigation", true, false) as NavigationRegion3D
+	var waited_nav: float = 0.0
+	while (nav == null or nav.navigation_mesh == null or nav.navigation_mesh.get_polygon_count() == 0) and waited_nav < 8.0:
+		await _wait(0.25)
+		waited_nav += 0.25
+	_check(nav != null and nav.navigation_mesh.get_polygon_count() > 0, "navmesh baked (%d polys)" % (nav.navigation_mesh.get_polygon_count() if nav != null else 0))
+	var goal: Vector3 = Vector3(-6, 0, 10)
+	player.command_move(goal)
+	var t: float = 0.0
+	while int(player.get("command")) != 0 and t < 10.0:
+		await _wait(0.25)
+		t += 0.25
+	var moved: float = Vector2(player.global_position.x - goal.x, player.global_position.z - goal.z).length()
+	_check(moved < 1.0, "right-click move arrived (%.2f m off, %.1fs)" % [moved, t])
+
+	var rock: ResourceNode = _find_resource_node(&"stone")
+	var stone_before: int = ResourceManager.get_count(&"stone")
+	player.command_gather(rock)
+	t = 0.0
+	while ResourceManager.get_count(&"stone") == stone_before and t < 15.0:
+		await _wait(0.25)
+		t += 0.25
+	_check(ResourceManager.get_count(&"stone") > stone_before, "gather command walked over and gathered (%.1fs)" % t)
+
+	var target_imp: Mob = (load("res://scenes/mobs/ShadowImp.tscn") as PackedScene).instantiate() as Mob
+	get_tree().current_scene.add_child(target_imp)
+	target_imp.global_position = player.global_position + Vector3(3.5, 0, 0)
+	var kills_before_cmd: int = int(GameManager.stats[&"kills"])
+	player.command_attack(target_imp)
+	t = 0.0
+	while is_instance_valid(target_imp) and target_imp.current_hp > 0 and t < 15.0:
+		await _wait(0.25)
+		t += 0.25
+	_check(int(GameManager.stats[&"kills"]) > kills_before_cmd, "attack command chased and auto-attacked an imp to death (%.1fs)" % t)
+	player.stop_commands()
+
 	# Watch Post pelts a nearby imp on its own.
 	var post_def: BuildingDefinition = BuildManager.get_known_definitions()[1]
 	var post: Building = post_def.get_scene().instantiate() as Building

@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://b0campsitemain01"]
+[gd_scene load_steps=9 format=3 uid="uid://b0campsitemain01"]
 
 [ext_resource type="PackedScene" uid="uid://b0campsiteworld01" path="res://scenes/world/TestWorld.tscn" id="1_world"]
 [ext_resource type="PackedScene" uid="uid://b0campsitehud01" path="res://scenes/ui/HUD.tscn" id="2_hud"]
@@ -7,11 +7,15 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/ControlsOverlay.tscn" id="5_controls"]
 [ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="6_pause"]
 [ext_resource type="PackedScene" path="res://scenes/ui/EndScreen.tscn" id="7_end"]
+[ext_resource type="Script" path="res://scripts/player/pointer_commands.gd" id="8_pointer"]
 
 [node name="Main" type="Node"]
 script = ExtResource("3_main_script")
 
 [node name="TestWorld" parent="." instance=ExtResource("1_world")]
+
+[node name="PointerCommands" type="Node" parent="."]
+script = ExtResource("8_pointer")
 
 [node name="HUD" parent="." instance=ExtResource("2_hud")]
 

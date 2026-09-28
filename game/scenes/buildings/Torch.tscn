@@ -1,55 +1,35 @@
-[gd_scene load_steps=8 format=3 uid="uid://b0campsitetorch01"]
+[gd_scene load_steps=6 format=3 uid="uid://b0campsitetorch01"]
 
 [ext_resource type="Script" path="res://scripts/buildings/torch.gd" id="1_torch"]
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_post"]
-top_radius = 0.05
-bottom_radius = 0.07
-height = 1.1
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_post"]
-albedo_color = Color(0.4, 0.26, 0.12, 1)
-roughness = 0.9
-
-[sub_resource type="SphereMesh" id="SphereMesh_flame"]
-radius = 0.14
-height = 0.34
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_flame"]
-albedo_color = Color(1, 0.7, 0.25, 1)
-emission_enabled = true
-emission = Color(1, 0.55, 0.15, 1)
-emission_energy_multiplier = 3.0
-shading_mode = 0
+[ext_resource type="Script" path="res://scripts/world/fire_effect.gd" id="2_fire"]
+[ext_resource type="PackedScene" path="res://assets/kaykit/halloween/lantern_standing.gltf" id="m_lantern"]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_ring"]
 top_radius = 3.5
 bottom_radius = 3.5
 height = 0.02
+radial_segments = 48
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ring"]
 transparency = 1
+blend_mode = 1
 shading_mode = 0
-albedo_color = Color(1, 0.7, 0.3, 0.12)
+albedo_color = Color(1, 0.62, 0.25, 0.08)
 
 [node name="Torch" type="Node3D"]
 script = ExtResource("1_torch")
 
-[node name="Post" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
-mesh = SubResource("CylinderMesh_post")
-surface_material_override/0 = SubResource("StandardMaterial3D_post")
+[node name="Model" parent="." instance=ExtResource("m_lantern")]
+transform = Transform3D(1.1, 0, 0, 0, 1.1, 0, 0, 0, 1.1, 0, 0, 0)
 
-[node name="Flame" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
-mesh = SubResource("SphereMesh_flame")
-surface_material_override/0 = SubResource("StandardMaterial3D_flame")
-
-[node name="Light" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
-light_color = Color(1, 0.7, 0.35, 1)
-light_energy = 2.0
-omni_range = 5.0
+[node name="Fire" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.02, 0)
+script = ExtResource("2_fire")
+size = 0.32
+light_energy = 1.3
+light_range = 6.0
+smoke = false
+flame_count = 1
 
 [node name="Radius" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)

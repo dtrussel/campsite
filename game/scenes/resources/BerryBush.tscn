@@ -1,30 +1,48 @@
-[gd_scene load_steps=8 format=3 uid="uid://b0campsiteberrybush01"]
+[gd_scene load_steps=6 format=3 uid="uid://b0campsiteberrybush01"]
 
 [ext_resource type="Script" path="res://scripts/resources/resource_node.gd" id="1_rn"]
-[ext_resource type="Resource" path="res://resources/items/fiber.tres" id="3_bonus"]
 [ext_resource type="Resource" uid="uid://b0campsiteitemberries" path="res://resources/items/berries.tres" id="2_def"]
+[ext_resource type="Resource" path="res://resources/items/fiber.tres" id="3_bonus"]
 
-[sub_resource type="SphereMesh" id="SphereMesh_bush"]
-radius = 0.55
-height = 0.7
+[sub_resource type="SphereMesh" id="Foliage"]
+radius = 0.5
+height = 0.85
+radial_segments = 16
+rings = 8
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bush"]
-albedo_color = Color(0.3, 0.55, 0.28, 1)
-roughness = 0.85
+[sub_resource type="StandardMaterial3D" id="Leaf_dark"]
+albedo_color = Color(0.2, 0.46, 0.2, 1)
+roughness = 1.0
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
 
-[sub_resource type="SphereMesh" id="SphereMesh_berries"]
-radius = 0.12
-height = 0.24
+[sub_resource type="StandardMaterial3D" id="Leaf_light"]
+albedo_color = Color(0.36, 0.64, 0.26, 1)
+roughness = 1.0
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_berries"]
-albedo_color = Color(0.85, 0.25, 0.35, 1)
-roughness = 0.4
+[sub_resource type="SphereMesh" id="Berry"]
+radius = 0.09
+height = 0.18
+radial_segments = 10
+rings = 5
+
+[sub_resource type="StandardMaterial3D" id="Berry_mat"]
+albedo_color = Color(0.9, 0.12, 0.28, 1)
+roughness = 0.35
 emission_enabled = true
-emission = Color(0.6, 0.1, 0.2, 1)
-emission_energy_multiplier = 0.2
+emission = Color(0.55, 0.02, 0.12, 1)
+emission_energy_multiplier = 0.6
+rim_enabled = true
+rim = 0.6
 
-[sub_resource type="SphereShape3D" id="SphereShape3D_bush"]
-radius = 0.55
+
+[sub_resource type="CylinderShape3D" id="Shape_collision"]
+radius = 0.6
+height = 0.9
 
 [node name="BerryBush" type="StaticBody3D"]
 collision_layer = 2
@@ -34,31 +52,92 @@ definition = ExtResource("2_def")
 yield_amount = 2
 gather_time_seconds = 1.0
 respawn_seconds = 15.0
+gather_animation = &"pick"
+gather_burst = &"berries"
 bonus_definition = ExtResource("3_bonus")
 bonus_amount = 1
 
 [node name="Visual" type="Node3D" parent="."]
 
-[node name="Foliage" type="MeshInstance3D" parent="Visual"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
-mesh = SubResource("SphereMesh_bush")
-surface_material_override/0 = SubResource("StandardMaterial3D_bush")
+[node name="Leaves0" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, -0, 0, 1, 0, 0, 0, 1, 0, 0.42, 0)
+mesh = SubResource("Foliage")
+surface_material_override/0 = SubResource("Leaf_dark")
 
-[node name="BerryA" type="MeshInstance3D" parent="Visual"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.45, 0.15)
-mesh = SubResource("SphereMesh_berries")
-surface_material_override/0 = SubResource("StandardMaterial3D_berries")
+[node name="Leaves1" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(0.8, 0, -0, 0, 0.8, 0, 0, 0, 0.8, 0.38, 0.34, 0.12)
+mesh = SubResource("Foliage")
+surface_material_override/0 = SubResource("Leaf_light")
 
-[node name="BerryB" type="MeshInstance3D" parent="Visual"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.5, 0.2)
-mesh = SubResource("SphereMesh_berries")
-surface_material_override/0 = SubResource("StandardMaterial3D_berries")
+[node name="Leaves2" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(0.75, 0, -0, 0, 0.75, 0, 0, 0, 0.75, -0.34, 0.32, 0.18)
+mesh = SubResource("Foliage")
+surface_material_override/0 = SubResource("Leaf_light")
 
-[node name="BerryC" type="MeshInstance3D" parent="Visual"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 0.55, -0.25)
-mesh = SubResource("SphereMesh_berries")
-surface_material_override/0 = SubResource("StandardMaterial3D_berries")
+[node name="Leaves3" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(0.8, 0, -0, 0, 0.8, 0, 0, 0, 0.8, 0.05, 0.3, -0.36)
+mesh = SubResource("Foliage")
+surface_material_override/0 = SubResource("Leaf_dark")
+
+[node name="Leaves4" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(0.7, 0, -0, 0, 0.7, 0, 0, 0, 0.7, 0.1, 0.62, 0.05)
+mesh = SubResource("Foliage")
+surface_material_override/0 = SubResource("Leaf_light")
+
+[node name="Berry0" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, -0, 0, 1, 0, 0, 0, 1, 0.35, 0.55, 0.35)
+mesh = SubResource("Berry")
+surface_material_override/0 = SubResource("Berry_mat")
+
+[node name="Berry1" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, -0, 0, 1, 0, 0, 0, 1, -0.3, 0.5, 0.4)
+mesh = SubResource("Berry")
+surface_material_override/0 = SubResource("Berry_mat")
+
+[node name="Berry2" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, -0, 0, 1, 0, 0, 0, 1, 0.5, 0.35, -0.1)
+mesh = SubResource("Berry")
+surface_material_override/0 = SubResource("Berry_mat")
+
+[node name="Berry3" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, -0, 0, 1, 0, 0, 0, 1, -0.45, 0.4, -0.15)
+mesh = SubResource("Berry")
+surface_material_override/0 = SubResource("Berry_mat")
+
+[node name="Berry4" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, -0, 0, 1, 0, 0, 0, 1, 0.05, 0.8, 0.25)
+mesh = SubResource("Berry")
+surface_material_override/0 = SubResource("Berry_mat")
+
+[node name="Berry5" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, -0, 0, 1, 0, 0, 0, 1, 0.2, 0.6, -0.4)
+mesh = SubResource("Berry")
+surface_material_override/0 = SubResource("Berry_mat")
+
+[node name="Berry6" type="MeshInstance3D" parent="Visual"]
+transform = Transform3D(1, 0, -0, 0, 1, 0, 0, 0, 1, -0.15, 0.72, -0.25)
+mesh = SubResource("Berry")
+surface_material_override/0 = SubResource("Berry_mat")
+
+[node name="DepletedVisual" type="Node3D" parent="."]
+visible = false
+
+[node name="Leaves0" type="MeshInstance3D" parent="DepletedVisual"]
+transform = Transform3D(0.7, 0, -0, 0, 0.7, 0, 0, 0, 0.7, 0, 0.252, 0)
+mesh = SubResource("Foliage")
+surface_material_override/0 = SubResource("Leaf_dark")
+
+[node name="Leaves1" type="MeshInstance3D" parent="DepletedVisual"]
+transform = Transform3D(0.56, 0, -0, 0, 0.56, 0, 0, 0, 0.56, 0.266, 0.204, 0.084)
+mesh = SubResource("Foliage")
+surface_material_override/0 = SubResource("Leaf_dark")
+
+[node name="Leaves2" type="MeshInstance3D" parent="DepletedVisual"]
+transform = Transform3D(0.525, 0, -0, 0, 0.525, 0, 0, 0, 0.525, -0.238, 0.192, 0.126)
+mesh = SubResource("Foliage")
+surface_material_override/0 = SubResource("Leaf_dark")
+
 
 [node name="Collision" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
-shape = SubResource("SphereShape3D_bush")
+transform = Transform3D(1, 0, -0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+shape = SubResource("Shape_collision")

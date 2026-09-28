@@ -8,6 +8,10 @@ extends CharacterBody3D
 ## campfire itself). If the boy or a companion comes within
 ## `aggro_radius`, the mob chases and attacks them instead until they
 ## escape or are knocked out. Lit torches slow mobs down.
+##
+## Mobs rise out of the ground when spawned (they cannot move or be
+## targeted by their own AI until the rise finishes) and collapse into
+## purple smoke when defeated.
 
 signal defeated(mob: Node)
 
@@ -18,6 +22,8 @@ const KNOCKBACK_DISTANCE: float = 0.5
 const KNOCKBACK_DECAY: float = 10.0
 ## Extra reach against the campfire, whose collider is wider than a mob.
 const CAMPFIRE_REACH_BONUS: float = 0.7
+## Seconds a defeated mob lingers for its collapse animation.
+const CORPSE_SECONDS: float = 1.4
 
 @export var definition: MobDefinition
 
@@ -30,6 +36,10 @@ var _attack_target: Node = null
 var _attack_cooldown_remaining: float = 0.0
 var _last_damage_source: Node = null
 var _knockback: Vector3 = Vector3.ZERO
+var _spawn_remaining: float = 0.0
+var _hp_bar: HealthBar3D = null
+
+@onready var _visual: CharacterVisual = get_node_or_null("Visual") as CharacterVisual
 
 
 func _ready() -> void:
@@ -40,6 +50,20 @@ func _ready() -> void:
 		push_warning("Mob '%s' has no definition" % name)
 		current_hp = 1
 	_refresh_base()
+	_hp_bar = HealthBar3D.attach(self, 1.35, "enemy", 0.9)
+	_hp_bar.set_value.call_deferred(current_hp, current_hp)
+	if _visual != null:
+		if _base != null:
+			_visual.face_instantly(_base.global_position - global_position)
+		_spawn_remaining = minf(_visual.play_action(&"spawn", 1.6), 2.0)
+	# Deferred: the spawner positions us right after add_child.
+	_play_spawn_fx.call_deferred()
+
+
+func _play_spawn_fx() -> void:
+	Fx.burst(&"shadow_spawn", global_position)
+	if _visual != null and _base != null:
+		_visual.face_instantly(_base.global_position - global_position)
 
 
 func take_damage(amount: int, source: Node = null) -> void:
@@ -48,8 +72,12 @@ func take_damage(amount: int, source: Node = null) -> void:
 	if source != null:
 		_last_damage_source = source
 	current_hp = max(0, current_hp - amount)
+	if _hp_bar != null and definition != null:
+		_hp_bar.set_value(current_hp, definition.max_hp)
 	Fx.flash(self, Color(1, 1, 1, 0.8))
 	Fx.float_text(self, "-%d" % amount, Color(1, 0.95, 0.6), 1.2)
+	if _visual != null and current_hp > 0 and _spawn_remaining <= 0.0 and not _visual.is_in_action():
+		_visual.play_action(&"hit", 1.5)
 	var source_3d: Node3D = source as Node3D
 	if source_3d != null:
 		var away: Vector3 = global_position - source_3d.global_position
@@ -68,8 +96,15 @@ func _die() -> void:
 	_award_kill_xp()
 	GameManager.record(&"kills")
 	defeated.emit(self)
+	if _hp_bar != null:
+		_hp_bar.visible = false
+	Fx.burst(&"shadow_death", global_position + Vector3(0, 0.5, 0))
+	if _visual != null:
+		_visual.play_final(&"death")
 	var tween: Tween = create_tween()
-	tween.tween_property(self, "scale", Vector3(1.4, 0.05, 1.4), 0.18)
+	tween.tween_interval(CORPSE_SECONDS * 0.6)
+	tween.tween_property(self, "scale", Vector3(1.0, 0.02, 1.0), CORPSE_SECONDS * 0.4) \
+		.set_ease(Tween.EASE_IN)
 	tween.tween_callback(queue_free)
 
 
@@ -88,6 +123,10 @@ func _physics_process(delta: float) -> void:
 	if state == State.DYING or definition == null:
 		return
 	_attack_cooldown_remaining = max(0.0, _attack_cooldown_remaining - delta)
+	if _spawn_remaining > 0.0:
+		# Still clawing out of the ground.
+		_spawn_remaining -= delta
+		return
 	if _base == null or not is_instance_valid(_base):
 		_refresh_base()
 
@@ -136,12 +175,22 @@ func _physics_process(delta: float) -> void:
 
 	_knockback = _knockback.move_toward(Vector3.ZERO, KNOCKBACK_DECAY * KNOCKBACK_DISTANCE * delta * 4.0)
 
+	if _visual != null:
+		var planar_speed: float = Vector2(velocity.x, velocity.z).length()
+		_visual.set_locomotion(planar_speed)
+		if direct_target is Node3D:
+			_visual.face((direct_target as Node3D).global_position - global_position, delta)
+		elif planar_speed > 0.2:
+			_visual.face(velocity, delta)
+
 
 func _try_attack(target: Node) -> void:
 	_attack_target = target
 	state = State.ATTACKING
 	if _attack_cooldown_remaining > 0.0:
 		return
+	if _visual != null:
+		_visual.play_action(&"attack", 1.6)
 	if target.has_method("take_damage"):
 		target.take_damage(definition.attack_damage, self)
 	_attack_cooldown_remaining = definition.attack_cooldown_seconds

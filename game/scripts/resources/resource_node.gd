@@ -25,15 +25,22 @@ const GATHER_XP_REWARD: int = 1
 ## drops Leaves). Leave empty for single-yield nodes.
 @export var bonus_definition: ResourceDefinition
 @export var bonus_amount: int = 1
+## Gatherer animation state (CharacterVisual clip key): "chop" for
+## trees and rocks, "pick" for bushes.
+@export var gather_animation: StringName = &"chop"
+## Fx.burst kind played when a gather completes.
+@export var gather_burst: StringName = &"wood"
 
 var is_gatherable: bool = true
-var _progress_label: Label3D = null
+var _progress_bar: HealthBar3D = null
 
 var _active_gather_actor: Node = null
 var _gather_timer: Timer
 var _respawn_timer: Timer
 
 @onready var _visual_root: Node3D = $Visual
+## Optional stump / leftover shown while depleted.
+@onready var _depleted_visual: Node3D = get_node_or_null("DepletedVisual") as Node3D
 
 
 func _ready() -> void:
@@ -47,8 +54,8 @@ func _ready() -> void:
 	_respawn_timer.timeout.connect(_on_respawn_complete)
 	add_child(_respawn_timer)
 
-	_progress_label = Fx.make_hp_label(self, 2.2)
-	_progress_label.visible = false
+	_progress_bar = HealthBar3D.attach(self, 2.4, "structure", 1.0)
+	_progress_bar.visible = false
 	set_process(false)
 
 
@@ -56,8 +63,7 @@ func _process(_delta: float) -> void:
 	if _active_gather_actor == null or gather_time_seconds <= 0.0:
 		return
 	var done: float = 1.0 - _gather_timer.time_left / gather_time_seconds
-	var filled: int = clampi(int(done * 10.0), 0, 10)
-	_progress_label.text = "Gathering %s%s" % ["|".repeat(filled), ".".repeat(10 - filled)]
+	_progress_bar.set_value(int(done * 100.0), 100)
 
 
 func begin_gather(actor: Node) -> bool:
@@ -94,16 +100,18 @@ func _on_gather_complete() -> void:
 		ResourceManager.add(bonus_definition.id, bonus_amount)
 		pickup += "  +%d %s" % [bonus_amount, bonus_definition.display_name]
 	Fx.float_text(self, pickup, definition.ui_color, 1.8)
+	Fx.burst(gather_burst, global_position + Vector3(0, 0.8, 0))
 	ProgressionManager.award_xp(actor, GATHER_XP_REWARD, &"gather")
 	gathered.emit(actor, definition.id, yield_amount)
 	_deplete()
 
 
 func _show_progress(is_shown: bool) -> void:
-	if _progress_label == null:
+	if _progress_bar == null:
 		return
-	_progress_label.visible = is_shown
-	_progress_label.modulate = Color(1, 1, 0.8)
+	_progress_bar.visible = is_shown
+	if is_shown:
+		_progress_bar.set_value(0, 100)
 	set_process(is_shown)
 
 
@@ -111,6 +119,8 @@ func _deplete() -> void:
 	is_gatherable = false
 	if _visual_root != null:
 		_visual_root.visible = false
+	if _depleted_visual != null:
+		_depleted_visual.visible = true
 	depleted.emit()
 	if respawn_seconds > 0.0:
 		_respawn_timer.start(respawn_seconds)
@@ -120,4 +130,9 @@ func _on_respawn_complete() -> void:
 	is_gatherable = true
 	if _visual_root != null:
 		_visual_root.visible = true
+		_visual_root.scale = Vector3.ONE * 0.2
+		create_tween().tween_property(_visual_root, "scale", Vector3.ONE, 0.45) \
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	if _depleted_visual != null:
+		_depleted_visual.visible = false
 	respawned.emit()
