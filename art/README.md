@@ -25,6 +25,7 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 | `nature/` | Trees (3 variants + stump), autumn pines, rocks, berry bush |
 | `props/camp.py` | Campfire, tent, fence, watch post, torch, woodpile, crate, barrel, toadstools |
 | `props/forage.py` | Feature 017: clay pit, mushroom patch and junk pile (each with a gathered variant), snap trap (base plus a jaw that Godot animates), glow lantern, glow shard, hearth ring. Feature 019: reinforced wall, storage crate, crafting table. Decimated to the 1.4k prop budget |
+| `props/haunted.py` | Feature 025: jack-o'-lantern (emissive face) and small pumpkin, camp lantern, water bucket, three dead trees, three hills and two mountains for the backdrop. Replaces the last KayKit props |
 | `characters/mushroom_gremlin.py` | Feature 021: the Mushroom Gremlin. The imp's method on the Skeleton Minion rig: a small stem body, a spotted purple cap (rigid on the head), glowing eyes and a loot sack |
 | `characters/bramble_beast.py` | Feature 018: the Bramble Beast. The imp's method (metaballs on the Skeleton Minion rig), but gorilla-shaped, with bark, moss, thorns, a leafy crown and ember eyes |
 | `characters/shadow_imp.py` | Feature 022 remodel: sculpted brow, cheeks, snout, knees and elbows; claws, a head tuft, slit eyes and rune markings; high-to-low bake to about 7.5k triangles. Brand-new imp body (metaballs along the Skeleton Minion rig, auto-weighted) with horns, wings, tail and glowing eyes |

@@ -41,7 +41,7 @@ func _ready() -> void:
 		["wood", func() -> Node3D: return _custom("woodpile.glb", 1.0), 2.6, 1.6, 0.25, 0.6],
 		["bush", func() -> Node3D: return _custom("berry_bush.glb", 1.0), 2.6, 1.8, 0.4, 0.3],
 		["tree", func() -> Node3D: return _custom("tree_a.glb", 1.0), 2.6, 1.2, 0.4, 0.3],
-		["pumpkin", func() -> Node3D: return _model("halloween/pumpkin_orange_jackolantern.gltf", 1.0), 2.4, 1.2, 0.6, 0.0],
+		["pumpkin", func() -> Node3D: return _custom("jack_o_lantern.glb", 1.0), 2.4, 1.2, 0.6, 0.0],
 		# Feature 017: new items, buildings and upgrades.
 		["clay", func() -> Node3D: return _custom("clay_pit.glb", 1.0), 2.6, 1.8, 0.3, 0.4],
 		["mushrooms", func() -> Node3D: return _custom("mushrooms.glb", 1.0), 2.4, 1.6, 0.3, 0.3],
@@ -393,16 +393,3 @@ func _hearth() -> Node3D:
 	root.add_child(_custom("hearth_ring.glb", 1.0))
 	return root
 
-
-func _campfire() -> Node3D:
-	var root: Node3D = Node3D.new()
-	for i in range(8):
-		var angle: float = TAU * i / 8.0
-		var rock: Node3D = _model("hexagon/rock_single_C.gltf", 1.5, Color(0.75, 0.74, 0.78))
-		rock.position = Vector3(cos(angle) * 0.55, 0, sin(angle) * 0.55)
-		root.add_child(rock)
-	var flame: MeshInstance3D = _sphere(0.28, Color(1.0, 0.55, 0.15), Vector3(0, 0.35, 0), 2.5)
-	flame.scale = Vector3(1.0, 1.7, 1.0)
-	root.add_child(flame)
-	root.add_child(_sphere(0.16, Color(1.0, 0.9, 0.5), Vector3(0, 0.3, 0.12), 3.0))
-	return root

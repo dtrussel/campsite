@@ -246,4 +246,5 @@ art track in parallel.
 | 022 Imp remodel | **Done.** The Shadow Imp is sculpted and painted in the kids' style: forms, claws, a head tuft, slit eyes and rune markings, with a high-to-low bake at 8.4k triangles. |
 | 023 Animation layering | **Done.** An AnimationTree per character: a walk/run blend, upper-body actions while moving, and a lean into turns. |
 | 024 Living world | **Done.** Trees and bushes sway in the wind, leaves and pollen drift by day, fireflies come out at night, and running feet kick up dust. |
-| Art (next) | 025: painted props replacing the last KayKit leftovers. |
+| 025 Painted props | **Done.** Painted jack-o'-lanterns, pumpkins, camp lanterns, water bucket, dead trees, hills and mountains replace the last KayKit props. Only the rigs and animations (and the axe icon) still come from KayKit. |
+| Next | Open: pick the next focus with the team (ideas: weather, more Nela tasks, a boss night). |
