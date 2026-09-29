@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="MobDefinition" load_steps=2 format=3 uid="uid://b0campsitemobdefbramble"]
+
+[ext_resource type="Script" path="res://scripts/mobs/mob_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"bramble_beast"
+display_name = "Bramble Beast"
+scene_path = "res://scenes/mobs/BrambleBeast.tscn"
+max_hp = 40
+move_speed = 1.5
+attack_damage = 4
+attack_range = 1.3
+aggro_radius = 2.0
+attack_cooldown_seconds = 1.8
+xp_reward = 15
+ui_color = Color(0.4, 0.55, 0.2, 1)
+prefers_buildings = true
+building_damage_multiplier = 3.0
+attack_hit_delay = 0.55
+impact_burst = &"bramble_slam"
+knockback_scale = 0.15
+spawn_burst = &"bramble_spawn"
+death_burst = &"bramble_death"
+drop_item = &"glow_shards"
+drop_every_n_kills = 1

@@ -26,6 +26,8 @@ var run_state: int = RunState.MENU
 var end_reason: String = ""
 ## Per-run counters for the end screen and the playtest log.
 var stats: Dictionary = {}
+## A save waiting to be applied once the gameplay scene is ready.
+var _pending_save: Dictionary = {}
 
 
 func _ready() -> void:
@@ -61,23 +63,45 @@ func _unhandled_input(event: InputEvent) -> void:
 	if run_state != RunState.PLAYING or get_tree().paused:
 		return
 	if event.is_action_pressed("assign_idle"):
-		_assign_to_all_companions(0)
+		assign_companion_task(0)
 	elif event.is_action_pressed("assign_follow"):
-		_assign_to_all_companions(1)
+		assign_companion_task(1)
 	elif event.is_action_pressed("assign_guard"):
-		_assign_to_all_companions(2)
+		assign_companion_task(2)
 	elif event.is_action_pressed("assign_gather"):
-		_assign_to_all_companions(3)
+		assign_companion_task(3)
+	elif event.is_action_pressed("assign_repair"):
+		assign_companion_task(4)
 	elif event.is_action_pressed("skip_to_night"):
 		if TimeManager.current_phase == TimeManager.Phase.DAY:
 			TimeManager.skip_phase()
 
 
-## Resets every autoload and loads the gameplay scene.
-func start_run() -> void:
+## Resets every autoload and loads the gameplay scene. `nights` picks
+## the run length (3 or 7 from the title screen); 0 keeps the current
+## one (Again / restart). A new run replaces any autosave.
+func start_run(nights: int = 0) -> void:
+	if nights > 0:
+		nights_to_win = nights
+	_pending_save = {}
+	SaveManager.delete_save()
 	get_tree().paused = false
 	_reset_autoloads()
-	get_tree().change_scene_to_file(GAME_SCENE)
+	LoadingScreen.load_scene(GAME_SCENE)  # key art while the camp loads (feature 029)
+
+
+## Resumes the autosaved run at the morning after its last dawn.
+## False if there is no usable save.
+func continue_run() -> bool:
+	var data: Dictionary = SaveManager.load_save()
+	if data.is_empty():
+		return false
+	nights_to_win = int(data["nights_to_win"])
+	get_tree().paused = false
+	_reset_autoloads()
+	_pending_save = data
+	LoadingScreen.load_scene(GAME_SCENE)
+	return true
 
 
 func go_to_title() -> void:
@@ -92,8 +116,15 @@ func on_game_scene_ready() -> void:
 	run_state = RunState.PLAYING
 	_hook_base_core()
 	_hook_player()
-	TimeManager.start_run()
-	PlaytestLog.write("run_started nights_to_win=%d" % nights_to_win)
+	if _pending_save.is_empty():
+		TimeManager.start_run()
+		PlaytestLog.write("run_started nights_to_win=%d" % nights_to_win)
+	else:
+		var data: Dictionary = _pending_save
+		_pending_save = {}
+		SaveManager.apply(data)
+		TimeManager.start_run(int(data["day"]) + 1)
+		PlaytestLog.write("run_continued nights_to_win=%d day=%d" % [nights_to_win, TimeManager.day_number])
 	run_started.emit()
 
 
@@ -123,6 +154,8 @@ func _reset_stats() -> void:
 		&"built": 0,
 		&"crafted": 0,
 		&"torches_placed": 0,
+		&"repairs": 0,
+		&"shards": 0,
 		&"nights_survived": 0,
 	}
 
@@ -168,6 +201,7 @@ func _on_xp_gained(_character: Node, _amount: int, source: StringName) -> void:
 ## Public entry for the HUD's task buttons.
 func assign_companion_task(task: int) -> void:
 	_assign_to_all_companions(task)
+	AudioManager.play_sfx(&"task")
 
 
 func _assign_to_all_companions(task: int) -> void:

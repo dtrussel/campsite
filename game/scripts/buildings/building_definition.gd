@@ -15,6 +15,10 @@ extends Resource
 @export var footprint_size: Vector3 = Vector3(1.0, 1.0, 1.0)
 @export var ui_color: Color = Color.WHITE
 @export var sort_order: int = 100        # lower comes first in the build menu
+## Sound when placed (AudioLibrary id).
+@export var place_sound: StringName = &"place"
+## Picture for the build hint (number keys follow sort_order).
+@export var icon: Texture2D = null
 
 
 ## Scenes are referenced by path (not PackedScene) because the scene

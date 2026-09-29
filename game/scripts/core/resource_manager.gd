@@ -11,6 +11,10 @@ extends Node
 
 signal resource_changed(id: StringName, new_value: int, delta: int)
 signal inventory_ready
+## Storage Crates were built or destroyed: caps changed.
+signal caps_changed
+
+const STORAGE_GROUP: StringName = &"storage"
 
 const ITEM_DIR: String = "res://resources/items/"
 
@@ -52,13 +56,46 @@ func has(id: StringName, amount: int) -> bool:
 	return get_count(id) >= amount
 
 
+## Adds up to the stash cap. Returns the new count; `room_for()` tells
+## callers beforehand whether anything fits.
 func add(id: StringName, amount: int) -> int:
 	if amount <= 0 or not _inventory.has(id):
 		return get_count(id)
-	var new_value: int = get_count(id) + amount
+	var added: int = mini(amount, room_for(id))
+	if added <= 0:
+		return get_count(id)
+	var new_value: int = get_count(id) + added
 	_inventory[id] = new_value
-	resource_changed.emit(id, new_value, amount)
+	resource_changed.emit(id, new_value, added)
 	return new_value
+
+
+## The stash limit for an item: base_cap per crate plus the camp's own
+## (0 = unlimited).
+func get_cap(id: StringName) -> int:
+	var definition: ResourceDefinition = get_definition(id)
+	if definition == null or definition.base_cap <= 0:
+		return 0
+	return definition.base_cap * (1 + get_storage_count())
+
+
+func get_storage_count() -> int:
+	return get_tree().get_nodes_in_group(STORAGE_GROUP).size() if is_inside_tree() else 0
+
+
+## How many more of an item fit (a big number when uncapped).
+func room_for(id: StringName) -> int:
+	var cap: int = get_cap(id)
+	return 1_000_000 if cap <= 0 else maxi(0, cap - get_count(id))
+
+
+func is_full(id: StringName) -> bool:
+	return room_for(id) <= 0
+
+
+## Called by Storage Crates when they are built or removed.
+func notify_caps_changed() -> void:
+	caps_changed.emit()
 
 
 func spend(id: StringName, amount: int) -> bool:

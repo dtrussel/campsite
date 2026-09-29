@@ -178,6 +178,7 @@ static func button(text: String, on_pressed: Callable, focusable: bool = true) -
 	result.text = text.to_upper()
 	result.custom_minimum_size = Vector2(280, 46)
 	result.focus_mode = Control.FOCUS_ALL if focusable else Control.FOCUS_NONE
+	result.pressed.connect(func() -> void: AudioManager.play_sfx(&"ui_click"))
 	result.pressed.connect(on_pressed)
 	return result
 
@@ -211,10 +212,12 @@ const PICTURE_GUIDE: Array = [
 	["mouse_right", "tree", "Chop"],
 	["mouse_right", "bush", "Pick"],
 	["mouse_right", "campfire", "Craft"],
+	["mouse_right", "glyph:hammer", "Fix"],
 	["key:Q", "torch", "Torch"],
 	["key:R", "berries", "Eat"],
+	["key:X", "bandage", "Nela"],
 	["key:B", "fence", "Build"],
-	["key:F G T Y", "portrait_nela", "Nela"],
+	["key:F G T Y V", "portrait_nela", "Nela"],
 	["key:N", "glyph:moon", "Night"],
 ]
 
@@ -265,7 +268,7 @@ static func goal_picture(nights: int = 3) -> HBoxContainer:
 	row.add_child(fire)
 	row.add_child(HudWidgets.Glyph.new("heart", Color(1.0, 0.4, 0.45), 40))
 	for i in range(nights):
-		row.add_child(HudWidgets.Glyph.new("moon", Color(1.0, 0.92, 0.55), 48))
+		row.add_child(HudWidgets.Glyph.new("moon", Color(1.0, 0.92, 0.55), 48 if nights <= 4 else 34))
 	return row
 
 

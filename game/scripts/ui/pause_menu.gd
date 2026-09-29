@@ -33,7 +33,31 @@ func _ready() -> void:
 	column.add_child(HudWidgets.icon_button("restart", "Again", _restart, UiKit.COLOR_GOLD, null, false))
 	column.add_child(HudWidgets.icon_button("home", "Home", _quit_to_title, UiKit.COLOR_GOLD, null, false))
 	column.add_child(HudWidgets.icon_button("close", "Quit", _quit_game, Color(1.0, 0.45, 0.4), null, false))
+	column.add_child(UiKit.divider(280))
+	column.add_child(_volume_row("Music", AudioManager.music_volume, AudioManager.set_music_volume))
+	column.add_child(_volume_row("Sounds", AudioManager.sfx_volume, AudioManager.set_sfx_volume))
 	_root.visible = false
+
+
+## A labelled 0..1 slider; changes apply (and are saved) as it moves.
+func _volume_row(caption: String, value: float, on_changed: Callable) -> HBoxContainer:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	var label: Label = UiKit.label(caption.to_upper(), 18)
+	label.custom_minimum_size = Vector2(96, 0)
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(label)
+	var slider: HSlider = HSlider.new()
+	slider.min_value = 0.0
+	slider.max_value = 1.0
+	slider.step = 0.05
+	slider.value = value
+	slider.custom_minimum_size = Vector2(160, 32)
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.focus_mode = Control.FOCUS_NONE
+	slider.value_changed.connect(on_changed)
+	row.add_child(slider)
+	return row
 
 
 func _unhandled_input(event: InputEvent) -> void:

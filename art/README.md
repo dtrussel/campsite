@@ -24,7 +24,16 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 | `lib/preview.py` | Preview renders |
 | `nature/` | Trees (3 variants + stump), autumn pines, rocks, berry bush |
 | `props/camp.py` | Campfire, tent, fence, watch post, torch, woodpile, crate, barrel, toadstools |
-| `characters/shadow_imp.py` | Brand-new imp body (metaballs along the Skeleton Minion rig, auto-weighted) with horns, wings, tail and glowing eyes |
+| `props/forage.py` | Feature 017: clay pit, mushroom patch and junk pile (each with a gathered variant), snap trap (base plus a jaw that Godot animates), glow lantern, glow shard, hearth ring. Feature 019: reinforced wall, storage crate, crafting table. Decimated to the 1.4k prop budget |
+| `props/haunted.py` | Feature 025: jack-o'-lantern (emissive face) and small pumpkin, camp lantern, water bucket, three dead trees, three hills and two mountains for the backdrop. Replaces the last KayKit props |
+| `characters/bramble_beast.py` | Feature 026 remodel of the Bramble Beast after `.features/026-bramble-remodel/reference/concept.png`: sculpted face, bark grain, moss mantle, log fists, antlers, leaf crown, berries, vines, thorns; lengthened forearms and wider legs on the Skeleton Minion rig; high-to-low bake |
+| `characters/beast_anims.py` | Feature 026: the beast's own hand-keyed clips (idle, walk, slam, hit, spawn, death, roar), replacing the rig's stock clips in its GLB |
+| `characters/mushroom_gremlin.py` | Feature 027 remodel of the Mushroom Gremlin after `.features/027-gremlin-remodel/reference/concept.png`: sculpted face under a wide spotted cap (amber eyes with pupils, brows, hooked nose, grin and fang), long pointed ears, clawed fingers and toes, satchel with a leaf pouch; high-to-low bake |
+| `characters/gremlin_anims.py` | Feature 027: the gremlin's own clips (idle, sneak, flee, grab, hit, spawn, death) |
+| `characters/rig_anims.py` | Shared helpers for hand-keyed clips on the Skeleton Minion rig (poses in rest axes, mirroring, keying) used by the imp, the beast and the gremlin |
+| `characters/shadow_imp.py` | Feature 028 remodel after `.features/028-imp-remodel/reference/concept.png`: big head with oversized glowing eyes and slit pupils, magenta brows, snout, fanged grin; pink bat ears, curled horns, spiky crest, small bat wings, S-curling arrow tail; lavender belly, magenta stripes, back chevrons, cream claws; high-to-low bake. Also holds the rig helpers the other creatures import |
+| `characters/imp_anims.py` | Feature 028: the imp's own clips (idle, run, attack, hit, spawn, death) |
+| `ui/key_art.py` | Feature 029: prepares the team's key art (`ui/source/key_art.png`) and the three monster paintings (`ui/source/loading_*.png`, feature 030) as loading-screen WebPs, and the boot splash with the gold CAMPSITE logo (Pillow) |
 | `characters/leo.py`, `nela.py` | Leo and Nela, modelled from the concept art on the KayKit adventurer rig (all 76 clips). The concept sheets are the reference for faces, outfits and gear (feature 012); each script's docstring lists what it follows |
 | `characters/chibi.py` | Kit for the kids: fused, auto-weighted clothing; rigid gear; face decals (eyes, brows, smile); hair locks; boots, backpack parts. `QUICK=1` previews without baking |
 | `characters/head_loft.py` | **Drawn game heads** (feature 014): a loft through superellipse sections (front outline and side profile per character) with a few planar forms: a wedge nose, inset eye plates, a brow shelf, cheek, lip and chin planes. The face itself is painted. Also the sculpted ears (`ear()`). Tune with a `HeadLoft` per character |
@@ -48,3 +57,23 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 - **Rigid gear** on characters is bound to one bone at weight 1.0.
   Weapons are built in the `handslot.r` bone frame: handle along +Y, blade
   toward -X.
+
+## Audio
+
+All sound is procedural too: numpy synthesis in `art/audio/`, written as
+`.ogg` to `game/assets/audio/` (committed, so neither the game nor Blender
+needs Python). `tools/build_audio.sh` creates `.venv-audio/` (numpy and
+soundfile) on first run.
+
+| Path | What |
+|------|------|
+| `audio/dsp.py` | Oscillators, envelopes, filters, a convolution reverb, and instruments: `pluck` (Karplus-Strong guitar), `bell`, `pad`, `knock` (wood), `owl`. `write()` normalises and encodes the result |
+| `audio/sfx.py` | One-shots in the `SOUNDS` table. Each id is written as `sfx/<id>_<n>.ogg` (variants). Ids match `Fx.burst` kinds where one exists |
+| `audio/music.py` | Seamless loops: `music/day.ogg`, `music/night.ogg`, and `ambience/{day,night,campfire}.ogg` |
+
+- **Tone:** warm, toy-like and never harsh (the players are young kids). Imps are silly ("poof" and a squeak), not scary.
+- **Adding a sound:**
+  1. Write a function and add it to `SOUNDS`.
+  2. Run `tools/build_audio.sh sfx <id>`.
+  3. Add the id to `volumes` in `game/resources/audio/audio_library.tres`. `validate_project` fails otherwise, and also when an `Fx.burst` kind has no sound.
+- **Loops** fold their tails back to the start, so they wrap without a seam. Music uses whole cycles; ambience uses a short crossfade.

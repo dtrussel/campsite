@@ -6,7 +6,10 @@
 >
 > **Status (2026-09):** Phases 0&ndash;7 done, plus an art &amp; feel pass
 > (feature 006: stylized KayKit art, VFX, LoL-style UI and controls).
-> Playtest 1 is next.
+> Art passes 007&ndash;015 (hand-painted Leo, Nela, imps and props) and
+> the audio &amp; feel pass (feature 016: procedural music, ambience and
+> sound effects, hit-stop, sunset cue) are done. Playtest 1 can run on
+> any of these builds. See "Next features" at the end for what follows.
 
 ## Phase 0 &mdash; Project foundation
 
@@ -196,6 +199,9 @@ enjoys it before we invest in save/load. Implemented by
 
 ## Phase 8 &mdash; Save/load prototype
 
+*Done in feature 020 as an autosave at dawn plus Continue, with a
+versioned `user://save.json`. No manual save or load menu.*
+
 **Goal:** the player can save and resume.
 
 **Deliverables**
@@ -223,3 +229,27 @@ planning is captured in new `.features/` folders as new goals are chosen:
 - Skill trees or alternative progression structures.
 - World expansion (multiple biomes, deeper forest).
 - Polish pass on art, audio, UI, juice.
+
+## Next features (agreed 2026-09)
+
+Chosen after the feature 016 review. They are gameplay-first, with an
+art track in parallel.
+
+| Feature | Goal |
+|---------|------|
+| 016 Audio &amp; feel | **Done.** Procedural sound for everything, music and ambience moods, hit-stop, sunset cue, volume settings. |
+| 017 Repair and resources | **Done.** Repair by Leo (hammer) and Nela (task V), and Feed the Fire. Clay pits, mushroom patches and junk piles; Glow Shards from imps. Berry Snack and Stone Hearth recipes; Snap Trap and Glow Lantern buildings. |
+| 018 Bramble Beast | **Done.** A slow, tanky siege mob that walks to the nearest building (×3 damage). Waves mix 0/1/2 beasts into nights 1/2/3. |
+| 019 Buildings | **Done.** Reinforced Wall; stash caps plus the Storage Crate; the Crafting Table with the Sturdy Stick, Slingshot, Bandage and Trap Refill. |
+| 020 Longer runs + save/load | **Done.** 3- or 7-night runs; autosave at dawn with Continue (Phase 8, as autosave). Endless mode was not chosen. |
+| 021 Mushroom Gremlin | **Done.** A fast thief: it steals up to 4 of the most plentiful resource from the stash (a crate, else the campfire) and runs. Caught, it drops the loot. Nights 2+ bring 1 or more. |
+| 022 Imp remodel | **Done.** The Shadow Imp is sculpted and painted in the kids' style: forms, claws, a head tuft, slit eyes and rune markings, with a high-to-low bake at 8.4k triangles. |
+| 023 Animation layering | **Done.** An AnimationTree per character: a walk/run blend, upper-body actions while moving, and a lean into turns. |
+| 024 Living world | **Done.** Trees and bushes sway in the wind, leaves and pollen drift by day, fireflies come out at night, and running feet kick up dust. |
+| 025 Painted props | **Done.** Painted jack-o'-lanterns, pumpkins, camp lanterns, water bucket, dead trees, hills and mountains replace the last KayKit props. Only the rigs and animations (and the axe icon) still come from KayKit. |
+| 026 Bramble Beast remodel | **Done.** Rebuilt after the team's concept art: a sculpted, painted tree golem (carved angry face, moss mantle, log fists, twig antlers, leaf crown, berries, vines). Its own clips: breathing idle, stomping walk, two-fist slam, flinch, rising spawn, kneeling death, chest-thump roar. The slam is telegraphed: damage lands at impact (0.55 s), kids can step away, and the impact kicks up dust with a thud and a small shake. |
+| 027 Mushroom Gremlin remodel | **Done.** Rebuilt after the team's concept: a cheeky mushroom goblin with a face under the cap (amber eyes, sly pupils, hooked nose, lopsided grin and fang), long pointed ears, clawed hands and feet, and a leaf-pouch satchel. Its own clips: shifty idle, tiptoe sneak, grab, satchel-clutching scurry (swapped in while it flees), flinch, pop-up spawn, plop death. |
+| 028 Shadow Imp remodel | **Done.** Rebuilt after the team's concept: big head with oversized glowing eyes and slit pupils, cheeky fanged grin, pink bat ears, curled horns, spiky crest, small bat wings, S-curling arrow tail, lavender belly and magenta stripes. Its own clips: bouncy crouch idle, hop-run, claw swipe, flinch, rise from the ground, tumble-over death. All mobs now have original models and clips. |
+| 029 Key-art splash | **Done.** The team's painted key art is the boot splash (with the gold logo) and a loading screen with kid-friendly tips while the camp loads on a background thread (no more freeze after Play). |
+| 030 More loading art | **Done.** Three more team paintings (imp, beast, gremlin) join the loading screen, each with matching tips; a load never repeats the previous picture. |
+| Next | Open: pick the next focus with the team (ideas: weather, more Nela tasks, a boss night). |

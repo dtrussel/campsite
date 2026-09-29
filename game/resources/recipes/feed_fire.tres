@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/crafting/crafting_recipe.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"feed_fire"
+display_name = "Feed the Fire"
+description = "Throw a log on the campfire: +20 campfire HP."
+inputs = {
+&"wood": 1
+}
+effect = &"feed_fire"
+icon_name = "campfire"
+xp_reward = 1
+sort_order = 5

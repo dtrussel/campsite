@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="CraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/crafting/crafting_recipe.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"berry_snack"
+display_name = "Berry Snack"
+description = "2 Berries and a Mushroom make a Berry Snack. Eat it with R: +35 HP."
+inputs = {
+&"berries": 2,
+&"mushrooms": 1
+}
+output_id = &"snack"
+output_amount = 1
+xp_reward = 3
+sort_order = 20

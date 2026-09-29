@@ -7,6 +7,8 @@ extends Node
 ##   Right/left click imp  -> attack it (walk into range, auto-attack)
 ##   Right/left click node -> walk over and gather
 ##   Right/left click fire -> walk over and open crafting
+##   Right/left click a damaged building -> walk over and repair it
+##   Right/left click a Crafting Table -> walk over and open crafting
 ## Also drives the hover feedback: a pulsing rim on the unit under the
 ## cursor, a context cursor (move / attack / gather / use), and the
 ## attack-range ring while an attack is targeted.
@@ -17,7 +19,7 @@ const PICK_MASK: int = 1 | 2 | 4 | 8
 const MOB_PICK_RADIUS: float = 1.0
 const NODE_PICK_RADIUS: float = 0.9
 
-enum Hover { NONE, GROUND, MOB, RESOURCE, CAMPFIRE }
+enum Hover { NONE, GROUND, MOB, RESOURCE, CAMPFIRE, REPAIR }
 
 var _player: Node3D = null
 var _hover_kind: int = Hover.NONE
@@ -30,7 +32,7 @@ var _cursors: Dictionary = {}  # Hover -> Texture2D
 
 
 func _ready() -> void:
-	for kind in [Hover.MOB, Hover.RESOURCE, Hover.CAMPFIRE]:
+	for kind in [Hover.MOB, Hover.RESOURCE, Hover.CAMPFIRE, Hover.REPAIR]:
 		var material: ShaderMaterial = ShaderMaterial.new()
 		material.shader = RIM_SHADER
 		material.set_shader_parameter("rim_color", _hover_color(kind))
@@ -74,6 +76,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		Hover.RESOURCE:
 			_player.command_gather(_hover_target)
 			_spawn_marker(_hover_target.global_position, Color(1.0, 0.85, 0.35))
+		Hover.REPAIR:
+			_player.command_repair(_hover_target)
+			_spawn_marker(_hover_target.global_position, Color(0.45, 1.0, 0.5))
 		Hover.CAMPFIRE:
 			_player.command_campfire(_hover_target)
 			_spawn_marker(_hover_target.global_position, Color(0.3, 0.95, 0.9))
@@ -117,6 +122,13 @@ func _pick_under_mouse() -> void:
 			_set_hover(Hover.RESOURCE, collider as Node3D)
 			return
 		if collider.is_in_group("base_core"):
+			_set_hover(Hover.CAMPFIRE, collider as Node3D)
+			return
+		if collider is Building and Repair.needs_repair(collider):
+			_set_hover(Hover.REPAIR, collider as Node3D)
+			return
+		if collider is CraftingTable:
+			# A second crafting station: same "walk over and craft" as the fire.
 			_set_hover(Hover.CAMPFIRE, collider as Node3D)
 			return
 	# Forgiving picks: small units near the cursor's ground point.
@@ -200,6 +212,8 @@ func _hover_color(kind: int) -> Color:
 			return Color(1.0, 0.82, 0.3)
 		Hover.CAMPFIRE:
 			return Color(0.25, 0.95, 0.9)
+		Hover.REPAIR:
+			return Color(0.45, 1.0, 0.5)
 	return Color.WHITE
 
 
@@ -277,6 +291,7 @@ func _build_cursors() -> void:
 		Hover.MOB: Color(1.0, 0.3, 0.25),
 		Hover.RESOURCE: Color(1.0, 0.9, 0.4),
 		Hover.CAMPFIRE: Color(0.3, 0.95, 0.9),
+		Hover.REPAIR: Color(0.5, 1.0, 0.55),
 	}
 	var arrow: PackedVector2Array = PackedVector2Array([
 		Vector2(2, 2), Vector2(2, 24), Vector2(8, 18), Vector2(12, 28),

@@ -17,8 +17,6 @@ trap 'rm -rf "$WORK"' EXIT
 PACKS=(
 	"KayKit-Character-Pack-Adventures-1.0|672074b73ba276876a19e8816ecdc5241817ab47|adventurers|Rogue.glb Mage.glb axe_1handed.gltf wand.gltf"
 	"KayKit-Character-Pack-Skeletons-1.0|15b62b9bad122f72926c10fb14d622c73819fa54|skeletons|Skeleton_Minion.glb"
-	"KayKit-Halloween-Bits-1.0|6dc69bf6b2fa766a985754f35ec6a0324090e6c6|halloween|tree_pine_orange_large.gltf tree_pine_orange_medium.gltf tree_pine_yellow_large.gltf tree_pine_yellow_medium.gltf tree_dead_large.gltf tree_dead_medium.gltf tree_dead_small.gltf pumpkin_orange.gltf pumpkin_orange_jackolantern.gltf pumpkin_yellow_small.gltf lantern_standing.gltf post_lantern.gltf candle_triple.gltf"
-	"KayKit-Medieval-Hexagon-Pack-1.0|84fa4e91af6a88989be7c99e0891cede11f2ca38|hexagon|tree_single_A.gltf tree_single_A_cut.gltf tree_single_B.gltf tree_single_B_cut.gltf trees_A_large.gltf trees_A_medium.gltf trees_B_large.gltf trees_B_medium.gltf rock_single_A.gltf rock_single_B.gltf rock_single_C.gltf rock_single_D.gltf rock_single_E.gltf hills_A_trees.gltf hills_B_trees.gltf hills_C_trees.gltf mountain_A_grass_trees.gltf mountain_B_grass_trees.gltf tent.gltf barrel.gltf crate_A_big.gltf crate_B_small.gltf sack.gltf resource_lumber.gltf resource_stone.gltf bucket_water.gltf wheelbarrow.gltf fence_wood_straight.gltf building_tower_A_green.gltf flag_green.gltf cloud_big.gltf cloud_small.gltf"
 )
 
 for entry in "${PACKS[@]}"; do

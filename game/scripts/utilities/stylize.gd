@@ -26,6 +26,10 @@ const PAINTED_SUFFIX: String = "_painted"
 ## levels) that multiplies the albedo, e.g. to warm up KayKit's teal
 ## trees or grey its white rocks.
 const TINT_META: StringName = &"style_tint"
+## Meta on a model (or any ancestor) whose painted meshes sway in the
+## wind: trees, pines and bushes (feature 024).
+const FOLIAGE_META: StringName = &"foliage"
+const FOLIAGE_SHADER: Shader = preload("res://shaders/painted_foliage.gdshader")
 
 ## Shared tints so the world stays colour-consistent.
 const TINT_FOLIAGE: Color = Color(0.92, 0.78, 0.48)
@@ -47,6 +51,7 @@ static func apply_mesh(mesh: MeshInstance3D, profile: String) -> void:
 	if mesh.mesh == null:
 		return
 	var is_eye: bool = profile == "shadow" and mesh.name.contains(EYE_MESH_HINT)
+	var foliage: bool = profile == "prop" and _has_meta_up(mesh, FOLIAGE_META)
 	var tint: Color = _find_tint(mesh)
 	for surface in range(mesh.mesh.get_surface_count()):
 		var source: Material = mesh.mesh.surface_get_material(surface)
@@ -54,6 +59,13 @@ static func apply_mesh(mesh: MeshInstance3D, profile: String) -> void:
 			source = mesh.get_surface_override_material(surface)
 		var base: StandardMaterial3D = source as StandardMaterial3D
 		if base == null:
+			continue
+		if foliage and base.resource_name.ends_with(PAINTED_SUFFIX) and not base.emission_enabled:
+			var aabb: AABB = mesh.mesh.get_aabb()
+			var foliage_key: String = "foliage|%d|%.2f|%.2f" % [base.get_instance_id(), aabb.position.y, aabb.size.y]
+			if not _cache.has(foliage_key):
+				_cache[foliage_key] = _make_foliage(base, aabb)
+			mesh.set_surface_override_material(surface, _cache[foliage_key])
 			continue
 		var key: String = "%d|%s|%s|%s" % [base.get_instance_id(), profile, is_eye, tint.to_html()]
 		if not _cache.has(key):
@@ -66,6 +78,28 @@ static func apply_mesh(mesh: MeshInstance3D, profile: String) -> void:
 			_cache[key] = made
 		mesh.set_surface_override_material(surface, _cache[key])
 	mesh.set_meta(&"stylized", profile)
+
+
+static func _has_meta_up(node: Node, meta: StringName) -> bool:
+	var current: Node = node
+	for i in range(6):
+		if current == null:
+			return false
+		if current.has_meta(meta):
+			return bool(current.get_meta(meta))
+		current = current.get_parent()
+	return false
+
+
+## Painted foliage that sways in the wind (see painted_foliage.gdshader).
+static func _make_foliage(base: StandardMaterial3D, aabb: AABB) -> ShaderMaterial:
+	var material: ShaderMaterial = ShaderMaterial.new()
+	material.shader = FOLIAGE_SHADER
+	material.set_shader_parameter("albedo_texture", base.albedo_texture)
+	material.set_shader_parameter("albedo_color", base.albedo_color)
+	material.set_shader_parameter("base_y", aabb.position.y)
+	material.set_shader_parameter("height", maxf(aabb.size.y, 0.1))
+	return material
 
 
 static func _find_tint(node: Node) -> Color:
