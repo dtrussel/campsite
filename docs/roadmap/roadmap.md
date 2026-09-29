@@ -242,4 +242,5 @@ art track in parallel.
 | 018 Bramble Beast | **Done.** A slow, tanky siege mob that walks to the nearest building (×3 damage). Waves mix 0/1/2 beasts into nights 1/2/3. |
 | 019 Buildings | **Done.** Reinforced Wall; stash caps plus the Storage Crate; the Crafting Table with the Sturdy Stick, Slingshot, Bandage and Trap Refill. |
 | 020 Longer runs + save/load | **Done.** 3- or 7-night runs; autosave at dawn with Continue (Phase 8, as autosave). Endless mode was not chosen. |
+| 021 Mushroom Gremlin | **Done.** A fast thief: it steals up to 4 of the most plentiful resource from the stash (a crate, else the campfire) and runs. Caught, it drops the loot. Nights 2+ bring 1 or more. |
 | Art (parallel) | Shadow Imp remodel with the hero pipeline, then gather, attack and hit animations, then painted environment and props. |

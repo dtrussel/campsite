@@ -14,6 +14,9 @@ extends CharacterBody3D
 ## purple smoke when defeated.
 
 signal defeated(mob: Node)
+## A thief grabbed loot from the stash, or got away with it.
+signal stole(mob: Node3D, item_id: StringName, amount: int)
+signal escaped(mob: Node3D, item_id: StringName, amount: int)
 
 enum State { MOVING_TO_TARGET, ATTACKING, DYING }
 
@@ -41,6 +44,13 @@ var _last_damage_source: Node = null
 var _knockback: Vector3 = Vector3.ZERO
 var _spawn_remaining: float = 0.0
 var _stun_remaining: float = 0.0
+# Thief state (feature 021).
+var loot_id: StringName = &""
+var loot_amount: int = 0
+var is_fleeing: bool = false
+var _home: Vector3 = Vector3.ZERO
+var _home_set: bool = false
+
 var _hp_bar: HealthBar3D = null
 
 @onready var _visual: CharacterVisual = get_node_or_null("Visual") as CharacterVisual
@@ -105,6 +115,7 @@ func _die() -> void:
 	if _hp_bar != null:
 		_hp_bar.visible = false
 	Fx.burst(definition.death_burst if definition != null else &"shadow_death", global_position + Vector3(0, 0.5, 0))
+	_drop_loot()
 	if _visual != null:
 		_visual.play_final(&"death")
 	var tween: Tween = create_tween()
@@ -112,6 +123,112 @@ func _die() -> void:
 	tween.tween_property(self, "scale", Vector3(1.0, 0.02, 1.0), CORPSE_SECONDS * 0.4) \
 		.set_ease(Tween.EASE_IN)
 	tween.tween_callback(queue_free)
+
+
+# --- Thief (Mushroom Gremlin) ----------------------------------------------
+
+const THIEF_ESCAPE_DISTANCE: float = 0.9
+
+
+func _tick_thief(delta: float) -> void:
+	if not _home_set:
+		_home = global_position
+		_home_set = true
+	var target: Vector3
+	if is_fleeing:
+		target = _home
+		if _flat_to(target).length() <= THIEF_ESCAPE_DISTANCE:
+			_escape()
+			return
+	else:
+		var stash: Node3D = _find_stash()
+		if stash == null:
+			is_fleeing = true
+			return
+		target = stash.global_position
+		if _flat_to(target).length() <= definition.attack_range + _footprint_radius(stash):
+			_steal()
+			is_fleeing = true
+			return
+	var to_target: Vector3 = _flat_to(target)
+	var speed: float = definition.move_speed * _torch_slow_factor()
+	velocity = to_target.normalized() * speed + _knockback
+	velocity.y = 0.0
+	move_and_slide()
+	_knockback = _knockback.move_toward(Vector3.ZERO, KNOCKBACK_DECAY * KNOCKBACK_DISTANCE * delta * 4.0)
+	if _visual != null:
+		_visual.set_locomotion(Vector2(velocity.x, velocity.z).length())
+		_visual.face(velocity, delta)
+
+
+func _flat_to(point: Vector3) -> Vector3:
+	var offset: Vector3 = point - global_position
+	offset.y = 0.0
+	return offset
+
+
+## The camp's stash: the nearest Storage Crate, else the campfire.
+func _find_stash() -> Node3D:
+	var best: Node3D = null
+	var best_d: float = INF
+	for node in get_tree().get_nodes_in_group(ResourceManager.STORAGE_GROUP):
+		var crate: Node3D = node as Node3D
+		var d: float = crate.global_position.distance_squared_to(global_position)
+		if d < best_d:
+			best_d = d
+			best = crate
+	return best if best != null else _base
+
+
+## Grabs up to steal_amount of the camp's most plentiful resource.
+func _steal() -> void:
+	var best: StringName = &""
+	var best_count: int = 0
+	for item in ResourceManager.get_definitions():
+		if item.base_cap <= 0:
+			continue  # crafted things (torches, snacks) are left alone
+		var count: int = ResourceManager.get_count(item.id)
+		if count > best_count:
+			best_count = count
+			best = item.id
+	if best == &"":
+		Fx.float_text(self, "?", Color(0.9, 0.8, 1.0), 1.4)
+		return
+	var amount: int = mini(definition.steal_amount, best_count)
+	ResourceManager.spend(best, amount)
+	loot_id = best
+	loot_amount = amount
+	var item_def: ResourceDefinition = ResourceManager.get_definition(best)
+	Fx.icon_popup(self, item_def.icon if item_def != null else null, "-%d" % amount, Color(1.0, 0.5, 0.45))
+	AudioManager.play_sfx(&"gremlin_steal", global_position)
+	GameManager.record(&"stolen", amount)
+	PlaytestLog.write("gremlin_stole id=%s amount=%d day=%d" % [best, amount, TimeManager.day_number])
+	stole.emit(self, best, amount)
+
+
+## Reached the forest edge: gone, with whatever it carries.
+func _escape() -> void:
+	state = State.DYING
+	remove_from_group("mobs")
+	if loot_amount > 0:
+		GameManager.record(&"stolen_lost", loot_amount)
+		escaped.emit(self, loot_id, loot_amount)
+	Fx.burst(definition.spawn_burst, global_position)
+	var tween: Tween = create_tween()
+	tween.tween_property(self, "scale", Vector3(0.05, 0.05, 0.05), 0.3)
+	tween.tween_callback(queue_free)
+
+
+## Caught: the loot spills out as a pickup (walk over it to get it back).
+func _drop_loot() -> void:
+	if loot_amount <= 0:
+		return
+	var pickup: Node3D = PICKUP_SCENE.instantiate() as Node3D
+	pickup.set("item_id", loot_id)
+	pickup.set("amount", loot_amount)
+	get_tree().current_scene.add_child(pickup)
+	pickup.global_position = Vector3(global_position.x, 0.0, global_position.z)
+	loot_amount = 0
 
 
 ## Holds the mob in place (snap traps). Longer stuns replace shorter.
@@ -163,6 +280,9 @@ func _physics_process(delta: float) -> void:
 		return
 	if _base == null or not is_instance_valid(_base):
 		_refresh_base()
+	if definition.steals_resources:
+		_tick_thief(delta)
+		return
 
 	# Drop an attack target that has been destroyed.
 	if _attack_target != null and not is_instance_valid(_attack_target):

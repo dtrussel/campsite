@@ -295,6 +295,15 @@ data only.
 
 Implement **Shadow Imp** only.
 
+*Feature 021:* the **Mushroom Gremlin** is in.
+- It runs to the stash (a Storage Crate, else the campfire) and takes up
+  to 4 of the most plentiful raw resource.
+- Then it flees to its spawn point.
+- Caught, it drops the loot as a pickup; escaped, the loot is gone.
+- It has 8 HP, is fast, and ignores the kids.
+- Waves: nights 1–3 have 0, 1, 1 gremlins, then +1 per night, in the
+  first half of the wave.
+
 *Feature 018:* the **Bramble Beast** is in.
 - It walks to the nearest building and tears it down (×3 damage), then
   goes for the campfire.

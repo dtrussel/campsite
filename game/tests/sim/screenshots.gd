@@ -105,6 +105,16 @@ func _ready() -> void:
 	var beast: Node3D = (load("res://scenes/mobs/BrambleBeast.tscn") as PackedScene).instantiate() as Node3D
 	get_tree().current_scene.add_child(beast)
 	beast.global_position = Vector3(6.5, 0, 7.5)
+	# Feature 021: a Mushroom Gremlin, and the loot a caught one dropped.
+	var gremlin: Node3D = (load("res://scenes/mobs/MushroomGremlin.tscn") as PackedScene).instantiate() as Node3D
+	get_tree().current_scene.add_child(gremlin)
+	gremlin.global_position = Vector3(1.8, 0, 6.2)
+	gremlin.set_physics_process(false)  # hold still for the picture
+	var loot: Node3D = (load("res://scenes/world/ItemPickup.tscn") as PackedScene).instantiate() as Node3D
+	loot.set("item_id", &"stone")
+	loot.set("amount", 4)
+	get_tree().current_scene.add_child(loot)
+	loot.global_position = Vector3(-2.5, 0, 5.5)
 	Engine.time_scale = 3.0
 	await get_tree().create_timer(4.0, true, false, true).timeout
 	Engine.time_scale = 1.0

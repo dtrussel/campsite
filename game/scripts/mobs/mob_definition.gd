@@ -25,6 +25,12 @@ extends Resource
 @export var building_damage_multiplier: float = 1.0
 ## How far hits push this mob back (0 = immovable, 1 = an imp).
 @export var knockback_scale: float = 1.0
+## Thieves (Mushroom Gremlin, feature 021) ignore everyone, run to the
+## camp's stash (a Storage Crate, else the campfire), grab up to
+## `steal_amount` of the most plentiful resource and run back to the
+## forest. Caught, they drop the loot; escaped, it is gone.
+@export var steals_resources: bool = false
+@export var steal_amount: int = 4
 ## Fx.burst kinds (and sounds) for rising out of the ground and dying.
 @export var spawn_burst: StringName = &"shadow_spawn"
 @export var death_burst: StringName = &"shadow_death"

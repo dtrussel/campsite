@@ -557,9 +557,20 @@ func _pulse_vignette(color: Color) -> void:
 
 
 ## A heavy mob gets its own warning: kids should run to their fences.
-func _on_mob_spawned(_mob: Node3D, definition: MobDefinition) -> void:
+func _on_mob_spawned(mob: Node3D, definition: MobDefinition) -> void:
 	if definition != null and definition.prefers_buildings:
 		show_banner("%s!" % definition.display_name, Color(0.6, 0.9, 0.35))
+	elif definition != null and definition.steals_resources:
+		show_banner("%s!" % definition.display_name, Color(0.85, 0.55, 1.0))
+		mob.stole.connect(func(_m: Node3D, item: StringName, amount: int) -> void:
+			show_banner("Thief! -%d %s" % [amount, _item_name(item)], Color(1.0, 0.55, 0.5)))
+		mob.escaped.connect(func(_m: Node3D, item: StringName, amount: int) -> void:
+			show_banner("It got away with %d %s!" % [amount, _item_name(item)], Color(1.0, 0.55, 0.5)))
+
+
+func _item_name(id: StringName) -> String:
+	var definition: ResourceDefinition = ResourceManager.get_definition(id)
+	return definition.display_name if definition != null else String(id)
 
 
 func _on_night_started(day_number: int) -> void:

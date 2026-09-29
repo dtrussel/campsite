@@ -270,6 +270,7 @@ func _check_feature_017(player: Node3D, companion: Node3D, fence: Building) -> v
 
 	await _check_bramble_beast(player)
 	await _check_feature_019(player, companion)
+	await _check_mushroom_gremlin(player)
 
 
 ## Feature 019: stash caps, the Storage Crate, the Reinforced Wall and
@@ -341,6 +342,63 @@ func _check_feature_019(player: Node3D, companion: Node3D) -> void:
 	await get_tree().process_frame
 
 
+## Feature 021: Mushroom Gremlins steal from the stash and run; caught,
+## they drop the loot; escaped, it is gone.
+func _check_mushroom_gremlin(player: Node3D) -> void:
+	var spawner: Node = get_tree().get_first_node_in_group("mob_spawner")
+	var gremlin_def: MobDefinition = spawner.get("sneak_definition")
+	_check(gremlin_def != null and gremlin_def.steals_resources, "spawner has a thief (mushroom gremlin)")
+	var wave: Array = spawner.build_wave(2)
+	var first: int = wave.find(gremlin_def)
+	_check(first >= 0 and first < wave.size() / 2, "night 2: the gremlin sneaks in early")
+
+	# It steals the most plentiful resource from the campfire stash...
+	for item in [&"wood", &"stone", &"berries", &"fiber", &"leaves", &"resin", &"clay", &"mushrooms", &"scrap", &"glow_shards"]:
+		ResourceManager.spend(item, ResourceManager.get_count(item))
+	ResourceManager.add(&"stone", 10)
+	ResourceManager.add(&"wood", 3)
+	player.global_position = Vector3(-12, 0, -8)  # out of the way
+	var thief: Mob = _spawn_mob(gremlin_def, Vector3(0, 0, 12))
+	var t: float = 0.0
+	while int(thief.get("loot_amount")) == 0 and t < 15.0:
+		await _wait(0.25)
+		t += 0.25
+	_check(thief.loot_id == &"stone" and thief.loot_amount == 4 and ResourceManager.get_count(&"stone") == 6,
+		"gremlin stole 4 stone (%.1fs)" % t)
+	_check(thief.is_fleeing and ResourceManager.get_count(&"wood") == 3, "it runs off and leaves the wood")
+	# ...and drops it when caught.
+	var at: Vector3 = thief.global_position
+	thief.take_damage(999, player)
+	await get_tree().process_frame
+	var loot: Node3D = null
+	for pickup in get_tree().get_nodes_in_group("pickups"):
+		if pickup.get("item_id") == &"stone" and (pickup as Node3D).global_position.distance_to(Vector3(at.x, 0, at.z)) < 1.0:
+			loot = pickup
+	_check(loot != null and int(loot.get("amount")) == 4, "caught gremlin dropped its loot")
+	if loot != null:
+		player.global_position = loot.global_position
+		await _wait(0.3)
+		_check(ResourceManager.get_count(&"stone") == 10, "walking over the loot got it back")
+
+	# An escaped gremlin keeps what it took.
+	var lost_before: int = int(GameManager.stats.get(&"stolen_lost", 0))
+	player.global_position = Vector3(-12, 0, -8)
+	var runner: Mob = _spawn_mob(gremlin_def, Vector3(0, 0, 12))
+	t = 0.0
+	while is_instance_valid(runner) and t < 20.0:
+		await _wait(0.25)
+		t += 0.25
+	_check(not is_instance_valid(runner) and int(GameManager.stats.get(&"stolen_lost", 0)) == lost_before + 4
+		and ResourceManager.get_count(&"stone") == 6, "escaped gremlin got away with 4 stone (%.1fs)" % t)
+
+
+func _spawn_mob(definition: MobDefinition, position: Vector3) -> Mob:
+	var mob: Mob = definition.get_scene().instantiate() as Mob
+	get_tree().current_scene.add_child(mob)
+	mob.global_position = position
+	return mob
+
+
 func _spawn_building(id: StringName, position: Vector3) -> Building:
 	var building: Building = BuildManager.get_definition(id).get_scene().instantiate() as Building
 	get_tree().current_scene.add_child(building)
@@ -356,8 +414,10 @@ func _check_bramble_beast(player: Node3D) -> void:
 	for night in [1, 2, 3]:
 		var wave: Array = spawner.build_wave(night)
 		var beasts: int = wave.count(beast_def)
-		_check(beasts == spawner.get_heavy_count(night) and wave.size() == spawner.get_wave_size(night) + beasts,
-			"night %d wave: %d imps + %d beasts" % [night, wave.size() - beasts, beasts])
+		var sneaks: int = wave.count(spawner.get("sneak_definition"))
+		_check(beasts == spawner.get_heavy_count(night) and sneaks == spawner.get_sneak_count(night)
+			and wave.size() == spawner.get_wave_size(night) + beasts + sneaks,
+			"night %d wave: %d imps + %d beasts + %d gremlins" % [night, wave.size() - beasts - sneaks, beasts, sneaks])
 		if beasts > 0:
 			_check(wave.find(beast_def) >= wave.size() / 2 - 1, "night %d: beasts come in the second half" % night)
 

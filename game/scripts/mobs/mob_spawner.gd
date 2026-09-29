@@ -6,7 +6,8 @@ extends Node3D
 ## wave of mobs from this node's Marker3D children (random pick per
 ## spawn). Stops if BaseCore is destroyed. A wave is `get_wave_size()`
 ## imps with `get_heavy_count()` heavy mobs (Bramble Beasts, feature
-## 018) mixed into its second half.
+## 018) mixed into its second half and `get_sneak_count()` thieves
+## (Mushroom Gremlins, feature 021) in its first half.
 
 signal wave_started(night_number: int, mob_count: int)
 signal wave_ended
@@ -22,6 +23,11 @@ signal mob_spawned(mob: Node3D, definition: MobDefinition)
 @export var heavy_definition: MobDefinition
 @export var heavy_counts: PackedInt32Array = PackedInt32Array([0, 1, 2])
 @export var heavy_per_night_extra: int = 1
+## Thieves (Mushroom Gremlins, feature 021) per night, mixed into the
+## first half so they sneak in while the imps keep the kids busy.
+@export var sneak_definition: MobDefinition
+@export var sneak_counts: PackedInt32Array = PackedInt32Array([0, 1, 1])
+@export var sneak_per_night_extra: int = 1
 @export var spawn_interval_seconds: float = 4.0
 @export var initial_delay_seconds: float = 2.0
 
@@ -91,12 +97,24 @@ func get_wave_size(night: int) -> int:
 
 
 func get_heavy_count(night: int) -> int:
-	if heavy_definition == null or heavy_counts.is_empty():
+	if heavy_definition == null:
+		return 0
+	return _count_for(heavy_counts, heavy_per_night_extra, night)
+
+
+func get_sneak_count(night: int) -> int:
+	if sneak_definition == null:
+		return 0
+	return _count_for(sneak_counts, sneak_per_night_extra, night)
+
+
+func _count_for(counts: PackedInt32Array, extra: int, night: int) -> int:
+	if counts.is_empty():
 		return 0
 	var index: int = night - 1
-	if index < heavy_counts.size():
-		return heavy_counts[max(0, index)]
-	return heavy_counts[heavy_counts.size() - 1] + heavy_per_night_extra * (index - heavy_counts.size() + 1)
+	if index < counts.size():
+		return counts[max(0, index)]
+	return counts[counts.size() - 1] + extra * (index - counts.size() + 1)
 
 
 ## The spawn order for a night: imps first, heavies spread through the
@@ -109,6 +127,10 @@ func build_wave(night: int) -> Array[MobDefinition]:
 	for k in heavies:
 		var at: int = wave.size() / 2 + int(float(k) * wave.size() / float(heavies * 2))
 		wave.insert(clampi(at, 0, wave.size()), heavy_definition)
+	var sneaks: int = get_sneak_count(night)
+	for k in sneaks:
+		var at_sneak: int = 1 + int(float(k) * wave.size() / float(sneaks * 2))
+		wave.insert(clampi(at_sneak, 0, wave.size()), sneak_definition)
 	return wave
 
 

@@ -1,0 +1,36 @@
+[gd_scene load_steps=6 format=3 uid="uid://b0campsitemobgremlin01"]
+
+[ext_resource type="Script" path="res://scripts/mobs/mob_controller.gd" id="1_mob"]
+[ext_resource type="Resource" uid="uid://b0campsitemobdefgremlin" path="res://resources/mobs/mushroom_gremlin.tres" id="2_def"]
+[ext_resource type="Script" path="res://scripts/utilities/character_visual.gd" id="3_visual"]
+[ext_resource type="PackedScene" path="res://assets/custom/mushroom_gremlin.glb" id="4_model"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_mob"]
+radius = 0.28
+height = 0.9
+
+[node name="MushroomGremlin" type="CharacterBody3D"]
+collision_layer = 8
+collision_mask = 5
+script = ExtResource("1_mob")
+definition = ExtResource("2_def")
+hp_bar_height = 1.45
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+shape = SubResource("CapsuleShape3D_mob")
+
+[node name="Visual" type="Node3D" parent="."]
+script = ExtResource("3_visual")
+model_scale = 0.55
+model_scene = ExtResource("4_model")
+style = "shadow"
+clips = {
+&"attack": "Unarmed_Melee_Attack_Punch_A",
+&"death": "Death_C_Skeletons",
+&"hit": "Hit_B",
+&"idle": "Idle_Combat",
+&"move": "Walking_D_Skeletons",
+&"spawn": "Skeletons_Awaken_Floor"
+}
+reference_speed = 2.2

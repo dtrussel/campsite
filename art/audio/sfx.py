@@ -344,6 +344,39 @@ def bandage(v):
     return reverb(out, 0.3, 1.1)
 
 
+def gremlin_spawn(v):
+    """A Mushroom Gremlin pops up: a soft spore puff and a sneaky giggle."""
+    out = silence(1.2)
+    puff = lowpass(noise(0.4, 600 + v), 1500) * env_perc(0.4, 0.01, 0.08) * 0.8
+    place(out, puff, 0.0)
+    for k in range(5):
+        f0 = 900 + 120 * v + (80 if k % 2 else 0)
+        hee = sine(sweep(f0, f0 * 1.35, 0.07, 0.6), 0.07) * env_adsr(0.07, 0.005, 0.03)
+        place(out, hee * 0.5, 0.25 + k * 0.09)
+    return reverb(out, 0.2, 0.8)
+
+
+def gremlin_steal(v):
+    """Yoink! A slide-whistle swoop up and a jingle of loot."""
+    d = 0.9
+    out = silence(d)
+    swoop = sine(sweep(500, 1500 + 200 * v, 0.3, 0.8), 0.3) * env_adsr(0.3, 0.01, 0.08) * 0.6
+    place(out, swoop, 0.0)
+    for k in range(4):
+        place(out, bell(midi_hz(88 + (k % 2) * 3 + v), 0.35, 0.8) * 0.25, 0.28 + k * 0.05)
+    return reverb(out, 0.2, 0.7)
+
+
+def gremlin_death(v):
+    """Caught: a soft spore pop and a surprised squeak."""
+    d = 0.8
+    pop = lowpass(noise(d, 620 + v), sweep(2500, 300, d)) * env_perc(d, 0.002, 0.06) * 1.8
+    squeak = sine(sweep(1300 + 100 * v, 500, 0.2, 0.6), 0.2) * env_adsr(0.2, 0.005, 0.08) * 0.45
+    out = pop
+    place(out, squeak, 0.02)
+    return reverb(out, 0.2, 0.7)
+
+
 def camp_hit(v):
     """Imp hitting the campfire: a thud and a spray of sparks."""
     d = 0.6
@@ -418,6 +451,9 @@ SOUNDS = {
     "bramble_spawn": (bramble_spawn, 2),
     "bramble_death": (bramble_death, 2),
     "stone_place": (stone_place, 2),
+    "gremlin_spawn": (gremlin_spawn, 2),
+    "gremlin_steal": (gremlin_steal, 2),
+    "gremlin_death": (gremlin_death, 2),
     "bandage": (bandage, 2),
     "sunset": (sunset, 1),
     "win": (win, 1),
