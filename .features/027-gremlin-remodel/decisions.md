@@ -20,3 +20,14 @@
   the upper body if it is already moving.
 - **Shared keying helpers.** `rig_anims.py` holds the pose, mirror and
   key code for any Skeleton Minion creature. The imp could use it next.
+
+## Follow-up: face visibility (team request)
+
+- **Game camera:** pitch lowered from 56° to 48° (`camera_follow.gd`),
+  so everyone's faces show a little more.
+- **Smaller cap:** radius 0.58 → 0.48 and height 0.5 → 0.42. The ears
+  are a bit shorter (0.66) to keep the wide silhouette in proportion.
+- **The crouch keeps the head up.** Head −52° (−58° when fleeing), so
+  the face points at the camera instead of hiding under the cap.
+- **Paint and glow:** the skin is a touch darker (it blew out to white
+  under the house lighting) and the eyes glow more strongly (3.2).

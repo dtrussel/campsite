@@ -26,7 +26,7 @@ def claws_up(amount=30.0):
     return P(wrist_l=[("Z", -amount)], wrist_r=[("Z", amount)])
 
 
-def crouch(spine=30.0, head=-36.0, roll=0.0, twist=0.0, hips_z=-0.12):
+def crouch(spine=30.0, head=-52.0, roll=0.0, twist=0.0, hips_z=-0.12):
     return torso(spine=spine, chest=6.0, head=head, roll=roll, twist=twist, hips_z=hips_z)
 
 
@@ -59,10 +59,10 @@ def sneak():
 def flee():
     """A fast, low scurry, one arm clutching the satchel."""
     clutch = P(upperarm_l=[("Y", 70.0), ("X", 10.0)], lowerarm_l=[("Z", -75.0)])
-    stride = (crouch(spine=40.0, head=-44.0, roll=-3.0, hips_z=-0.1) + clutch
+    stride = (crouch(spine=40.0, head=-58.0, roll=-3.0, hips_z=-0.1) + clutch
               + P(upperarm_r=[("Y", -55.0), ("X", -45.0)], lowerarm_r=[("Z", 60.0)])
               + legs(swing_l=55.0, swing_r=-20.0, knee_l=40.0, knee_r=70.0, wide=6.0, foot_l=15.0, foot_r=-20.0))
-    push = (crouch(spine=40.0, head=-44.0, roll=3.0, hips_z=-0.06) + clutch
+    push = (crouch(spine=40.0, head=-58.0, roll=3.0, hips_z=-0.06) + clutch
             + P(upperarm_r=[("Y", -60.0), ("X", 25.0)], lowerarm_r=[("Z", 50.0)])
             + legs(swing_l=-20.0, swing_r=55.0, knee_l=70.0, knee_r=40.0, wide=6.0, foot_l=-20.0, foot_r=15.0))
     return [(0, stride), (6, push), (12, stride)]

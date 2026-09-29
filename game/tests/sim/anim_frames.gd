@@ -124,4 +124,15 @@ func _gremlin_frames(player: Node3D) -> void:
 	for i in 3:
 		await _settle(0.3)
 		_shot("gremlin_death_%d" % i)
+	# One that stands still facing the camera, to judge the face.
+	var poser: Node3D = gremlin_def.get_scene().instantiate() as Node3D
+	get_tree().current_scene.add_child(poser)
+	poser.global_position = player.global_position + Vector3(1.4, 0, 0.6)
+	await _settle(2.2)
+	poser.process_mode = Node.PROCESS_MODE_DISABLED
+	var visual: CharacterVisual = poser.get_node("Visual") as CharacterVisual
+	visual.process_mode = Node.PROCESS_MODE_ALWAYS
+	visual.face_instantly(Vector3(0, 0, 1))
+	await _settle(0.5)
+	_shot("gremlin_face_0")
 

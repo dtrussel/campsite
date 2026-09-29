@@ -18,3 +18,13 @@
 - **Balance sim** (3 nights): unchanged, won with the fire at 102/150.
 - Refactor check: after moving the helpers to `rig_anims.py`, the
   beast's animation data is identical.
+
+## 2026-09-29 (follow-up)
+
+- Lowered the camera to 48°, gave the gremlin a smaller cap, raised
+  its head, and made the eyes stronger and the skin darker.
+- Checked with a new filmstrip shot of a gremlin facing the camera at
+  gameplay zoom (`gremlin_face_0`): the eyes, nose and ears read under
+  the cap.
+- `tools/check.sh` passes; the regular screenshots look right at the
+  new angle.

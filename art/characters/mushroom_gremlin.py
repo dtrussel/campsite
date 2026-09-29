@@ -36,8 +36,8 @@ from characters import chibi  # noqa: E402
 from characters.shadow_imp import DEFORM, bone_points, curved_tube, rigid  # noqa: E402
 from characters.bramble_beast import _smooth01, leaf, place, surface_point  # noqa: E402
 
-SKIN = (0.87, 0.83, 0.75)
-SKIN_SHADE = (0.7, 0.65, 0.6)
+SKIN = (0.8, 0.75, 0.68)
+SKIN_SHADE = (0.64, 0.58, 0.54)
 SKIN_DARK = (0.6, 0.54, 0.5)
 SPOT = (0.55, 0.42, 0.5)
 BLUSH = (0.78, 0.5, 0.58)
@@ -56,7 +56,7 @@ GILL_DARK = (0.66, 0.52, 0.52)
 POUCH = (0.4, 0.48, 0.2)
 POUCH_DARK = (0.26, 0.32, 0.12)
 STRAP = (0.5, 0.42, 0.26)
-EYE = (1.0, 0.72, 0.2)
+EYE = (1.0, 0.62, 0.1)
 PUPIL = (0.14, 0.06, 0.02)
 
 ## Triangle budget of the game mesh (with the eyes, 9k at most).
@@ -67,8 +67,8 @@ EYE_Z = 1.45
 EYE_X = 0.12
 MOUTH_Z = 1.3
 CAP_BASE = 1.6
-CAP_R = 0.58
-CAP_H = 0.5
+CAP_R = 0.48
+CAP_H = 0.42
 CAP_TILT = math.radians(-18)   # brim up at the front, so the face shows
 
 
@@ -240,7 +240,7 @@ def cap():
 def ear(side, body):
     """A long, flat, pointed ear sticking out sideways, drooping a little
     and curling up at the tip; the pink inner side faces forward."""
-    length, width = 0.74, 0.26
+    length, width = 0.66, 0.25
     rows, cols = 12, 6
     bm = bmesh.new()
     grid = []
@@ -453,7 +453,7 @@ def eyes(body):
         pupils.append(common.mesh_object("pupil", bm))
     glow = common.join(glows, "MushroomGremlin_Eyes")
     common.shade_smooth(glow)
-    paint_bake.flat_material(glow, EYE, emission=2.0, name="gremlin_eye_glow")
+    paint_bake.flat_material(glow, EYE, emission=3.2, name="gremlin_eye_glow")
     dark = common.join(pupils, "MushroomGremlin_Pupils")
     common.shade_smooth(dark)
     paint_bake.flat_material(dark, PUPIL, name="gremlin_pupil")

@@ -17,6 +17,8 @@
   `BAKE_SIZE=512` gives a fast draft and `CLAY=1` gives clay views.
 - **Poses:** `art/characters/gremlin_anims.py` (`SNEAK` is the base
   crouch; `DROOP` is the hand droop).
+- **Camera angle:** `pitch_degrees` in
+  `game/scripts/utilities/camera_follow.gd` (48°).
 - **In game:** `model_scale`, `reference_speed` and `step_distance` in
   `MushroomGremlin.tscn`.
 
