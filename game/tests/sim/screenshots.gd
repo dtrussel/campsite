@@ -123,6 +123,14 @@ func _ready() -> void:
 	_shot("06_night_wave")
 	await get_tree().create_timer(3.0, true, false, true).timeout
 	_shot("07_night_later")
+	# Feature 022: the remodelled Shadow Imp up close, next to Leo.
+	for offset in [Vector3(-1.4, 0, 1.2), Vector3(1.5, 0, 1.0)]:
+		var imp: Node3D = (load("res://scenes/mobs/ShadowImp.tscn") as PackedScene).instantiate() as Node3D
+		get_tree().current_scene.add_child(imp)
+		imp.global_position = player.global_position + offset
+		imp.set_physics_process(false)
+	await _settle(2.2)  # past the rise-from-the-ground animation
+	_shot("07b_imp_closeup")
 	var pause: Node = main.get_node("PauseMenu")
 	pause.get("_root").visible = true
 	await _settle(0.2)

@@ -13,7 +13,7 @@ fragile camping trip into a magical woodland fortress.
 
 ## Status
 
-**Prototype, ready for first playtest (v0.16.0-playtest1).** Hand-painted,
+**Prototype, ready for first playtest (v0.17.0-playtest1).** Hand-painted,
 LoL-inspired 3D art: **Leo** (the big brother, played by you), his little
 sister **Nela**, the Shadow Imps, trees, rocks, camp props and the painted
 ground are modelled, painted and texture-baked by the scripts in
@@ -197,7 +197,7 @@ Start here if you are a new contributor or coding agent:
 6. [Test strategy](docs/testing/test-strategy.md)
 7. [ADR-0001: Engine & language selection](docs/decisions/ADR-0001-engine-and-language-selection.md)
 8. [Agent feature workflow](.features/README.md)
-9. [Latest feature handoff](.features/021-mushroom-gremlin/handoff.md)
+9. [Latest feature handoff](.features/022-imp-remodel/handoff.md)
 10. [Playtest 001 script](docs/testing/playtest-001.md)
 
 ## Development workflow

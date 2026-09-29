@@ -64,14 +64,15 @@ func _ready() -> void:
 	for job in jobs:
 		if only.is_empty() or only.has(job[0]):
 			await _render(job[0], (job[1] as Callable).call(), job[2], job[3], job[4], job[5])
-	if not only.is_empty():
-		print("render_icons: done")
-		get_tree().quit()
-		return
 	# Portraits: head-and-shoulders of each character.
-	await _portrait("portrait_leo", "custom/leo.glb", "hero", ["Leo_Stick"], 0.48, 2.4)
-	await _portrait("portrait_nela", "custom/nela.glb", "hero", ["Nela_Lantern", "Nela_LanternGlow"], 0.16, 2.7)
-	await _portrait("portrait_imp", "custom/shadow_imp.glb", "shadow", [], -0.12, 3.1)
+	var portraits: Array = [
+		["portrait_leo", "custom/leo.glb", "hero", ["Leo_Stick"], 0.48, 2.4],
+		["portrait_nela", "custom/nela.glb", "hero", ["Nela_Lantern", "Nela_LanternGlow"], 0.16, 2.7],
+		["portrait_imp", "custom/shadow_imp.glb", "shadow", [], -0.12, 3.1],
+	]
+	for p in portraits:
+		if only.is_empty() or only.has(p[0]):
+			await _portrait(p[0], p[1], p[2], p[3], p[4], p[5])
 	print("render_icons: done")
 	get_tree().quit()
 
