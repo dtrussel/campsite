@@ -63,7 +63,7 @@ The user asks: other games' characters use far fewer polygons, so should the bud
   - The stripes, folds and face paint must match the current look.
   - Then discard the draft outputs (`git checkout` the GLBs, delete `*_paint.webp`, `.import` and `game/tools/_review`).
 - Then the pending ship steps:
-  - the final 2K bake and Godot reimport;
+  - the final 1K bake (switched from 2K at the user's request) and Godot reimport;
   - `render_icons`;
   - recheck the HP bar heights;
   - `tools/check.sh`;

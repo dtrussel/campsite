@@ -669,7 +669,7 @@ def build():
         print("leo tris:", common.triangle_count(meshes))
         render_previews(rig, meshes, head, "leo", ("Running_A", 8), ("1H_Melee_Attack_Chop", 14), ("PickUp", 12), ("Death_A", 40))
         return
-    params = dict(size=2048, ao_distance=0.18, ao_strength=0.65, edge_strength=0.3, edge_radius=0.012,
+    params = dict(size=1024, ao_distance=0.18, ao_strength=0.65, edge_strength=0.3, edge_radius=0.012,
                   noise_scale=6.0, stroke_strength=0.08, light=(1.12, 1.04, 0.94), shadow=(0.42, 0.36, 0.55),
                   foot_darken=0.4, foot_height=1.1, key_light=(-0.4, -0.6, 0.8), key_strength=0.55,
                   curvature_tint=((0.72, 0.55, 0.5), (1.1, 1.08, 1.12), 0.85))

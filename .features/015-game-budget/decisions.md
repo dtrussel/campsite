@@ -13,3 +13,6 @@
 - **Budgets per mesh:**
   - Leo: body 20k, head and ears 4.5k, hair 9k, stick 1.5k.
   - Nela: body 18k, head and ears 4.5k, hair 10k, lantern 1.5k, bunny 1.5k.
+- **Textures: 1024, down from 2048 (user decision).**
+  - The kids are under 100 px on screen, including the title backdrop, and the portraits are 128 px.
+  - A 1k head texture still gives the face about 500 texels across.
