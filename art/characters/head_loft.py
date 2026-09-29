@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 
 import bmesh
 import numpy as np
+from mathutils import Matrix, Vector
 
 from lib import common
 from characters import chibi
@@ -183,4 +184,39 @@ def build_head(head, L, S, skin, skin_shade, blush, name="head"):
     common.shade_smooth(obj)
     head.bind(obj)
     common.color_by(obj, lambda p, nrm: common.lerp(skin, skin_shade, max(0.0, min(1.0, -nrm.z * 0.7))))
+    return obj
+
+
+def ear(head, side, yaw=1.52, pitch=-0.12, size=1.0, tilt=0.35, out=0.018, colour=None, shade=None):
+    """A stylised sculpted ear: a flattened shell with a rolled helix rim,
+    a cupped concha and a small tragus, angled back and out."""
+    s = size
+    # Local frame: X out from the head, Y back, Z up.
+    outline = [(0.0, -0.012 * s, -0.038 * s), (0.0, -0.022 * s, -0.008 * s), (0.0, -0.02 * s, 0.026 * s),
+               (0.0, 0.0, 0.046 * s), (0.0, 0.022 * s, 0.036 * s), (0.0, 0.03 * s, 0.006 * s),
+               (0.0, 0.022 * s, -0.026 * s), (0.0, 0.006 * s, -0.05 * s), (0.0, -0.01 * s, -0.056 * s)]
+    shell = chibi.ellipsoid((0.004 * s, 0.004 * s, -0.004 * s), (0.012 * s, 0.028 * s, 0.05 * s), name="ear",
+                            segs=(20, 14))
+    rim = chibi.tube([Vector(q) + Vector((0.008 * s, 0, 0)) for q in outline],
+                     [0.008 * s, 0.009 * s, 0.009 * s, 0.009 * s, 0.009 * s, 0.009 * s, 0.008 * s, 0.009 * s, 0.01 * s],
+                     name="ear", levels=1)
+    tragus = chibi.ellipsoid((0.006 * s, -0.016 * s, -0.012 * s), (0.008 * s, 0.006 * s, 0.009 * s), name="ear",
+                             segs=(10, 8))
+    obj = chibi.fuse([shell, rim, tragus], "ear", voxel=0.0028 * s, smooth=1, faces=1400)
+    # Cup the concha (the bowl inside the rim).
+    for v in obj.data.vertices:
+        k = math.exp(-((v.co.y - 0.004 * s) / (0.012 * s)) ** 2 - ((v.co.z + 0.006 * s) / (0.02 * s)) ** 2)
+        if v.co.x > 0.004 * s:
+            v.co.x -= 0.009 * s * k
+    obj.data.update()
+    p, n = head.point(side * yaw, pitch)
+    rot = Matrix.Rotation(side * -tilt, 4, "Z") @ Matrix.Rotation(-0.2, 4, "X")
+    if side < 0:
+        obj.data.transform(Matrix.Scale(-1, 4, (1, 0, 0)))
+        obj.data.flip_normals()
+    obj.data.transform(Matrix.Translation(p + n * out * 0.3) @ rot)
+    common.shade_smooth(obj)
+    if colour:
+        common.color_by(obj, lambda pos, nrm: common.lerp(colour, shade or colour,
+                                                          max(0.0, min(1.0, -nrm.z * 0.5 + 0.3))))
     return obj

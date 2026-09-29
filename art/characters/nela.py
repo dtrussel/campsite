@@ -19,7 +19,7 @@ import bmesh  # noqa: E402
 from mathutils import Matrix, Vector, noise  # noqa: E402
 
 from lib import common, paint_bake, preview  # noqa: E402
-from characters import chibi, face_paint, head_loft, head_sculpt  # noqa: E402
+from characters import chibi, face_paint, head_loft  # noqa: E402
 from characters.leo import render_previews, sculpt_previews  # noqa: E402
 
 SKIN = (0.99, 0.72, 0.56)
@@ -434,7 +434,7 @@ def hair():
 
 
 def ears():
-    return [head_sculpt.ear(HEAD, side, yaw=1.5, pitch=-0.2, size=1.0, tilt=0.35, colour=SKIN, shade=SKIN_SHADE)
+    return [head_loft.ear(HEAD, side, yaw=1.5, pitch=-0.2, size=1.0, tilt=0.35, colour=SKIN, shade=SKIN_SHADE)
             for side in (-1, 1)]
 
 
