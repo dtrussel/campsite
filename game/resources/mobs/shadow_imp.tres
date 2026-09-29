@@ -14,4 +14,6 @@ attack_range = 1.1
 aggro_radius = 4.0
 attack_cooldown_seconds = 1.0
 xp_reward = 5
+drop_item = &"glow_shards"
+drop_every_n_kills = 3
 ui_color = Color(0.55, 0.3, 0.7, 1)

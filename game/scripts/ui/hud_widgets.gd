@@ -304,6 +304,13 @@ class Glyph extends Control:
 				draw_arc(c + Vector2(0, -r * 0.1), r * 0.6, PI, TAU, 16, color, s * 0.08, true)
 				_poly(PackedVector2Array([c + Vector2(-r, -r * 0.1), c + Vector2(r, -r * 0.1), c + Vector2(r * 0.7, r),
 					c + Vector2(-r * 0.7, r)]), color)
+			"hammer":
+				# Handle from bottom-left to the head at the top-right.
+				draw_line(c + Vector2(-r * 0.75, r * 0.8), c + Vector2(r * 0.25, -r * 0.2), outline, s * 0.2, true)
+				draw_line(c + Vector2(-r * 0.75, r * 0.8), c + Vector2(r * 0.25, -r * 0.2), Color(0.85, 0.62, 0.38), s * 0.12, true)
+				var head: PackedVector2Array = PackedVector2Array([c + Vector2(-r * 0.05, -r * 0.55), c + Vector2(r * 0.45, -r * 1.0),
+					c + Vector2(r * 1.0, -r * 0.45), c + Vector2(r * 0.55, 0.0)])
+				_poly(head, color)
 			"zzz":
 				var font: Font = Fx.bold_font()
 				draw_string_outline(font, c + Vector2(-r * 0.9, r * 0.5), "z", HORIZONTAL_ALIGNMENT_LEFT, -1, int(s * 0.5), 4, outline)
@@ -359,6 +366,7 @@ static func icon_button(glyph_kind: String, caption: String, on_pressed: Callabl
 	button.custom_minimum_size = Vector2(250 if caption != "" else 64, 58)
 	button.focus_mode = Control.FOCUS_ALL if focusable else Control.FOCUS_NONE
 	button.add_theme_font_size_override("font_size", 22)
+	button.pressed.connect(func() -> void: AudioManager.play_sfx(&"ui_click"))
 	button.pressed.connect(on_pressed)
 	var holder: Control = Control.new()
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE

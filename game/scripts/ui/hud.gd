@@ -18,7 +18,10 @@ const _PHASE_COLOR_DAY: Color = Color(1, 0.95, 0.8)
 const _PHASE_COLOR_SUNSET: Color = Color(1, 0.6, 0.45)
 const _PHASE_COLOR_NIGHT: Color = Color(0.75, 0.65, 1.0)
 const _PHASE_COLOR_DAWN: Color = Color(1, 0.88, 0.65)
-const _TRAY_ITEMS: Array[StringName] = [&"wood", &"stone", &"berries", &"fiber", &"leaves", &"resin", &"torch"]
+
+var _vignette: TextureRect = null
+const _TRAY_ITEMS: Array[StringName] = [&"wood", &"stone", &"berries", &"fiber", &"leaves", &"resin", &"clay",
+	&"mushrooms", &"scrap", &"glow_shards", &"torch", &"snack"]
 const _ICON_DIR: String = "res://assets/icons/"
 
 var _player: Node = null
@@ -61,6 +64,7 @@ func _ready() -> void:
 	_build_banner(root)
 
 	ResourceManager.resource_changed.connect(_on_resource_changed)
+	ResourceManager.caps_changed.connect(_refresh_tray)
 	BuildManager.build_mode_entered.connect(_on_build_mode_entered)
 	BuildManager.build_mode_exited.connect(func() -> void: (_build_label.get_meta(&"plate") as Control).visible = false)
 	BuildManager.placement_validity_changed.connect(_on_placement_validity_changed)
@@ -68,6 +72,9 @@ func _ready() -> void:
 	ProgressionManager.xp_gained.connect(func(character: Node, _a: int, _s: StringName) -> void: _refresh_progress(character))
 	ProgressionManager.level_up.connect(_on_level_up)
 	TimeManager.sunset_warning.connect(_on_sunset_warning)
+	var spawner: Node = get_tree().get_first_node_in_group("mob_spawner")
+	if spawner != null and spawner.has_signal("mob_spawned"):
+		spawner.mob_spawned.connect(_on_mob_spawned)
 	TimeManager.night_started.connect(_on_night_started)
 	TimeManager.dawn_started.connect(_on_dawn_started)
 	TimeManager.day_started.connect(_on_day_started)
@@ -101,8 +108,9 @@ func _build_top(root: Control) -> void:
 	_clock.custom_minimum_size = Vector2(56, 56)
 	row.add_child(_clock)
 	# One moon per night to survive; they light up as nights are won.
+	var moon_size: float = 46.0 if GameManager.nights_to_win <= 4 else 30.0
 	for i in range(GameManager.nights_to_win):
-		var moon: HudWidgets.Glyph = HudWidgets.Glyph.new("moon_empty", Color(1.0, 0.92, 0.55), 46)
+		var moon: HudWidgets.Glyph = HudWidgets.Glyph.new("moon_empty", Color(1.0, 0.92, 0.55), moon_size)
 		row.add_child(moon)
 		_moons.append(moon)
 
@@ -145,11 +153,11 @@ func _build_sibling_frame(root: Control) -> void:
 	_sibling_hp.custom_minimum_size = Vector2(200, 14)
 	_sibling_hp.show_text = false
 	column.add_child(_sibling_hp)
-	# Task picker: idle, follow, guard, gather (Companion.Task order).
+	# Task picker: idle, follow, guard, gather, repair (Companion.Task order).
 	var tasks: HBoxContainer = HBoxContainer.new()
 	tasks.add_theme_constant_override("separation", 4)
 	column.add_child(tasks)
-	var specs: Array = [["zzz", "Y"], ["footsteps", "F"], ["shield", "G"], ["basket", "T"]]
+	var specs: Array = [["zzz", "Y"], ["footsteps", "F"], ["shield", "G"], ["basket", "T"], ["hammer", "V"]]
 	for i in range(specs.size()):
 		var button: Button = Button.new()
 		button.custom_minimum_size = Vector2(46, 46)
@@ -224,8 +232,8 @@ func _name_tag(portrait: Control, character_name: String, font_size: int) -> Con
 func _build_hero_bar(root: Control) -> void:
 	var plate: PanelContainer = _plate(10)
 	plate.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	plate.position = Vector2(-270, -128)
-	plate.custom_minimum_size = Vector2(540, 0)
+	plate.position = Vector2(-300, -128)
+	plate.custom_minimum_size = Vector2(600, 0)
 	root.add_child(plate)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
@@ -245,9 +253,10 @@ func _build_hero_bar(root: Control) -> void:
 		[&"attack", "axe", "SP", "Attack (Space, or click an imp)"],
 		[&"gather", "wood", "E", "Gather the nearest resource (E, or right-click it)"],
 		[&"torch", "torch", "Q", "Plant a torch (Q). Craft torches at the campfire."],
-		[&"eat", "berries", "R", "Eat 2 berries: +15 HP (R)"],
-		[&"craft", "campfire", "C", "Crafting (C, near the campfire)"],
-		[&"build", "fence", "B", "Build fences and watch posts (B)"],
+		[&"eat", "berries", "R", "Eat (R): a Berry Snack gives +35 HP, else 2 berries give +15 HP"],
+		[&"bandage", "bandage", "X", "Put a bandage on Nela (X, next to her): +25 HP or wakes her up"],
+		[&"craft", "campfire", "C", "Crafting (C, near the campfire or a Crafting Table)"],
+		[&"build", "fence", "B", "Build (B), then 1-7: fence, wall, watch post, snap trap, glow lantern, crate, crafting table"],
 	]
 	for entry in definitions:
 		var slot: HudWidgets.AbilitySlot = HudWidgets.AbilitySlot.new(_icon(entry[1]), entry[2])
@@ -358,8 +367,19 @@ func _refresh_slots() -> void:
 	(_slots[&"gather"] as HudWidgets.AbilitySlot).set_state(true)
 	var torches: int = ResourceManager.get_count(&"torch")
 	(_slots[&"torch"] as HudWidgets.AbilitySlot).set_state(torches > 0, str(torches) if torches > 0 else "")
-	var berries: int = ResourceManager.get_count(&"berries")
-	(_slots[&"eat"] as HudWidgets.AbilitySlot).set_state(berries >= 2, str(berries) if berries > 0 else "")
+	var eat_slot: HudWidgets.AbilitySlot = _slots[&"eat"] as HudWidgets.AbilitySlot
+	var snacks: int = ResourceManager.get_count(&"snack")
+	var eat_icon: Texture2D = _icon("snack" if snacks > 0 else "berries")
+	if eat_slot.icon != eat_icon:
+		eat_slot.icon = eat_icon
+		eat_slot.queue_redraw()
+	if snacks > 0:
+		eat_slot.set_state(true, str(snacks))
+	else:
+		var berries: int = ResourceManager.get_count(&"berries")
+		eat_slot.set_state(berries >= 2, str(berries) if berries > 0 else "")
+	var bandages: int = ResourceManager.get_count(&"bandage")
+	(_slots[&"bandage"] as HudWidgets.AbilitySlot).set_state(bandages > 0, str(bandages) if bandages > 0 else "")
 	var craft_ready: bool = false
 	for recipe in CraftingManager.get_recipes():
 		craft_ready = craft_ready or CraftingManager.can_craft(recipe)
@@ -374,8 +394,18 @@ func _refresh_slots() -> void:
 func _refresh_tray() -> void:
 	for id in _tray_labels.keys():
 		var count: int = ResourceManager.get_count(id)
-		(_tray_labels[id] as Label).text = str(count)
-		(_tray_rows[id] as Control).modulate = Color(1, 1, 1, 1.0 if count > 0 else 0.38)
+		var cap: int = ResourceManager.get_cap(id)
+		var label: Label = _tray_labels[id] as Label
+		label.text = str(count)
+		# A full stash glows gold: time to build a Storage Crate.
+		var full: bool = cap > 0 and count >= cap
+		label.add_theme_color_override("font_color", Color(1.0, 0.78, 0.25) if full else UiKit.COLOR_TEXT)
+		var row: Control = _tray_rows[id] as Control
+		row.modulate = Color(1, 1, 1, 1.0 if count > 0 else 0.38)
+		var definition: ResourceDefinition = ResourceManager.get_definition(id)
+		if definition != null:
+			var amount: String = "%d/%d" % [count, cap] if cap > 0 else str(count)
+			row.tooltip_text = "%s %s - %s" % [definition.display_name, amount, definition.description]
 
 
 func _refresh_progress(character: Node) -> void:
@@ -461,9 +491,17 @@ func _refresh_build_label(definition: BuildingDefinition) -> void:
 		return
 	for child in _build_row.get_children():
 		child.queue_free()
-	var building_icon: String = "fence" if definition.id == &"wooden_fence" else "tower"
+	# Number chips for every building; the active one is lit.
+	var known: Array[BuildingDefinition] = BuildManager.get_known_definitions()
+	for i in range(known.size()):
+		var chip: Control = HudWidgets.AbilitySlot.new(known[i].icon, str(i + 1))
+		chip.custom_minimum_size = Vector2(40, 40)
+		(chip as HudWidgets.AbilitySlot).set_state(ResourceManager.can_afford(known[i].cost))
+		(chip as HudWidgets.AbilitySlot).highlight = known[i] == definition
+		chip.tooltip_text = "%s (%d): %s" % [known[i].display_name, i + 1, known[i].description]
+		_build_row.add_child(chip)
 	var picture: TextureRect = TextureRect.new()
-	picture.texture = _icon(building_icon)
+	picture.texture = definition.icon
 	picture.custom_minimum_size = Vector2(56, 56)
 	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -479,7 +517,7 @@ func _on_level_up(character: Node, new_level: int) -> void:
 	_refresh_progress(character)
 	if character == _companion:
 		_refresh_sibling()
-	elif character == _player:
+	elif character == _player and not ProgressionManager.is_restoring:
 		show_banner("Level up!", Color(1.0, 0.86, 0.45))
 
 
@@ -489,6 +527,50 @@ func _on_day_started(day_number: int) -> void:
 
 func _on_sunset_warning(seconds: float) -> void:
 	show_banner("Back to the fire!", _PHASE_COLOR_SUNSET)
+	_pulse_vignette(Color(1.0, 0.42, 0.18))
+
+
+## Warm glow creeping in from the screen edges, twice, with the owl call.
+func _pulse_vignette(color: Color) -> void:
+	if _vignette == null:
+		var gradient: Gradient = Gradient.new()
+		gradient.offsets = PackedFloat32Array([0.0, 0.45, 1.0])
+		gradient.colors = PackedColorArray([Color(1, 1, 1, 0), Color(1, 1, 1, 0), Color(1, 1, 1, 0.9)])
+		var texture: GradientTexture2D = GradientTexture2D.new()
+		texture.gradient = gradient
+		texture.fill = GradientTexture2D.FILL_RADIAL
+		texture.fill_from = Vector2(0.5, 0.5)
+		texture.fill_to = Vector2(1.05, 1.05)
+		_vignette = TextureRect.new()
+		_vignette.texture = texture
+		_vignette.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_vignette.stretch_mode = TextureRect.STRETCH_SCALE
+		_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(_vignette)
+		move_child(_vignette, 0)
+	_vignette.modulate = Color(color, 0.0)
+	var tween: Tween = create_tween()
+	for i in 2:
+		tween.tween_property(_vignette, "modulate:a", 1.0, 0.45).set_trans(Tween.TRANS_SINE)
+		tween.tween_property(_vignette, "modulate:a", 0.0, 0.9).set_trans(Tween.TRANS_SINE)
+
+
+## A heavy mob gets its own warning: kids should run to their fences.
+func _on_mob_spawned(mob: Node3D, definition: MobDefinition) -> void:
+	if definition != null and definition.prefers_buildings:
+		show_banner("%s!" % definition.display_name, Color(0.6, 0.9, 0.35))
+	elif definition != null and definition.steals_resources:
+		show_banner("%s!" % definition.display_name, Color(0.85, 0.55, 1.0))
+		mob.stole.connect(func(_m: Node3D, item: StringName, amount: int) -> void:
+			show_banner("Thief! -%d %s" % [amount, _item_name(item)], Color(1.0, 0.55, 0.5)))
+		mob.escaped.connect(func(_m: Node3D, item: StringName, amount: int) -> void:
+			show_banner("It got away with %d %s!" % [amount, _item_name(item)], Color(1.0, 0.55, 0.5)))
+
+
+func _item_name(id: StringName) -> String:
+	var definition: ResourceDefinition = ResourceManager.get_definition(id)
+	return definition.display_name if definition != null else String(id)
 
 
 func _on_night_started(day_number: int) -> void:

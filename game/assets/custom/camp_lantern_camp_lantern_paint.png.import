@@ -1,0 +1,37 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://dv178j05aicyj"
+path="res://.godot/imported/camp_lantern_camp_lantern_paint.png-9519cf8de448fa1715196cf2a9c4adff.ctex"
+metadata={
+"vram_texture": false
+}
+generator_parameters={
+"md5": "98129471445bae029351d1d69f76725b"
+}
+
+[deps]
+
+source_file="res://assets/custom/camp_lantern_camp_lantern_paint.png"
+dest_files=["res://.godot/imported/camp_lantern_camp_lantern_paint.png-9519cf8de448fa1715196cf2a9c4adff.ctex"]
+
+[params]
+
+compress/mode=0
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=1

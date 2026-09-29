@@ -5,7 +5,9 @@ extends CharacterBody3D
 ## LoL-style command movement. The pointer (see PointerCommands) issues
 ## commands: move to a point, attack an imp (walk into range, then
 ## auto-attack until it dies), gather a resource node (walk to it,
-## then gather), or use the campfire (walk to it, open crafting).
+## then gather), use the campfire (walk to it, open crafting), or
+## repair a damaged building (walk to it, then hammer until it is fixed
+## or the wood runs out; see Repair).
 ## Paths come from the world's navigation mesh; WASD still works as a
 ## direct override and cancels the current command.
 ##
@@ -18,16 +20,24 @@ signal command_changed(command: int, target: Node)
 signal attacked(target: Node)
 
 enum PlayerState { IDLE, MOVING, GATHERING, KNOCKED_OUT }
-enum Command { NONE, MOVE, ATTACK, GATHER, CAMPFIRE }
+enum Command { NONE, MOVE, ATTACK, GATHER, CAMPFIRE, REPAIR }
 
 const TORCH_SCENE: PackedScene = preload("res://scenes/buildings/Torch.tscn")
 const TORCH_ITEM_ID: StringName = &"torch"
 const BERRY_ITEM_ID: StringName = &"berries"
 const BERRIES_PER_MEAL: int = 2
+const SNACK_ITEM_ID: StringName = &"snack"
+const BANDAGE_ITEM_ID: StringName = &"bandage"
+## How close Leo must be to Nela to put a bandage on her.
+const BANDAGE_REACH: float = 3.0
+## Crafting Table upgrade (feature 019).
+const STURDY_STICK_BONUS: int = 2
 ## Distance at which a gather command starts gathering.
 const GATHER_REACH: float = 1.5
 ## Distance at which a campfire command opens crafting.
 const CAMPFIRE_REACH: float = 2.6
+## Distance (plus the target's radius) at which a repair command hammers.
+const REPAIR_REACH: float = 1.4
 ## Seconds into the swing when damage lands (the "wind-up").
 const ATTACK_WINDUP: float = 0.18
 const REPATH_SECONDS: float = 0.25
@@ -45,6 +55,7 @@ const REPATH_SECONDS: float = 0.25
 @export var regen_per_second: float = 1.5
 @export var hurt_invulnerability_seconds: float = 0.6
 @export var heal_per_meal: int = 15
+@export var heal_per_snack: int = 35
 ## Half-size of the playable square around the campfire; keeps the boy
 ## inside the area the camera and mob spawns are designed around.
 @export var play_area_half_extent: float = 19.0
@@ -64,6 +75,8 @@ var _invulnerable_remaining: float = 0.0
 var _regen_accumulator: float = 0.0
 var _move_goal: Vector3 = Vector3.ZERO
 var _repath_timer: float = 0.0
+var _repair_timer: float = 0.0
+var has_sturdy_stick: bool = false
 var _agent: NavigationAgent3D = null
 var _hp_bar: HealthBar3D = null
 
@@ -103,6 +116,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_try_place_torch()
 	elif event.is_action_pressed("eat_berries"):
 		_try_eat_berries()
+	elif event.is_action_pressed("use_bandage"):
+		try_use_bandage()
 
 
 # --- Commands (issued by PointerCommands or tests) -------------------
@@ -140,6 +155,15 @@ func command_campfire(base: Node3D) -> void:
 	_agent.target_position = base.global_position
 
 
+func command_repair(target: Node3D) -> void:
+	if not _can_command() or not Repair.needs_repair(target):
+		return
+	_cancel_active_gather()
+	_set_command(Command.REPAIR, target)
+	_repair_timer = 0.0
+	_agent.target_position = target.global_position
+
+
 func stop_commands() -> void:
 	_set_command(Command.NONE, null)
 
@@ -163,6 +187,7 @@ func take_damage(amount: int, _source: Node = null) -> void:
 	Fx.flash(self)
 	Fx.float_text(self, "-%d" % amount, Color(1, 0.45, 0.4))
 	Fx.shake(0.18)
+	AudioManager.play_sfx(&"player_hurt", global_position)
 	if current_hp == 0:
 		_cancel_active_gather()
 		_set_command(Command.NONE, null)
@@ -261,11 +286,27 @@ func _tick_command(delta: float) -> Vector3:
 			if command_target == null or not is_instance_valid(command_target):
 				_set_command(Command.NONE, null)
 				return Vector3.ZERO
-			if _flat_distance(command_target.global_position) <= CAMPFIRE_REACH:
+			if _flat_distance(command_target.global_position) <= CAMPFIRE_REACH + _node_radius(command_target) * 0.5:
 				_set_command(Command.NONE, null)
 				var panel: Node = get_tree().get_first_node_in_group("crafting_panel")
 				if panel != null:
 					panel.open()
+				return Vector3.ZERO
+			return _path_velocity(command_target.global_position)
+		Command.REPAIR:
+			if not Repair.needs_repair(command_target):
+				_set_command(Command.NONE, null)
+				return Vector3.ZERO
+			if _flat_distance(command_target.global_position) <= REPAIR_REACH + _node_radius(command_target):
+				_visual.face(command_target.global_position - global_position, delta)
+				_repair_timer -= delta
+				if _repair_timer <= 0.0:
+					_repair_timer = Repair.TAP_SECONDS
+					if Repair.tap(command_target, self):
+						_visual.play_action(&"chop", 1.8)
+					else:
+						Fx.icon_popup(self, Fx.icon("wood"), "", Color.WHITE, true)
+						_set_command(Command.NONE, null)
 				return Vector3.ZERO
 			return _path_velocity(command_target.global_position)
 	return Vector3.ZERO
@@ -316,6 +357,9 @@ func _node_radius(node: Node3D) -> float:
 		return (shape.shape as CylinderShape3D).radius
 	if shape != null and shape.shape is SphereShape3D:
 		return (shape.shape as SphereShape3D).radius
+	if shape != null and shape.shape is BoxShape3D:
+		var box: Vector3 = (shape.shape as BoxShape3D).size
+		return maxf(box.x, box.z) * 0.5
 	return 0.4
 
 
@@ -335,6 +379,7 @@ func _perform_attack(target: Node3D) -> void:
 		if _is_attackable(target) and _flat_distance(target.global_position) <= attack_range * 1.4:
 			target.take_damage(attack_damage, self)
 			Fx.burst(&"hit", target.global_position + Vector3(0, 0.7, 0))
+			Fx.hit_stop()
 	)
 
 
@@ -413,16 +458,44 @@ func _try_place_torch() -> void:
 	PlaytestLog.write("torch_placed day=%d phase=%s" % [TimeManager.day_number, TimeManager.get_phase_name()])
 
 
+## R: eat a Berry Snack if there is one (+35 HP), else 2 berries (+15).
 func _try_eat_berries() -> void:
 	if current_hp >= max_hp:
+		Fx.icon_popup(self, Fx.icon("snack" if ResourceManager.has(SNACK_ITEM_ID, 1) else "berries"), "", Color.WHITE, true)
+		return
+	var amount: int = heal_per_meal
+	if ResourceManager.spend(SNACK_ITEM_ID, 1):
+		amount = heal_per_snack
+	elif not ResourceManager.spend(BERRY_ITEM_ID, BERRIES_PER_MEAL):
 		Fx.icon_popup(self, Fx.icon("berries"), "", Color.WHITE, true)
 		return
-	if not ResourceManager.spend(BERRY_ITEM_ID, BERRIES_PER_MEAL):
-		Fx.icon_popup(self, Fx.icon("berries"), "", Color.WHITE, true)
-		return
-	heal(heal_per_meal)
-	Fx.float_text(self, "+%d HP" % heal_per_meal, Color(0.5, 1, 0.5))
+	heal(amount)
+	Fx.float_text(self, "+%d HP" % amount, Color(0.5, 1, 0.5))
 	Fx.burst(&"heal", global_position)
+
+
+## Sturdy Stick: Leo hits harder for the rest of the run.
+func upgrade_stick() -> void:
+	if has_sturdy_stick:
+		return
+	has_sturdy_stick = true
+	attack_damage += STURDY_STICK_BONUS
+	Fx.float_text(self, "STURDY STICK!", Color(1.0, 0.85, 0.4), 2.8)
+	Fx.burst(&"level_up", global_position)
+
+
+## X: put a bandage on Nela when she is close and hurt (or knocked out).
+func try_use_bandage() -> bool:
+	var sibling: Node3D = get_tree().get_first_node_in_group("companions") as Node3D
+	var close: bool = sibling != null and _flat_distance(sibling.global_position) <= BANDAGE_REACH
+	if not close or not ResourceManager.has(BANDAGE_ITEM_ID, 1) or not sibling.has_method("apply_bandage"):
+		Fx.icon_popup(self, Fx.icon("bandage"), "", Color.WHITE, true)
+		return false
+	if not sibling.apply_bandage():
+		Fx.icon_popup(self, Fx.icon("bandage"), "", Color.WHITE, true)
+		return false
+	ResourceManager.spend(BANDAGE_ITEM_ID, 1)
+	return true
 
 
 func _tick_regen(delta: float) -> void:
@@ -444,8 +517,9 @@ func _on_level_up(character: Node, _new_level: int) -> void:
 	max_hp += stats.max_health_per_level
 	current_hp = min(max_hp, current_hp + stats.max_health_per_level)
 	health_changed.emit(current_hp, max_hp)
-	Fx.float_text(self, "LEVEL UP!", Color(1.0, 0.85, 0.4), 2.8)
-	Fx.burst(&"level_up", global_position)
+	if not ProgressionManager.is_restoring:
+		Fx.float_text(self, "LEVEL UP!", Color(1.0, 0.85, 0.4), 2.8)
+		Fx.burst(&"level_up", global_position)
 
 
 func _find_nearest_mob_in_range() -> Node3D:

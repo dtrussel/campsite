@@ -11,4 +11,5 @@ description = "Basic construction material. Most early buildings and tools start
 icon = ExtResource("2_icon")
 rarity = 1
 max_stack = 99
+base_cap = 20
 ui_color = Color(0.55, 0.36, 0.18, 1)

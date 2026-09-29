@@ -1,0 +1,24 @@
+[gd_scene load_steps=5 format=3 uid="uid://b0campsitebuildwall01"]
+
+[ext_resource type="PackedScene" path="res://assets/custom/reinforced_wall.glb" id="m_new"]
+[ext_resource type="Script" path="res://scripts/buildings/building.gd" id="1_build"]
+[ext_resource type="Resource" uid="uid://b0campsitebuilddefwall" path="res://resources/buildings/reinforced_wall.tres" id="2_def"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_b"]
+size = Vector3(1.6, 1.2, 0.45)
+
+[node name="ReinforcedWall" type="StaticBody3D"]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_build")
+definition = ExtResource("2_def")
+hp_label_height = 1.7
+
+[node name="Visual" type="Node3D" parent="."]
+
+[node name="Model" parent="Visual" instance=ExtResource("m_new")]
+transform = Transform3D(0.95, 0, 0, 0, 0.95, 0, 0, 0, 0.95, 0, 0, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+shape = SubResource("BoxShape3D_b")

@@ -163,6 +163,15 @@ guidelines; final recipes will live in `.tres` data files.
 | Scrap       | Rare     | 30    | Improvised tools, weapon upgrades, complex devices.           |
 | Glow Shards | Rare     | 20    | Magical upgrades, night defenses, vision items.               |
 
+*Feature 017 status:* every resource now has a source and a use.
+
+| Resource | Source | Uses |
+|----------|--------|------|
+| Clay | Clay pits in the NE and SW corners | Stone Hearth |
+| Mushrooms | Mushroom patches in the NW and SE corners | Berry Snack |
+| Scrap | Junk piles near the E and S spawn lanes | Snap Trap, Glow Lantern |
+| Glow Shards | Every third imp kill drops one as a pickup | Glow Lantern |
+
 ### Display
 
 Each resource has:
@@ -192,8 +201,11 @@ These are stored as `ResourceDefinition` `.tres` files; see the architecture doc
 | Campfire Core  | Central base object; mobs target it; provides light radius.  |
 | Wooden Fence   | Cheap barrier; blocks or slows mobs.                         |
 | Watch Post     | Elevated post; companions can guard from here.               |
-| Storage Crate  | Increases resource storage cap. *(optional in prototype)*    |
-| Crafting Table | Unlocks simple recipes. *(optional in prototype)*            |
+| Storage Crate  | *(019)* +20 stash cap per resource (caps start at 20). 4 Wood + 2 Stone. |
+| Crafting Table | *(019)* A second crafting station with the Sturdy Stick, Slingshot, Bandage and Trap Refill. 4 Wood + 2 Stone + 1 Scrap. |
+| Reinforced Wall | *(019)* 150 HP, three times a fence. 3 Stone + 2 Clay + 1 Wood. |
+| Snap Trap      | *(017)* Snaps the first imp on it: 10 damage, held 2.5 s; 3 snaps. 2 Wood + 1 Fiber + 1 Scrap. |
+| Glow Lantern   | *(017)* A torch that never burns out: slows and zaps imps within 5 m. 2 Glow Shards + 1 Scrap + 2 Wood. |
 
 ### Prototype subset
 
@@ -217,6 +229,15 @@ These are stored as `ResourceDefinition` `.tres` files; see the architecture doc
 - HP at zero destroys the building (no repair allowed).
 - Players or companions with the Repair task can restore HP at a fraction
   of the original resource cost.
+  *Feature 017:*
+  - Leo right-clicks a damaged building, walks over and hammers it. Each
+    tap costs 1 Wood and restores 12 HP.
+  - The campfire is fed at the crafting panel (Feed the Fire: 1 Wood,
+    +20 HP).
+  - Nela's Repair task (**V**) fixes the most damaged structure, the
+    campfire first when it is low. She guards the camp when there is
+    nothing to fix.
+  - Snap Traps are rebuilt, not repaired.
 
 ## H. Crafting system
 
@@ -232,6 +253,17 @@ These are stored as `ResourceDefinition` `.tres` files; see the architecture doc
 
 These numbers are placeholder; final values live in `CraftingRecipe`
 resources.
+
+*Implemented at the campfire (feature 017):*
+
+| Recipe | Inputs | Result |
+|--------|--------|--------|
+| Feed the Fire | 1 Wood | +20 campfire HP (only while it is damaged) |
+| Torch | 1 Wood + 1 Resin + 1 Leaves | A torch (plant with Q) |
+| Berry Snack | 2 Berries + 1 Mushroom | A snack (R: +35 HP); mushrooms replace leaves to give mushrooms a use |
+| Stone Hearth | 5 Clay + 4 Stone | Campfire +75 max HP, fully healed; once per run |
+
+The Simple Trap became the Snap Trap building (build menu 3).
 
 ### Prototype subset
 
@@ -262,6 +294,24 @@ data only.
 ### Prototype subset
 
 Implement **Shadow Imp** only.
+
+*Feature 021:* the **Mushroom Gremlin** is in.
+- It runs to the stash (a Storage Crate, else the campfire) and takes up
+  to 4 of the most plentiful raw resource.
+- Then it flees to its spawn point.
+- Caught, it drops the loot as a pickup; escaped, the loot is gone.
+- It has 8 HP, is fast, and ignores the kids.
+- Waves: nights 1–3 have 0, 1, 1 gremlins, then +1 per night, in the
+  first half of the wave.
+
+*Feature 018:* the **Bramble Beast** is in.
+- It walks to the nearest building and tears it down (×3 damage), then
+  goes for the campfire.
+- It ignores the kids unless they come within 2 m, and barely flinches
+  when hit.
+- It has 40 HP and always drops a Glow Shard.
+- Waves: nights 1, 2 and 3 have 0, 1 and 2 beasts, spawned in the second
+  half of the wave.
 
 ### Mob lifecycle
 
@@ -378,6 +428,16 @@ Initial audio targets (placeholders welcome):
 - Mob attack and death sounds.
 
 Music can be ambient / atmospheric. No vocals.
+
+*Implemented in feature 016.* Everything is synthesized by `art/audio/`:
+- a campfire-guitar day tune and a D-minor night drone with a heartbeat;
+- birds and wind by day, crickets by night;
+- a 3D crackle at every fire;
+- an owl call and a warm screen pulse at sunset;
+- one-shots for every gameplay beat.
+
+Deferred: night howls and creaking branches, and imp hisses while they
+walk (they have spawn and death sounds only).
 
 ## N. First vertical slice definition
 

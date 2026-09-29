@@ -13,12 +13,14 @@ fragile camping trip into a magical woodland fortress.
 
 ## Status
 
-**Prototype, ready for first playtest (v0.10.0-playtest1).** Hand-painted,
+**Prototype, ready for first playtest (v0.20.0-playtest1).** Hand-painted,
 LoL-inspired 3D art: **Leo** (the big brother, played by you), his little
 sister **Nela**, the Shadow Imps, trees, rocks, camp props and the painted
 ground are modelled, painted and texture-baked by the scripts in
 [`art/`](art/README.md).
 The UI is icon-first for young players. See [`CREDITS.md`](CREDITS.md).
+All sound (music, ambience and effects) is original and synthesized by
+the scripts in [`art/audio/`](art/README.md#audio) (feature 016).
 
 A complete 3-night run is playable:
 
@@ -27,8 +29,29 @@ A complete 3-night run is playable:
 3. Nights of Shadow Imp waves.
 4. A win or loss screen, and restart.
 
-Roadmap phases 0–7 are implemented. Save/load (Phase 8) is next, after
-playtest feedback. See [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md)
+Roadmap phases 0–7 are implemented, plus the audio & feel pass
+(feature 016) and repair with the full resource set (feature 017):
+- clay pits, mushroom patches and junk piles;
+- Glow Shards from imps;
+- Feed the Fire, the Berry Snack and the Stone Hearth at the campfire;
+- Snap Traps and Glow Lanterns in the build menu;
+- hammer repairs by Leo and by Nela.
+
+The **Bramble Beast** (feature 018) joins nights 2 and 3. It is slow
+and tough, and tears down fences and posts before going for the fire.
+
+Feature 019 adds:
+- the **Reinforced Wall**;
+- **stash limits** (20 of each resource), raised by **Storage Crates**;
+- the **Crafting Table**, a second crafting spot with the Sturdy Stick,
+  Nela's Slingshot, Bandages and Trap Refills.
+
+Feature 021 adds the **Mushroom Gremlin**, a fast little thief. It
+grabs a few of your most plentiful resource and runs back to the forest.
+Catch it to get the loot back.
+
+Feature 020 adds **3- or 7-night runs**. The game **autosaves every
+morning**, and **Continue** on the title screen resumes the run. See [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md)
 and [`.features/005-first-playtest-build/handoff.md`](.features/005-first-playtest-build/handoff.md).
 
 **Playtesters:** follow [`docs/testing/playtest-001.md`](docs/testing/playtest-001.md).
@@ -59,25 +82,28 @@ The reasoning is captured in
 - The main scene is `game/scenes/ui/TitleScreen.tscn`; **Play** loads
   `game/scenes/main/Main.tscn`.
 
-**Goal:** survive 3 nights and keep the campfire burning.
+**Goal:** survive 3 (or 7) nights and keep the campfire burning. The
+game saves itself every morning; use **Continue** on the title screen to
+resume.
 
 Controls (LoL-style; also shown in-game with **H**):
 
 | Input | Action |
 |-------|--------|
-| Right click | Move / attack an imp / gather a resource / use the campfire |
+| Right click | Move / attack an imp / gather a resource / use the campfire / repair a damaged building |
 | Left click | Attack or use what you click (never moves) |
 | Mouse wheel | Zoom |
 | Space | Attack the nearest imp |
 | E | Gather the nearest resource |
 | Q | Plant a crafted torch |
-| R | Eat 2 berries to heal |
-| C | Crafting panel (near the campfire) |
-| B, then 1 / 2 | Build: Wooden Fence / Watch Post (R rotate, LMB place, RMB/Esc cancel) |
-| F / G / T / Y | Sibling: follow / guard camp / gather / idle |
+| R | Eat: a Berry Snack (+35 HP) if you have one, else 2 berries (+15 HP) |
+| X | Put a bandage on Nela (next to her): +25 HP, or wakes her up |
+| C | Crafting panel (near the campfire or a Crafting Table) |
+| B, then 1–7 | Build: Fence / Reinforced Wall / Watch Post / Snap Trap / Glow Lantern / Storage Crate / Crafting Table (R rotate, LMB place, RMB/Esc cancel) |
+| F / G / T / Y / V | Nela: follow / guard camp / gather / idle / repair |
 | N | Call the night early (daytime) |
 | W A S D | Walk directly (optional) |
-| H / Esc | Help / Pause menu |
+| H / Esc | Help / Pause menu (with Music and Sounds volume) |
 
 ## Checks and builds
 
@@ -85,6 +111,7 @@ Controls (LoL-style; also shown in-game with **H**):
 tools/check.sh            # headless: import, validate all data, full smoke run
 tools/export_playtest.sh  # Windows zip + self-tested Linux export in build/
 tools/fetch_assets.sh     # re-vendor the CC0 models and fonts (only when the list changes)
+tools/build_audio.sh      # rebuild the procedural sound into game/assets/audio/
 ```
 
 Both scripts use `godot` on PATH, or `$GODOT`. Exports need the Godot
@@ -122,8 +149,8 @@ Both scripts use `godot` on PATH, or `$GODOT`. Exports need the Godot
   assets/             Art, audio, materials, fonts
     placeholder/      Throwaway placeholder content
     custom/           Original models + painted textures (built from art/)
-    kaykit/           Vendored CC0 KayKit packs (rigs, animations, backdrop)
-    audio/            Sound effects and music
+    kaykit/           Vendored CC0 KayKit packs (rigs and animations)
+    audio/            Sound effects, music and ambience (built from art/audio/)
     materials/        Shared materials
     fonts/            Fonts
   resources/          Godot .tres data resources (data-driven content)
@@ -135,7 +162,7 @@ Both scripts use `godot` on PATH, or `$GODOT`. Exports need the Godot
   tests/
     manual/           (placeholder for manual smoke scenes)
     automated/        Headless smoke test (smoke_run.tscn)
-    sim/              Balance simulation and screenshot capture
+    sim/              Balance simulation, screenshot and animation-frame capture
   tools/              In-project tools (validate_project.tscn)
 
 /docs/                Project documentation
@@ -170,7 +197,7 @@ Start here if you are a new contributor or coding agent:
 6. [Test strategy](docs/testing/test-strategy.md)
 7. [ADR-0001: Engine & language selection](docs/decisions/ADR-0001-engine-and-language-selection.md)
 8. [Agent feature workflow](.features/README.md)
-9. [Latest feature handoff](.features/005-first-playtest-build/handoff.md)
+9. [Latest feature handoff](.features/025-painted-props/handoff.md)
 10. [Playtest 001 script](docs/testing/playtest-001.md)
 
 ## Development workflow
@@ -198,6 +225,7 @@ Start here if you are a new contributor or coding agent:
 | 6     | Combat, XP, and leveling                   | done |
 | 7     | Crafting and first survival loop           | done |
 | P1    | First human playtest                       | **next** |
+| 8     | Save/load (autosave at dawn, Continue)     | done (feature 020) |
 | 8     | Save/load prototype                        | planned |
 
 Full detail in [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md).

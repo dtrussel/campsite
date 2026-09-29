@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="BuildingDefinition" load_steps=3 format=3 uid="uid://b0campsitebuilddefglowlantern"]
+
+[ext_resource type="Script" path="res://scripts/buildings/building_definition.gd" id="1_def"]
+[ext_resource type="Texture2D" path="res://assets/icons/lantern.png" id="9_icon"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"glow_lantern"
+display_name = "Glow Lantern"
+description = "A lantern of Glow Shards. Like a big torch that never burns out: imps within 5 m slow down and get zapped."
+scene_path = "res://scenes/buildings/GlowLantern.tscn"
+cost = {
+&"glow_shards": 2,
+&"scrap": 1,
+&"wood": 2
+}
+max_hp = 60
+footprint_size = Vector3(0.9, 1.8, 0.9)
+ui_color = Color(0.45, 0.85, 1, 1)
+sort_order = 40
+icon = ExtResource("9_icon")

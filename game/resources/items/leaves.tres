@@ -11,4 +11,5 @@ description = "Camouflage, bedding, simple roofs, ground-cover crafts."
 icon = ExtResource("2_icon")
 rarity = 1
 max_stack = 99
+base_cap = 20
 ui_color = Color(0.45, 0.78, 0.32, 1)

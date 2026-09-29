@@ -66,6 +66,8 @@ func _validate_data() -> void:
 			continue
 		_check_id(mob.id, mob.resource_path, mob_ids)
 		_check_scene(mob.scene_path, mob.resource_path)
+		if mob.drop_item != &"" and not item_ids.has(mob.drop_item):
+			_fail("%s drops unknown item '%s'" % [mob.resource_path, mob.drop_item])
 
 	var recipe_ids: Dictionary = {}
 	for res in DefinitionLoader.load_all("res://resources/recipes/"):
@@ -75,14 +77,26 @@ func _validate_data() -> void:
 			continue
 		_check_id(recipe.id, recipe.resource_path, recipe_ids)
 		_check_items(recipe.inputs, item_ids, recipe.resource_path)
-		if not item_ids.has(recipe.output_id):
-			_fail("%s outputs unknown item '%s'" % [recipe.resource_path, recipe.output_id])
+		if recipe.effect != &"" and not CraftingRecipe.EFFECTS.has(recipe.effect):
+			_fail("%s has unknown effect '%s'" % [recipe.resource_path, recipe.effect])
+		if recipe.effect == &"" or recipe.output_id != &"":
+			if not item_ids.has(recipe.output_id):
+				_fail("%s outputs unknown item '%s'" % [recipe.resource_path, recipe.output_id])
+		if recipe.result_icon() == null:
+			_fail("%s has no result icon (output item icon or icon_name)" % recipe.resource_path)
+
+	_validate_audio()
 
 	# Every item a building or recipe needs must be obtainable somewhere:
 	# as a resource node yield/bonus or as a recipe output.
 	var obtainable: Dictionary = {}
 	for res in DefinitionLoader.load_all("res://resources/recipes/"):
-		obtainable[(res as CraftingRecipe).output_id] = true
+		if (res as CraftingRecipe).output_id != &"":
+			obtainable[(res as CraftingRecipe).output_id] = true
+	for res in DefinitionLoader.load_all("res://resources/mobs/"):
+		var drop: StringName = (res as MobDefinition).drop_item
+		if drop != &"" and (res as MobDefinition).drop_every_n_kills > 0:
+			obtainable[drop] = true
 	var node_scenes: PackedStringArray = PackedStringArray()
 	_collect("res://scenes/resources/", node_scenes)
 	for scene_path in node_scenes:
@@ -104,6 +118,30 @@ func _validate_data() -> void:
 	for key in needed.keys():
 		if not obtainable.has(StringName(key)):
 			_fail("item '%s' is needed by a cost/recipe but nothing produces it" % key)
+
+
+## The audio library: every listed id has at least one variant file,
+## every Fx.burst kind has a sound, and the loops are set.
+func _validate_audio() -> void:
+	var library: AudioLibrary = load("res://resources/audio/audio_library.tres") as AudioLibrary
+	if library == null:
+		_fail("res://resources/audio/audio_library.tres is missing or not an AudioLibrary")
+		return
+	for id in library.volumes.keys():
+		if library.streams_for(StringName(id)).is_empty():
+			_fail("audio id '%s' has no %s/%s_1.ogg" % [id, library.sfx_dir, id])
+	for id in library.ui_ids:
+		if not library.has_sound(id):
+			_fail("audio ui id '%s' is not in volumes" % id)
+	for kind in Fx.BURSTS.keys():
+		if not library.has_sound(kind) and not Fx.SILENT_BURSTS.has(kind):
+			_fail("Fx burst '%s' has no sound in the audio library" % kind)
+	for loop_name in ["music_day", "music_night", "ambience_day", "ambience_night", "ambience_campfire"]:
+		if library.get(loop_name) == null:
+			_fail("audio library has no %s" % loop_name)
+	for bus_name in [&"Music", &"SFX", &"UI"]:
+		if AudioServer.get_bus_index(bus_name) == -1:
+			_fail("audio bus '%s' missing (default_bus_layout.tres)" % bus_name)
 
 
 func _check_id(id: StringName, path: String, seen: Dictionary) -> void:

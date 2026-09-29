@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ResourceDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/resource_definition.gd" id="1_def"]
+[ext_resource type="Texture2D" path="res://assets/icons/snack.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"snack"
+display_name = "Berry Snack"
+description = "Berries and a mushroom, cooked at the campfire. Press R to eat one: +35 HP."
+icon = ExtResource("2_icon")
+rarity = 2
+max_stack = 20
+ui_color = Color(0.9, 0.3, 0.35, 1)

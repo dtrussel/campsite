@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="CraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/crafting/crafting_recipe.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"stone_hearth"
+display_name = "Stone Hearth"
+description = "Clay bricks around the campfire: +75 campfire max HP, fully healed. Once per run."
+inputs = {
+&"clay": 5,
+&"stone": 4
+}
+effect = &"stone_hearth"
+icon_name = "hearth"
+xp_reward = 10
+sort_order = 30

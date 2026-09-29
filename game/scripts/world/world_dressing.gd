@@ -11,7 +11,6 @@ extends Node3D
 ##   - camp props around the campfire (tent, woodpile, crates, lanterns).
 ## Nothing here affects gameplay except the tent and woodpile colliders.
 
-const KAY: String = "res://assets/kaykit/"
 const GRASS_SHADER: Shader = preload("res://shaders/grass.gdshader")
 
 @export var dressing_seed: int = 1337
@@ -122,13 +121,13 @@ func _build_border() -> void:
 		["custom/tree_b.glb", 1.1, 1.5],
 		["custom/tree_c.glb", 1.1, 1.5],
 		["custom/pine_b.glb", 1.1, 1.4],
-		["kaykit/hexagon/hills_A_trees.gltf", 4.5, 6.0],
-		["kaykit/hexagon/hills_B_trees.gltf", 4.5, 6.0],
+		["custom/hill_a.glb", 4.5, 6.0],
+		["custom/hill_b.glb", 4.5, 6.0],
 	]
 	var backdrop: Array = [
-		["kaykit/hexagon/mountain_A_grass_trees.gltf", 7.0, 9.0],
-		["kaykit/hexagon/mountain_B_grass_trees.gltf", 7.0, 9.0],
-		["kaykit/hexagon/hills_C_trees.gltf", 6.0, 8.0],
+		["custom/mountain_a.glb", 7.0, 9.0],
+		["custom/mountain_b.glb", 7.0, 9.0],
+		["custom/hill_c.glb", 6.0, 8.0],
 	]
 	# Inner ring: individual trees just past the play boundary.
 	for i in range(70):
@@ -158,7 +157,7 @@ func _place_square_ring(models: Array, angle: float, radius: float) -> void:
 # --- Haunted edges near mob spawns ---------------------------------------
 
 func _build_haunted_edges() -> void:
-	var dead: Array = ["kaykit/halloween/tree_dead_large.gltf", "kaykit/halloween/tree_dead_medium.gltf", "kaykit/halloween/tree_dead_small.gltf"]
+	var dead: Array = ["custom/dead_tree_a.glb", "custom/dead_tree_b.glb", "custom/dead_tree_c.glb"]
 	for spawn_angle in spawn_angles:
 		var base: float = deg_to_rad(spawn_angle)
 		var dir: Vector3 = Vector3(sin(base), 0, -cos(base))
@@ -170,7 +169,7 @@ func _build_haunted_edges() -> void:
 			_spawn_model(dead[_rng.randi() % dead.size()], pos, _rng.randf_range(0.9, 1.3), _rng.randf() * TAU)
 		# A glowing jack-o'-lantern marks each lane.
 		var lantern_pos: Vector3 = dir * 18.5 + side * _rng.randf_range(2.5, 3.5)
-		var pumpkin: Node3D = _spawn_model("kaykit/halloween/pumpkin_orange_jackolantern.gltf", lantern_pos, 0.8, _rng.randf() * TAU)
+		var pumpkin: Node3D = _spawn_model("custom/jack_o_lantern.glb", lantern_pos, 0.85, _rng.randf() * TAU)
 		if pumpkin != null:
 			var glow: OmniLight3D = OmniLight3D.new()
 			glow.light_color = Color(1.0, 0.5, 0.15)
@@ -178,7 +177,7 @@ func _build_haunted_edges() -> void:
 			glow.omni_range = 3.5
 			glow.position = Vector3(0, 0.6, 0)
 			pumpkin.add_child(glow)
-		_spawn_model("kaykit/halloween/pumpkin_yellow_small.gltf", lantern_pos + side * 0.9 + dir * 0.4, 1.0, _rng.randf() * TAU)
+		_spawn_model("custom/pumpkin_small.glb", lantern_pos + side * 0.9 + dir * 0.4, 1.0, _rng.randf() * TAU)
 
 
 # --- Camp ------------------------------------------------------------------
@@ -191,9 +190,9 @@ func _build_camp() -> void:
 	_spawn_model("custom/crate.glb", Vector3(-5.3, 0, -0.8), 0.9, 0.4)
 	_spawn_model("custom/crate.glb", Vector3(-4.7, 0, 0.1), 0.65, 1.1)
 	_spawn_model("custom/barrel.glb", Vector3(-5.8, 0, 0.5), 0.9, 0.0)
-	_spawn_model("kaykit/hexagon/bucket_water.gltf", Vector3(1.6, 0, -3.6), 4.5, 0.0)
+	_spawn_model("custom/water_bucket.glb", Vector3(1.6, 0, -3.6), 1.2, 0.0)
 	for pos in [Vector3(-2.1, 0, 2.9), Vector3(3.1, 0, 1.2)]:
-		var lantern: Node3D = _spawn_model("kaykit/halloween/lantern_standing.gltf", pos, 0.9, _rng.randf() * TAU)
+		var lantern: Node3D = _spawn_model("custom/camp_lantern.glb", pos, 1.0, _rng.randf() * TAU)
 		if lantern != null:
 			var light: OmniLight3D = OmniLight3D.new()
 			light.light_color = Color(1.0, 0.75, 0.4)
@@ -246,10 +245,12 @@ func _spawn_model(path: String, position: Vector3, uniform_scale: float, yaw: fl
 	node.position = position
 	node.rotation.y = yaw
 	node.scale = Vector3.ONE * uniform_scale
-	if path.contains("hills") or path.contains("mountain"):
+	if path.contains("hill") or path.contains("mountain"):
 		node.set_meta(Stylize.TINT_META, Stylize.TINT_FOLIAGE)
 	elif path.contains("rock"):
 		node.set_meta(Stylize.TINT_META, Stylize.TINT_ROCK)
+	if (path.contains("tree_") or path.contains("pine_") or path.contains("bush")) and not path.contains("dead"):
+		node.set_meta(Stylize.FOLIAGE_META, true)
 	add_child(node)
 	return node
 

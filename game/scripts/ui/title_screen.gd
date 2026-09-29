@@ -4,7 +4,9 @@ extends Control
 ##
 ## Entry scene: a live 3D dusk backdrop of the camp (TitleBackdrop)
 ## under a LoL-client-style menu - gold Cinzel logo, hextech buttons,
-## and a How-to-play panel. Play starts a fresh run via GameManager.
+## and a How-to-play panel. Two Play buttons start a fresh 3- or 7-night
+## run; Continue (shown when there is an autosave) resumes the saved
+## run at its next morning.
 
 const BACKDROP: Script = preload("res://scripts/ui/title_backdrop.gd")
 
@@ -16,6 +18,7 @@ func _ready() -> void:
 	theme = UiKit.theme()
 	var backdrop: Node3D = BACKDROP.new()
 	add_child(backdrop)
+	AudioManager.set_mood(&"day")
 
 	# Vignette so the menu reads over the 3D scene.
 	var shade: TextureRect = TextureRect.new()
@@ -49,12 +52,30 @@ func _ready() -> void:
 
 	var buttons: VBoxContainer = UiKit.vbox(10)
 	buttons.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	buttons.position = Vector2(-140, -230)
+	buttons.position = Vector2(-236, -260)
 	add_child(buttons)
-	var play: Button = HudWidgets.icon_button("play", "Play", _on_play, Color(0.5, 1.0, 0.55))
-	play.custom_minimum_size = Vector2(300, 72)
-	play.add_theme_font_size_override("font_size", 32)
-	buttons.add_child(play)
+	var save: Dictionary = SaveManager.load_save()
+	var play: Button = null
+	if not save.is_empty():
+		# Continue: the saved run, with its nights so far as moons.
+		play = HudWidgets.icon_button("play", "Continue", _on_continue, Color(0.5, 1.0, 0.55))
+		play.custom_minimum_size = Vector2(300, 72)
+		play.add_theme_font_size_override("font_size", 30)
+		play.tooltip_text = "Night %d of %d" % [int(save["day"]) + 1, int(save["nights_to_win"])]
+		buttons.add_child(play)
+	var lengths: HBoxContainer = HBoxContainer.new()
+	lengths.alignment = BoxContainer.ALIGNMENT_CENTER
+	lengths.add_theme_constant_override("separation", 12)
+	buttons.add_child(lengths)
+	for nights in [3, 7]:
+		var start: Button = HudWidgets.icon_button("moon", "%d Nights" % nights, _on_play.bind(nights),
+			Color(1.0, 0.92, 0.55))
+		start.custom_minimum_size = Vector2(230, 64)
+		start.add_theme_font_size_override("font_size", 24)
+		start.tooltip_text = "Survive %d nights. The game saves every morning." % nights
+		lengths.add_child(start)
+		if play == null:
+			play = start
 	var small: HBoxContainer = HBoxContainer.new()
 	small.alignment = BoxContainer.ALIGNMENT_CENTER
 	small.add_theme_constant_override("separation", 12)
@@ -82,8 +103,13 @@ func _ready() -> void:
 	play.grab_focus()
 
 
-func _on_play() -> void:
-	GameManager.start_run()
+func _on_play(nights: int) -> void:
+	GameManager.start_run(nights)
+
+
+func _on_continue() -> void:
+	if not GameManager.continue_run():
+		GameManager.start_run(3)
 
 
 func _on_toggle_controls() -> void:

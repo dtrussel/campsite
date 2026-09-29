@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/crafting/crafting_recipe.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"trap_refill"
+display_name = "Trap Refill"
+description = "New springs: every Snap Trap gets all 3 snaps back."
+inputs = {
+&"wood": 1,
+&"scrap": 1
+}
+effect = &"trap_refill"
+station = &"table"
+icon_name = "refill"
+xp_reward = 3
+sort_order = 140

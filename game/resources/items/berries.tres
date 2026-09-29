@@ -11,4 +11,5 @@ description = "Food and basic healing snack. Foundation for simple recipes."
 icon = ExtResource("2_icon")
 rarity = 1
 max_stack = 50
+base_cap = 20
 ui_color = Color(0.85, 0.25, 0.35, 1)

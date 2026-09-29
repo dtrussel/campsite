@@ -1,8 +1,9 @@
-CAMPSITE - Playtest build 0.10.0 (playtest 1)
+CAMPSITE - Playtest build 0.20.0 (playtest 1)
 ============================================
 
-Thanks for testing! This is an early prototype. There is no sound
-yet, and the game needs a reasonably recent graphics driver.
+Thanks for testing! This is an early prototype. Turn your sound on:
+an owl calls when night is coming. Music and sound volume are in the
+pause menu (Esc). The game needs a reasonably recent graphics driver.
 
 HOW TO START
 ------------

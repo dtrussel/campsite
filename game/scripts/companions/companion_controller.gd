@@ -12,7 +12,11 @@ signal task_changed(new_task: int)
 signal health_changed(current_hp: int, max_hp: int)
 signal knocked_out_changed(is_knocked_out: bool)
 
-enum Task { IDLE, FOLLOW_PLAYER, GUARD_BASE, GATHER_NEAREST }
+enum Task { IDLE, FOLLOW_PLAYER, GUARD_BASE, GATHER_NEAREST, REPAIR }
+
+## Seconds between Nela's hammer taps (a bit slower than Leo's).
+const REPAIR_TAP_SECONDS: float = 1.0
+const REPAIR_REACH: float = 1.9
 
 @export var definition: CompanionDefinition
 @export var stats: CharacterStatsDefinition
@@ -38,6 +42,12 @@ var _base_core: Node3D = null
 var _attack_cooldown_remaining: float = 0.0
 var _current_attack_damage: int = 0
 var _active_resource_node: Node = null   # ResourceNode currently being gathered
+var _repair_timer: float = 0.0
+## Crafting Table upgrade (feature 019): doubles her attack reach.
+var has_slingshot: bool = false
+
+const BANDAGE_HEAL: int = 25
+const SLINGSHOT_RANGE_FACTOR: float = 2.0
 
 
 func _ready() -> void:
@@ -66,6 +76,7 @@ func take_damage(amount: int, _source: Node = null) -> void:
 	health_changed.emit(current_hp, max_hp)
 	Fx.flash(self)
 	Fx.float_text(self, "-%d" % amount, Color(1, 0.6, 0.4))
+	AudioManager.play_sfx(&"sibling_hurt", global_position)
 	if current_hp == 0:
 		_set_knocked_out(true)
 	elif not _visual.is_in_action():
@@ -116,12 +127,44 @@ func set_task(task: int) -> void:
 	_update_task_label()
 
 
+func get_attack_range() -> float:
+	if definition == null:
+		return 0.0
+	return definition.attack_range * (SLINGSHOT_RANGE_FACTOR if has_slingshot else 1.0)
+
+
+func give_slingshot() -> void:
+	if has_slingshot:
+		return
+	has_slingshot = true
+	Fx.float_text(self, "SLINGSHOT!", Color(1.0, 0.85, 0.4), 2.7)
+	Fx.burst(&"level_up", global_position)
+
+
+## A bandage: +25 HP, or wakes her up (with 25 HP) when knocked out.
+## False when she does not need one.
+func apply_bandage() -> bool:
+	if is_knocked_out:
+		_set_knocked_out(false)
+		current_hp = mini(max_hp, BANDAGE_HEAL)
+	elif current_hp < max_hp:
+		current_hp = mini(max_hp, current_hp + BANDAGE_HEAL)
+	else:
+		return false
+	health_changed.emit(current_hp, max_hp)
+	Fx.float_text(self, "+%d HP" % BANDAGE_HEAL, Color(0.5, 1, 0.5))
+	Fx.burst(&"heal", global_position)
+	AudioManager.play_sfx(&"bandage", global_position)
+	return true
+
+
 func get_task_name() -> String:
 	match current_task:
 		Task.IDLE: return "Idle"
 		Task.FOLLOW_PLAYER: return "Follow Player"
 		Task.GUARD_BASE: return "Guard Base"
 		Task.GATHER_NEAREST: return "Gather"
+		Task.REPAIR: return "Repair"
 	return "?"
 
 
@@ -146,6 +189,8 @@ func _physics_process(delta: float) -> void:
 			_tick_guard_base()
 		Task.GATHER_NEAREST:
 			_tick_gather_nearest()
+		Task.REPAIR:
+			_tick_repair(delta)
 
 	var planar_speed: float = Vector2(velocity.x, velocity.z).length()
 	_visual.set_locomotion(planar_speed)
@@ -183,7 +228,7 @@ func _tick_guard_base() -> void:
 		move_and_slide()
 		return
 	# First priority: kill nearby mobs.
-	var mob: Node3D = _find_nearest_mob(definition.attack_range)
+	var mob: Node3D = _find_nearest_mob(get_attack_range())
 	if mob != null:
 		velocity = Vector3.ZERO
 		move_and_slide()
@@ -238,6 +283,45 @@ func _tick_gather_nearest() -> void:
 	move_and_slide()
 
 
+## Fixes the most damaged structure (the campfire first when it is
+## low), fighting any imp that comes within reach. With nothing to fix,
+## or no wood left, she guards the camp instead.
+func _tick_repair(delta: float) -> void:
+	_repair_timer = maxf(0.0, _repair_timer - delta)
+	var mob: Node3D = _find_nearest_mob(get_attack_range())
+	var target: Node3D = Repair.most_damaged(get_tree())
+	if mob != null or target == null or not ResourceManager.has(Repair.WOOD_ID, Repair.WOOD_PER_TAP):
+		_tick_guard_base()
+		return
+	var to_target: Vector3 = target.global_position - global_position
+	to_target.y = 0.0
+	if to_target.length() > REPAIR_REACH + _target_radius(target):
+		velocity = to_target.normalized() * definition.move_speed
+		move_and_slide()
+		return
+	velocity = Vector3.ZERO
+	move_and_slide()
+	_visual.face(to_target, delta)
+	if _repair_timer <= 0.0:
+		_repair_timer = REPAIR_TAP_SECONDS
+		if Repair.tap(target, self):
+			_visual.play_action(&"gather", 1.6)
+
+
+func _target_radius(node: Node3D) -> float:
+	var shape: CollisionShape3D = node.get_node_or_null("Collision") as CollisionShape3D
+	if shape == null:
+		return 0.5
+	if shape.shape is BoxShape3D:
+		var box: Vector3 = (shape.shape as BoxShape3D).size
+		return maxf(box.x, box.z) * 0.5
+	if shape.shape is SphereShape3D:
+		return (shape.shape as SphereShape3D).radius
+	if shape.shape is CylinderShape3D:
+		return (shape.shape as CylinderShape3D).radius
+	return 0.5
+
+
 func _begin_gather_on(node: Node) -> void:
 	if not node.has_method("begin_gather"):
 		return
@@ -286,7 +370,8 @@ func _on_level_up(character: Node, _new_level: int) -> void:
 	max_hp += stats.max_health_per_level
 	current_hp = min(max_hp, current_hp + stats.max_health_per_level)
 	health_changed.emit(current_hp, max_hp)
-	Fx.float_text(self, "LEVEL UP!", Color(1.0, 0.85, 0.4), 2.7)
+	if not ProgressionManager.is_restoring:
+		Fx.float_text(self, "LEVEL UP!", Color(1.0, 0.85, 0.4), 2.7)
 
 
 func _find_nearest_mob(within: float) -> Node3D:
@@ -316,7 +401,7 @@ func _find_nearest_resource_node() -> Node3D:
 		var node: Node = stack.pop_back()
 		if node == null:
 			continue
-		if node is ResourceNode and (node as ResourceNode).is_gatherable:
+		if node is ResourceNode and (node as ResourceNode).is_gatherable and not (node as ResourceNode).is_stash_full():
 			var n3d: Node3D = node as Node3D
 			var d_sq: float = n3d.global_position.distance_squared_to(global_position)
 			if d_sq < best_d_sq:

@@ -17,6 +17,27 @@ extends Resource
 @export var aggro_radius: float = 4.0
 @export var attack_cooldown_seconds: float = 1.0
 @export var xp_reward: int = 5
+## Siege mobs (Bramble Beast) walk to the nearest building and tear it
+## down before going for the campfire; they only turn on characters who
+## come within aggro_radius.
+@export var prefers_buildings: bool = false
+## Attack damage multiplier against buildings (not the campfire).
+@export var building_damage_multiplier: float = 1.0
+## How far hits push this mob back (0 = immovable, 1 = an imp).
+@export var knockback_scale: float = 1.0
+## Thieves (Mushroom Gremlin, feature 021) ignore everyone, run to the
+## camp's stash (a Storage Crate, else the campfire), grab up to
+## `steal_amount` of the most plentiful resource and run back to the
+## forest. Caught, they drop the loot; escaped, it is gone.
+@export var steals_resources: bool = false
+@export var steal_amount: int = 4
+## Fx.burst kinds (and sounds) for rising out of the ground and dying.
+@export var spawn_burst: StringName = &"shadow_spawn"
+@export var death_burst: StringName = &"shadow_death"
+## Loot: every `drop_every_n_kills`-th kill of this mob type (counted
+## per run) leaves a `drop_item` pickup (Glow Shards for imps). 0 = never.
+@export var drop_item: StringName = &""
+@export var drop_every_n_kills: int = 0
 @export var ui_color: Color = Color(0.6, 0.4, 0.7, 1)
 
 
