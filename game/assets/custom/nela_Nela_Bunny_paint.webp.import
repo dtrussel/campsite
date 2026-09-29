@@ -2,25 +2,25 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://deb43eahtuu40"
-path="res://.godot/imported/nela_Nela_paint.png-f2c7a7c5597dc3d792140d7f87f9b84e.ctex"
+uid="uid://p80spypmrnk3"
+path="res://.godot/imported/nela_Nela_Bunny_paint.webp-b33a01256392e9a532213243494532c4.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "e82f8174bf3716a835cb2179f197baa5"
+"md5": "6b3a761f1614d907c9fab17388718665"
 }
 
 [deps]
 
-source_file="res://assets/custom/nela_Nela_paint.png"
-dest_files=["res://.godot/imported/nela_Nela_paint.png-f2c7a7c5597dc3d792140d7f87f9b84e.ctex"]
+source_file="res://assets/custom/nela_Nela_Bunny_paint.webp"
+dest_files=["res://.godot/imported/nela_Nela_Bunny_paint.webp-b33a01256392e9a532213243494532c4.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
-compress/lossy_quality=0.7
+compress/lossy_quality=0.9
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0

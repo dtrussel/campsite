@@ -2,25 +2,25 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c7sgae08cj38n"
-path="res://.godot/imported/nela_Nela_Hair_paint.png-9c798dc44a6bb72b6f876f6ee9cd4467.ctex"
+uid="uid://d4hwxu5jf41qb"
+path="res://.godot/imported/nela_Nela_Lantern_paint.webp-cdd2fdca6c33d80ba1e37981e0f00c7f.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "f03bf4b6d5ad39c1418b1a71db0db27d"
+"md5": "4eea97eec824b6578cd84483d68eeef8"
 }
 
 [deps]
 
-source_file="res://assets/custom/nela_Nela_Hair_paint.png"
-dest_files=["res://.godot/imported/nela_Nela_Hair_paint.png-9c798dc44a6bb72b6f876f6ee9cd4467.ctex"]
+source_file="res://assets/custom/nela_Nela_Lantern_paint.webp"
+dest_files=["res://.godot/imported/nela_Nela_Lantern_paint.webp-cdd2fdca6c33d80ba1e37981e0f00c7f.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
-compress/lossy_quality=0.7
+compress/lossy_quality=0.9
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
