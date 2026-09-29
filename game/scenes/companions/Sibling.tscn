@@ -42,7 +42,7 @@ clips = {
 reference_speed = 6.1
 
 [node name="TaskLabel" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.3, 0)
 billboard = 1
 no_depth_test = true
 pixel_size = 0.009

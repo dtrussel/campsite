@@ -124,6 +124,23 @@ def color_by(obj, fn, smooth=True):
     mesh.color_attributes.active_color = attr
 
 
+def grime(obj, colour, amount):
+    """Blends `colour` (sRGB) over the existing 'Col' attribute:
+    amount(position_local, normal) -> 0..1 per vertex. For painted dirt,
+    wear, scuffs and mud on top of colours set by color_by/set_color."""
+    mesh = obj.data
+    attr = mesh.color_attributes.get("Col")
+    if attr is None:
+        return
+    target = srgb(colour)
+    weights = [max(0.0, min(1.0, amount(v.co, v.normal))) for v in mesh.vertices]
+    for loop in mesh.loops:
+        t = weights[loop.vertex_index]
+        if t > 0.0:
+            c = attr.data[loop.index].color
+            attr.data[loop.index].color = (*(c[i] + (target[i] - c[i]) * t for i in range(3)), 1.0)
+
+
 def lerp(a, b, t):
     return tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
 
@@ -194,7 +211,11 @@ def metaball_object(name, elements, resolution=0.05, threshold=0.6):
     return result
 
 
-def export_glb(path, objects, animations=False):
+def export_glb(path, objects, animations=False, image_format="AUTO"):
+    if os.environ.get("BAKE_SIZE") and not os.environ.get("DRAFT_EXPORT"):
+        # Draft bakes are for review only: keep the committed assets.
+        print("draft bake (BAKE_SIZE): not exporting", os.path.relpath(path, ROOT))
+        return
     os.makedirs(os.path.dirname(path), exist_ok=True)
     select_only(objects)
     bpy.ops.export_scene.gltf(
@@ -206,7 +227,8 @@ def export_glb(path, objects, animations=False):
         export_texcoords=True,
         export_normals=True,
         export_materials="EXPORT",
-        export_image_format="AUTO",
+        export_image_format=image_format,
+        export_image_quality=92,
         export_animations=animations,
         export_animation_mode="ACTIONS",
         export_skins=True,

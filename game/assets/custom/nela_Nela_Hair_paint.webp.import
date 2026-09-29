@@ -2,25 +2,25 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dfshxbpo0bj35"
-path="res://.godot/imported/nela_Nela_Head_paint.png-722ef0ea0ef1eef5c0ad544a295f3102.ctex"
+uid="uid://khirc4abh7xg"
+path="res://.godot/imported/nela_Nela_Hair_paint.webp-4f25f090285c844ab528ec4d6938fedb.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "65637d78590c2e43e6e195dc3ebc1098"
+"md5": "586a23dcd0d5db149819c652082c582b"
 }
 
 [deps]
 
-source_file="res://assets/custom/nela_Nela_Head_paint.png"
-dest_files=["res://.godot/imported/nela_Nela_Head_paint.png-722ef0ea0ef1eef5c0ad544a295f3102.ctex"]
+source_file="res://assets/custom/nela_Nela_Hair_paint.webp"
+dest_files=["res://.godot/imported/nela_Nela_Hair_paint.webp-4f25f090285c844ab528ec4d6938fedb.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
-compress/lossy_quality=0.7
+compress/lossy_quality=0.9
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0

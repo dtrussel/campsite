@@ -19,15 +19,16 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 
 | Path | What |
 |------|------|
-| `lib/common.py` | Scene reset, mesh helpers, sRGB→linear colours, per-vertex/face colouring, remesh/decimate, glTF export |
+| `lib/common.py` | Scene reset, mesh helpers, sRGB→linear colours, per-vertex/face colouring, painted grime, remesh/decimate, glTF export |
 | `lib/paint_bake.py` | **The painted look**: bakes base colour, a warm-top/cool-bottom tint, AO, edge highlights and brush noise into one texture (`<name>_painted` material) |
 | `lib/preview.py` | Preview renders |
 | `nature/` | Trees (3 variants + stump), autumn pines, rocks, berry bush |
 | `props/camp.py` | Campfire, tent, fence, watch post, torch, woodpile, crate, barrel, toadstools |
 | `characters/shadow_imp.py` | Brand-new imp body (metaballs along the Skeleton Minion rig, auto-weighted) with horns, wings, tail and glowing eyes |
-| `characters/leo.py`, `nela.py` | Leo and Nela, modelled from the concept art on the KayKit adventurer rig (all 76 clips) |
+| `characters/leo.py`, `nela.py` | Leo and Nela, modelled from the concept art on the KayKit adventurer rig (all 76 clips). The concept sheets are the reference for faces, outfits and gear (feature 012); each script's docstring lists what it follows |
 | `characters/chibi.py` | Kit for the kids: fused, auto-weighted clothing; rigid gear; face decals (eyes, brows, smile); hair locks; boots, backpack parts. `QUICK=1` previews without baking |
-| `characters/face_paint.py` | LoL-style **painted faces**: numpy paints eyes (lids, liner, iris, catchlight), brushed brows, nose/lip shading, contours and face paint into a front-projected image; `chibi.sculpt_features` carves matching relief from the same `FaceLayout`, and `paint_bake`'s `overlay` bakes it under the lighting |
+| `characters/head_loft.py` | **Drawn game heads** (feature 014): a loft through superellipse sections (front outline and side profile per character) with a few planar forms: a wedge nose, inset eye plates, a brow shelf, cheek, lip and chin planes. The face itself is painted. Also the sculpted ears (`ear()`). Tune with a `HeadLoft` per character |
+| `characters/face_paint.py` | LoL-style **painted faces**: numpy paints eyes (lids, liner, iris, catchlight), brushed brows, nose/lip shading, contours and face paint into a front-projected image; `head_loft` places its forms from the same `FaceLayout`, and `paint_bake`'s `overlay` bakes it under the lighting |
 | `ground/textures.py` | Seamless hand-painted grass, dirt and leaf-litter textures (numpy brush stamps) for `painted_ground.gdshader` |
 
 ## Conventions
@@ -37,7 +38,13 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
   (`scripts/utilities/stylize.gd`). The hero and shadow profiles also add an
   ink outline.
 - **Emissive** flat materials (eyes, wand star, embers) render unshaded.
-- **Triangle budgets:** characters ≤ 12k, trees ≤ 3k, props ≤ 1.5k.
+- **Triangle budgets:** imps ≤ 12k; the hero kids ≤ 40k (about 35k: body and clothes ~18–20k, head and ears ~4.5k, hair ~9–10k, each prop ~1.5k; Godot makes distance LODs on import), trees ≤ 3k, props ≤ 1.5k. The kids bake at 1024 (they are under 100 px on screen) and export WebP textures.
+- **High-to-low bake:** the kid scripts build dense meshes (voxel cloth with folds, the 100-ring head loft, per-vertex colours) and `chibi.lowpoly(mesh, tris)` decimates each one to its budget while keeping a dense copy. `paint_bake.paint(mesh, high=copy)` paints the look on the dense copy (so stripes, folds, AO and the face stay crisp), then transfers it onto the low mesh with a selected-to-active colour bake. `HIGH_POLY=1` skips the decimation, to compare.
+- **Draft bakes:** `BAKE_SIZE=512 .venv-blender/bin/python art/characters/nela.py` bakes the painted look at low resolution with fewer samples (about a minute per kid at 256, a few minutes at 512–1024) and renders the previews, but never exports to `game/assets` (unless `DRAFT_EXPORT=1`, for a quick look in Godot; do not commit those). Use it to review paint between milestones; run the full 1024 bake only for a release.
+- **Sculpt review:** `SCULPT=1 QUICK=1 .venv-blender/bin/python art/characters/leo.py` renders matte clay views (front, 3/4, side, back), game-size silhouettes and clay animation frames, without baking (`preview.render_clay`, `preview.render_silhouette`).
+- **Shape kit (chibi):** `limb` (elliptical lofted sections for anatomy), `fold` (sculpted cloth folds: parallel or radiating), `hem_ring` (rolled hems), `sculpted_hand`, `sculpted_boot`, `webbing`, `buckle`, `bedroll_detail`, `hair_clump(sharp=, twist=)`.
+- **Patterned cloth** (stripes, folk patterns) is voxel-remeshed without decimation, so painted bands stay crisp.
+- **Painted wear:** `common.grime(obj, colour, amount_fn)` blends dirt, scuffs and mud over the colours already set, before the bake.
 - **Rigid gear** on characters is bound to one bone at weight 1.0.
   Weapons are built in the `handslot.r` bone frame: handle along +Y, blade
   toward -X.
