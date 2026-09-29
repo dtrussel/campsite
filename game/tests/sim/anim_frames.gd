@@ -28,6 +28,10 @@ func _ready() -> void:
 		await _beast_frames(player)
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().size() > 1 and OS.get_cmdline_user_args()[1] == "imp":
+		await _imp_frames(player)
+		get_tree().quit()
+		return
 	if OS.get_cmdline_user_args().size() > 1 and OS.get_cmdline_user_args()[1] == "gremlin":
 		await _gremlin_frames(player)
 		get_tree().quit()
@@ -135,4 +139,38 @@ func _gremlin_frames(player: Node3D) -> void:
 	visual.face_instantly(Vector3(0, 0, 1))
 	await _settle(0.5)
 	_shot("gremlin_face_0")
+
+
+## Feature 028: the Shadow Imp rising, running at Leo, swiping, and a
+## still facing the camera. Pass `imp` after the output dir.
+func _imp_frames(player: Node3D) -> void:
+	for layer in get_tree().root.find_children("*", "CanvasLayer", true, false):
+		(layer as CanvasLayer).visible = false
+	var spawner: Node = get_tree().get_first_node_in_group("mob_spawner")
+	var imp_def: MobDefinition = spawner.get("mob_definition")
+	player.global_position = Vector3(0.4, 0, 3.0)
+	player.set("current_hp", 9999)
+	var imp: Node3D = imp_def.get_scene().instantiate() as Node3D
+	get_tree().current_scene.add_child(imp)
+	imp.global_position = Vector3(2.4, 0, 3.4)
+	for i in 4:
+		await _settle(0.3)
+		_shot("imp_spawn_%d" % i)
+	for i in 6:
+		await _settle(0.1)
+		_shot("imp_fight_%d" % i)
+	imp.call("take_damage", 999, player)
+	for i in 3:
+		await _settle(0.25)
+		_shot("imp_death_%d" % i)
+	var poser: Node3D = imp_def.get_scene().instantiate() as Node3D
+	get_tree().current_scene.add_child(poser)
+	poser.global_position = player.global_position + Vector3(1.4, 0, 0.6)
+	await _settle(2.2)
+	poser.process_mode = Node.PROCESS_MODE_DISABLED
+	var visual: CharacterVisual = poser.get_node("Visual") as CharacterVisual
+	visual.process_mode = Node.PROCESS_MODE_ALWAYS
+	visual.face_instantly(Vector3(0, 0, 1))
+	await _settle(0.5)
+	_shot("imp_face_0")
 

@@ -421,6 +421,21 @@ func _spawn_building(id: StringName, position: Vector3) -> Building:
 ## Feature 018: waves mix in Bramble Beasts, which go for buildings.
 func _check_bramble_beast(player: Node3D) -> void:
 	var spawner: Node = get_tree().get_first_node_in_group("mob_spawner")
+	# Feature 028: the Shadow Imp has its own clips.
+	var imp: Mob = _spawn_mob(spawner.get("mob_definition"), Vector3(-14, 0, 18))
+	await get_tree().process_frame
+	var imp_visual: CharacterVisual = imp.get_node("Visual") as CharacterVisual
+	var imp_player: AnimationPlayer = imp_visual.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	var imp_missing: Array = []
+	for state in imp_visual.clips.keys():
+		if not imp_player.has_animation(String(imp_visual.clips[state])):
+			imp_missing.append(imp_visual.clips[state])
+	_check(imp_missing.is_empty(), "imp model has all its clips %s" % [imp_missing])
+	# Defeated with no attacker (so no XP for Leo): it tumbles over and its
+	# corpse is gone within CORPSE_SECONDS.
+	imp.take_damage(999, null)
+	await _wait(2.0)
+	_check(not is_instance_valid(imp), "a defeated imp's corpse is cleared")
 	var beast_def: MobDefinition = spawner.get("heavy_definition")
 	_check(beast_def != null and beast_def.prefers_buildings, "spawner has a siege mob (bramble beast)")
 	for night in [1, 2, 3]:
