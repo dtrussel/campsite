@@ -108,8 +108,9 @@ func _build_top(root: Control) -> void:
 	_clock.custom_minimum_size = Vector2(56, 56)
 	row.add_child(_clock)
 	# One moon per night to survive; they light up as nights are won.
+	var moon_size: float = 46.0 if GameManager.nights_to_win <= 4 else 30.0
 	for i in range(GameManager.nights_to_win):
-		var moon: HudWidgets.Glyph = HudWidgets.Glyph.new("moon_empty", Color(1.0, 0.92, 0.55), 46)
+		var moon: HudWidgets.Glyph = HudWidgets.Glyph.new("moon_empty", Color(1.0, 0.92, 0.55), moon_size)
 		row.add_child(moon)
 		_moons.append(moon)
 
@@ -516,7 +517,7 @@ func _on_level_up(character: Node, new_level: int) -> void:
 	_refresh_progress(character)
 	if character == _companion:
 		_refresh_sibling()
-	elif character == _player:
+	elif character == _player and not ProgressionManager.is_restoring:
 		show_banner("Level up!", Color(1.0, 0.86, 0.45))
 
 

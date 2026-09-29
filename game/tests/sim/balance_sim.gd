@@ -2,7 +2,7 @@ extends Node
 
 ## Scratch balance simulation (not a pass/fail test). Plays nights
 ## unattended with the given companion task and prints HP at each dawn.
-##   -- <companion task 0-4> <fight|idle> [no_beasts]
+##   -- <companion task 0-4> <fight|idle> [no_beasts] [7]
 ## "fight" chases the nearest mob like an active player; days are
 ## skipped, so the boy is healed to full at each nightfall.
 
@@ -16,7 +16,9 @@ func _ready() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
 	if args.size() > 0: companion_task = int(args[0])
 	if args.size() > 1: player_fights = args[1] == "fight"
-	var no_beasts: bool = args.size() > 2 and args[2] == "no_beasts"
+	var no_beasts: bool = args.has("no_beasts")
+	var nights: int = 7 if args.has("7") else 3
+	GameManager.nights_to_win = nights
 	var main: Node = MAIN_SCENE.instantiate()
 	add_child(main)
 	await get_tree().process_frame
@@ -30,7 +32,7 @@ func _ready() -> void:
 	player.global_position = Vector3(1.5, 0, 1.5)
 	Engine.time_scale = 6.0
 	var fire: BaseCore = get_tree().get_first_node_in_group("base_core")
-	for night in range(1, 4):
+	for night in range(1, nights + 1):
 		while TimeManager.current_phase != TimeManager.Phase.NIGHT:
 			TimeManager.skip_phase()
 		# A real day (120 s at 1.5 HP/s) regenerates the boy fully.

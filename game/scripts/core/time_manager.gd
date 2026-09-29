@@ -39,10 +39,12 @@ func reset() -> void:
 	day_number = 1
 
 
-## Starts ticking from day 1. Called once the gameplay scene is ready
-## so scene-side listeners hear the initial day_started.
-func start_run() -> void:
+## Starts ticking from the morning of `first_day` (1, or later when a
+## save is continued). Called once the gameplay scene is ready so
+## scene-side listeners hear the initial day_started.
+func start_run(first_day: int = 1) -> void:
 	reset()
+	day_number = maxi(1, first_day)
 	is_running = true
 	phase_changed.emit(current_phase)
 	day_started.emit(day_number)

@@ -9,6 +9,9 @@ extends StaticBody3D
 ## (mobs) and Phase 4 (companion repair) can wire in without touching
 ## any building scene.
 
+## Every placed building (not build-mode ghosts); the autosave lists them.
+const BUILDINGS_GROUP: StringName = &"buildings"
+
 signal damaged(new_hp: int)
 signal repaired(new_hp: int)
 signal destroyed
@@ -37,6 +40,8 @@ func _ready() -> void:
 		current_hp = definition.max_hp
 	else:
 		push_warning("Building '%s' has no definition" % name)
+	if not has_meta(&"build_ghost"):
+		add_to_group(BUILDINGS_GROUP)
 	if not has_meta(&"build_ghost") and repair_per_tap > 0:
 		add_to_group(Repair.GROUP)
 	if not has_meta(&"build_ghost"):

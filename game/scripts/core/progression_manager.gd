@@ -12,6 +12,10 @@ signal level_up(character: Node, new_level: int)
 
 const SURVIVE_NIGHT_XP: int = 10
 
+## True while a save is being restored: level-ups still apply their
+## stat boosts, but skip the fanfare.
+var is_restoring: bool = false
+
 var _state: Dictionary = {}  # Node -> { level: int, xp: int, stats: CharacterStatsDefinition }
 
 
@@ -55,6 +59,18 @@ func award_xp(character: Node, amount: int, source: StringName) -> void:
 	entry["xp"] = int(entry["xp"]) + amount
 	xp_gained.emit(character, amount, source)
 	_check_level_ups(character, entry)
+
+
+## Sets a character's XP from a save, replaying level-ups quietly so
+## their stat boosts are applied the same way as in play.
+func restore_xp(character: Node, xp: int) -> void:
+	if character == null or not _state.has(character):
+		return
+	var entry: Dictionary = _state[character]
+	is_restoring = true
+	entry["xp"] = maxi(int(entry["xp"]), xp)
+	_check_level_ups(character, entry)
+	is_restoring = false
 
 
 func get_level(character: Node) -> int:

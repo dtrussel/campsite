@@ -370,7 +370,8 @@ func _on_level_up(character: Node, _new_level: int) -> void:
 	max_hp += stats.max_health_per_level
 	current_hp = min(max_hp, current_hp + stats.max_health_per_level)
 	health_changed.emit(current_hp, max_hp)
-	Fx.float_text(self, "LEVEL UP!", Color(1.0, 0.85, 0.4), 2.7)
+	if not ProgressionManager.is_restoring:
+		Fx.float_text(self, "LEVEL UP!", Color(1.0, 0.85, 0.4), 2.7)
 
 
 func _find_nearest_mob(within: float) -> Node3D:

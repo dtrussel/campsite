@@ -13,7 +13,7 @@ fragile camping trip into a magical woodland fortress.
 
 ## Status
 
-**Prototype, ready for first playtest (v0.14.0-playtest1).** Hand-painted,
+**Prototype, ready for first playtest (v0.15.0-playtest1).** Hand-painted,
 LoL-inspired 3D art: **Leo** (the big brother, played by you), his little
 sister **Nela**, the Shadow Imps, trees, rocks, camp props and the painted
 ground are modelled, painted and texture-baked by the scripts in
@@ -46,7 +46,8 @@ Feature 019 adds:
 - the **Crafting Table**, a second crafting spot with the Sturdy Stick,
   Nela's Slingshot, Bandages and Trap Refills.
 
-Next: 3- or 7-night runs with autosave (020). See [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md)
+Feature 020 adds **3- or 7-night runs**. The game **autosaves every
+morning**, and **Continue** on the title screen resumes the run. See [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md)
 and [`.features/005-first-playtest-build/handoff.md`](.features/005-first-playtest-build/handoff.md).
 
 **Playtesters:** follow [`docs/testing/playtest-001.md`](docs/testing/playtest-001.md).
@@ -77,7 +78,9 @@ The reasoning is captured in
 - The main scene is `game/scenes/ui/TitleScreen.tscn`; **Play** loads
   `game/scenes/main/Main.tscn`.
 
-**Goal:** survive 3 nights and keep the campfire burning.
+**Goal:** survive 3 (or 7) nights and keep the campfire burning. The
+game saves itself every morning; use **Continue** on the title screen to
+resume.
 
 Controls (LoL-style; also shown in-game with **H**):
 
@@ -190,7 +193,7 @@ Start here if you are a new contributor or coding agent:
 6. [Test strategy](docs/testing/test-strategy.md)
 7. [ADR-0001: Engine & language selection](docs/decisions/ADR-0001-engine-and-language-selection.md)
 8. [Agent feature workflow](.features/README.md)
-9. [Latest feature handoff](.features/019-wall-crate-table/handoff.md)
+9. [Latest feature handoff](.features/020-run-modes-and-autosave/handoff.md)
 10. [Playtest 001 script](docs/testing/playtest-001.md)
 
 ## Development workflow
@@ -218,6 +221,7 @@ Start here if you are a new contributor or coding agent:
 | 6     | Combat, XP, and leveling                   | done |
 | 7     | Crafting and first survival loop           | done |
 | P1    | First human playtest                       | **next** |
+| 8     | Save/load (autosave at dawn, Continue)     | done (feature 020) |
 | 8     | Save/load prototype                        | planned |
 
 Full detail in [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md).

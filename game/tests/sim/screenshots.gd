@@ -11,11 +11,18 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_out = OS.get_cmdline_user_args()[0] if not OS.get_cmdline_user_args().is_empty() else ProjectSettings.globalize_path(OUT_DIR)
 	DirAccess.make_dir_recursive_absolute(_out)
+	# A sample autosave so the title shows Continue (feature 020).
+	SaveManager.set_save_path("user://screenshot_save.json")
+	var sample: FileAccess = FileAccess.open("user://screenshot_save.json", FileAccess.WRITE)
+	sample.store_string(SaveManager.serialize({"nights_to_win": 7, "day": 3, "inventory": {}, "campfire": {"hp": 150, "hearth": false},
+		"buildings": [], "player": {"xp": 0, "stick": false}, "sibling": {"xp": 0, "slingshot": false, "task": 0}, "stats": {}}))
+	sample.close()
 	var title: Node = load("res://scenes/ui/TitleScreen.tscn").instantiate()
 	add_child(title)
 	await _settle(0.5)
 	_shot("01_title")
 	title.queue_free()
+	SaveManager.delete_save()
 
 	var main: Node = load("res://scenes/main/Main.tscn").instantiate()
 	add_child(main)

@@ -268,7 +268,7 @@ static func goal_picture(nights: int = 3) -> HBoxContainer:
 	row.add_child(fire)
 	row.add_child(HudWidgets.Glyph.new("heart", Color(1.0, 0.4, 0.45), 40))
 	for i in range(nights):
-		row.add_child(HudWidgets.Glyph.new("moon", Color(1.0, 0.92, 0.55), 48))
+		row.add_child(HudWidgets.Glyph.new("moon", Color(1.0, 0.92, 0.55), 48 if nights <= 4 else 34))
 	return row
 
 

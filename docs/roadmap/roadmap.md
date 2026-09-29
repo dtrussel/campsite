@@ -199,6 +199,9 @@ enjoys it before we invest in save/load. Implemented by
 
 ## Phase 8 &mdash; Save/load prototype
 
+*Done in feature 020 as an autosave at dawn plus Continue, with a
+versioned `user://save.json`. No manual save or load menu.*
+
 **Goal:** the player can save and resume.
 
 **Deliverables**
@@ -238,5 +241,5 @@ art track in parallel.
 | 017 Repair and resources | **Done.** Repair by Leo (hammer) and Nela (task V), and Feed the Fire. Clay pits, mushroom patches and junk piles; Glow Shards from imps. Berry Snack and Stone Hearth recipes; Snap Trap and Glow Lantern buildings. |
 | 018 Bramble Beast | **Done.** A slow, tanky siege mob that walks to the nearest building (×3 damage). Waves mix 0/1/2 beasts into nights 1/2/3. |
 | 019 Buildings | **Done.** Reinforced Wall; stash caps plus the Storage Crate; the Crafting Table with the Sturdy Stick, Slingshot, Bandage and Trap Refill. |
-| 020 Longer runs + save/load | 7-night and endless modes, with Phase 8 save/load. |
+| 020 Longer runs + save/load | **Done.** 3- or 7-night runs; autosave at dawn with Continue (Phase 8, as autosave). Endless mode was not chosen. |
 | Art (parallel) | Shadow Imp remodel with the hero pipeline, then gather, attack and hit animations, then painted environment and props. |

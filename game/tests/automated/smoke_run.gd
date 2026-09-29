@@ -17,6 +17,10 @@ const SPEED: float = 4.0
 
 var _main: Node = null
 var _failures: int = 0
+## The autosave written after night 1 of the win run (feature 020).
+var _night1_save: Dictionary = {}
+
+const TEST_SAVE_PATH: String = "user://smoke_save.json"
 
 
 func _ready() -> void:
@@ -25,8 +29,13 @@ func _ready() -> void:
 		_fail("timed out after %ds" % TIMEOUT_SECONDS)
 		_finish()
 	)
+	# Never touch a real player's autosave.
+	SaveManager.set_save_path(TEST_SAVE_PATH)
+	SaveManager.delete_save()
 	await _run_win_scenario()
 	await _run_loss_scenario()
+	await _run_continue_scenario()
+	SaveManager.delete_save()
 	_finish()
 
 
@@ -139,12 +148,19 @@ func _run_win_scenario() -> void:
 	companion.call("set_task", 2)  # guard the campfire
 	for night in range(1, GameManager.nights_to_win + 1):
 		await _survive_night(night, player)
+		if night == 1:
+			await get_tree().process_frame  # the autosave runs deferred
+			_night1_save = SaveManager.load_save()
+			_check(not _night1_save.is_empty() and int(_night1_save["day"]) == 1, "autosaved at dawn after night 1")
+			_check(int(_night1_save.get("inventory", {}).get("wood", 0)) == ResourceManager.get_count(&"wood"),
+				"autosave has the inventory (wood %d)" % ResourceManager.get_count(&"wood"))
 		if night < GameManager.nights_to_win:
 			_check(GameManager.is_playing(), "still playing after night %d" % night)
 	_check(GameManager.run_state == GameManager.RunState.WON, "run WON after %d nights" % GameManager.nights_to_win)
 	_check(int(GameManager.stats[&"kills"]) > 0, "kills recorded (%d)" % GameManager.stats[&"kills"])
 	_check(get_tree().paused, "world frozen behind end screen")
 	_check(AudioManager.mood == &"", "music stops for the win stinger")
+	_check(not SaveManager.has_save(), "a won run deletes its save")
 	var shards_seen: int = ResourceManager.get_count(&"glow_shards") + get_tree().get_nodes_in_group("pickups").size()
 	_check(shards_seen >= int(GameManager.stats[&"kills"]) / 3 - 1, "imps dropped glow shards (%d for %d kills)" % [shards_seen, GameManager.stats[&"kills"]])
 
@@ -411,6 +427,7 @@ func _run_loss_scenario() -> void:
 	_campfire().take_damage(10000)
 	await get_tree().process_frame
 	_check(GameManager.run_state == GameManager.RunState.LOST, "run LOST when campfire destroyed")
+	_check(not SaveManager.has_save(), "no save after a lost run")
 
 	# Volume settings round-trip through user://settings.cfg.
 	var saved_music: float = AudioManager.music_volume
@@ -419,6 +436,54 @@ func _run_loss_scenario() -> void:
 	_check(config.load(AudioManager.SETTINGS_PATH) == OK and is_equal_approx(float(config.get_value("audio", "music")), 0.35),
 		"music volume saved to settings.cfg")
 	AudioManager.set_music_volume(saved_music)
+
+
+## Feature 020: Continue rebuilds the camp from the night-1 autosave,
+## and a 7-night run shows 7 moons and bigger waves.
+func _run_continue_scenario() -> void:
+	print("smoke: --- continue scenario ---")
+	# Buildings from earlier checks live on the test root; clear them so
+	# only the restored ones remain.
+	for node in get_tree().get_nodes_in_group(Building.BUILDINGS_GROUP):
+		node.queue_free()
+	await get_tree().process_frame
+	var data: Dictionary = _night1_save
+	_check(not data.is_empty(), "have the night-1 save to continue")
+	if data.is_empty():
+		return
+	# Damaged or foreign saves are refused.
+	_check(SaveManager.parse("{not json").is_empty(), "a corrupt save is ignored")
+	var old_version: Dictionary = data.duplicate(true)
+	var text: String = SaveManager.serialize(old_version).replace('"version": 1', '"version": 99')
+	_check(SaveManager.parse(text).is_empty(), "a save from another version is ignored")
+	_check(SaveManager.parse(SaveManager.serialize(data)).hash() == SaveManager.parse(SaveManager.serialize(data)).hash()
+		and not SaveManager.parse(SaveManager.serialize(data)).is_empty(), "save round-trips through JSON")
+
+	GameManager.nights_to_win = int(data["nights_to_win"])
+	GameManager.set("_pending_save", data)
+	await _start_fresh_run()
+	_check(TimeManager.day_number == 2 and TimeManager.current_phase == TimeManager.Phase.DAY, "continued at the morning of day 2")
+	_check(ResourceManager.get_count(&"wood") == int(data["inventory"].get("wood", 0)), "inventory restored")
+	var buildings: int = get_tree().get_nodes_in_group(Building.BUILDINGS_GROUP).size()
+	_check(buildings == (data["buildings"] as Array).size(), "buildings restored (%d)" % buildings)
+	var fire: BaseCore = _campfire()
+	_check(fire.has_hearth == bool(data["campfire"]["hearth"]) and fire.current_hp == int(data["campfire"]["hp"]),
+		"campfire restored (%d HP, hearth %s)" % [fire.current_hp, fire.has_hearth])
+	var player: Node = get_tree().get_first_node_in_group("player")
+	_check(ProgressionManager.get_xp(player) == int(data["player"]["xp"]) and bool(player.get("has_sturdy_stick")) == bool(data["player"]["stick"]),
+		"Leo's progress restored (level %d)" % ProgressionManager.get_level(player))
+	_check(int(GameManager.stats[&"nights_survived"]) == 1, "stats restored (1 night survived)")
+
+	# A 7-night run.
+	GameManager.nights_to_win = 7
+	await _start_fresh_run()
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	if hud == null:
+		hud = _main.get_node_or_null("HUD")
+	_check(hud != null and (hud.get("_moons") as Array).size() == 7, "7-night run shows 7 moons")
+	var spawner: Node = get_tree().get_first_node_in_group("mob_spawner")
+	_check(spawner.get_wave_size(7) == 19 and spawner.get_heavy_count(7) == 6, "night 7: 19 imps and 6 beasts")
+	GameManager.nights_to_win = 3
 
 
 func _start_fresh_run() -> void:

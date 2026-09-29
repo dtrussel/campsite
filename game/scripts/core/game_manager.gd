@@ -26,6 +26,8 @@ var run_state: int = RunState.MENU
 var end_reason: String = ""
 ## Per-run counters for the end screen and the playtest log.
 var stats: Dictionary = {}
+## A save waiting to be applied once the gameplay scene is ready.
+var _pending_save: Dictionary = {}
 
 
 func _ready() -> void:
@@ -75,11 +77,31 @@ func _unhandled_input(event: InputEvent) -> void:
 			TimeManager.skip_phase()
 
 
-## Resets every autoload and loads the gameplay scene.
-func start_run() -> void:
+## Resets every autoload and loads the gameplay scene. `nights` picks
+## the run length (3 or 7 from the title screen); 0 keeps the current
+## one (Again / restart). A new run replaces any autosave.
+func start_run(nights: int = 0) -> void:
+	if nights > 0:
+		nights_to_win = nights
+	_pending_save = {}
+	SaveManager.delete_save()
 	get_tree().paused = false
 	_reset_autoloads()
 	get_tree().change_scene_to_file(GAME_SCENE)
+
+
+## Resumes the autosaved run at the morning after its last dawn.
+## False if there is no usable save.
+func continue_run() -> bool:
+	var data: Dictionary = SaveManager.load_save()
+	if data.is_empty():
+		return false
+	nights_to_win = int(data["nights_to_win"])
+	get_tree().paused = false
+	_reset_autoloads()
+	_pending_save = data
+	get_tree().change_scene_to_file(GAME_SCENE)
+	return true
 
 
 func go_to_title() -> void:
@@ -94,8 +116,15 @@ func on_game_scene_ready() -> void:
 	run_state = RunState.PLAYING
 	_hook_base_core()
 	_hook_player()
-	TimeManager.start_run()
-	PlaytestLog.write("run_started nights_to_win=%d" % nights_to_win)
+	if _pending_save.is_empty():
+		TimeManager.start_run()
+		PlaytestLog.write("run_started nights_to_win=%d" % nights_to_win)
+	else:
+		var data: Dictionary = _pending_save
+		_pending_save = {}
+		SaveManager.apply(data)
+		TimeManager.start_run(int(data["day"]) + 1)
+		PlaytestLog.write("run_continued nights_to_win=%d day=%d" % [nights_to_win, TimeManager.day_number])
 	run_started.emit()
 
 

@@ -80,7 +80,8 @@ func _on_run_ended(won: bool, _reason: String) -> void:
 		child.queue_free()
 	var nights: int = int(stats.get(&"nights_survived", 0))
 	for i in range(GameManager.nights_to_win):
-		_stars.add_child(HudWidgets.Glyph.new("star" if i < nights else "star_empty", Color(1.0, 0.85, 0.3), 64))
+		_stars.add_child(HudWidgets.Glyph.new("star" if i < nights else "star_empty", Color(1.0, 0.85, 0.3),
+			64 if GameManager.nights_to_win <= 4 else 44))
 	for child in _stats_row.get_children():
 		child.queue_free()
 	_stats_row.add_child(HudWidgets.icon_count(load("res://assets/icons/portrait_imp.png"), "", str(stats.get(&"kills", 0))))
