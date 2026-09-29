@@ -32,7 +32,7 @@ with thanks). Vendored by `tools/fetch_assets.sh` from pinned commits of:
 | Pack | Used for |
 |------|----------|
 | [KayKit Character Pack: Adventurers 1.0](https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0) | Rig and animations for Leo and Nela; the axe icon |
-| [KayKit Character Pack: Skeletons 1.0](https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0) | Rig and animations for the Shadow Imp, Bramble Beast and Mushroom Gremlin (Skeleton Minion) |
+| [KayKit Character Pack: Skeletons 1.0](https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0) | Rig for the Shadow Imp, Bramble Beast and Mushroom Gremlin, and animations for the imp and gremlin (Skeleton Minion). The Bramble Beast's clips are original (`art/characters/beast_anims.py`). |
 
 Each pack's `LICENSE.txt` is kept next to its files in `game/assets/kaykit/`.
 

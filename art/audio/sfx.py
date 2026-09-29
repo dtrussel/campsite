@@ -322,6 +322,21 @@ def bramble_death(v):
     return reverb(crack, 0.25, 1.2)
 
 
+def bramble_slam(v):
+    """A Bramble Beast's two-fist slam hitting the ground: a deep wooden
+    thump, a crunch of splinters and a spray of dirt (feature 026)."""
+    d = 0.9
+    out = np.zeros(int(d * RATE))
+    boom = sine(sweep(75 + 6 * v, 34, 0.5), 0.5) * env_perc(0.5, 0.002, 0.16)
+    place(out, soft_clip(boom * 1.6, 1.5) * 0.9, 0.0)
+    r = rng(560 + v)
+    for k in range(4):
+        place(out, knock(r.uniform(180, 420), 0.18, seed=570 + 10 * v + k) * r.uniform(0.4, 0.8), 0.005 + k * r.uniform(0.01, 0.03))
+    dirt = lowpass(noise(0.6, 590 + v), 1500) * env_perc(0.6, 0.004, 0.18) * 0.5
+    place(out, dirt, 0.01)
+    return reverb(out, 0.2, 0.9)
+
+
 def stone_place(v):
     """A stone wall set down: heavy grinding thunks and a little clay slap."""
     out = silence(0.8)
@@ -450,6 +465,7 @@ SOUNDS = {
     "trap_snap": (trap_snap, 2),
     "bramble_spawn": (bramble_spawn, 2),
     "bramble_death": (bramble_death, 2),
+    "bramble_slam": (bramble_slam, 2),
     "stone_place": (stone_place, 2),
     "gremlin_spawn": (gremlin_spawn, 2),
     "gremlin_steal": (gremlin_steal, 2),

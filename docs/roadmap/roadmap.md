@@ -247,4 +247,5 @@ art track in parallel.
 | 023 Animation layering | **Done.** An AnimationTree per character: a walk/run blend, upper-body actions while moving, and a lean into turns. |
 | 024 Living world | **Done.** Trees and bushes sway in the wind, leaves and pollen drift by day, fireflies come out at night, and running feet kick up dust. |
 | 025 Painted props | **Done.** Painted jack-o'-lanterns, pumpkins, camp lanterns, water bucket, dead trees, hills and mountains replace the last KayKit props. Only the rigs and animations (and the axe icon) still come from KayKit. |
+| 026 Bramble Beast remodel | **Done.** Rebuilt after the team's concept art: a sculpted, painted tree golem (carved angry face, moss mantle, log fists, twig antlers, leaf crown, berries, vines). Its own clips: breathing idle, stomping walk, two-fist slam, flinch, rising spawn, kneeling death, chest-thump roar. The slam is telegraphed: damage lands at impact (0.55 s), kids can step away, and the impact kicks up dust with a thud and a small shake. |
 | Next | Open: pick the next focus with the team (ideas: weather, more Nela tasks, a boss night). |

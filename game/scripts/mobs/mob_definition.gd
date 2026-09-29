@@ -23,6 +23,14 @@ extends Resource
 @export var prefers_buildings: bool = false
 ## Attack damage multiplier against buildings (not the campfire).
 @export var building_damage_multiplier: float = 1.0
+## Seconds from the start of the attack clip to the moment it lands
+## (feature 026). 0 = damage on the first frame (imps, gremlins). With a
+## delay, the attack is telegraphed: kids who step out of reach during
+## the windup are not hit (buildings and the campfire always are).
+@export var attack_hit_delay: float = 0.0
+## Burst (and sound) at the impact point of a delayed attack, plus a
+## little camera shake. Empty = none.
+@export var impact_burst: StringName = &""
 ## How far hits push this mob back (0 = immovable, 1 = an imp).
 @export var knockback_scale: float = 1.0
 ## Thieves (Mushroom Gremlin, feature 021) ignore everyone, run to the

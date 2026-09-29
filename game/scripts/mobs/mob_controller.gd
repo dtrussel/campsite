@@ -27,6 +27,8 @@ const KNOCKBACK_DECAY: float = 10.0
 const CAMPFIRE_REACH_BONUS: float = 0.7
 ## Seconds a defeated mob lingers for its collapse animation.
 const CORPSE_SECONDS: float = 1.4
+## How far past attack_range a telegraphed blow still reaches a kid.
+const DODGE_MARGIN: float = 0.4
 const PICKUP_SCENE: PackedScene = preload("res://scenes/world/ItemPickup.tscn")
 
 @export var definition: MobDefinition
@@ -352,12 +354,43 @@ func _try_attack(target: Node) -> void:
 		return
 	if _visual != null:
 		_visual.play_action(&"attack", 1.6)
-	if target.has_method("take_damage"):
-		var damage: int = definition.attack_damage
-		if target is Building:
-			damage = int(round(damage * definition.building_damage_multiplier))
-		target.take_damage(damage, self)
+	if definition.attack_hit_delay > 0.0:
+		# Telegraphed (feature 026): the blow lands at the clip's impact.
+		get_tree().create_timer(definition.attack_hit_delay, false).timeout.connect(_land_attack.bind(target))
+	else:
+		_land_attack(target)
 	_attack_cooldown_remaining = definition.attack_cooldown_seconds
+
+
+func _land_attack(target: Node) -> void:
+	if state == State.DYING or not is_instance_valid(target) or not target.has_method("take_damage"):
+		return
+	var delayed: bool = definition.attack_hit_delay > 0.0
+	if delayed:
+		var target_3d: Node3D = target as Node3D
+		var toward: Vector3 = Vector3.ZERO
+		if target_3d != null:
+			toward = target_3d.global_position - global_position
+			toward.y = 0.0
+		var impact: Vector3 = global_position + toward.limit_length(definition.attack_range * 0.8)
+		if definition.impact_burst != &"":
+			Fx.burst(definition.impact_burst, impact)
+			Fx.shake(0.25)
+		# Kids can dodge the windup by stepping away.
+		if _is_character(target) and toward.length() > definition.attack_range + DODGE_MARGIN:
+			PlaytestLog.write("attack_dodged mob=%s" % definition.id)
+			return
+	var damage: int = definition.attack_damage
+	if target is Building:
+		damage = int(round(damage * definition.building_damage_multiplier))
+	target.take_damage(damage, self)
+	# A beast that flattens a building beats its chest (feature 026).
+	if delayed and target is Building and (target as Building).current_hp <= 0 and _visual != null:
+		_visual.play_action(&"roar", 1.2)
+
+
+func _is_character(node: Node) -> bool:
+	return node.is_in_group(&"player") or node.is_in_group(&"companions")
 
 
 func _update_chase_target() -> void:

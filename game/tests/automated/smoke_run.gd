@@ -444,6 +444,35 @@ func _check_bramble_beast(player: Node3D) -> void:
 	beast.take_damage(1, player)
 	await _wait(0.3)
 	_check(beast.global_position.distance_to(knocked_from) < 0.25, "beast barely flinches from hits")
+
+	# Feature 026: its own clips, and a telegraphed slam.
+	var visual: CharacterVisual = beast.get_node("Visual") as CharacterVisual
+	var player_anim: AnimationPlayer = visual.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	var missing: Array = []
+	for state in visual.clips.keys():
+		if not player_anim.has_animation(String(visual.clips[state])):
+			missing.append(visual.clips[state])
+	_check(missing.is_empty(), "beast model has all its clips %s" % [missing])
+	# Hold the beast's own attacks so only the timed ones below land.
+	beast.set("_attack_cooldown_remaining", 99.0)
+	await _wait(1.0)
+	beast.set("_attack_cooldown_remaining", 0.0)
+	var before: int = fence.current_hp
+	beast.call("_try_attack", fence)
+	await _wait(beast_def.attack_hit_delay * 0.5)
+	_check(fence.current_hp == before, "the slam has not landed during the windup")
+	await _wait(beast_def.attack_hit_delay * 0.5 + 0.25)
+	_check(fence.current_hp < before, "the slam lands at impact (%.2fs)" % beast_def.attack_hit_delay)
+	# A kid who steps away during the windup is not hit.
+	beast.set("_attack_cooldown_remaining", 99.0)
+	await _wait(0.5)
+	player.global_position = beast.global_position + Vector3(1.0, 0, 0)
+	var leo_hp: int = player.get("current_hp")
+	beast.set("_attack_cooldown_remaining", 0.0)
+	beast.call("_try_attack", player)
+	player.global_position = beast.global_position + Vector3(4.0, 0, 0)
+	await _wait(beast_def.attack_hit_delay + 0.25)
+	_check(int(player.get("current_hp")) == leo_hp, "Leo dodged the slam by stepping away")
 	beast.take_damage(999, player)
 	fence.queue_free()
 	await _wait(0.2)
