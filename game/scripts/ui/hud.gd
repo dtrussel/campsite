@@ -64,6 +64,7 @@ func _ready() -> void:
 	_build_banner(root)
 
 	ResourceManager.resource_changed.connect(_on_resource_changed)
+	ResourceManager.caps_changed.connect(_refresh_tray)
 	BuildManager.build_mode_entered.connect(_on_build_mode_entered)
 	BuildManager.build_mode_exited.connect(func() -> void: (_build_label.get_meta(&"plate") as Control).visible = false)
 	BuildManager.placement_validity_changed.connect(_on_placement_validity_changed)
@@ -230,8 +231,8 @@ func _name_tag(portrait: Control, character_name: String, font_size: int) -> Con
 func _build_hero_bar(root: Control) -> void:
 	var plate: PanelContainer = _plate(10)
 	plate.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	plate.position = Vector2(-270, -128)
-	plate.custom_minimum_size = Vector2(540, 0)
+	plate.position = Vector2(-300, -128)
+	plate.custom_minimum_size = Vector2(600, 0)
 	root.add_child(plate)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
@@ -252,8 +253,9 @@ func _build_hero_bar(root: Control) -> void:
 		[&"gather", "wood", "E", "Gather the nearest resource (E, or right-click it)"],
 		[&"torch", "torch", "Q", "Plant a torch (Q). Craft torches at the campfire."],
 		[&"eat", "berries", "R", "Eat (R): a Berry Snack gives +35 HP, else 2 berries give +15 HP"],
-		[&"craft", "campfire", "C", "Crafting (C, near the campfire)"],
-		[&"build", "fence", "B", "Build (B), then 1-4: fence, watch post, snap trap, glow lantern"],
+		[&"bandage", "bandage", "X", "Put a bandage on Nela (X, next to her): +25 HP or wakes her up"],
+		[&"craft", "campfire", "C", "Crafting (C, near the campfire or a Crafting Table)"],
+		[&"build", "fence", "B", "Build (B), then 1-7: fence, wall, watch post, snap trap, glow lantern, crate, crafting table"],
 	]
 	for entry in definitions:
 		var slot: HudWidgets.AbilitySlot = HudWidgets.AbilitySlot.new(_icon(entry[1]), entry[2])
@@ -375,6 +377,8 @@ func _refresh_slots() -> void:
 	else:
 		var berries: int = ResourceManager.get_count(&"berries")
 		eat_slot.set_state(berries >= 2, str(berries) if berries > 0 else "")
+	var bandages: int = ResourceManager.get_count(&"bandage")
+	(_slots[&"bandage"] as HudWidgets.AbilitySlot).set_state(bandages > 0, str(bandages) if bandages > 0 else "")
 	var craft_ready: bool = false
 	for recipe in CraftingManager.get_recipes():
 		craft_ready = craft_ready or CraftingManager.can_craft(recipe)
@@ -389,8 +393,18 @@ func _refresh_slots() -> void:
 func _refresh_tray() -> void:
 	for id in _tray_labels.keys():
 		var count: int = ResourceManager.get_count(id)
-		(_tray_labels[id] as Label).text = str(count)
-		(_tray_rows[id] as Control).modulate = Color(1, 1, 1, 1.0 if count > 0 else 0.38)
+		var cap: int = ResourceManager.get_cap(id)
+		var label: Label = _tray_labels[id] as Label
+		label.text = str(count)
+		# A full stash glows gold: time to build a Storage Crate.
+		var full: bool = cap > 0 and count >= cap
+		label.add_theme_color_override("font_color", Color(1.0, 0.78, 0.25) if full else UiKit.COLOR_TEXT)
+		var row: Control = _tray_rows[id] as Control
+		row.modulate = Color(1, 1, 1, 1.0 if count > 0 else 0.38)
+		var definition: ResourceDefinition = ResourceManager.get_definition(id)
+		if definition != null:
+			var amount: String = "%d/%d" % [count, cap] if cap > 0 else str(count)
+			row.tooltip_text = "%s %s - %s" % [definition.display_name, amount, definition.description]
 
 
 func _refresh_progress(character: Node) -> void:

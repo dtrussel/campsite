@@ -215,6 +215,7 @@ const PICTURE_GUIDE: Array = [
 	["mouse_right", "glyph:hammer", "Fix"],
 	["key:Q", "torch", "Torch"],
 	["key:R", "berries", "Eat"],
+	["key:X", "bandage", "Nela"],
 	["key:B", "fence", "Build"],
 	["key:F G T Y V", "portrait_nela", "Nela"],
 	["key:N", "glyph:moon", "Night"],

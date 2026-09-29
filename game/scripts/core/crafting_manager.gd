@@ -35,7 +35,16 @@ func get_recipes() -> Array[CraftingRecipe]:
 
 
 func can_craft(recipe: CraftingRecipe) -> bool:
-	return recipe != null and ResourceManager.can_afford(recipe.inputs) and _effect_possible(recipe.effect)
+	if recipe == null or not ResourceManager.can_afford(recipe.inputs) or not _effect_possible(recipe.effect):
+		return false
+	if recipe.output_id != &"" and ResourceManager.room_for(recipe.output_id) < recipe.output_amount:
+		return false
+	return recipe.station != CraftingRecipe.STATION_TABLE or has_table()
+
+
+## Whether a Crafting Table stands in the camp (unlocks table recipes).
+func has_table() -> bool:
+	return not get_tree().get_nodes_in_group(CraftingTable.GROUP).is_empty()
 
 
 func craft(recipe: CraftingRecipe, crafter: Node) -> bool:
@@ -74,10 +83,40 @@ func _effect_possible(effect: StringName) -> bool:
 		&"stone_hearth":
 			var fire: BaseCore = _campfire()
 			return fire != null and not fire.has_hearth and not fire.is_destroyed
+		&"sturdy_stick":
+			var player: Node = _player()
+			return player != null and not bool(player.get("has_sturdy_stick"))
+		&"slingshot":
+			var sibling: Node = _sibling()
+			return sibling != null and not bool(sibling.get("has_slingshot"))
+		&"trap_refill":
+			for trap in get_tree().get_nodes_in_group(SnapTrap.GROUP):
+				if (trap as SnapTrap).needs_refill():
+					return true
+			return false
 	return false
 
 
+func _player() -> Node:
+	return get_tree().get_first_node_in_group("player")
+
+
+func _sibling() -> Node:
+	return get_tree().get_first_node_in_group("companions")
+
+
 func _apply_effect(effect: StringName) -> void:
+	match effect:
+		&"sturdy_stick":
+			_player().call("upgrade_stick")
+			return
+		&"slingshot":
+			_sibling().call("give_slingshot")
+			return
+		&"trap_refill":
+			for trap in get_tree().get_nodes_in_group(SnapTrap.GROUP):
+				(trap as SnapTrap).recharge()
+			return
 	var fire: BaseCore = _campfire()
 	if fire == null:
 		return

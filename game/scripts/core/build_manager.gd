@@ -46,6 +46,10 @@ func get_known_definitions() -> Array[BuildingDefinition]:
 	return _definitions
 
 
+func get_definition(id: StringName) -> BuildingDefinition:
+	return _by_id.get(id, null) as BuildingDefinition
+
+
 func get_active_definition() -> BuildingDefinition:
 	return _active_definition
 
@@ -94,14 +98,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("rotate_building"):
 		_ghost_yaw_degrees = fmod(_ghost_yaw_degrees + 90.0, 360.0)
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("select_building_1"):
-		_select_index(0)
-	elif event.is_action_pressed("select_building_2"):
-		_select_index(1)
-	elif event.is_action_pressed("select_building_3"):
-		_select_index(2)
-	elif event.is_action_pressed("select_building_4"):
-		_select_index(3)
+	elif _selected_number(event) > 0:
+		_select_index(_selected_number(event) - 1)
 	elif event.is_action_pressed("confirm_build"):
 		_try_confirm()
 		get_viewport().set_input_as_handled()
@@ -115,6 +113,14 @@ func _process(_delta: float) -> void:
 		return
 	_update_ghost_transform()
 	_update_validity(_compute_validity(), false)
+
+
+## Which build number key (1-7) the event presses, or 0.
+func _selected_number(event: InputEvent) -> int:
+	for n in range(1, 8):
+		if event.is_action_pressed("select_building_%d" % n):
+			return n
+	return 0
 
 
 func _select_index(idx: int) -> void:
@@ -141,7 +147,7 @@ func _try_confirm() -> void:
 	if _ghost != null:
 		(building as Node3D).global_transform = _ghost.global_transform
 	building_placed.emit(building)
-	AudioManager.play_sfx(&"place", (building as Node3D).global_position)
+	AudioManager.play_sfx(_active_definition.place_sound, (building as Node3D).global_position)
 	_award_build_xp()
 	# Force a validity re-eval so the ghost flips to red if the cost can
 	# no longer be afforded after spending.

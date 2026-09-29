@@ -11,4 +11,5 @@ description = "Orange river clay from the clay pits. Bake it into the Stone Hear
 icon = ExtResource("2_icon")
 rarity = 2
 max_stack = 50
+base_cap = 20
 ui_color = Color(0.82, 0.52, 0.32, 1)

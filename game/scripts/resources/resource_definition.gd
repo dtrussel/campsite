@@ -13,4 +13,7 @@ extends Resource
 @export var icon: Texture2D = null
 @export_range(1, 5) var rarity: int = 1
 @export var max_stack: int = 99
+## How many fit in the camp's stash (feature 019); each Storage Crate
+## adds this much again. 0 = no limit (crafted items).
+@export var base_cap: int = 0
 @export var ui_color: Color = Color.WHITE

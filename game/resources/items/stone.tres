@@ -11,4 +11,5 @@ description = "Sturdier construction material. Used in reinforced walls and heav
 icon = ExtResource("2_icon")
 rarity = 1
 max_stack = 99
+base_cap = 20
 ui_color = Color(0.62, 0.62, 0.62, 1)

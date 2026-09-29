@@ -201,8 +201,9 @@ These are stored as `ResourceDefinition` `.tres` files; see the architecture doc
 | Campfire Core  | Central base object; mobs target it; provides light radius.  |
 | Wooden Fence   | Cheap barrier; blocks or slows mobs.                         |
 | Watch Post     | Elevated post; companions can guard from here.               |
-| Storage Crate  | Increases resource storage cap. *(optional in prototype)*    |
-| Crafting Table | Unlocks simple recipes. *(optional in prototype)*            |
+| Storage Crate  | *(019)* +20 stash cap per resource (caps start at 20). 4 Wood + 2 Stone. |
+| Crafting Table | *(019)* A second crafting station with the Sturdy Stick, Slingshot, Bandage and Trap Refill. 4 Wood + 2 Stone + 1 Scrap. |
+| Reinforced Wall | *(019)* 150 HP, three times a fence. 3 Stone + 2 Clay + 1 Wood. |
 | Snap Trap      | *(017)* Snaps the first imp on it: 10 damage, held 2.5 s; 3 snaps. 2 Wood + 1 Fiber + 1 Scrap. |
 | Glow Lantern   | *(017)* A torch that never burns out: slows and zaps imps within 5 m. 2 Glow Shards + 1 Scrap + 2 Wood. |
 

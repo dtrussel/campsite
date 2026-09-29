@@ -51,6 +51,14 @@ func _ready() -> void:
 		["trap", _trap, 2.2, 2.0, 0.15, 0.5],
 		["lantern", func() -> Node3D: return _custom("glow_lantern.glb", 1.0), 4.0, 2.4, 0.9, 0.5],
 		["hearth", _hearth, 3.2, 2.4, 0.25, 0.3],
+		# Feature 019: buildings and Crafting Table recipes.
+		["wall", func() -> Node3D: return _custom("reinforced_wall.glb", 1.0), 3.0, 1.6, 0.55, 0.35],
+		["crate", func() -> Node3D: return _custom("storage_crate.glb", 1.0), 2.6, 1.8, 0.35, 0.5],
+		["table", func() -> Node3D: return _custom("crafting_table.glb", 1.0), 2.8, 2.0, 0.45, 0.4],
+		["stick", _stick, 2.0, 0.6, 0.3, 0.0],
+		["slingshot", _slingshot, 1.8, 0.5, 0.3, 0.0],
+		["bandage", _bandage, 1.4, 1.0, 0.15, 0.4],
+		["refill", _refill, 2.2, 2.0, 0.15, 0.5],
 	]
 	var only: PackedStringArray = OS.get_cmdline_user_args()
 	for job in jobs:
@@ -307,6 +315,75 @@ func _trap() -> Node3D:
 		hinge.rotation = Vector3(0, 0.0 if side > 0 else PI, deg_to_rad(35))
 		hinge.add_child(_custom("snap_trap_jaw.glb", 1.0))
 		root.add_child(hinge)
+	return root
+
+
+func _cylinder(radius: float, height: float, color: Color, position: Vector3, rotation_rad: Vector3 = Vector3.ZERO) -> MeshInstance3D:
+	var mesh: MeshInstance3D = MeshInstance3D.new()
+	var cylinder: CylinderMesh = CylinderMesh.new()
+	cylinder.top_radius = radius
+	cylinder.bottom_radius = radius
+	cylinder.height = height
+	mesh.mesh = cylinder
+	mesh.material_override = _material(color)
+	mesh.position = position
+	mesh.rotation = rotation_rad
+	return mesh
+
+
+## Sturdy Stick: a thick club bound with iron bands, tilted.
+func _stick() -> Node3D:
+	var root: Node3D = Node3D.new()
+	var club: MeshInstance3D = _cylinder(0.07, 1.0, Color(0.55, 0.36, 0.2), Vector3.ZERO)
+	(club.mesh as CylinderMesh).top_radius = 0.1
+	root.add_child(club)
+	for y in [0.18, 0.32]:
+		root.add_child(_cylinder(0.105, 0.05, Color(0.35, 0.37, 0.42), Vector3(0, y, 0)))
+	root.add_child(_sphere(0.1, Color(0.55, 0.36, 0.2), Vector3(0, 0.5, 0)))
+	root.rotation = Vector3(0, 0, -0.7)
+	return root
+
+
+## Slingshot: a wooden Y with a rubber band.
+func _slingshot() -> Node3D:
+	var root: Node3D = Node3D.new()
+	var wood: Color = Color(0.62, 0.42, 0.24)
+	root.add_child(_cylinder(0.04, 0.45, wood, Vector3(0, -0.2, 0)))
+	root.add_child(_cylinder(0.035, 0.35, wood, Vector3(-0.1, 0.12, 0), Vector3(0, 0, 0.5)))
+	root.add_child(_cylinder(0.035, 0.35, wood, Vector3(0.1, 0.12, 0), Vector3(0, 0, -0.5)))
+	root.add_child(_cylinder(0.012, 0.34, Color(0.85, 0.3, 0.25), Vector3(0, 0.26, 0.02), Vector3(0, 0, PI / 2)))
+	return root
+
+
+## Bandage: a white roll with a loose end.
+func _bandage() -> Node3D:
+	var root: Node3D = Node3D.new()
+	root.add_child(_cylinder(0.18, 0.2, Color(0.97, 0.95, 0.9), Vector3(0, 0.18, 0), Vector3(PI / 2, 0, 0)))
+	root.add_child(_cylinder(0.06, 0.21, Color(0.85, 0.8, 0.72), Vector3(0, 0.18, 0), Vector3(PI / 2, 0, 0)))
+	var strip: MeshInstance3D = MeshInstance3D.new()
+	var box: BoxMesh = BoxMesh.new()
+	box.size = Vector3(0.35, 0.01, 0.2)
+	strip.mesh = box
+	strip.material_override = _material(Color(0.97, 0.95, 0.9))
+	strip.position = Vector3(0.28, 0.01, 0)
+	root.add_child(strip)
+	root.add_child(_cylinder(0.02, 0.2, Color(0.9, 0.2, 0.2), Vector3(0.3, 0.02, 0), Vector3(PI / 2, 0, 0)))
+	return root
+
+
+## Trap Refill: a snap trap with a fresh coil of spring next to it.
+func _refill() -> Node3D:
+	var root: Node3D = _trap()
+	for k in range(4):
+		var coil: MeshInstance3D = MeshInstance3D.new()
+		var torus: TorusMesh = TorusMesh.new()
+		torus.inner_radius = 0.1
+		torus.outer_radius = 0.13
+		coil.mesh = torus
+		coil.material_override = _material(Color(0.6, 0.62, 0.68))
+		coil.position = Vector3(0.62, 0.05 + k * 0.05, 0.3)
+		root.add_child(coil)
+	root.add_child(_sphere(0.1, Color(0.4, 1.0, 0.45), Vector3(0.62, 0.35, 0.3), 1.2))
 	return root
 
 

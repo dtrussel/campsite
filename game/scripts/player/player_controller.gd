@@ -27,6 +27,11 @@ const TORCH_ITEM_ID: StringName = &"torch"
 const BERRY_ITEM_ID: StringName = &"berries"
 const BERRIES_PER_MEAL: int = 2
 const SNACK_ITEM_ID: StringName = &"snack"
+const BANDAGE_ITEM_ID: StringName = &"bandage"
+## How close Leo must be to Nela to put a bandage on her.
+const BANDAGE_REACH: float = 3.0
+## Crafting Table upgrade (feature 019).
+const STURDY_STICK_BONUS: int = 2
 ## Distance at which a gather command starts gathering.
 const GATHER_REACH: float = 1.5
 ## Distance at which a campfire command opens crafting.
@@ -71,6 +76,7 @@ var _regen_accumulator: float = 0.0
 var _move_goal: Vector3 = Vector3.ZERO
 var _repath_timer: float = 0.0
 var _repair_timer: float = 0.0
+var has_sturdy_stick: bool = false
 var _agent: NavigationAgent3D = null
 var _hp_bar: HealthBar3D = null
 
@@ -110,6 +116,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_try_place_torch()
 	elif event.is_action_pressed("eat_berries"):
 		_try_eat_berries()
+	elif event.is_action_pressed("use_bandage"):
+		try_use_bandage()
 
 
 # --- Commands (issued by PointerCommands or tests) -------------------
@@ -278,7 +286,7 @@ func _tick_command(delta: float) -> Vector3:
 			if command_target == null or not is_instance_valid(command_target):
 				_set_command(Command.NONE, null)
 				return Vector3.ZERO
-			if _flat_distance(command_target.global_position) <= CAMPFIRE_REACH:
+			if _flat_distance(command_target.global_position) <= CAMPFIRE_REACH + _node_radius(command_target) * 0.5:
 				_set_command(Command.NONE, null)
 				var panel: Node = get_tree().get_first_node_in_group("crafting_panel")
 				if panel != null:
@@ -464,6 +472,30 @@ func _try_eat_berries() -> void:
 	heal(amount)
 	Fx.float_text(self, "+%d HP" % amount, Color(0.5, 1, 0.5))
 	Fx.burst(&"heal", global_position)
+
+
+## Sturdy Stick: Leo hits harder for the rest of the run.
+func upgrade_stick() -> void:
+	if has_sturdy_stick:
+		return
+	has_sturdy_stick = true
+	attack_damage += STURDY_STICK_BONUS
+	Fx.float_text(self, "STURDY STICK!", Color(1.0, 0.85, 0.4), 2.8)
+	Fx.burst(&"level_up", global_position)
+
+
+## X: put a bandage on Nela when she is close and hurt (or knocked out).
+func try_use_bandage() -> bool:
+	var sibling: Node3D = get_tree().get_first_node_in_group("companions") as Node3D
+	var close: bool = sibling != null and _flat_distance(sibling.global_position) <= BANDAGE_REACH
+	if not close or not ResourceManager.has(BANDAGE_ITEM_ID, 1) or not sibling.has_method("apply_bandage"):
+		Fx.icon_popup(self, Fx.icon("bandage"), "", Color.WHITE, true)
+		return false
+	if not sibling.apply_bandage():
+		Fx.icon_popup(self, Fx.icon("bandage"), "", Color.WHITE, true)
+		return false
+	ResourceManager.spend(BANDAGE_ITEM_ID, 1)
+	return true
 
 
 func _tick_regen(delta: float) -> void:

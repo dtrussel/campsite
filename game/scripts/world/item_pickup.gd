@@ -31,6 +31,11 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if _collected:
 		return
+	if ResourceManager.is_full(item_id):
+		# Stash full: wait on the ground (bobbing) until there is room.
+		_time += delta
+		_visual.position.y = 0.35 + sin(_time * 3.0) * 0.12
+		return
 	_time += delta
 	_visual.position.y = 0.35 + sin(_time * 3.0) * 0.12
 	_visual.rotation.y += delta * 1.6

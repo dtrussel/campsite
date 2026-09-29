@@ -408,10 +408,104 @@ def hearth_ring():
     finish_prop(parts, "hearth_ring", size=512, edge_strength=0.35)
 
 
+# --- Feature 019: wall, storage crate, crafting table -----------------------
+
+STONE_GREY = (0.62, 0.6, 0.58)
+
+
+def _stone_block(seed, size, location):
+    rock = boulder("wallstone%d" % seed, 700 + seed, (1.0, 0.7, 0.6), subdiv=0, jag=0.12, moss=seed % 3 == 0)
+    return _place(rock, location, (0, 0, random.uniform(-0.1, 0.1)), size)
+
+
+def reinforced_wall():
+    """Three courses of fitted stones on a clay footing, capped with a
+    lashed log: the fence's sturdy big brother (same 1.7 m span)."""
+    common.reset(32)
+    parts = []
+    footing = block((1.8, 0.42, 0.14), location=(0, 0, 0.07), bevel=0.03, warp=0.02, seed=1)
+    common.color_by(footing, _clay_colour(1), smooth=False)
+    parts.append(footing)
+    # Clay mortar core, so the gaps between stones read as packed clay.
+    core = block((1.62, 0.12, 0.85), location=(0, 0, 0.55), bevel=0.03, warp=0.02, seed=2)
+    common.color_by(core, _clay_colour(2), smooth=False)
+    parts.append(core)
+    seed = 0
+    for row, z in enumerate((0.14, 0.44, 0.74)):
+        count = 4 if row % 2 == 0 else 3
+        width = 1.7 / count
+        for i in range(count):
+            x = -0.85 + width * (i + 0.5)
+            parts.append(_stone_block(seed, (width * 1.5, 0.9, 0.72), (x, 0, z - 0.02)))
+            seed += 1
+    cap = log(1.85, 0.1, location=(0, 0, 1.1), seed=5)
+    parts.append(cap)
+    for x in (-0.6, 0.0, 0.6):
+        parts.append(rope_ring(0.12, 0.022, (x, 0, 1.1), rotation=(0, math.radians(90), 0)))
+    finish_prop(parts, "reinforced_wall", size=512, preview_elevation=25, edge_strength=0.4)
+
+
+def storage_crate():
+    """A big lidded chest with rope bands and an iron latch."""
+    common.reset(33)
+    body = block((1.1, 0.75, 0.6), location=(0, 0, 0.3), bevel=0.04)
+    colour_wood(body, 2)
+    parts = [body]
+    lid = block((1.16, 0.8, 0.14), location=(0, 0, 0.67), bevel=0.04, warp=0.01, seed=3)
+    colour_wood(lid, 4, base=WOOD_DARK, light=WOOD)
+    parts.append(lid)
+    for x in (-0.36, 0.36):
+        band = block((0.08, 0.82, 0.76), location=(x, 0, 0.37), bevel=0.02)
+        colour_wood(band, 6, base=WOOD_DARK, light=WOOD)
+        parts.append(band)
+    latch = block((0.14, 0.05, 0.16), location=(0, -0.41, 0.56), bevel=0.015)
+    common.set_color(latch, IRON)
+    parts.append(latch)
+    for side in (-1, 1):
+        handle = rope_ring(0.08, 0.02, (side * 0.57, 0, 0.42), rotation=(0, math.radians(90), 0))
+        parts.append(handle)
+    finish_prop(parts, "storage_crate", size=512, edge_strength=0.45)
+
+
+def crafting_table():
+    """A sturdy workbench with a saw, a mallet and a vise."""
+    common.reset(34)
+    parts = []
+    top = block((1.3, 0.65, 0.1), location=(0, 0, 0.78), bevel=0.02, warp=0.01, seed=1)
+    colour_wood(top, 1, base=WOOD_LIGHT, light=WOOD)
+    parts.append(top)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            leg = block((0.1, 0.1, 0.74), location=(sx * 0.55, sy * 0.24, 0.37), bevel=0.015)
+            colour_wood(leg, sx + sy * 2, base=WOOD_DARK, light=WOOD)
+            parts.append(leg)
+    shelf = block((1.15, 0.5, 0.05), location=(0, 0, 0.2), bevel=0.015)
+    colour_wood(shelf, 7)
+    parts.append(shelf)
+    vise = block((0.18, 0.16, 0.16), location=(0.58, -0.3, 0.8), bevel=0.015)
+    common.set_color(vise, IRON)
+    parts.append(vise)
+    saw = block((0.5, 0.12, 0.01), location=(-0.25, 0.05, 0.84), bevel=0.0)
+    common.set_color(saw, (0.75, 0.77, 0.8))
+    parts.append(saw)
+    saw_handle = block((0.12, 0.08, 0.04), location=(-0.55, 0.05, 0.855), bevel=0.01)
+    colour_wood(saw_handle, 8)
+    parts.append(saw_handle)
+    mallet_head = log(0.2, 0.06, location=(0.2, 0.15, 0.89), rotation=(0, 0, math.pi / 2), seed=9)
+    mallet_handle = log(0.3, 0.02, location=(0.2, -0.02, 0.86), seed=10)
+    parts += [mallet_head, mallet_handle]
+    for k in range(3):
+        plank = block((0.5, 0.12, 0.04), location=(0.05, 0.05, 0.25 + k * 0.045), rotation=(0, 0, 0.1 * k), bevel=0.01)
+        colour_wood(plank, 11 + k)
+        parts.append(plank)
+    finish_prop(parts, "crafting_table", size=512, edge_strength=0.4)
+
+
 PROPS = {
     "clay_pit": clay_pit, "clay_pit_dug": clay_pit_dug, "mushrooms": mushrooms, "mushrooms_picked": mushrooms_picked,
     "junk_pile": junk_pile, "junk_pile_picked": junk_pile_picked, "snap_trap_base": snap_trap_base,
     "snap_trap_jaw": snap_trap_jaw, "glow_shard": glow_shard, "glow_lantern": glow_lantern, "hearth_ring": hearth_ring,
+    "reinforced_wall": reinforced_wall, "storage_crate": storage_crate, "crafting_table": crafting_table,
 }
 
 if __name__ == "__main__":

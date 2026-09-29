@@ -83,6 +83,11 @@ func begin_gather(actor: Node) -> bool:
 	if definition == null:
 		push_warning("ResourceNode '%s' has no definition" % name)
 		return false
+	if is_stash_full():
+		# Nothing would fit: show the crossed-out icon instead of gathering.
+		var anchor: Node3D = actor as Node3D if actor is Node3D else self
+		Fx.icon_popup(anchor, definition.icon, "", Color.WHITE, true)
+		return false
 	_active_gather_actor = actor
 	_next_tick = 0.2
 	_gather_timer.start(gather_time_seconds)
@@ -104,16 +109,32 @@ func _on_gather_complete() -> void:
 	var actor: Node = _active_gather_actor
 	_active_gather_actor = null
 	_show_progress(false)
-	ResourceManager.add(definition.id, yield_amount)
 	var popup_anchor: Node3D = actor as Node3D if actor is Node3D else self
-	Fx.icon_popup(popup_anchor, definition.icon, "+%d" % yield_amount, Color(1, 1, 0.85), false, 2.6, -0.35)
+	_give(popup_anchor, definition, yield_amount, 2.6, -0.35)
 	if bonus_definition != null and bonus_amount > 0:
-		ResourceManager.add(bonus_definition.id, bonus_amount)
-		Fx.icon_popup(popup_anchor, bonus_definition.icon, "+%d" % bonus_amount, Color(1, 1, 0.85), false, 2.1, 0.5)
+		_give(popup_anchor, bonus_definition, bonus_amount, 2.1, 0.5)
 	Fx.burst(gather_burst, global_position + Vector3(0, 0.8, 0))
 	ProgressionManager.award_xp(actor, GATHER_XP_REWARD, &"gather")
 	gathered.emit(actor, definition.id, yield_amount)
 	_deplete()
+
+
+## Adds an item and pops its icon; a crossed-out icon when the stash is
+## full (build a Storage Crate).
+func _give(anchor: Node3D, item: ResourceDefinition, amount: int, height: float, offset_x: float) -> void:
+	var fits: int = mini(amount, ResourceManager.room_for(item.id))
+	ResourceManager.add(item.id, fits)
+	if fits > 0:
+		Fx.icon_popup(anchor, item.icon, "+%d" % fits, Color(1, 1, 0.85), false, height, offset_x)
+	else:
+		Fx.icon_popup(anchor, item.icon, "", Color.WHITE, true, height, offset_x)
+
+
+## True when nothing this node gives would fit in the stash.
+func is_stash_full() -> bool:
+	if definition == null or not ResourceManager.is_full(definition.id):
+		return false
+	return bonus_definition == null or ResourceManager.is_full(bonus_definition.id)
 
 
 func _show_progress(is_shown: bool) -> void:

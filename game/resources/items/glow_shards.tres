@@ -11,4 +11,5 @@ description = "Magic crystals some Shadow Imps drop. Glow Lanterns keep imps awa
 icon = ExtResource("2_icon")
 rarity = 3
 max_stack = 20
+base_cap = 10
 ui_color = Color(0.45, 0.9, 0.95, 1)

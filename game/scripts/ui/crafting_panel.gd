@@ -3,15 +3,19 @@ extends CanvasLayer
 ## CraftingPanel
 ##
 ## C toggles a small recipe list while the boy stands near the
-## campfire. Each row shows the recipe's inputs, its result and a Make
-## button that is enabled only when it can be made right now (the
-## inventory can pay, and an effect like Feed the Fire has something to
-## do). The game keeps running while the panel is open.
+## campfire or a Crafting Table; each station shows its own recipes.
+## Each row shows the recipe's inputs, its result and a Make button
+## that is enabled only when it can be made right now (the inventory
+## can pay, and an effect like Feed the Fire has something to do). The
+## game keeps running while the panel is open.
 
 const CRAFT_RANGE: float = 4.0
 
 var _root: Control = null
-var _rows: Array = []   # [{ recipe, button }]
+var _rows: Array = []   # [{ recipe, button, row }]
+var _station: StringName = &""
+var _header_icon: TextureRect = null
+var _table_hint: Control = null
 
 
 func _ready() -> void:
@@ -31,7 +35,8 @@ func _ready() -> void:
 	panel.add_child(column)
 	var header: HBoxContainer = HBoxContainer.new()
 	header.add_theme_constant_override("separation", 10)
-	header.add_child(_icon_rect(Fx.icon("campfire"), 56))
+	_header_icon = _icon_rect(Fx.icon("campfire"), 56)
+	header.add_child(_header_icon)
 	var spacer: Control = Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(spacer)
@@ -56,7 +61,18 @@ func _ready() -> void:
 		button.tooltip_text = recipe.display_name
 		row.add_child(button)
 		column.add_child(row)
-		_rows.append({ "recipe": recipe, "button": button })
+		_rows.append({ "recipe": recipe, "button": button, "row": row })
+	# At the campfire, before a table exists: "build a table for more".
+	_table_hint = HBoxContainer.new()
+	_table_hint.add_theme_constant_override("separation", 6)
+	_table_hint.tooltip_text = "Build a Crafting Table (B) for more recipes"
+	_table_hint.mouse_filter = Control.MOUSE_FILTER_PASS
+	_table_hint.add_child(HudWidgets.Glyph.new("hammer", UiKit.COLOR_GOLD, 34))
+	_table_hint.add_child(HudWidgets.Glyph.new("arrow", UiKit.COLOR_GOLD, 28))
+	_table_hint.add_child(_icon_rect(Fx.icon("table"), 52))
+	_table_hint.add_child(UiKit.label("+4", 20, UiKit.COLOR_GOLD))
+	_table_hint.modulate = Color(1, 1, 1, 0.55)
+	column.add_child(_table_hint)
 	_root.visible = false
 	ResourceManager.resource_changed.connect(func(_id: StringName, _v: int, _d: int) -> void: _refresh())
 	GameManager.run_ended.connect(func(_won: bool, _reason: String) -> void: close())
@@ -76,6 +92,10 @@ func is_open() -> bool:
 
 
 func open() -> void:
+	var player: Node3D = _get_player()
+	_station = _station_near(player) if player != null else &"campfire"
+	if _station == &"":
+		_station = &"campfire"
 	_refresh()
 	_root.visible = true
 
@@ -94,25 +114,33 @@ func _unhandled_input(event: InputEvent) -> void:
 	var player: Node3D = _get_player()
 	if player == null:
 		return
-	if not _is_near_campfire(player):
+	if _station_near(player) == &"":
 		Fx.icon_popup(player, Fx.icon("campfire"), "", Color.WHITE, true)
 		return
 	open()
 
 
 func _process(_delta: float) -> void:
-	# Walking away from the fire closes the panel.
+	# Walking away from the fire (or table) closes the panel.
 	if is_open():
 		var player: Node3D = _get_player()
-		if player == null or not _is_near_campfire(player):
+		var station: StringName = _station_near(player) if player != null else &""
+		if station == &"":
 			close()
 		else:
+			_station = station
 			_refresh()  # the campfire's HP can change while it is open
 
 
+## Shows the current station's recipes (campfire or table) and enables
+## the ones that can be made right now.
 func _refresh() -> void:
 	for row in _rows:
-		(row["button"] as Button).disabled = not CraftingManager.can_craft(row["recipe"])
+		var recipe: CraftingRecipe = row["recipe"]
+		(row["row"] as Control).visible = recipe.station == _station
+		(row["button"] as Button).disabled = not CraftingManager.can_craft(recipe)
+	_header_icon.texture = Fx.icon("table" if _station == CraftingRecipe.STATION_TABLE else "campfire")
+	_table_hint.visible = _station == CraftingRecipe.STATION_CAMPFIRE and not CraftingManager.has_table()
 
 
 func _on_craft(recipe: CraftingRecipe) -> void:
@@ -126,6 +154,18 @@ func _get_player() -> Node3D:
 	return get_tree().get_first_node_in_group("player") as Node3D
 
 
-func _is_near_campfire(player: Node3D) -> bool:
+## The crafting station within reach of the player: &"table" if a
+## Crafting Table is nearer than the campfire, &"campfire", or &"".
+func _station_near(player: Node3D) -> StringName:
+	var best: StringName = &""
+	var best_d: float = CRAFT_RANGE
 	var base: Node3D = get_tree().get_first_node_in_group("base_core") as Node3D
-	return base != null and base.global_position.distance_to(player.global_position) <= CRAFT_RANGE
+	if base != null and base.global_position.distance_to(player.global_position) <= best_d:
+		best_d = base.global_position.distance_to(player.global_position)
+		best = CraftingRecipe.STATION_CAMPFIRE
+	for table in get_tree().get_nodes_in_group(CraftingTable.GROUP):
+		var d: float = (table as Node3D).global_position.distance_to(player.global_position)
+		if d <= best_d:
+			best_d = d
+			best = CraftingRecipe.STATION_TABLE
+	return best

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="BuildingDefinition" load_steps=3 format=3 uid="uid://b0campsitebuilddeftable"]
+
+[ext_resource type="Script" path="res://scripts/buildings/building_definition.gd" id="1_def"]
+[ext_resource type="Texture2D" path="res://assets/icons/table.png" id="9_icon"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"crafting_table"
+display_name = "Crafting Table"
+description = "A workbench: unlocks the Sturdy Stick, the Slingshot, Bandages and Trap Refills. Craft right here or at the campfire."
+scene_path = "res://scenes/buildings/CraftingTable.tscn"
+cost = {
+&"wood": 4,
+&"stone": 2,
+&"scrap": 1
+}
+max_hp = 60
+footprint_size = Vector3(1.25, 0.9, 0.65)
+ui_color = Color(0.7, 0.5, 0.3, 1)
+sort_order = 60
+icon = ExtResource("9_icon")

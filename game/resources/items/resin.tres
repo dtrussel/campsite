@@ -11,4 +11,5 @@ description = "Glue, fire upgrades, longer-burning torches."
 icon = ExtResource("2_icon")
 rarity = 2
 max_stack = 50
+base_cap = 20
 ui_color = Color(0.95, 0.72, 0.32, 1)

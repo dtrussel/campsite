@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/crafting/crafting_recipe.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"bandage"
+display_name = "Bandage"
+description = "Press X next to Nela: +25 HP, or wakes her up if she is knocked out."
+inputs = {
+&"fiber": 2,
+&"leaves": 1
+}
+output_id = &"bandage"
+output_amount = 1
+station = &"table"
+xp_reward = 3
+sort_order = 130

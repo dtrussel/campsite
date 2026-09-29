@@ -9,6 +9,7 @@ extends Building
 ## charge (the trap's HP bar); after the last one it breaks. Traps are
 ## rebuilt, not repaired.
 
+const GROUP: StringName = &"snap_traps"
 const OPEN_DEGREES: float = 8.0
 const CLOSED_DEGREES: float = 84.0
 
@@ -26,6 +27,8 @@ func _ready() -> void:
 	super()
 	_set_jaws(OPEN_DEGREES)
 	set_physics_process(not has_meta(&"build_ghost"))
+	if not has_meta(&"build_ghost"):
+		add_to_group(GROUP)
 
 
 func _physics_process(_delta: float) -> void:
@@ -62,6 +65,19 @@ func _snap(mob: Node3D) -> void:
 	else:
 		tween.tween_method(_set_jaws, CLOSED_DEGREES, OPEN_DEGREES, 0.35)
 		tween.tween_callback(func() -> void: _armed = true)
+
+
+## Trap Refill (Crafting Table): true while some snaps are used up.
+func needs_refill() -> bool:
+	return current_hp > 0 and definition != null and current_hp < definition.max_hp
+
+
+func recharge() -> void:
+	if not needs_refill():
+		return
+	current_hp = definition.max_hp
+	_refresh_hp_label()
+	Fx.burst(&"repair", global_position + Vector3(0, 0.3, 0))
 
 
 func _break() -> void:

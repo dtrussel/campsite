@@ -1,6 +1,6 @@
 # Playtest 001: first human playtest
 
-> Build: `Campsite-0.13.0-playtest1-windows.zip` (produced by
+> Build: `Campsite-0.14.0-playtest1-windows.zip` (produced by
 > `tools/export_playtest.sh`). Target session length: **20–30 minutes**
 > (about 10 minutes per run, 2 runs).
 
@@ -78,6 +78,7 @@ worked:
 | Night | Did the sunset warning register? Did they go back to the fire? | |
 | Combat | Was it clear when they hit an imp, or got hit? | |
 | Sibling | Did they use F/G/T/Y/V? Which task, and why? | |
+| Stash & table | Did they notice a gold "full" count and build a Storage Crate? Did they find the Crafting Table recipes and use a bandage (X)? | |
 | Bramble Beast | Did they notice it goes for fences? Did they go out to fight it, or trap it? | |
 | Repair & loot | Did they notice damaged fences can be fixed? Did they chase the Glow Shards? Too much wood spent on repairs? | |
 | Difficulty | Which night was hardest? Did they lose? Why? | |

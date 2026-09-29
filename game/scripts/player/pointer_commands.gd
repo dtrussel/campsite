@@ -8,6 +8,7 @@ extends Node
 ##   Right/left click node -> walk over and gather
 ##   Right/left click fire -> walk over and open crafting
 ##   Right/left click a damaged building -> walk over and repair it
+##   Right/left click a Crafting Table -> walk over and open crafting
 ## Also drives the hover feedback: a pulsing rim on the unit under the
 ## cursor, a context cursor (move / attack / gather / use), and the
 ## attack-range ring while an attack is targeted.
@@ -125,6 +126,10 @@ func _pick_under_mouse() -> void:
 			return
 		if collider is Building and Repair.needs_repair(collider):
 			_set_hover(Hover.REPAIR, collider as Node3D)
+			return
+		if collider is CraftingTable:
+			# A second crafting station: same "walk over and craft" as the fire.
+			_set_hover(Hover.CAMPFIRE, collider as Node3D)
 			return
 	# Forgiving picks: small units near the cursor's ground point.
 	var mob: Node3D = _nearest_in_group("mobs", ground, MOB_PICK_RADIUS)

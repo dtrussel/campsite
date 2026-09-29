@@ -7,7 +7,8 @@ art), the Shadow Imp and the Bramble Beast, the hand-painted ground textures, tr
 rocks, berry bushes and camp props (campfire, tent, fence, watch post,
 torch, woodpile, crate, barrel, toadstools, and the feature 017 clay
 pit, mushroom patch, junk pile, snap trap, glow lantern, glow shard and
-hearth ring) are original to this project.
+hearth ring, and the feature 019 reinforced wall, storage crate and
+crafting table) are original to this project.
 They are generated and hand-paint-baked by the Blender scripts in `art/`
 (`tools/build_art.sh`) and written to `game/assets/custom/`.
 

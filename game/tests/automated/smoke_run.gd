@@ -36,7 +36,7 @@ func _run_win_scenario() -> void:
 	_check(GameManager.is_playing(), "run is PLAYING after scene load")
 	_check(TimeManager.is_running, "clock is running")
 	_check(ResourceManager.get_definitions().size() >= 11, "items loaded (%d)" % ResourceManager.get_definitions().size())
-	_check(BuildManager.get_known_definitions().size() == 4, "4 buildings loaded")
+	_check(BuildManager.get_known_definitions().size() == 7, "7 buildings loaded")
 	_check(CraftingManager.get_recipes().size() >= 1, "recipes loaded")
 
 	var player: Node3D = get_tree().get_first_node_in_group("player")
@@ -76,7 +76,7 @@ func _run_win_scenario() -> void:
 	_check(ResourceManager.get_count(&"torch") == 0, "torch consumed")
 
 	# A fence instance loads and takes damage.
-	var fence_def: BuildingDefinition = BuildManager.get_known_definitions()[0]
+	var fence_def: BuildingDefinition = BuildManager.get_definition(&"wooden_fence")
 	var fence: Building = fence_def.get_scene().instantiate() as Building
 	get_tree().current_scene.add_child(fence)
 	fence.global_position = Vector3(0, 0, -4)
@@ -123,7 +123,7 @@ func _run_win_scenario() -> void:
 	player.stop_commands()
 
 	# Watch Post pelts a nearby imp on its own.
-	var post_def: BuildingDefinition = BuildManager.get_known_definitions()[1]
+	var post_def: BuildingDefinition = BuildManager.get_definition(&"watch_post")
 	var post: Building = post_def.get_scene().instantiate() as Building
 	get_tree().current_scene.add_child(post)
 	post.global_position = Vector3(12, 0, 12)
@@ -253,6 +253,83 @@ func _check_feature_017(player: Node3D, companion: Node3D, fence: Building) -> v
 	lantern.queue_free()
 
 	await _check_bramble_beast(player)
+	await _check_feature_019(player, companion)
+
+
+## Feature 019: stash caps, the Storage Crate, the Reinforced Wall and
+## the Crafting Table recipes.
+func _check_feature_019(player: Node3D, companion: Node3D) -> void:
+	# Caps: 20 wood, 40 with a crate; losing the crate keeps what you have.
+	ResourceManager.add(&"wood", 100)
+	_check(ResourceManager.get_count(&"wood") == 20 and ResourceManager.is_full(&"wood"), "wood caps at 20")
+	var crate: Building = _spawn_building(&"storage_crate", Vector3(-6, 0, -12))
+	await get_tree().process_frame
+	_check(ResourceManager.get_cap(&"wood") == 40, "a storage crate raises the cap to 40")
+	ResourceManager.add(&"wood", 100)
+	_check(ResourceManager.get_count(&"wood") == 40, "wood fills to 40")
+	crate.queue_free()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(ResourceManager.get_cap(&"wood") == 20 and ResourceManager.get_count(&"wood") == 40,
+		"losing the crate lowers the cap but keeps the wood")
+	ResourceManager.spend(&"wood", 25)
+
+	# The Reinforced Wall is 3x a fence; a beast still does 12 a hit.
+	var wall: Building = _spawn_building(&"reinforced_wall", Vector3(-8, 0, 14))
+	_check(wall.current_hp == 150 and wall.is_in_group(Repair.GROUP), "reinforced wall has 150 HP and is repairable")
+	var beast_def: MobDefinition = get_tree().get_first_node_in_group("mob_spawner").get("heavy_definition")
+	var beast: Mob = beast_def.get_scene().instantiate() as Mob
+	get_tree().current_scene.add_child(beast)
+	beast.global_position = Vector3(-8, 0, 16.5)
+	var t: float = 0.0
+	while wall.current_hp == 150 and t < 15.0:
+		await _wait(0.25)
+		t += 0.25
+	_check(wall.current_hp == 138, "beast hits the wall for 12 (%d left)" % wall.current_hp)
+	beast.take_damage(999, player)
+	wall.queue_free()
+
+	# Crafting Table recipes are locked until a table stands in the camp.
+	for item in [&"wood", &"scrap", &"resin", &"fiber", &"leaves"]:
+		ResourceManager.add(item, 10)
+	var stick: CraftingRecipe = _recipe(&"sturdy_stick")
+	_check(stick.station == CraftingRecipe.STATION_TABLE and not CraftingManager.can_craft(stick), "table recipes locked without a table")
+	var table: Building = _spawn_building(&"crafting_table", Vector3(5, 0, -6))
+	_check(CraftingManager.has_table() and CraftingManager.can_craft(stick), "a crafting table unlocks them")
+	var damage: int = int(player.get("attack_damage"))
+	_check(CraftingManager.craft(stick, player) and int(player.get("attack_damage")) == damage + 2, "sturdy stick: +2 attack")
+	_check(not CraftingManager.can_craft(stick), "sturdy stick only once")
+	var reach: float = companion.call("get_attack_range")
+	_check(CraftingManager.craft(_recipe(&"slingshot"), player) and is_equal_approx(companion.call("get_attack_range"), reach * 2.0),
+		"slingshot doubles Nela's reach")
+
+	# Bandage wakes a knocked-out Nela (X next to her).
+	_check(CraftingManager.craft(_recipe(&"bandage"), player) and ResourceManager.get_count(&"bandage") == 1, "made a bandage")
+	companion.set("_invulnerable_remaining", 0.0)
+	companion.take_damage(999)
+	_check(bool(companion.get("is_knocked_out")), "Nela knocked out")
+	companion.global_position = player.global_position + Vector3(1.0, 0, 0)
+	_check(player.call("try_use_bandage") and not bool(companion.get("is_knocked_out")) and ResourceManager.get_count(&"bandage") == 0,
+		"bandage woke Nela up (%d HP)" % companion.get("current_hp"))
+
+	# Trap Refill restores a used trap.
+	var refill: CraftingRecipe = _recipe(&"trap_refill")
+	var trap: SnapTrap = _spawn_building(&"snap_trap", Vector3(-14, 0, 8)) as SnapTrap
+	for other in get_tree().get_nodes_in_group(SnapTrap.GROUP):
+		(other as SnapTrap).recharge()  # the 017 trap has used a snap
+	_check(not CraftingManager.can_craft(refill), "trap refill needs a used trap")
+	trap.current_hp = 1
+	_check(CraftingManager.craft(refill, player) and trap.current_hp == 3, "trap refill restored all snaps")
+	trap.queue_free()
+	table.queue_free()
+	await get_tree().process_frame
+
+
+func _spawn_building(id: StringName, position: Vector3) -> Building:
+	var building: Building = BuildManager.get_definition(id).get_scene().instantiate() as Building
+	get_tree().current_scene.add_child(building)
+	building.global_position = position
+	return building
 
 
 ## Feature 018: waves mix in Bramble Beasts, which go for buildings.
@@ -269,7 +346,7 @@ func _check_bramble_beast(player: Node3D) -> void:
 			_check(wave.find(beast_def) >= wave.size() / 2 - 1, "night %d: beasts come in the second half" % night)
 
 	# A beast walks past Leo to tear down the nearest fence, hitting hard.
-	var fence_def: BuildingDefinition = BuildManager.get_known_definitions()[0]
+	var fence_def: BuildingDefinition = BuildManager.get_definition(&"wooden_fence")
 	var fence: Building = fence_def.get_scene().instantiate() as Building
 	get_tree().current_scene.add_child(fence)
 	fence.global_position = Vector3(-8, 0, 14)

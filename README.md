@@ -13,7 +13,7 @@ fragile camping trip into a magical woodland fortress.
 
 ## Status
 
-**Prototype, ready for first playtest (v0.13.0-playtest1).** Hand-painted,
+**Prototype, ready for first playtest (v0.14.0-playtest1).** Hand-painted,
 LoL-inspired 3D art: **Leo** (the big brother, played by you), his little
 sister **Nela**, the Shadow Imps, trees, rocks, camp props and the painted
 ground are modelled, painted and texture-baked by the scripts in
@@ -40,7 +40,13 @@ Roadmap phases 0–7 are implemented, plus the audio & feel pass
 The **Bramble Beast** (feature 018) joins nights 2 and 3. It is slow
 and tough, and tears down fences and posts before going for the fire.
 
-Next: more buildings (019), and longer runs with save/load (020). See [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md)
+Feature 019 adds:
+- the **Reinforced Wall**;
+- **stash limits** (20 of each resource), raised by **Storage Crates**;
+- the **Crafting Table**, a second crafting spot with the Sturdy Stick,
+  Nela's Slingshot, Bandages and Trap Refills.
+
+Next: 3- or 7-night runs with autosave (020). See [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md)
 and [`.features/005-first-playtest-build/handoff.md`](.features/005-first-playtest-build/handoff.md).
 
 **Playtesters:** follow [`docs/testing/playtest-001.md`](docs/testing/playtest-001.md).
@@ -84,8 +90,9 @@ Controls (LoL-style; also shown in-game with **H**):
 | E | Gather the nearest resource |
 | Q | Plant a crafted torch |
 | R | Eat: a Berry Snack (+35 HP) if you have one, else 2 berries (+15 HP) |
-| C | Crafting panel (near the campfire) |
-| B, then 1–4 | Build: Wooden Fence / Watch Post / Snap Trap / Glow Lantern (R rotate, LMB place, RMB/Esc cancel) |
+| X | Put a bandage on Nela (next to her): +25 HP, or wakes her up |
+| C | Crafting panel (near the campfire or a Crafting Table) |
+| B, then 1–7 | Build: Fence / Reinforced Wall / Watch Post / Snap Trap / Glow Lantern / Storage Crate / Crafting Table (R rotate, LMB place, RMB/Esc cancel) |
 | F / G / T / Y / V | Nela: follow / guard camp / gather / idle / repair |
 | N | Call the night early (daytime) |
 | W A S D | Walk directly (optional) |
@@ -183,7 +190,7 @@ Start here if you are a new contributor or coding agent:
 6. [Test strategy](docs/testing/test-strategy.md)
 7. [ADR-0001: Engine & language selection](docs/decisions/ADR-0001-engine-and-language-selection.md)
 8. [Agent feature workflow](.features/README.md)
-9. [Latest feature handoff](.features/018-bramble-beast/handoff.md)
+9. [Latest feature handoff](.features/019-wall-crate-table/handoff.md)
 10. [Playtest 001 script](docs/testing/playtest-001.md)
 
 ## Development workflow

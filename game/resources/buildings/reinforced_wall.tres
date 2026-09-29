@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="BuildingDefinition" load_steps=3 format=3 uid="uid://b0campsitebuilddefwall"]
+
+[ext_resource type="Script" path="res://scripts/buildings/building_definition.gd" id="1_def"]
+[ext_resource type="Texture2D" path="res://assets/icons/wall.png" id="9_icon"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"reinforced_wall"
+display_name = "Reinforced Wall"
+description = "Stones packed in clay: three times as tough as a fence. Bramble Beasts need a long time to break it."
+scene_path = "res://scenes/buildings/ReinforcedWall.tscn"
+cost = {
+&"stone": 3,
+&"clay": 2,
+&"wood": 1
+}
+max_hp = 150
+footprint_size = Vector3(1.6, 1.2, 0.45)
+ui_color = Color(0.6, 0.55, 0.5, 1)
+sort_order = 15
+place_sound = &"stone_place"
+icon = ExtResource("9_icon")

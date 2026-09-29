@@ -15,7 +15,9 @@ extends Resource
 @export var footprint_size: Vector3 = Vector3(1.0, 1.0, 1.0)
 @export var ui_color: Color = Color.WHITE
 @export var sort_order: int = 100        # lower comes first in the build menu
-## Picture for the build hint (keys 1-4 follow sort_order).
+## Sound when placed (AudioLibrary id).
+@export var place_sound: StringName = &"place"
+## Picture for the build hint (number keys follow sort_order).
 @export var icon: Texture2D = null
 
 

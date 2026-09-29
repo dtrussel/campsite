@@ -11,4 +11,5 @@ description = "Old camper junk: nails, tins and springs. Needed for traps and la
 icon = ExtResource("2_icon")
 rarity = 3
 max_stack = 30
+base_cap = 20
 ui_color = Color(0.7, 0.7, 0.78, 1)

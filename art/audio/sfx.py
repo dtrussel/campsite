@@ -322,6 +322,28 @@ def bramble_death(v):
     return reverb(crack, 0.25, 1.2)
 
 
+def stone_place(v):
+    """A stone wall set down: heavy grinding thunks and a little clay slap."""
+    out = silence(0.8)
+    for k, f in enumerate((180, 240)):
+        thud = sine(sweep(f, f * 0.45, 0.3), 0.3) * env_perc(0.3, 0.002, 0.06)
+        grind = bandpass(noise(0.2, 560 + 10 * v + k), 900 + 200 * k, 1.2) * env_perc(0.2, 0.003, 0.05)
+        place(out, thud * 1.2, k * 0.13)
+        place(out, grind * 0.7, k * 0.13)
+    place(out, clay(v % 2)[: int(0.25 * RATE)] * 0.4, 0.3)
+    return reverb(out, 0.15, 0.7)
+
+
+def bandage(v):
+    """Wrapping a bandage: a soft cloth swish and a gentle chime."""
+    out = silence(1.2)
+    for k in range(2):
+        place(out, rustle(0.22, 580 + 10 * v + k, 2200) * 0.6, k * 0.18)
+    place(out, bell(midi_hz(79 + 2 * v), 0.8, 0.5) * 0.4, 0.42)
+    place(out, bell(midi_hz(86 + 2 * v), 0.7, 0.5) * 0.3, 0.5)
+    return reverb(out, 0.3, 1.1)
+
+
 def camp_hit(v):
     """Imp hitting the campfire: a thud and a spray of sparks."""
     d = 0.6
@@ -395,6 +417,8 @@ SOUNDS = {
     "trap_snap": (trap_snap, 2),
     "bramble_spawn": (bramble_spawn, 2),
     "bramble_death": (bramble_death, 2),
+    "stone_place": (stone_place, 2),
+    "bandage": (bandage, 2),
     "sunset": (sunset, 1),
     "win": (win, 1),
     "lose": (lose, 1),

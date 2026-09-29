@@ -43,7 +43,7 @@ func _ready() -> void:
 	get_tree().get_first_node_in_group("crafting_panel").close()
 
 	# Build flow through the real mouse raycast.
-	BuildManager.enter_build_mode(BuildManager.get_known_definitions()[0])
+	BuildManager.enter_build_mode(BuildManager.get_definition(&"wooden_fence"))
 	get_viewport().warp_mouse(Vector2(820, 470))
 	await _settle(0.5)
 	print("build: ghost valid=", BuildManager.get("_is_valid"))
@@ -58,6 +58,9 @@ func _ready() -> void:
 	# and a glow shard pickup lying in the grass.
 	CraftingManager.craft(_recipe(&"stone_hearth"), player)
 	for spec in [["res://scenes/buildings/SnapTrap.tscn", Vector3(3.2, 0, 3.5)],
+			["res://scenes/buildings/ReinforcedWall.tscn", Vector3(4.5, 0, -1.0)],
+			["res://scenes/buildings/StorageCrate.tscn", Vector3(-4.6, 0, 1.8)],
+			["res://scenes/buildings/CraftingTable.tscn", Vector3(2.0, 0, -4.5)],
 			["res://scenes/buildings/GlowLantern.tscn", Vector3(-3.0, 0, 3.8)],
 			["res://scenes/world/ItemPickup.tscn", Vector3(0.5, 0, 5.0)]]:
 		var extra: Node3D = (load(spec[0]) as PackedScene).instantiate() as Node3D
@@ -67,13 +70,22 @@ func _ready() -> void:
 	get_tree().get_first_node_in_group("companions").call("set_task", 4)
 	await _settle(1.0)
 	_shot("04c_feature_017")
-	BuildManager.enter_build_mode(BuildManager.get_known_definitions()[3])
+	# Feature 019: the Crafting Table's own recipes, and a full stash.
+	ResourceManager.add(&"wood", 100)
+	player.global_position = Vector3(2.0, 0, -3.2)
+	await _settle(0.3)
+	get_tree().get_first_node_in_group("crafting_panel").open()
+	await _settle(0.3)
+	_shot("04e_table_recipes")
+	get_tree().get_first_node_in_group("crafting_panel").close()
+	player.global_position = Vector3(0.5, 0, 2.2)
+	BuildManager.enter_build_mode(BuildManager.get_definition(&"glow_lantern"))
 	await _settle(0.4)
 	_shot("04d_build_lantern")
 	BuildManager.exit_build_mode()
 	CraftingManager.craft(CraftingManager.get_recipes()[0], player)
 	player.call("_try_place_torch")
-	var fence: Node3D = BuildManager.get_known_definitions()[0].get_scene().instantiate()
+	var fence: Node3D = BuildManager.get_definition(&"wooden_fence").get_scene().instantiate()
 	get_tree().current_scene.add_child(fence)
 	fence.global_position = Vector3(0, 0, -3)
 

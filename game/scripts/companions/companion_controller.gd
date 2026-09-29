@@ -43,6 +43,11 @@ var _attack_cooldown_remaining: float = 0.0
 var _current_attack_damage: int = 0
 var _active_resource_node: Node = null   # ResourceNode currently being gathered
 var _repair_timer: float = 0.0
+## Crafting Table upgrade (feature 019): doubles her attack reach.
+var has_slingshot: bool = false
+
+const BANDAGE_HEAL: int = 25
+const SLINGSHOT_RANGE_FACTOR: float = 2.0
 
 
 func _ready() -> void:
@@ -122,6 +127,37 @@ func set_task(task: int) -> void:
 	_update_task_label()
 
 
+func get_attack_range() -> float:
+	if definition == null:
+		return 0.0
+	return definition.attack_range * (SLINGSHOT_RANGE_FACTOR if has_slingshot else 1.0)
+
+
+func give_slingshot() -> void:
+	if has_slingshot:
+		return
+	has_slingshot = true
+	Fx.float_text(self, "SLINGSHOT!", Color(1.0, 0.85, 0.4), 2.7)
+	Fx.burst(&"level_up", global_position)
+
+
+## A bandage: +25 HP, or wakes her up (with 25 HP) when knocked out.
+## False when she does not need one.
+func apply_bandage() -> bool:
+	if is_knocked_out:
+		_set_knocked_out(false)
+		current_hp = mini(max_hp, BANDAGE_HEAL)
+	elif current_hp < max_hp:
+		current_hp = mini(max_hp, current_hp + BANDAGE_HEAL)
+	else:
+		return false
+	health_changed.emit(current_hp, max_hp)
+	Fx.float_text(self, "+%d HP" % BANDAGE_HEAL, Color(0.5, 1, 0.5))
+	Fx.burst(&"heal", global_position)
+	AudioManager.play_sfx(&"bandage", global_position)
+	return true
+
+
 func get_task_name() -> String:
 	match current_task:
 		Task.IDLE: return "Idle"
@@ -192,7 +228,7 @@ func _tick_guard_base() -> void:
 		move_and_slide()
 		return
 	# First priority: kill nearby mobs.
-	var mob: Node3D = _find_nearest_mob(definition.attack_range)
+	var mob: Node3D = _find_nearest_mob(get_attack_range())
 	if mob != null:
 		velocity = Vector3.ZERO
 		move_and_slide()
@@ -252,7 +288,7 @@ func _tick_gather_nearest() -> void:
 ## or no wood left, she guards the camp instead.
 func _tick_repair(delta: float) -> void:
 	_repair_timer = maxf(0.0, _repair_timer - delta)
-	var mob: Node3D = _find_nearest_mob(definition.attack_range)
+	var mob: Node3D = _find_nearest_mob(get_attack_range())
 	var target: Node3D = Repair.most_damaged(get_tree())
 	if mob != null or target == null or not ResourceManager.has(Repair.WOOD_ID, Repair.WOOD_PER_TAP):
 		_tick_guard_base()
@@ -364,7 +400,7 @@ func _find_nearest_resource_node() -> Node3D:
 		var node: Node = stack.pop_back()
 		if node == null:
 			continue
-		if node is ResourceNode and (node as ResourceNode).is_gatherable:
+		if node is ResourceNode and (node as ResourceNode).is_gatherable and not (node as ResourceNode).is_stash_full():
 			var n3d: Node3D = node as Node3D
 			var d_sq: float = n3d.global_position.distance_squared_to(global_position)
 			if d_sq < best_d_sq:
