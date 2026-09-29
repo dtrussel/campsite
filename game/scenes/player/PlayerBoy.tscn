@@ -36,6 +36,7 @@ clips = {
 &"gather": "Interact",
 &"hit": "Hit_A",
 &"idle": "Idle",
+&"walk": "Walking_A",
 &"move": "Running_A",
 &"pick": "PickUp"
 }

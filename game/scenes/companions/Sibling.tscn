@@ -37,6 +37,7 @@ clips = {
 &"getup": "Lie_StandUp",
 &"hit": "Hit_A",
 &"idle": "Idle",
+&"walk": "Walking_A",
 &"move": "Running_A"
 }
 reference_speed = 6.1

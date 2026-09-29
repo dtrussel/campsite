@@ -110,6 +110,8 @@ func _run_win_scenario() -> void:
 	var moved: float = Vector2(player.global_position.x - goal.x, player.global_position.z - goal.z).length()
 	_check(moved < 1.0, "right-click move arrived (%.2f m off, %.1fs)" % [moved, t])
 
+	await _check_animation_layers(player)
+
 	var rock: ResourceNode = _find_resource_node(&"stone")
 	var stone_before: int = ResourceManager.get_count(&"stone")
 	player.command_gather(rock)
@@ -445,6 +447,30 @@ func _check_bramble_beast(player: Node3D) -> void:
 	beast.take_damage(999, player)
 	fence.queue_free()
 	await _wait(0.2)
+
+
+## Feature 023: actions layer over locomotion. While Leo runs, a swing
+## plays on the upper body and the legs keep running; standing still it
+## plays on the whole body.
+func _check_animation_layers(player: Node3D) -> void:
+	var visual: CharacterVisual = player.get_node("Visual") as CharacterVisual
+	var tree: AnimationTree = visual.get_animation_tree()
+	_check(tree != null and tree.active, "Leo has an active animation tree")
+	player.command_move(player.global_position + Vector3(8, 0, 0))
+	await _wait(0.4)
+	_check(visual.is_moving() and float(tree.get("parameters/loco/blend_position")) > 1.0,
+		"running blends the locomotion (%.1f)" % float(tree.get("parameters/loco/blend_position")))
+	visual.play_action(&"attack", 1.9)
+	await get_tree().physics_frame  # the tree updates on physics frames
+	await get_tree().physics_frame
+	_check(visual.active_action_layer() == "upper", "a swing while running plays on the upper body")
+	player.stop_commands()
+	await _wait(0.8)
+	visual.play_action(&"attack", 1.9)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	_check(not visual.is_moving() and visual.active_action_layer() == "full", "a swing standing still plays on the whole body")
+	await _wait(0.6)
 
 
 func _recipe(id: StringName) -> CraftingRecipe:
