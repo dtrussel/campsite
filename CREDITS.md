@@ -36,6 +36,13 @@ with thanks). Vendored by `tools/fetch_assets.sh` from pinned commits of:
 
 Each pack's `LICENSE.txt` is kept next to its files in `game/assets/kaykit/`.
 
+## Illustration
+
+The key art on the boot splash and loading screen (Leo and Nela at
+sunset with the camp and its monsters) was supplied by the project
+team. It is kept at `art/ui/source/key_art.png`; `art/ui/key_art.py`
+prepares the game versions and adds the logo.
+
 ## Audio
 
 **Original sound.** All music, ambience and sound effects are

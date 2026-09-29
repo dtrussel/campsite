@@ -23,6 +23,12 @@ func _ready() -> void:
 	_shot("01_title")
 	title.queue_free()
 	SaveManager.delete_save()
+	# Feature 029: the key-art loading screen (a still preview).
+	var loading: LoadingScreen = LoadingScreen.preview(0.6)
+	add_child(loading)
+	await _settle(0.3)
+	_shot("01b_loading")
+	loading.queue_free()
 
 	var main: Node = load("res://scenes/main/Main.tscn").instantiate()
 	add_child(main)

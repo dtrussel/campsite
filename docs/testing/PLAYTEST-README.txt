@@ -1,4 +1,4 @@
-CAMPSITE - Playtest build 0.23.0 (playtest 1)
+CAMPSITE - Playtest build 0.24.0 (playtest 1)
 ============================================
 
 Thanks for testing! This is an early prototype. Turn your sound on:
@@ -78,6 +78,7 @@ Please tell us what you think about:
 - Moving and fighting: Leo swings while running, and leans into turns.
 - The world: trees sway, leaves and pollen drift by day, fireflies at
   night, pumpkins and lanterns at the forest edge.
+- The new start-up picture and loading screen: do the tips help?
 - Was it too easy or too hard? Which night was hardest?
 
 AFTER PLAYING

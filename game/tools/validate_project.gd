@@ -19,6 +19,17 @@ const SKIP_DIRS: Array[String] = ["res://.godot", "res://addons"]
 var _errors: PackedStringArray = PackedStringArray()
 
 
+## Feature 029: the boot splash exists and the loading screen builds.
+func _validate_key_art() -> void:
+	var splash: String = String(ProjectSettings.get_setting("application/boot_splash/image", ""))
+	if splash == "" or not FileAccess.file_exists(splash):
+		_fail("boot splash image missing: '%s'" % splash)
+	var screen: LoadingScreen = LoadingScreen.preview()
+	if screen.get_child_count() == 0:
+		_fail("LoadingScreen.preview() built nothing")
+	screen.free()
+
+
 func _ready() -> void:
 	var files: PackedStringArray = PackedStringArray()
 	_collect("res://", files)
@@ -29,6 +40,7 @@ func _ready() -> void:
 		elif loaded is GDScript and not (loaded as GDScript).can_instantiate():
 			_fail("script does not compile: %s" % path)
 	_validate_data()
+	_validate_key_art()
 	if _errors.is_empty():
 		print("validate_project: OK (%d files checked)" % files.size())
 		get_tree().quit(0)
