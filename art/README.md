@@ -48,3 +48,23 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 - **Rigid gear** on characters is bound to one bone at weight 1.0.
   Weapons are built in the `handslot.r` bone frame: handle along +Y, blade
   toward -X.
+
+## Audio
+
+All sound is procedural too: numpy synthesis in `art/audio/`, written as
+`.ogg` to `game/assets/audio/` (committed, so neither the game nor Blender
+needs Python). `tools/build_audio.sh` creates `.venv-audio/` (numpy and
+soundfile) on first run.
+
+| Path | What |
+|------|------|
+| `audio/dsp.py` | Oscillators, envelopes, filters, a convolution reverb, and instruments: `pluck` (Karplus-Strong guitar), `bell`, `pad`, `knock` (wood), `owl`. `write()` normalises and encodes the result |
+| `audio/sfx.py` | One-shots in the `SOUNDS` table. Each id is written as `sfx/<id>_<n>.ogg` (variants). Ids match `Fx.burst` kinds where one exists |
+| `audio/music.py` | Seamless loops: `music/day.ogg`, `music/night.ogg`, and `ambience/{day,night,campfire}.ogg` |
+
+- **Tone:** warm, toy-like and never harsh (the players are young kids). Imps are silly ("poof" and a squeak), not scary.
+- **Adding a sound:**
+  1. Write a function and add it to `SOUNDS`.
+  2. Run `tools/build_audio.sh sfx <id>`.
+  3. Add the id to `volumes` in `game/resources/audio/audio_library.tres`. `validate_project` fails otherwise, and also when an `Fx.burst` kind has no sound.
+- **Loops** fold their tails back to the start, so they wrap without a seam. Music uses whole cycles; ambience uses a short crossfade.

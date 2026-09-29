@@ -66,6 +66,7 @@ func take_damage(amount: int, _source: Node = null) -> void:
 	health_changed.emit(current_hp, max_hp)
 	Fx.flash(self)
 	Fx.float_text(self, "-%d" % amount, Color(1, 0.6, 0.4))
+	AudioManager.play_sfx(&"sibling_hurt", global_position)
 	if current_hp == 0:
 		_set_knocked_out(true)
 	elif not _visual.is_in_action():

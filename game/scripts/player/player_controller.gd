@@ -163,6 +163,7 @@ func take_damage(amount: int, _source: Node = null) -> void:
 	Fx.flash(self)
 	Fx.float_text(self, "-%d" % amount, Color(1, 0.45, 0.4))
 	Fx.shake(0.18)
+	AudioManager.play_sfx(&"player_hurt", global_position)
 	if current_hp == 0:
 		_cancel_active_gather()
 		_set_command(Command.NONE, null)
@@ -335,6 +336,7 @@ func _perform_attack(target: Node3D) -> void:
 		if _is_attackable(target) and _flat_distance(target.global_position) <= attack_range * 1.4:
 			target.take_damage(attack_damage, self)
 			Fx.burst(&"hit", target.global_position + Vector3(0, 0.7, 0))
+			Fx.hit_stop()
 	)
 
 

@@ -28,13 +28,17 @@ const GATHER_XP_REWARD: int = 1
 ## Gatherer animation state (CharacterVisual clip key): "chop" for
 ## trees and rocks, "pick" for bushes.
 @export var gather_animation: StringName = &"chop"
-## Fx.burst kind played when a gather completes.
+## Fx.burst kind played when a gather completes. Its sound also ticks
+## while gathering (chop, chop...).
 @export var gather_burst: StringName = &"wood"
+
+const GATHER_TICK_SECONDS: float = 0.55
 
 var is_gatherable: bool = true
 var _progress_bar: HealthBar3D = null
 
 var _active_gather_actor: Node = null
+var _next_tick: float = 0.0
 var _gather_timer: Timer
 var _respawn_timer: Timer
 
@@ -63,6 +67,11 @@ func _process(_delta: float) -> void:
 	if _active_gather_actor == null or gather_time_seconds <= 0.0:
 		return
 	var done: float = 1.0 - _gather_timer.time_left / gather_time_seconds
+	var elapsed: float = gather_time_seconds - _gather_timer.time_left
+	# Tick sounds during the gather; the last one comes with the burst.
+	if elapsed >= _next_tick and _gather_timer.time_left > GATHER_TICK_SECONDS * 0.5:
+		_next_tick += GATHER_TICK_SECONDS
+		AudioManager.play_sfx(gather_burst, global_position + Vector3(0, 0.8, 0))
 	_progress_bar.set_value(int(done * 100.0), 100)
 
 
@@ -75,6 +84,7 @@ func begin_gather(actor: Node) -> bool:
 		push_warning("ResourceNode '%s' has no definition" % name)
 		return false
 	_active_gather_actor = actor
+	_next_tick = 0.2
 	_gather_timer.start(gather_time_seconds)
 	_show_progress(true)
 	return true

@@ -43,6 +43,14 @@ func _run_win_scenario() -> void:
 	var companion: Node3D = get_tree().get_first_node_in_group("companions")
 	_check(player != null and companion != null, "player and companion exist")
 
+	# Audio: the day tune plays, and one-shots from the pool never error.
+	var library: AudioLibrary = AudioManager.library
+	_check(library != null and library.music_day != null, "audio library loaded")
+	_check(AudioManager.mood == &"day", "day music mood at run start (%s)" % AudioManager.mood)
+	for id in library.volumes.keys():
+		AudioManager.play_sfx(StringName(id), player.global_position)
+	AudioManager.play_sfx(&"no_such_sound")  # unknown ids are ignored
+
 	# Gather from a tree: wood plus the leaves bonus.
 	var tree_node: ResourceNode = _find_resource_node(&"wood")
 	_check(tree_node != null, "found a tree")
@@ -134,12 +142,16 @@ func _run_win_scenario() -> void:
 	_check(GameManager.run_state == GameManager.RunState.WON, "run WON after %d nights" % GameManager.nights_to_win)
 	_check(int(GameManager.stats[&"kills"]) > 0, "kills recorded (%d)" % GameManager.stats[&"kills"])
 	_check(get_tree().paused, "world frozen behind end screen")
+	_check(AudioManager.mood == &"", "music stops for the win stinger")
 
 
 func _survive_night(night: int, player: Node3D) -> void:
 	# Fast-forward: day -> sunset -> night.
 	while TimeManager.current_phase != TimeManager.Phase.NIGHT:
 		TimeManager.skip_phase()
+	_check(AudioManager.mood == &"night", "night %d: night music mood" % night)
+	await _wait(0.2)
+	_check(AudioManager.current_music() == AudioManager.library.music_night, "night %d: night track playing" % night)
 	# Let the imps arrive and hit things for a few seconds, then clear
 	# every imp as it appears. Killing the whole wave brings dawn early.
 	var kills_before: int = int(GameManager.stats[&"kills"])
@@ -166,6 +178,14 @@ func _run_loss_scenario() -> void:
 	_campfire().take_damage(10000)
 	await get_tree().process_frame
 	_check(GameManager.run_state == GameManager.RunState.LOST, "run LOST when campfire destroyed")
+
+	# Volume settings round-trip through user://settings.cfg.
+	var saved_music: float = AudioManager.music_volume
+	AudioManager.set_music_volume(0.35)
+	var config: ConfigFile = ConfigFile.new()
+	_check(config.load(AudioManager.SETTINGS_PATH) == OK and is_equal_approx(float(config.get_value("audio", "music")), 0.35),
+		"music volume saved to settings.cfg")
+	AudioManager.set_music_volume(saved_music)
 
 
 func _start_fresh_run() -> void:

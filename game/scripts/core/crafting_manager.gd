@@ -50,5 +50,6 @@ func craft(recipe: CraftingRecipe, crafter: Node) -> bool:
 		ProgressionManager.award_xp(crafter, recipe.xp_reward, &"craft")
 	GameManager.record(&"crafted", recipe.output_amount)
 	PlaytestLog.write("crafted id=%s day=%d" % [recipe.id, TimeManager.day_number])
+	AudioManager.play_sfx(&"craft")
 	crafted.emit(recipe, crafter)
 	return true

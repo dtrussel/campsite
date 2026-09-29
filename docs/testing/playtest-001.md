@@ -1,6 +1,6 @@
 # Playtest 001: first human playtest
 
-> Build: `Campsite-0.10.0-playtest1-windows.zip` (produced by
+> Build: `Campsite-0.11.0-playtest1-windows.zip` (produced by
 > `tools/export_playtest.sh`). Target session length: **20–30 minutes**
 > (about 10 minutes per run, 2 runs).
 
@@ -64,6 +64,7 @@ worked:
 | Onboarding | Did they read the help screen? Did they reopen it (H)? | |
 | Controls | Did right-click movement feel natural? Did they try WASD? | |
 | Look & feel | First reaction to the art, effects and UI? Anything hard to read? | |
+| Sound | Did the owl at sunset make them head back? Any sound annoying or too loud? Did they touch the volume sliders? | |
 | Gathering | Did they find all four resource kinds without being told? | |
 | Building | Did they understand why the ghost is red or green? | |
 | Crafting | Did they discover crafting on their own? At the campfire? | |

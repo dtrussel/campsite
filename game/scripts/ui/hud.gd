@@ -18,6 +18,8 @@ const _PHASE_COLOR_DAY: Color = Color(1, 0.95, 0.8)
 const _PHASE_COLOR_SUNSET: Color = Color(1, 0.6, 0.45)
 const _PHASE_COLOR_NIGHT: Color = Color(0.75, 0.65, 1.0)
 const _PHASE_COLOR_DAWN: Color = Color(1, 0.88, 0.65)
+
+var _vignette: TextureRect = null
 const _TRAY_ITEMS: Array[StringName] = [&"wood", &"stone", &"berries", &"fiber", &"leaves", &"resin", &"torch"]
 const _ICON_DIR: String = "res://assets/icons/"
 
@@ -489,6 +491,33 @@ func _on_day_started(day_number: int) -> void:
 
 func _on_sunset_warning(seconds: float) -> void:
 	show_banner("Back to the fire!", _PHASE_COLOR_SUNSET)
+	_pulse_vignette(Color(1.0, 0.42, 0.18))
+
+
+## Warm glow creeping in from the screen edges, twice, with the owl call.
+func _pulse_vignette(color: Color) -> void:
+	if _vignette == null:
+		var gradient: Gradient = Gradient.new()
+		gradient.offsets = PackedFloat32Array([0.0, 0.45, 1.0])
+		gradient.colors = PackedColorArray([Color(1, 1, 1, 0), Color(1, 1, 1, 0), Color(1, 1, 1, 0.9)])
+		var texture: GradientTexture2D = GradientTexture2D.new()
+		texture.gradient = gradient
+		texture.fill = GradientTexture2D.FILL_RADIAL
+		texture.fill_from = Vector2(0.5, 0.5)
+		texture.fill_to = Vector2(1.05, 1.05)
+		_vignette = TextureRect.new()
+		_vignette.texture = texture
+		_vignette.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_vignette.stretch_mode = TextureRect.STRETCH_SCALE
+		_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(_vignette)
+		move_child(_vignette, 0)
+	_vignette.modulate = Color(color, 0.0)
+	var tween: Tween = create_tween()
+	for i in 2:
+		tween.tween_property(_vignette, "modulate:a", 1.0, 0.45).set_trans(Tween.TRANS_SINE)
+		tween.tween_property(_vignette, "modulate:a", 0.0, 0.9).set_trans(Tween.TRANS_SINE)
 
 
 func _on_night_started(day_number: int) -> void:

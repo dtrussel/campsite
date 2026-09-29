@@ -6,7 +6,10 @@
 >
 > **Status (2026-09):** Phases 0&ndash;7 done, plus an art &amp; feel pass
 > (feature 006: stylized KayKit art, VFX, LoL-style UI and controls).
-> Playtest 1 is next.
+> Art passes 007&ndash;015 (hand-painted Leo, Nela, imps and props) and
+> the audio &amp; feel pass (feature 016: procedural music, ambience and
+> sound effects, hit-stop, sunset cue) are done. Playtest 1 can run on
+> any of these builds. See "Next features" at the end for what follows.
 
 ## Phase 0 &mdash; Project foundation
 
@@ -223,3 +226,17 @@ planning is captured in new `.features/` folders as new goals are chosen:
 - Skill trees or alternative progression structures.
 - World expansion (multiple biomes, deeper forest).
 - Polish pass on art, audio, UI, juice.
+
+## Next features (agreed 2026-09)
+
+Chosen after the feature 016 review. They are gameplay-first, with an
+art track in parallel.
+
+| Feature | Goal |
+|---------|------|
+| 016 Audio &amp; feel | **Done.** Procedural sound for everything, music and ambience moods, hit-stop, sunset cue, volume settings. |
+| 017 Repair and resources | **Repair:** right-click a damaged building or the campfire, for a share of its cost; Nela gets a Repair task. **Resources:** Clay, Mushrooms, Scrap and Glow Shards get sources (Glow Shards drop from imps). **New recipes:** Berry Snack, Simple Trap and Glow Lantern. |
+| 018 Bramble Beast | A slow, tanky, fence-breaking mob. Waves become a mix of mob types. |
+| 019 Buildings | Reinforced Wall, Storage Crate, placeable Simple Trap, and a Crafting Table that unlocks advanced recipes. |
+| 020 Longer runs + save/load | 7-night and endless modes, with Phase 8 save/load. |
+| Art (parallel) | Shadow Imp remodel with the hero pipeline, then gather, attack and hit animations, then painted environment and props. |

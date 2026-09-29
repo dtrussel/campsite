@@ -78,6 +78,8 @@ func _validate_data() -> void:
 		if not item_ids.has(recipe.output_id):
 			_fail("%s outputs unknown item '%s'" % [recipe.resource_path, recipe.output_id])
 
+	_validate_audio()
+
 	# Every item a building or recipe needs must be obtainable somewhere:
 	# as a resource node yield/bonus or as a recipe output.
 	var obtainable: Dictionary = {}
@@ -104,6 +106,30 @@ func _validate_data() -> void:
 	for key in needed.keys():
 		if not obtainable.has(StringName(key)):
 			_fail("item '%s' is needed by a cost/recipe but nothing produces it" % key)
+
+
+## The audio library: every listed id has at least one variant file,
+## every Fx.burst kind has a sound, and the loops are set.
+func _validate_audio() -> void:
+	var library: AudioLibrary = load("res://resources/audio/audio_library.tres") as AudioLibrary
+	if library == null:
+		_fail("res://resources/audio/audio_library.tres is missing or not an AudioLibrary")
+		return
+	for id in library.volumes.keys():
+		if library.streams_for(StringName(id)).is_empty():
+			_fail("audio id '%s' has no %s/%s_1.ogg" % [id, library.sfx_dir, id])
+	for id in library.ui_ids:
+		if not library.has_sound(id):
+			_fail("audio ui id '%s' is not in volumes" % id)
+	for kind in Fx.BURSTS.keys():
+		if not library.has_sound(kind):
+			_fail("Fx burst '%s' has no sound in the audio library" % kind)
+	for loop_name in ["music_day", "music_night", "ambience_day", "ambience_night", "ambience_campfire"]:
+		if library.get(loop_name) == null:
+			_fail("audio library has no %s" % loop_name)
+	for bus_name in [&"Music", &"SFX", &"UI"]:
+		if AudioServer.get_bus_index(bus_name) == -1:
+			_fail("audio bus '%s' missing (default_bus_layout.tres)" % bus_name)
 
 
 func _check_id(id: StringName, path: String, seen: Dictionary) -> void:

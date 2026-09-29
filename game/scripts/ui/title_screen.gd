@@ -16,6 +16,7 @@ func _ready() -> void:
 	theme = UiKit.theme()
 	var backdrop: Node3D = BACKDROP.new()
 	add_child(backdrop)
+	AudioManager.set_mood(&"day")
 
 	# Vignette so the menu reads over the 3D scene.
 	var shade: TextureRect = TextureRect.new()

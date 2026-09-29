@@ -178,6 +178,7 @@ static func button(text: String, on_pressed: Callable, focusable: bool = true) -
 	result.text = text.to_upper()
 	result.custom_minimum_size = Vector2(280, 46)
 	result.focus_mode = Control.FOCUS_ALL if focusable else Control.FOCUS_NONE
+	result.pressed.connect(func() -> void: AudioManager.play_sfx(&"ui_click"))
 	result.pressed.connect(on_pressed)
 	return result
 

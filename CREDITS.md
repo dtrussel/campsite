@@ -32,6 +32,13 @@ with thanks). Vendored by `tools/fetch_assets.sh` from pinned commits of:
 
 Each pack's `LICENSE.txt` is kept next to its files in `game/assets/kaykit/`.
 
+## Audio
+
+**Original sound.** All music, ambience and sound effects are
+synthesized from scratch by the numpy scripts in `art/audio/`
+(`tools/build_audio.sh`) and written to `game/assets/audio/`. No
+recorded samples or third-party sounds are used.
+
 ## Fonts
 
 - **Cinzel** by Natanael Gama — SIL Open Font License 1.1

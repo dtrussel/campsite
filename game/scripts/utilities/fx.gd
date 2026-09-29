@@ -5,8 +5,8 @@ extends RefCounted
 ##
 ## Tiny, asset-free feedback helpers shared by every damageable thing:
 ## a hit flash, floating numbers, and an overhead HP label. All of it
-## is placeholder "juice" built from engine primitives so the
-## prototype reads clearly without art or audio.
+## is "juice" built from engine primitives; burst() also plays the
+## matching sound through AudioManager.
 
 const FLASH_SECONDS: float = 0.12
 const FLOAT_SECONDS: float = 0.9
@@ -238,6 +238,9 @@ static var _burst_materials: Dictionary = {}  # additive(bool) -> material
 ## One-shot particle burst at a world position. Safe to call from
 ## anywhere; does nothing outside the scene tree or for unknown kinds.
 static func burst(kind: StringName, position: Vector3) -> void:
+	# Every burst kind has a matching sound (AudioLibrary), so feedback
+	# is always seen and heard together.
+	AudioManager.play_sfx(kind, position)
 	if not BURSTS.has(kind):
 		return
 	var tree: SceneTree = Engine.get_main_loop() as SceneTree
@@ -325,3 +328,23 @@ static func shake(amount: float) -> void:
 	var rig: Node = tree.get_first_node_in_group("camera_rig")
 	if rig != null and rig.has_method("add_trauma"):
 		rig.add_trauma(amount)
+
+
+static var _hit_stop_scale: float = -1.0
+
+
+## Freezes the game for a blink (a few frames) so a hit lands with
+## weight. Restores whatever time scale was active (tests run faster),
+## and never stacks.
+static func hit_stop(seconds: float = 0.05, slow_factor: float = 0.08) -> void:
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	if tree == null or _hit_stop_scale > 0.0 or tree.paused:
+		return
+	var previous: float = Engine.time_scale
+	_hit_stop_scale = previous * slow_factor
+	Engine.time_scale = _hit_stop_scale
+	tree.create_timer(seconds, true, false, true).timeout.connect(func() -> void:
+		if is_equal_approx(Engine.time_scale, _hit_stop_scale):
+			Engine.time_scale = previous
+		_hit_stop_scale = -1.0
+	)

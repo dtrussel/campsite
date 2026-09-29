@@ -13,12 +13,14 @@ fragile camping trip into a magical woodland fortress.
 
 ## Status
 
-**Prototype, ready for first playtest (v0.10.0-playtest1).** Hand-painted,
+**Prototype, ready for first playtest (v0.11.0-playtest1).** Hand-painted,
 LoL-inspired 3D art: **Leo** (the big brother, played by you), his little
 sister **Nela**, the Shadow Imps, trees, rocks, camp props and the painted
 ground are modelled, painted and texture-baked by the scripts in
 [`art/`](art/README.md).
 The UI is icon-first for young players. See [`CREDITS.md`](CREDITS.md).
+All sound (music, ambience and effects) is original and synthesized by
+the scripts in [`art/audio/`](art/README.md#audio) (feature 016).
 
 A complete 3-night run is playable:
 
@@ -27,8 +29,9 @@ A complete 3-night run is playable:
 3. Nights of Shadow Imp waves.
 4. A win or loss screen, and restart.
 
-Roadmap phases 0–7 are implemented. Save/load (Phase 8) is next, after
-playtest feedback. See [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md)
+Roadmap phases 0–7 are implemented, plus the audio & feel pass
+(feature 016). Next: repair and the unused resources (017), the Bramble
+Beast (018), more buildings (019), and longer runs with save/load (020). See [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md)
 and [`.features/005-first-playtest-build/handoff.md`](.features/005-first-playtest-build/handoff.md).
 
 **Playtesters:** follow [`docs/testing/playtest-001.md`](docs/testing/playtest-001.md).
@@ -77,7 +80,7 @@ Controls (LoL-style; also shown in-game with **H**):
 | F / G / T / Y | Sibling: follow / guard camp / gather / idle |
 | N | Call the night early (daytime) |
 | W A S D | Walk directly (optional) |
-| H / Esc | Help / Pause menu |
+| H / Esc | Help / Pause menu (with Music and Sounds volume) |
 
 ## Checks and builds
 
@@ -85,6 +88,7 @@ Controls (LoL-style; also shown in-game with **H**):
 tools/check.sh            # headless: import, validate all data, full smoke run
 tools/export_playtest.sh  # Windows zip + self-tested Linux export in build/
 tools/fetch_assets.sh     # re-vendor the CC0 models and fonts (only when the list changes)
+tools/build_audio.sh      # rebuild the procedural sound into game/assets/audio/
 ```
 
 Both scripts use `godot` on PATH, or `$GODOT`. Exports need the Godot
@@ -123,7 +127,7 @@ Both scripts use `godot` on PATH, or `$GODOT`. Exports need the Godot
     placeholder/      Throwaway placeholder content
     custom/           Original models + painted textures (built from art/)
     kaykit/           Vendored CC0 KayKit packs (rigs, animations, backdrop)
-    audio/            Sound effects and music
+    audio/            Sound effects, music and ambience (built from art/audio/)
     materials/        Shared materials
     fonts/            Fonts
   resources/          Godot .tres data resources (data-driven content)
@@ -170,7 +174,7 @@ Start here if you are a new contributor or coding agent:
 6. [Test strategy](docs/testing/test-strategy.md)
 7. [ADR-0001: Engine & language selection](docs/decisions/ADR-0001-engine-and-language-selection.md)
 8. [Agent feature workflow](.features/README.md)
-9. [Latest feature handoff](.features/005-first-playtest-build/handoff.md)
+9. [Latest feature handoff](.features/016-audio-and-feel/handoff.md)
 10. [Playtest 001 script](docs/testing/playtest-001.md)
 
 ## Development workflow

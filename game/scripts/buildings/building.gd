@@ -67,6 +67,8 @@ func take_damage(amount: int, _source: Node = null) -> void:
 	current_hp = max(0, current_hp - amount)
 	damaged.emit(current_hp)
 	Fx.flash(self)
+	if current_hp > 0:
+		AudioManager.play_sfx(&"structure_hit", global_position)
 	_refresh_hp_label()
 	if current_hp == 0:
 		Fx.burst(&"build", global_position + Vector3(0, 0.5, 0))

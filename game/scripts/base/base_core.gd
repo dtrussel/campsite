@@ -32,6 +32,7 @@ func take_damage(amount: int, _source: Node = null) -> void:
 	current_hp = max(0, current_hp - amount)
 	damaged.emit(current_hp)
 	Fx.flash(self)
+	AudioManager.play_sfx(&"camp_hit", global_position)
 	_refresh_hp_label()
 	_log_quarters()
 	if current_hp == 0:

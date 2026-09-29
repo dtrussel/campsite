@@ -359,6 +359,7 @@ static func icon_button(glyph_kind: String, caption: String, on_pressed: Callabl
 	button.custom_minimum_size = Vector2(250 if caption != "" else 64, 58)
 	button.focus_mode = Control.FOCUS_ALL if focusable else Control.FOCUS_NONE
 	button.add_theme_font_size_override("font_size", 22)
+	button.pressed.connect(func() -> void: AudioManager.play_sfx(&"ui_click"))
 	button.pressed.connect(on_pressed)
 	var holder: Control = Control.new()
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE

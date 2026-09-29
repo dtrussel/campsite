@@ -39,3 +39,6 @@ __pycache__/
 
 # Blender (bpy) venv for art builds
 .venv-blender/
+
+# Python venv for procedural audio builds
+.venv-audio/

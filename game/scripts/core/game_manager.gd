@@ -168,6 +168,7 @@ func _on_xp_gained(_character: Node, _amount: int, source: StringName) -> void:
 ## Public entry for the HUD's task buttons.
 func assign_companion_task(task: int) -> void:
 	_assign_to_all_companions(task)
+	AudioManager.play_sfx(&"task")
 
 
 func _assign_to_all_companions(task: int) -> void:

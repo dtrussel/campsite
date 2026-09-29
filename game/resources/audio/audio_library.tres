@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="AudioLibrary" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/audio/audio_library.gd" id="1_lib"]
+[ext_resource type="AudioStream" path="res://assets/audio/music/day.ogg" id="2_day"]
+[ext_resource type="AudioStream" path="res://assets/audio/music/night.ogg" id="3_night"]
+[ext_resource type="AudioStream" path="res://assets/audio/ambience/day.ogg" id="4_amb_day"]
+[ext_resource type="AudioStream" path="res://assets/audio/ambience/night.ogg" id="5_amb_night"]
+[ext_resource type="AudioStream" path="res://assets/audio/ambience/campfire.ogg" id="6_fire"]
+
+[resource]
+script = ExtResource("1_lib")
+sfx_dir = "res://assets/audio/sfx"
+volumes = {
+&"berries": -4.0,
+&"build": -3.0,
+&"camp_hit": -3.0,
+&"craft": -2.0,
+&"dust": -4.0,
+&"heal": -3.0,
+&"hit": -5.0,
+&"leaves": -5.0,
+&"level_up": -1.0,
+&"lose": 0.0,
+&"place": -2.0,
+&"player_hurt": -5.0,
+&"resin": -4.0,
+&"shadow_death": -3.0,
+&"shadow_spawn": -4.0,
+&"sibling_hurt": -6.0,
+&"sparkle": -8.0,
+&"stone": -4.0,
+&"structure_hit": -6.0,
+&"sunset": 0.0,
+&"task": -4.0,
+&"ui_click": -6.0,
+&"win": 0.0,
+&"wood": -3.0
+}
+ui_ids = Array[StringName]([&"ui_click", &"task", &"sunset", &"win", &"lose", &"level_up", &"craft"])
+pitch_jitter = 0.08
+music_day = ExtResource("2_day")
+music_night = ExtResource("3_night")
+ambience_day = ExtResource("4_amb_day")
+ambience_night = ExtResource("5_amb_night")
+ambience_campfire = ExtResource("6_fire")

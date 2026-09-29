@@ -379,6 +379,16 @@ Initial audio targets (placeholders welcome):
 
 Music can be ambient / atmospheric. No vocals.
 
+*Implemented in feature 016.* Everything is synthesized by `art/audio/`:
+- a campfire-guitar day tune and a D-minor night drone with a heartbeat;
+- birds and wind by day, crickets by night;
+- a 3D crackle at every fire;
+- an owl call and a warm screen pulse at sunset;
+- one-shots for every gameplay beat.
+
+Deferred: night howls and creaking branches, and imp hisses while they
+walk (they have spawn and death sounds only).
+
 ## N. First vertical slice definition
 
 A successful first vertical slice means:

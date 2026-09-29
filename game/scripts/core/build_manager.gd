@@ -137,6 +137,7 @@ func _try_confirm() -> void:
 	if _ghost != null:
 		(building as Node3D).global_transform = _ghost.global_transform
 	building_placed.emit(building)
+	AudioManager.play_sfx(&"place", (building as Node3D).global_position)
 	_award_build_xp()
 	# Force a validity re-eval so the ghost flips to red if the cost can
 	# no longer be afforded after spending.

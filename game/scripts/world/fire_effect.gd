@@ -16,6 +16,8 @@ const FLAME_SHADER: Shader = preload("res://shaders/flame.gdshader")
 @export var flame_count: int = 3
 ## Light height above the flame base, in multiples of `size`.
 @export var light_height: float = 0.9
+## Loops the campfire crackle here; louder for bigger fires.
+@export var crackle: bool = true
 
 var _light: OmniLight3D = null
 var _flicker_time: float = 0.0
@@ -59,6 +61,9 @@ func _ready() -> void:
 	_light.position = Vector3(0, light_height * size, 0)
 	add_child(_light)
 	_base_energy = light_energy
+	if crackle and AudioManager.library != null:
+		var stream: AudioStream = AudioManager.library.ambience_campfire
+		add_child(AudioManager.make_ambient_emitter(stream, linear_to_db(clampf(size, 0.05, 2.0)) - 2.0))
 
 
 func _process(delta: float) -> void:
