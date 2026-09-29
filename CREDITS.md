@@ -32,9 +32,20 @@ with thanks). Vendored by `tools/fetch_assets.sh` from pinned commits of:
 | Pack | Used for |
 |------|----------|
 | [KayKit Character Pack: Adventurers 1.0](https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0) | Rig and animations for Leo and Nela; the axe icon |
-| [KayKit Character Pack: Skeletons 1.0](https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0) | Rig and animations for the Shadow Imp, Bramble Beast and Mushroom Gremlin (Skeleton Minion) |
+| [KayKit Character Pack: Skeletons 1.0](https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0) | Rig for the Shadow Imp, Bramble Beast and Mushroom Gremlin (Skeleton Minion). All three mobs' clips are original (`art/characters/imp_anims.py`, `beast_anims.py`, `gremlin_anims.py`). |
 
 Each pack's `LICENSE.txt` is kept next to its files in `game/assets/kaykit/`.
+
+## Illustration
+
+The key art on the boot splash and loading screen (Leo and Nela at
+sunset with the camp and its monsters) was supplied by the project
+team. It is kept at `art/ui/source/key_art.png`; `art/ui/key_art.py`
+prepares the game versions and adds the logo.
+The three monster paintings on the loading screens (the Shadow Imp on a
+branch at night, the Bramble Beast at sunset, the Mushroom Gremlin by a
+stream) were also supplied by the project team
+(`art/ui/source/loading_*.png`).
 
 ## Audio
 

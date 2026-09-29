@@ -68,11 +68,11 @@ func _ready() -> void:
 	var portraits: Array = [
 		["portrait_leo", "custom/leo.glb", "hero", ["Leo_Stick"], 0.48, 2.4],
 		["portrait_nela", "custom/nela.glb", "hero", ["Nela_Lantern", "Nela_LanternGlow"], 0.16, 2.7],
-		["portrait_imp", "custom/shadow_imp.glb", "shadow", [], -0.12, 3.1],
+		["portrait_imp", "custom/shadow_imp.glb", "shadow", [], -0.12, 3.1, {&"idle": "Imp_Idle", &"move": "Imp_Run"}],
 	]
 	for p in portraits:
 		if only.is_empty() or only.has(p[0]):
-			await _portrait(p[0], p[1], p[2], p[3], p[4], p[5])
+			await _portrait(p[0], p[1], p[2], p[3], p[4], p[5], p[6] if p.size() > 6 else {})
 	print("render_icons: done")
 	get_tree().quit()
 
@@ -148,8 +148,11 @@ func _bounds(root: Node) -> AABB:
 	return result
 
 
-func _portrait(name: String, path: String, style: String, hidden: Array, raise: float = 0.0, distance: float = 2.6) -> void:
+func _portrait(name: String, path: String, style: String, hidden: Array, raise: float = 0.0, distance: float = 2.6,
+		clips: Dictionary = {}) -> void:
 	var visual: CharacterVisual = CharacterVisual.new()
+	if not clips.is_empty():
+		visual.clips = clips  # creatures with their own clips (the imp, feature 028)
 	visual.model_scene = load("res://assets/" + path)
 	visual.model_scale = 1.0
 	visual.hidden_parts = PackedStringArray(hidden)

@@ -23,6 +23,13 @@ func _ready() -> void:
 	_shot("01_title")
 	title.queue_free()
 	SaveManager.delete_save()
+	# Features 029-030: the loading screens, one per painting.
+	for i in LoadingScreen.SCREENS.size():
+		var loading: LoadingScreen = LoadingScreen.preview(0.6, i)
+		add_child(loading)
+		await _settle(0.3)
+		_shot("01b_loading_%d" % i)
+		loading.queue_free()
 
 	var main: Node = load("res://scenes/main/Main.tscn").instantiate()
 	add_child(main)

@@ -368,6 +368,16 @@ func _check_mushroom_gremlin(player: Node3D) -> void:
 	_check(thief.loot_id == &"stone" and thief.loot_amount == 4 and ResourceManager.get_count(&"stone") == 6,
 		"gremlin stole 4 stone (%.1fs)" % t)
 	_check(thief.is_fleeing and ResourceManager.get_count(&"wood") == 3, "it runs off and leaves the wood")
+	# Feature 027: its own clips; it sneaks in and scurries off.
+	var visual: CharacterVisual = thief.get_node("Visual") as CharacterVisual
+	var anim_player: AnimationPlayer = visual.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	var missing: Array = []
+	for state in visual.clips.keys():
+		if not anim_player.has_animation(String(visual.clips[state])):
+			missing.append(visual.clips[state])
+	_check(missing.is_empty(), "gremlin model has all its clips %s" % [missing])
+	_check(visual.current_move_clip() == StringName(visual.clips[&"flee"]),
+		"a fleeing gremlin scurries (%s)" % visual.current_move_clip())
 	# ...and drops it when caught.
 	var at: Vector3 = thief.global_position
 	thief.take_damage(999, player)
@@ -411,6 +421,21 @@ func _spawn_building(id: StringName, position: Vector3) -> Building:
 ## Feature 018: waves mix in Bramble Beasts, which go for buildings.
 func _check_bramble_beast(player: Node3D) -> void:
 	var spawner: Node = get_tree().get_first_node_in_group("mob_spawner")
+	# Feature 028: the Shadow Imp has its own clips.
+	var imp: Mob = _spawn_mob(spawner.get("mob_definition"), Vector3(-14, 0, 18))
+	await get_tree().process_frame
+	var imp_visual: CharacterVisual = imp.get_node("Visual") as CharacterVisual
+	var imp_player: AnimationPlayer = imp_visual.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	var imp_missing: Array = []
+	for state in imp_visual.clips.keys():
+		if not imp_player.has_animation(String(imp_visual.clips[state])):
+			imp_missing.append(imp_visual.clips[state])
+	_check(imp_missing.is_empty(), "imp model has all its clips %s" % [imp_missing])
+	# Defeated with no attacker (so no XP for Leo): it tumbles over and its
+	# corpse is gone within CORPSE_SECONDS.
+	imp.take_damage(999, null)
+	await _wait(2.0)
+	_check(not is_instance_valid(imp), "a defeated imp's corpse is cleared")
 	var beast_def: MobDefinition = spawner.get("heavy_definition")
 	_check(beast_def != null and beast_def.prefers_buildings, "spawner has a siege mob (bramble beast)")
 	for night in [1, 2, 3]:
@@ -444,6 +469,35 @@ func _check_bramble_beast(player: Node3D) -> void:
 	beast.take_damage(1, player)
 	await _wait(0.3)
 	_check(beast.global_position.distance_to(knocked_from) < 0.25, "beast barely flinches from hits")
+
+	# Feature 026: its own clips, and a telegraphed slam.
+	var visual: CharacterVisual = beast.get_node("Visual") as CharacterVisual
+	var player_anim: AnimationPlayer = visual.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	var missing: Array = []
+	for state in visual.clips.keys():
+		if not player_anim.has_animation(String(visual.clips[state])):
+			missing.append(visual.clips[state])
+	_check(missing.is_empty(), "beast model has all its clips %s" % [missing])
+	# Hold the beast's own attacks so only the timed ones below land.
+	beast.set("_attack_cooldown_remaining", 99.0)
+	await _wait(1.0)
+	beast.set("_attack_cooldown_remaining", 0.0)
+	var before: int = fence.current_hp
+	beast.call("_try_attack", fence)
+	await _wait(beast_def.attack_hit_delay * 0.5)
+	_check(fence.current_hp == before, "the slam has not landed during the windup")
+	await _wait(beast_def.attack_hit_delay * 0.5 + 0.25)
+	_check(fence.current_hp < before, "the slam lands at impact (%.2fs)" % beast_def.attack_hit_delay)
+	# A kid who steps away during the windup is not hit.
+	beast.set("_attack_cooldown_remaining", 99.0)
+	await _wait(0.5)
+	player.global_position = beast.global_position + Vector3(1.0, 0, 0)
+	var leo_hp: int = player.get("current_hp")
+	beast.set("_attack_cooldown_remaining", 0.0)
+	beast.call("_try_attack", player)
+	player.global_position = beast.global_position + Vector3(4.0, 0, 0)
+	await _wait(beast_def.attack_hit_delay + 0.25)
+	_check(int(player.get("current_hp")) == leo_hp, "Leo dodged the slam by stepping away")
 	beast.take_damage(999, player)
 	fence.queue_free()
 	await _wait(0.2)

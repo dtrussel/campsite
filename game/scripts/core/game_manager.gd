@@ -87,7 +87,7 @@ func start_run(nights: int = 0) -> void:
 	SaveManager.delete_save()
 	get_tree().paused = false
 	_reset_autoloads()
-	get_tree().change_scene_to_file(GAME_SCENE)
+	LoadingScreen.load_scene(GAME_SCENE)  # key art while the camp loads (feature 029)
 
 
 ## Resumes the autosaved run at the morning after its last dawn.
@@ -100,7 +100,7 @@ func continue_run() -> bool:
 	get_tree().paused = false
 	_reset_autoloads()
 	_pending_save = data
-	get_tree().change_scene_to_file(GAME_SCENE)
+	LoadingScreen.load_scene(GAME_SCENE)
 	return true
 
 

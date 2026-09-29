@@ -71,6 +71,7 @@ var _player: AnimationPlayer = null
 var _tree: AnimationTree = null
 var _upper_anim: AnimationNodeAnimation = null
 var _full_anim: AnimationNodeAnimation = null
+var _move_anim: AnimationNodeAnimation = null  # the loco "move" point (swappable)
 var _run_start: float = 1.0
 var _blend_position: float = 0.0
 var _speed: float = 0.0
@@ -108,7 +109,7 @@ func _ready() -> void:
 	Stylize.apply(model, style)
 	_player = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if _player != null:
-		for state in [&"idle", &"walk", &"move"]:
+		for state in [&"idle", &"walk", &"move", &"flee"]:
 			var anim: Animation = _get_clip(state)
 			if anim != null:
 				anim.loop_mode = Animation.LOOP_LINEAR
@@ -271,11 +272,13 @@ func _build_tree() -> void:
 	if walk != "" and _player.has_animation(walk):
 		_run_start = walk_speed * 2.2
 		loco.add_blend_point(_clip_node(walk), walk_speed)
-		loco.add_blend_point(_clip_node(move), _run_start)
+		_move_anim = _clip_node(move)
+		loco.add_blend_point(_move_anim, _run_start)
 		loco.max_space = maxf(reference_speed * 2.0, _run_start + 1.0)
 	else:
 		_run_start = move_threshold * 2.0
-		loco.add_blend_point(_clip_node(move), _run_start)
+		_move_anim = _clip_node(move)
+		loco.add_blend_point(_move_anim, _run_start)
 		loco.max_space = maxf(reference_speed * 2.0, 1.0)
 	loco.min_space = 0.0
 	blend_tree.add_node(&"loco", loco)
@@ -319,6 +322,20 @@ func _filter_upper_body(shot: AnimationNodeOneShot) -> void:
 	for bone in UPPER_BONES:
 		if skeleton.find_bone(bone) != -1:
 			shot.set_filter_path(NodePath("%s:%s" % [skeleton_path, bone]), true)
+
+
+## Swaps the locomotion clip for another role in `clips` (e.g. the
+## Mushroom Gremlin's &"flee" scurry, feature 027); &"move" restores it.
+## Does nothing if the model has no such clip.
+func set_move_clip(state: StringName) -> void:
+	if _move_anim == null or _get_clip(state) == null:
+		return
+	_move_anim.animation = StringName(clips[state])
+
+
+## The clip the locomotion currently uses for moving.
+func current_move_clip() -> StringName:
+	return _move_anim.animation if _move_anim != null else &""
 
 
 func _clip_node(clip: String) -> AnimationNodeAnimation:
