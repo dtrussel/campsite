@@ -134,7 +134,7 @@ func _validate_audio() -> void:
 		if not library.has_sound(id):
 			_fail("audio ui id '%s' is not in volumes" % id)
 	for kind in Fx.BURSTS.keys():
-		if not library.has_sound(kind):
+		if not library.has_sound(kind) and not Fx.SILENT_BURSTS.has(kind):
 			_fail("Fx burst '%s' has no sound in the audio library" % kind)
 	for loop_name in ["music_day", "music_night", "ambience_day", "ambience_night", "ambience_campfire"]:
 		if library.get(loop_name) == null:

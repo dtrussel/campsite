@@ -51,5 +51,5 @@ License texts: `game/assets/fonts/*-OFL.txt`.
 
 ## Everything else
 
-Shaders (ground, grass, flames, health bars, hover rim), particle effects,
+Shaders (ground, grass, painted foliage wind, flames, health bars, hover rim), particle effects (including the leaves, pollen and fireflies),
 UI widgets, rendered icons and all code are original to this project.

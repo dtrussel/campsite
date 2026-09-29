@@ -235,10 +235,15 @@ const BURSTS: Dictionary = {
 	&"scrap": [12, 0.6, Color(0.7, 0.72, 0.78), Color(0.6, 0.35, 0.2, 0), 3.5, -9.0, 0.1, false, 70.0],
 	&"shard": [16, 0.9, Color(0.6, 1.0, 1.0), Color(0.5, 0.4, 1.0, 0), 2.0, 2.0, 0.14, true, 60.0],
 	&"bramble_spawn": [34, 1.4, Color(0.45, 0.35, 0.22, 0.9), Color(0.3, 0.45, 0.15, 0), 2.2, -3.0, 0.5, false, 50.0],
+	&"step_dust": [5, 0.5, Color(0.78, 0.68, 0.52, 0.5), Color(0.7, 0.62, 0.5, 0), 0.8, 0.5, 0.2, false, 70.0],
+	&"step_thud": [12, 0.8, Color(0.62, 0.52, 0.38, 0.65), Color(0.55, 0.48, 0.38, 0), 1.6, 0.3, 0.4, false, 85.0],
 	&"gremlin_spawn": [26, 1.1, Color(0.7, 0.35, 0.85, 0.9), Color(0.95, 0.9, 0.7, 0), 1.6, 1.5, 0.35, false, 60.0],
 	&"gremlin_death": [24, 0.9, Color(0.95, 0.9, 0.75), Color(0.6, 0.25, 0.7, 0), 2.6, -1.0, 0.25, false, 90.0],
 	&"bramble_death": [30, 1.2, Color(0.45, 0.7, 0.22), Color(0.85, 0.5, 0.18, 0), 3.2, -4.0, 0.2, false, 80.0],
 }
+
+## Bursts that are purely visual (footsteps): no AudioLibrary sound.
+const SILENT_BURSTS: Array[StringName] = [&"step_dust", &"step_thud"]
 
 static var _soft_texture: Texture2D = null
 static var _burst_materials: Dictionary = {}  # additive(bool) -> material

@@ -34,3 +34,5 @@ clips = {
 &"spawn": "Skeletons_Awaken_Floor"
 }
 reference_speed = 1.5
+footstep_dust = &"step_thud"
+step_distance = 1.3

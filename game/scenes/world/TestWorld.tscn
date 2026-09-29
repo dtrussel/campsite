@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3 uid="uid://b0campsiteworld01"]
+[gd_scene load_steps=26 format=3 uid="uid://b0campsiteworld01"]
 
 [ext_resource type="PackedScene" uid="uid://b0campsitebase01" path="res://scenes/base/CampfireCore.tscn" id="1_campfire"]
 [ext_resource type="PackedScene" uid="uid://b0campsiteplayer01" path="res://scenes/player/PlayerBoy.tscn" id="2_player"]
@@ -20,6 +20,7 @@
 [ext_resource type="PackedScene" uid="uid://b0campsiteclaypit01" path="res://scenes/resources/ClayPit.tscn" id="20_clay"]
 [ext_resource type="PackedScene" uid="uid://b0campsitemushroom01" path="res://scenes/resources/MushroomPatch.tscn" id="21_mush"]
 [ext_resource type="PackedScene" uid="uid://b0campsitejunkpile01" path="res://scenes/resources/JunkPile.tscn" id="22_junk"]
+[ext_resource type="Script" path="res://scripts/world/world_ambience.gd" id="25_ambience"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 size = Vector2(120, 120)
@@ -175,6 +176,9 @@ campfire_path = NodePath("../CampfireCore")
 
 [node name="WorldDressing" type="Node3D" parent="."]
 script = ExtResource("14_dressing")
+
+[node name="WorldAmbience" type="Node3D" parent="."]
+script = ExtResource("25_ambience")
 
 [node name="Navigation" type="NavigationRegion3D" parent="."]
 script = ExtResource("15_nav")

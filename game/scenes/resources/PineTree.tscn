@@ -27,6 +27,7 @@ bonus_definition = ExtResource("3_bonus")
 bonus_amount = 1
 
 [node name="Visual" type="Node3D" parent="."]
+metadata/foliage = true
 script = ExtResource("vs")
 
 [node name="Model0" parent="Visual" instance=ExtResource("c1")]

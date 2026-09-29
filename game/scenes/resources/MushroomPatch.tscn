@@ -21,6 +21,7 @@ gather_animation = &"pick"
 gather_burst = &"mushrooms"
 
 [node name="Visual" type="Node3D" parent="."]
+metadata/foliage = true
 
 [node name="Model0" parent="Visual" instance=ExtResource("c1")]
 transform = Transform3D(1.0, 0, 0, 0, 1.0, 0, 0, 0, 1.0, 0, 0, 0)

@@ -250,6 +250,8 @@ func _spawn_model(path: String, position: Vector3, uniform_scale: float, yaw: fl
 		node.set_meta(Stylize.TINT_META, Stylize.TINT_FOLIAGE)
 	elif path.contains("rock"):
 		node.set_meta(Stylize.TINT_META, Stylize.TINT_ROCK)
+	if path.contains("tree_") or path.contains("pine_") or path.contains("bush"):
+		node.set_meta(Stylize.FOLIAGE_META, true)
 	add_child(node)
 	return node
 

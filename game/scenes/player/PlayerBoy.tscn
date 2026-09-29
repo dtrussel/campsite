@@ -41,6 +41,8 @@ clips = {
 &"pick": "PickUp"
 }
 reference_speed = 7.0
+footstep_dust = &"step_dust"
+step_distance = 1.1
 
 [node name="GatherInteractor" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)

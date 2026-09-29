@@ -245,4 +245,5 @@ art track in parallel.
 | 021 Mushroom Gremlin | **Done.** A fast thief: it steals up to 4 of the most plentiful resource from the stash (a crate, else the campfire) and runs. Caught, it drops the loot. Nights 2+ bring 1 or more. |
 | 022 Imp remodel | **Done.** The Shadow Imp is sculpted and painted in the kids' style: forms, claws, a head tuft, slit eyes and rune markings, with a high-to-low bake at 8.4k triangles. |
 | 023 Animation layering | **Done.** An AnimationTree per character: a walk/run blend, upper-body actions while moving, and a lean into turns. |
-| Art (next) | 024 living world (wind, fireflies, leaves, footstep dust), then 025 painted props replacing the last KayKit leftovers. |
+| 024 Living world | **Done.** Trees and bushes sway in the wind, leaves and pollen drift by day, fireflies come out at night, and running feet kick up dust. |
+| Art (next) | 025: painted props replacing the last KayKit leftovers. |

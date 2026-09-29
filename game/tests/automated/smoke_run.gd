@@ -472,6 +472,18 @@ func _check_animation_layers(player: Node3D) -> void:
 	_check(not visual.is_moving() and visual.active_action_layer() == "full", "a swing standing still plays on the whole body")
 	await _wait(0.6)
 
+	# Feature 024: footsteps, swaying foliage, day ambience.
+	_check(visual.steps_puffed > 0, "running kicks up footstep dust (%d puffs)" % visual.steps_puffed)
+	var tree_node: ResourceNode = _find_resource_node(&"wood")
+	var swaying: bool = false
+	for mesh in tree_node.find_children("*", "MeshInstance3D", true, false):
+		var m: MeshInstance3D = mesh as MeshInstance3D
+		if m.mesh != null and m.get_surface_override_material(0) is ShaderMaterial:
+			swaying = true
+	_check(swaying, "trees use the swaying foliage material")
+	var ambience: WorldAmbience = get_tree().current_scene.find_child("WorldAmbience", true, false) as WorldAmbience
+	_check(ambience != null and ambience.leaves.emitting and not ambience.fireflies.emitting, "day: leaves drift, no fireflies")
+
 
 func _recipe(id: StringName) -> CraftingRecipe:
 	for recipe in CraftingManager.get_recipes():
@@ -485,6 +497,8 @@ func _survive_night(night: int, player: Node3D) -> void:
 	while TimeManager.current_phase != TimeManager.Phase.NIGHT:
 		TimeManager.skip_phase()
 	_check(AudioManager.mood == &"night", "night %d: night music mood" % night)
+	var ambience: WorldAmbience = get_tree().current_scene.find_child("WorldAmbience", true, false) as WorldAmbience
+	_check(ambience != null and ambience.fireflies.emitting and not ambience.leaves.emitting, "night %d: fireflies come out" % night)
 	await _wait(0.2)
 	_check(AudioManager.current_music() == AudioManager.library.music_night, "night %d: night track playing" % night)
 	# Let the imps arrive and hit things for a few seconds, then clear

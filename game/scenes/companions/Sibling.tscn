@@ -41,6 +41,8 @@ clips = {
 &"move": "Running_A"
 }
 reference_speed = 6.1
+footstep_dust = &"step_dust"
+step_distance = 1.0
 
 [node name="TaskLabel" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.3, 0)

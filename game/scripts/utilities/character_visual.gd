@@ -61,6 +61,10 @@ const LEAN_PER_TURN_RATE: float = 0.045
 @export var walk_speed: float = 1.6
 ## Lean into turns (feature 023).
 @export var lean: bool = true
+## Fx.burst kind puffed at the feet every `step_distance` metres while
+## running (feature 024); empty = none.
+@export var footstep_dust: StringName = &""
+@export var step_distance: float = 1.1
 
 var model: Node3D = null
 var _player: AnimationPlayer = null
@@ -75,6 +79,10 @@ var _locked: bool = false  # death: stay on the last pose
 var _lean_target: float = 0.0
 var _lean: float = 0.0
 var _last_yaw: float = 0.0
+var _last_step_pos: Vector3 = Vector3.INF
+var _step_travel: float = 0.0
+## Footstep puffs made so far (tests).
+var steps_puffed: int = 0
 
 
 func _ready() -> void:
@@ -124,6 +132,20 @@ func set_locomotion(speed: float) -> void:
 		if clips.has(&"walk") else (1.0 if speed > move_threshold else 0.0)
 	var run_scale: float = clampf(speed / reference_speed, 0.6, 1.4)
 	_tree.set("parameters/loco_speed/scale", lerpf(1.0, run_scale, run_weight))
+	_tick_footsteps(run_weight)
+
+
+func _tick_footsteps(run_weight: float) -> void:
+	if footstep_dust == &"" or not is_inside_tree():
+		return
+	var here: Vector3 = global_position
+	if _last_step_pos != Vector3.INF and run_weight > 0.5:
+		_step_travel += Vector2(here.x - _last_step_pos.x, here.z - _last_step_pos.z).length()
+		if _step_travel >= step_distance:
+			_step_travel = 0.0
+			steps_puffed += 1
+			Fx.burst(footstep_dust, here + Vector3(0, 0.05, 0))
+	_last_step_pos = here
 
 
 ## Plays a one-shot clip; locomotion resumes when it ends. Returns the
