@@ -13,3 +13,11 @@
   ```
 
   works for any scene.
+
+## Adding another loading picture (feature 030)
+
+1. Put the PNG in `art/ui/source/`, add its name to `LOADING` in
+   `art/ui/key_art.py`, and run the script.
+2. Add a `[art path, [[tip, icon], ...]]` entry to `SCREENS` in
+   `game/scripts/ui/loading_screen.gd`. The validator and screenshots
+   pick it up automatically.

@@ -42,6 +42,10 @@ The key art on the boot splash and loading screen (Leo and Nela at
 sunset with the camp and its monsters) was supplied by the project
 team. It is kept at `art/ui/source/key_art.png`; `art/ui/key_art.py`
 prepares the game versions and adds the logo.
+The three monster paintings on the loading screens (the Shadow Imp on a
+branch at night, the Bramble Beast at sunset, the Mushroom Gremlin by a
+stream) were also supplied by the project team
+(`art/ui/source/loading_*.png`).
 
 ## Audio
 

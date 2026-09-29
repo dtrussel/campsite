@@ -11,28 +11,43 @@ extends CanvasLayer
 ##
 ##   LoadingScreen.load_scene("res://scenes/main/Main.tscn")
 
-const KEY_ART: Texture2D = preload("res://assets/ui/key_art.webp")
 ## Shown at least this long, so the art never just flashes by.
 const MIN_SECONDS: float = 1.2
 const FADE_IN: float = 0.2
 const FADE_OUT: float = 0.35
 
-## [text, icon] pairs; short and simple for young players.
-const TIPS: Array = [
-	["Torches slow the Shadow Imps down.", "res://assets/icons/torch.png"],
-	["Watch the Bramble Beast's fists: step away before the SLAM!", ""],
-	["Build a Storage Crate so Mushroom Gremlins can't grab everything.", "res://assets/icons/crate.png"],
-	["Give Nela a job: she can gather, guard and repair.", "res://assets/icons/portrait_nela.png"],
-	["Hurt? Press R to eat berries and heal.", "res://assets/icons/berries.png"],
-	["Catch a gremlin to get your things back!", "res://assets/icons/mushrooms.png"],
-	["Glow Lanterns zap imps that come too close.", "res://assets/icons/lantern.png"],
+## The team's paintings (features 029-030), each with tips that fit it:
+## [art, [[tip, icon], ...]]. Short, simple words for young players.
+const SCREENS: Array = [
+	["res://assets/ui/key_art.webp", [
+		["Give Nela a job: she can gather, guard and repair.", "res://assets/icons/portrait_nela.png"],
+		["Hurt? Press R to eat berries and heal.", "res://assets/icons/berries.png"],
+		["Keep the campfire burning all night long!", "res://assets/icons/campfire.png"],
+	]],
+	["res://assets/ui/loading_imp.webp", [
+		["Torches slow the Shadow Imps down.", "res://assets/icons/torch.png"],
+		["Glow Lanterns zap imps that come too close.", "res://assets/icons/lantern.png"],
+		["Imps love the campfire: build fences around it!", "res://assets/icons/fence.png"],
+	]],
+	["res://assets/ui/loading_beast.webp", [
+		["Watch the Bramble Beast's fists: step away before the SLAM!", ""],
+		["Bramble Beasts smash fences first. Reinforced Walls last longer.", "res://assets/icons/stone.png"],
+	]],
+	["res://assets/ui/loading_gremlin.webp", [
+		["Build a Storage Crate so Mushroom Gremlins can't grab everything.", "res://assets/icons/crate.png"],
+		["Catch a gremlin to get your things back!", "res://assets/icons/mushrooms.png"],
+	]],
 ]
+
+## The picture shown last time, so the next load shows another one.
+static var _last_screen: int = -1
 
 var _path: String = ""
 var _root: Control = null
 var _art: TextureRect = null
 var _bar: ProgressBar = null
 var _elapsed: float = 0.0
+var _screen: int = -1
 var _swapped: bool = false
 var _finishing: bool = false
 
@@ -47,8 +62,10 @@ static func load_scene(path: String) -> LoadingScreen:
 
 
 ## A still copy for screenshots and the validator: no loading.
-static func preview(progress: float = 0.6) -> LoadingScreen:
+## `index` picks the painting (-1 = random).
+static func preview(progress: float = 0.6, index: int = -1) -> LoadingScreen:
 	var screen: LoadingScreen = LoadingScreen.new()
+	screen._screen = index
 	screen._build()
 	screen._bar.value = progress
 	screen.set_process(false)
@@ -117,8 +134,11 @@ func _build() -> void:
 	UiKit.full_rect(backdrop)
 	_root.add_child(backdrop)
 
+	if _screen < 0 or _screen >= SCREENS.size():
+		_screen = _pick_screen()
+	var entry: Array = SCREENS[_screen]
 	_art = TextureRect.new()
-	_art.texture = KEY_ART
+	_art.texture = load(String(entry[0])) as Texture2D
 	_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	UiKit.full_rect(_art)
@@ -172,7 +192,8 @@ func _build() -> void:
 	_bar.add_theme_stylebox_override("background", back)
 	column.add_child(_bar)
 
-	var tip: Array = TIPS[randi() % TIPS.size()]
+	var tips: Array = entry[1]
+	var tip: Array = tips[randi() % tips.size()]
 	var row: HBoxContainer = HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 10)
@@ -188,3 +209,13 @@ func _build() -> void:
 	text.add_theme_constant_override("outline_size", 6)
 	text.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.04, 1))
 	row.add_child(text)
+
+
+## A random painting, never the same as last time.
+static func _pick_screen() -> int:
+	var index: int = randi() % SCREENS.size()
+	if SCREENS.size() > 1 and index == _last_screen:
+		index = (index + 1 + randi() % (SCREENS.size() - 1)) % SCREENS.size()
+	_last_screen = index
+	return index
+

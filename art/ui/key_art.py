@@ -1,8 +1,9 @@
 """Key art (feature 029): the team's painted illustration of Leo and Nela
 at sunset, prepared for the game.
 
-- game/assets/ui/key_art.webp: 1600x900, centre-cropped to 16:9; the
-  loading screen's background.
+- game/assets/ui/key_art.webp: 1600x900, centre-cropped to 16:9; a
+  loading screen's background. loading_imp/beast/gremlin.webp likewise
+  (feature 030: the team's paintings of each monster).
 - game/assets/ui/boot_splash.png: 1280x720 with the gold "CAMPSITE"
   logo baked into the sky (the engine's boot splash can't draw text).
   Same look as the title screen's logo: Cinzel bold, gold, dark outline.
@@ -18,6 +19,8 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SOURCE = os.path.join(ROOT, "art", "ui", "source", "key_art.png")
 OUT = os.path.join(ROOT, "game", "assets", "ui")
 FONT = os.path.join(ROOT, "game", "assets", "fonts", "Cinzel.ttf")
+## Extra loading-screen paintings in art/ui/source/ (feature 030).
+LOADING = ("loading_imp", "loading_beast", "loading_gremlin")
 
 GOLD = (199, 171, 110)          # UiKit.COLOR_GOLD
 GOLD_LIGHT = (240, 230, 209)
@@ -74,10 +77,14 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     art = crop_16_9(Image.open(SOURCE).convert("RGB"))
     art.resize((1600, 900), Image.LANCZOS).save(os.path.join(OUT, "key_art.webp"), quality=88, method=6)
+    # More loading-screen paintings (feature 030), one per monster.
+    for name in LOADING:
+        extra = crop_16_9(Image.open(os.path.join(ROOT, "art", "ui", "source", name + ".png")).convert("RGB"))
+        extra.resize((1600, 900), Image.LANCZOS).save(os.path.join(OUT, name + ".webp"), quality=88, method=6)
     splash = art.resize((1280, 720), Image.LANCZOS).convert("RGBA")
     splash = draw_logo(splash)
     splash.convert("RGB").save(os.path.join(OUT, "boot_splash.png"), optimize=True)
-    for name in ("key_art.webp", "boot_splash.png"):
+    for name in ["key_art.webp", "boot_splash.png"] + [n + ".webp" for n in LOADING]:
         path = os.path.join(OUT, name)
         print("wrote", os.path.relpath(path, ROOT), os.path.getsize(path) // 1024, "KB")
 

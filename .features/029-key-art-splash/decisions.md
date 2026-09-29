@@ -23,3 +23,16 @@
 - **Fixed along the way:** the title screen's imps still asked for the
   old KayKit "Taunt" clip, which feature 028 removed, so they stood in
   a T-pose. They now play `Imp_Idle`.
+
+## Follow-up (feature 030): more loading pictures
+
+- The team supplied three more paintings, one per monster: the imp on
+  a branch at night, the beast peeking round a tree at sunset, and the
+  gremlin by a stream with glowing mushrooms. They join the first
+  picture as loading screens; the boot splash stays Leo and Nela.
+- **Each picture has its own tips** (`LoadingScreen.SCREENS`): the imp
+  gets torch, lantern and fence tips; the beast gets the slam and
+  walls; the gremlin gets the storage crate and catching it. The first
+  picture keeps the general tips about Nela, berries and the campfire.
+- **A random pick that never repeats the last picture**, so Play then
+  Again always look different. Only the chosen picture is loaded.

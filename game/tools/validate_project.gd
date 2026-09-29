@@ -24,10 +24,17 @@ func _validate_key_art() -> void:
 	var splash: String = String(ProjectSettings.get_setting("application/boot_splash/image", ""))
 	if splash == "" or not FileAccess.file_exists(splash):
 		_fail("boot splash image missing: '%s'" % splash)
-	var screen: LoadingScreen = LoadingScreen.preview()
-	if screen.get_child_count() == 0:
-		_fail("LoadingScreen.preview() built nothing")
-	screen.free()
+	for i in LoadingScreen.SCREENS.size():
+		var entry: Array = LoadingScreen.SCREENS[i]
+		if not ResourceLoader.exists(String(entry[0])):
+			_fail("loading screen art missing: %s" % entry[0])
+		for tip in entry[1]:
+			if String(tip[1]) != "" and not ResourceLoader.exists(String(tip[1])):
+				_fail("loading tip icon missing: %s" % tip[1])
+		var screen: LoadingScreen = LoadingScreen.preview(0.6, i)
+		if screen.get_child_count() == 0:
+			_fail("LoadingScreen.preview(%d) built nothing" % i)
+		screen.free()
 
 
 func _ready() -> void:

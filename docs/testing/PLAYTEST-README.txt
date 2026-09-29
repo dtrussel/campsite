@@ -1,4 +1,4 @@
-CAMPSITE - Playtest build 0.24.0 (playtest 1)
+CAMPSITE - Playtest build 0.25.0 (playtest 1)
 ============================================
 
 Thanks for testing! This is an early prototype. Turn your sound on:

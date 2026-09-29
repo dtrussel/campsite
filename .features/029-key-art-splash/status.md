@@ -20,3 +20,15 @@
   Windows zip is built.
 - Fixed the title-screen imps (the old "Taunt" clip is replaced with
   `Imp_Idle`).
+
+## 2026-09-29 (feature 030)
+
+- Added three more loading pictures (WebP, 270–360 KB each), each with
+  matching tips.
+- **Validator:** every picture and tip icon exists, and each picture
+  builds.
+- **Screenshots:** `01b_loading_0` to `01b_loading_3`. The text reads
+  on all four.
+- **End-to-end:** two Plays in a row showed different pictures (imp,
+  then beast), and the overlay cleared both times. `tools/check.sh`
+  passes.
