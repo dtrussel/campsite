@@ -22,15 +22,18 @@ shape = SubResource("CapsuleShape3D_mob")
 
 [node name="Visual" type="Node3D" parent="."]
 script = ExtResource("3_visual")
-model_scale = 0.55
+model_scale = 0.62
 model_scene = ExtResource("4_model")
 style = "shadow"
 clips = {
-&"attack": "Unarmed_Melee_Attack_Punch_A",
-&"death": "Death_C_Skeletons",
-&"hit": "Hit_B",
-&"idle": "Idle_Combat",
-&"move": "Walking_D_Skeletons",
-&"spawn": "Skeletons_Awaken_Floor"
+&"death": "Gremlin_Death",
+&"flee": "Gremlin_Flee",
+&"hit": "Gremlin_Hit",
+&"idle": "Gremlin_Idle",
+&"move": "Gremlin_Sneak",
+&"spawn": "Gremlin_Spawn",
+&"steal": "Gremlin_Grab"
 }
 reference_speed = 2.2
+footstep_dust = &"step_dust"
+step_distance = 0.6

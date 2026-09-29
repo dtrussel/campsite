@@ -151,6 +151,8 @@ func _tick_thief(delta: float) -> void:
 		if _flat_to(target).length() <= definition.attack_range + _footprint_radius(stash):
 			_steal()
 			is_fleeing = true
+			if _visual != null:
+				_visual.set_move_clip(&"flee")
 			return
 	var to_target: Vector3 = _flat_to(target)
 	var speed: float = definition.move_speed * _torch_slow_factor()
@@ -205,6 +207,8 @@ func _steal() -> void:
 	AudioManager.play_sfx(&"gremlin_steal", global_position)
 	GameManager.record(&"stolen", amount)
 	PlaytestLog.write("gremlin_stole id=%s amount=%d day=%d" % [best, amount, TimeManager.day_number])
+	if _visual != null:
+		_visual.play_action(&"steal", 1.4)
 	stole.emit(self, best, amount)
 
 

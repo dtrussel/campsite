@@ -28,6 +28,10 @@ func _ready() -> void:
 		await _beast_frames(player)
 		get_tree().quit()
 		return
+	if OS.get_cmdline_user_args().size() > 1 and OS.get_cmdline_user_args()[1] == "gremlin":
+		await _gremlin_frames(player)
+		get_tree().quit()
+		return
 	var visual: CharacterVisual = player.get_node("Visual") as CharacterVisual
 	# Run right and swing: the legs should keep running.
 	player.command_move(Vector3(8, 0, 3))
@@ -85,4 +89,39 @@ func _beast_frames(player: Node3D) -> void:
 	for i in 4:
 		await _settle(0.25)
 		_shot("beast_death_%d" % i)
+
+
+## Feature 027: the Mushroom Gremlin popping up, sneaking to the campfire,
+## grabbing loot, scurrying off, and plopping over when caught. Pass
+## `gremlin` after the output dir.
+func _gremlin_frames(player: Node3D) -> void:
+	for layer in get_tree().root.find_children("*", "CanvasLayer", true, false):
+		(layer as CanvasLayer).visible = false
+	ResourceManager.add(&"wood", 8)
+	var spawner: Node = get_tree().get_first_node_in_group("mob_spawner")
+	var gremlin_def: MobDefinition = spawner.get("sneak_definition")
+	var gremlin: Node3D = gremlin_def.get_scene().instantiate() as Node3D
+	get_tree().current_scene.add_child(gremlin)
+	gremlin.global_position = Vector3(3.2, 0, 3.4)
+	player.global_position = Vector3(0.4, 0, 3.0)
+	for i in 4:
+		await _settle(0.3)
+		_shot("gremlin_spawn_%d" % i)
+	for i in 4:
+		await _settle(0.12)
+		_shot("gremlin_sneak_%d" % i)
+	var t: float = 0.0
+	while int(gremlin.get("loot_amount")) == 0 and t < 8.0:
+		await _settle(0.05)
+		t += 0.05
+	for i in 3:
+		_shot("gremlin_grab_%d" % i)
+		await _settle(0.1)
+	for i in 3:
+		await _settle(0.12)
+		_shot("gremlin_flee_%d" % i)
+	gremlin.call("take_damage", 999, player)
+	for i in 3:
+		await _settle(0.3)
+		_shot("gremlin_death_%d" % i)
 

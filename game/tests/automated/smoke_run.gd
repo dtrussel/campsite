@@ -368,6 +368,16 @@ func _check_mushroom_gremlin(player: Node3D) -> void:
 	_check(thief.loot_id == &"stone" and thief.loot_amount == 4 and ResourceManager.get_count(&"stone") == 6,
 		"gremlin stole 4 stone (%.1fs)" % t)
 	_check(thief.is_fleeing and ResourceManager.get_count(&"wood") == 3, "it runs off and leaves the wood")
+	# Feature 027: its own clips; it sneaks in and scurries off.
+	var visual: CharacterVisual = thief.get_node("Visual") as CharacterVisual
+	var anim_player: AnimationPlayer = visual.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	var missing: Array = []
+	for state in visual.clips.keys():
+		if not anim_player.has_animation(String(visual.clips[state])):
+			missing.append(visual.clips[state])
+	_check(missing.is_empty(), "gremlin model has all its clips %s" % [missing])
+	_check(visual.current_move_clip() == StringName(visual.clips[&"flee"]),
+		"a fleeing gremlin scurries (%s)" % visual.current_move_clip())
 	# ...and drops it when caught.
 	var at: Vector3 = thief.global_position
 	thief.take_damage(999, player)
