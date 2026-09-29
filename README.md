@@ -127,8 +127,8 @@ zips are attached to the run as the `Campsite-<version>` artifact (kept
 rebuild the art (the baked assets are committed).
 
 To publish a release, bump `config/version` in `game/project.godot`,
-then push a matching tag, e.g. `git tag v0.10.0-playtest1 && git push
-origin v0.10.0-playtest1`. The tag's run creates a GitHub Release with
+then push a matching tag, e.g. `git tag v0.25.0-playtest1 && git push
+origin v0.25.0-playtest1`. The tag's run creates a GitHub Release with
 both zips (a pre-release when the version has a `-suffix`).
 
 ## Repository structure
