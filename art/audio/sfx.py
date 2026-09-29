@@ -286,6 +286,42 @@ def trap_snap(v):
     return out
 
 
+def bramble_spawn(v):
+    """A Bramble Beast rising: creaking wood, falling dirt and a deep,
+    grumpy groan (big, but more grumbly than scary)."""
+    d = 2.0
+    t = t_axis(d)
+    groan_f = (58 + 6 * v) * (1 + 0.12 * np.sin(np.pi * t / d)) + 3 * np.sin(2 * np.pi * 6 * t)
+    groan = sine(groan_f, d) + 0.6 * sine(groan_f * 2.01, d) + 0.3 * sine(groan_f * 3.02, d)
+    groan = lowpass(soft_clip(groan * 1.8, 2.0), 700) * env_adsr(d, 0.35, 0.8) * 0.6
+    creak = np.zeros(len(t))
+    r = rng(500 + v)
+    for k in range(5):
+        cd = r.uniform(0.15, 0.3)
+        f = sweep(r.uniform(300, 500), r.uniform(200, 350), cd)
+        c = bandpass(sine(f, cd) * (0.5 + 0.5 * np.sign(np.sin(2 * np.pi * r.uniform(40, 70) * t_axis(cd)))), 900, 2.0)
+        place(creak, c * env_adsr(cd, 0.02, 0.08) * 0.5, r.uniform(0.0, 1.4))
+    dirt = lowpass(noise(d, 510 + v), 1200) * env_adsr(d, 0.1, 1.2) * 0.4
+    return reverb(groan + creak + dirt, 0.3, 1.6, damp=2200)
+
+
+def bramble_death(v):
+    """A Bramble Beast collapsing: a big branch crack and a shower of
+    leaves."""
+    d = 1.5
+    crack = np.zeros(int(d * RATE))
+    r = rng(520 + v)
+    for k in range(6):
+        place(crack, knock(r.uniform(250, 600), 0.2, seed=530 + 10 * v + k) * r.uniform(0.5, 1.0), k * r.uniform(0.02, 0.05))
+    thud = sine(sweep(90, 40, 0.5), 0.5) * env_perc(0.5, 0.003, 0.12)
+    place(crack, thud * 1.2, 0.15)
+    leaves = rustle(1.0, 540 + v, 3200) * 0.45
+    place(crack, leaves, 0.2)
+    sigh = lowpass(sine(sweep(110, 60, 0.8, 1.0), 0.8), 500) * env_adsr(0.8, 0.1, 0.4) * 0.35
+    place(crack, sigh, 0.05)
+    return reverb(crack, 0.25, 1.2)
+
+
 def camp_hit(v):
     """Imp hitting the campfire: a thud and a spray of sparks."""
     d = 0.6
@@ -357,6 +393,8 @@ SOUNDS = {
     "scrap": (scrap, 3),
     "shard": (shard, 2),
     "trap_snap": (trap_snap, 2),
+    "bramble_spawn": (bramble_spawn, 2),
+    "bramble_death": (bramble_death, 2),
     "sunset": (sunset, 1),
     "win": (win, 1),
     "lose": (lose, 1),

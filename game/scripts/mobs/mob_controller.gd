@@ -27,6 +27,8 @@ const CORPSE_SECONDS: float = 1.4
 const PICKUP_SCENE: PackedScene = preload("res://scenes/world/ItemPickup.tscn")
 
 @export var definition: MobDefinition
+## Height of the overhead HP bar (bigger mobs need it higher).
+@export var hp_bar_height: float = 1.75
 
 var current_hp: int = 0
 var state: int = State.MOVING_TO_TARGET
@@ -52,7 +54,7 @@ func _ready() -> void:
 		push_warning("Mob '%s' has no definition" % name)
 		current_hp = 1
 	_refresh_base()
-	_hp_bar = HealthBar3D.attach(self, 1.75, "enemy", 0.9)
+	_hp_bar = HealthBar3D.attach(self, hp_bar_height, "enemy", 0.9)
 	_hp_bar.set_value.call_deferred(current_hp, current_hp)
 	if _visual != null:
 		if _base != null:
@@ -63,7 +65,7 @@ func _ready() -> void:
 
 
 func _play_spawn_fx() -> void:
-	Fx.burst(&"shadow_spawn", global_position)
+	Fx.burst(definition.spawn_burst if definition != null else &"shadow_spawn", global_position)
 	if _visual != null and _base != null:
 		_visual.face_instantly(_base.global_position - global_position)
 
@@ -85,7 +87,8 @@ func take_damage(amount: int, source: Node = null) -> void:
 		var away: Vector3 = global_position - source_3d.global_position
 		away.y = 0.0
 		if away.length() > 0.01:
-			_knockback = away.normalized() * KNOCKBACK_DISTANCE * KNOCKBACK_DECAY
+			var push: float = definition.knockback_scale if definition != null else 1.0
+			_knockback = away.normalized() * KNOCKBACK_DISTANCE * KNOCKBACK_DECAY * push
 	if current_hp == 0:
 		_die()
 
@@ -101,7 +104,7 @@ func _die() -> void:
 	defeated.emit(self)
 	if _hp_bar != null:
 		_hp_bar.visible = false
-	Fx.burst(&"shadow_death", global_position + Vector3(0, 0.5, 0))
+	Fx.burst(definition.death_burst if definition != null else &"shadow_death", global_position + Vector3(0, 0.5, 0))
 	if _visual != null:
 		_visual.play_final(&"death")
 	var tween: Tween = create_tween()
@@ -169,8 +172,13 @@ func _physics_process(delta: float) -> void:
 	_update_chase_target()
 
 	var destination: Vector3 = global_position
+	var siege_target: Node3D = null
+	if _chase_target == null and definition.prefers_buildings:
+		siege_target = _find_siege_target()
 	if _chase_target != null:
 		destination = _chase_target.global_position
+	elif siege_target != null:
+		destination = siege_target.global_position
 	elif _base != null:
 		destination = _base.global_position
 
@@ -183,7 +191,9 @@ func _physics_process(delta: float) -> void:
 	var direct_target: Node = null
 	if _chase_target != null and distance <= reach:
 		direct_target = _chase_target
-	elif _chase_target == null and _base != null and distance <= reach + CAMPFIRE_REACH_BONUS:
+	elif siege_target != null and distance <= reach + _footprint_radius(siege_target):
+		direct_target = siege_target
+	elif _chase_target == null and siege_target == null and _base != null and distance <= reach + CAMPFIRE_REACH_BONUS:
 		direct_target = _base
 
 	if direct_target != null:
@@ -223,7 +233,10 @@ func _try_attack(target: Node) -> void:
 	if _visual != null:
 		_visual.play_action(&"attack", 1.6)
 	if target.has_method("take_damage"):
-		target.take_damage(definition.attack_damage, self)
+		var damage: int = definition.attack_damage
+		if target is Building:
+			damage = int(round(damage * definition.building_damage_multiplier))
+		target.take_damage(damage, self)
 	_attack_cooldown_remaining = definition.attack_cooldown_seconds
 
 
@@ -265,6 +278,33 @@ func _torch_slow_factor() -> float:
 		if node.has_method("affects") and node.affects(global_position):
 			return node.slow_factor
 	return 1.0
+
+
+## The nearest standing building a siege mob should tear down (traps
+## are flat on the ground and ignored). Sticks with its current one.
+func _find_siege_target() -> Node3D:
+	var current: Building = _attack_target as Building
+	if current != null and is_instance_valid(current) and current.current_hp > 0 and current.collision_layer != 0:
+		return current
+	var best: Node3D = null
+	var best_d: float = INF
+	for node in get_tree().get_nodes_in_group(Repair.GROUP):
+		var building: Building = node as Building
+		if building == null or building.current_hp <= 0 or building.collision_layer == 0:
+			continue
+		var d: float = building.global_position.distance_squared_to(global_position)
+		if d < best_d:
+			best_d = d
+			best = building
+	return best
+
+
+func _footprint_radius(node: Node3D) -> float:
+	var shape: CollisionShape3D = node.get_node_or_null("Collision") as CollisionShape3D
+	if shape != null and shape.shape is BoxShape3D:
+		var box: Vector3 = (shape.shape as BoxShape3D).size
+		return maxf(box.x, box.z) * 0.5
+	return 0.6
 
 
 func _find_blocker() -> Node:

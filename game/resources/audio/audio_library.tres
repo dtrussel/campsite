@@ -12,6 +12,8 @@ script = ExtResource("1_lib")
 sfx_dir = "res://assets/audio/sfx"
 volumes = {
 &"berries": -4.0,
+&"bramble_death": -2.0,
+&"bramble_spawn": -1.0,
 &"build": -3.0,
 &"camp_hit": -3.0,
 &"clay": -4.0,

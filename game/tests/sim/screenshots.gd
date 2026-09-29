@@ -82,6 +82,10 @@ func _ready() -> void:
 	await _settle(0.3)
 	_shot("05_sunset")
 	TimeManager.skip_phase()
+	# Feature 018: a Bramble Beast lumbering toward the fence.
+	var beast: Node3D = (load("res://scenes/mobs/BrambleBeast.tscn") as PackedScene).instantiate() as Node3D
+	get_tree().current_scene.add_child(beast)
+	beast.global_position = Vector3(6.5, 0, 7.5)
 	Engine.time_scale = 3.0
 	await get_tree().create_timer(4.0, true, false, true).timeout
 	Engine.time_scale = 1.0

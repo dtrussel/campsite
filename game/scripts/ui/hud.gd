@@ -71,6 +71,9 @@ func _ready() -> void:
 	ProgressionManager.xp_gained.connect(func(character: Node, _a: int, _s: StringName) -> void: _refresh_progress(character))
 	ProgressionManager.level_up.connect(_on_level_up)
 	TimeManager.sunset_warning.connect(_on_sunset_warning)
+	var spawner: Node = get_tree().get_first_node_in_group("mob_spawner")
+	if spawner != null and spawner.has_signal("mob_spawned"):
+		spawner.mob_spawned.connect(_on_mob_spawned)
 	TimeManager.night_started.connect(_on_night_started)
 	TimeManager.dawn_started.connect(_on_dawn_started)
 	TimeManager.day_started.connect(_on_day_started)
@@ -536,6 +539,12 @@ func _pulse_vignette(color: Color) -> void:
 	for i in 2:
 		tween.tween_property(_vignette, "modulate:a", 1.0, 0.45).set_trans(Tween.TRANS_SINE)
 		tween.tween_property(_vignette, "modulate:a", 0.0, 0.9).set_trans(Tween.TRANS_SINE)
+
+
+## A heavy mob gets its own warning: kids should run to their fences.
+func _on_mob_spawned(_mob: Node3D, definition: MobDefinition) -> void:
+	if definition != null and definition.prefers_buildings:
+		show_banner("%s!" % definition.display_name, Color(0.6, 0.9, 0.35))
 
 
 func _on_night_started(day_number: int) -> void:

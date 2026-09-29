@@ -294,6 +294,15 @@ data only.
 
 Implement **Shadow Imp** only.
 
+*Feature 018:* the **Bramble Beast** is in.
+- It walks to the nearest building and tears it down (×3 damage), then
+  goes for the campfire.
+- It ignores the kids unless they come within 2 m, and barely flinches
+  when hit.
+- It has 40 HP and always drops a Glow Shard.
+- Waves: nights 1, 2 and 3 have 0, 1 and 2 beasts, spawned in the second
+  half of the wave.
+
 ### Mob lifecycle
 
 1. **Spawning** &mdash; appears at a designated edge of the map at night.

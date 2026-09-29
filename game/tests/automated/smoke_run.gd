@@ -252,6 +252,47 @@ func _check_feature_017(player: Node3D, companion: Node3D, fence: Building) -> v
 	_check(not TimeManager.dawn_started.is_connected(aura.get("_on_dawn_started")), "lantern aura does not burn out at dawn")
 	lantern.queue_free()
 
+	await _check_bramble_beast(player)
+
+
+## Feature 018: waves mix in Bramble Beasts, which go for buildings.
+func _check_bramble_beast(player: Node3D) -> void:
+	var spawner: Node = get_tree().get_first_node_in_group("mob_spawner")
+	var beast_def: MobDefinition = spawner.get("heavy_definition")
+	_check(beast_def != null and beast_def.prefers_buildings, "spawner has a siege mob (bramble beast)")
+	for night in [1, 2, 3]:
+		var wave: Array = spawner.build_wave(night)
+		var beasts: int = wave.count(beast_def)
+		_check(beasts == spawner.get_heavy_count(night) and wave.size() == spawner.get_wave_size(night) + beasts,
+			"night %d wave: %d imps + %d beasts" % [night, wave.size() - beasts, beasts])
+		if beasts > 0:
+			_check(wave.find(beast_def) >= wave.size() / 2 - 1, "night %d: beasts come in the second half" % night)
+
+	# A beast walks past Leo to tear down the nearest fence, hitting hard.
+	var fence_def: BuildingDefinition = BuildManager.get_known_definitions()[0]
+	var fence: Building = fence_def.get_scene().instantiate() as Building
+	get_tree().current_scene.add_child(fence)
+	fence.global_position = Vector3(-8, 0, 14)
+	var beast: Mob = beast_def.get_scene().instantiate() as Mob
+	get_tree().current_scene.add_child(beast)
+	beast.global_position = Vector3(-8, 0, 17.5)
+	player.global_position = Vector3(-11, 0, 16)
+	player.call("stop_commands")
+	var t: float = 0.0
+	while fence.current_hp == fence_def.max_hp and t < 15.0:
+		await _wait(0.25)
+		t += 0.25
+	var expected_hit: int = int(round(beast_def.attack_damage * beast_def.building_damage_multiplier))
+	_check(fence_def.max_hp - fence.current_hp == expected_hit, "beast hit the fence for %d (%.1fs)" % [fence_def.max_hp - fence.current_hp, t])
+	_check(beast.get("_chase_target") == null, "beast ignored Leo 3 m away")
+	var knocked_from: Vector3 = beast.global_position
+	beast.take_damage(1, player)
+	await _wait(0.3)
+	_check(beast.global_position.distance_to(knocked_from) < 0.25, "beast barely flinches from hits")
+	beast.take_damage(999, player)
+	fence.queue_free()
+	await _wait(0.2)
+
 
 func _recipe(id: StringName) -> CraftingRecipe:
 	for recipe in CraftingManager.get_recipes():

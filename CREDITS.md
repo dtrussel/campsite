@@ -3,7 +3,7 @@
 ## Art
 
 **Original art.** Leo, Nela (modelled from the project's own concept
-art) and the Shadow Imp, the hand-painted ground textures, trees, pines,
+art), the Shadow Imp and the Bramble Beast, the hand-painted ground textures, trees, pines,
 rocks, berry bushes and camp props (campfire, tent, fence, watch post,
 torch, woodpile, crate, barrel, toadstools, and the feature 017 clay
 pit, mushroom patch, junk pile, snap trap, glow lantern, glow shard and
@@ -18,7 +18,7 @@ art; no Riot Games assets are used.
 
 **KayKit.** The characters still use KayKit skeletons and animations:
 Leo and Nela are new models on the Adventurers rig, and the imp is a new
-body on the Skeleton Minion rig. Hills, mountains, dead trees,
+body on the Skeleton Minion rig, and so is the Bramble Beast. Hills, mountains, dead trees,
 pumpkins and lanterns are KayKit models.
 
 3D models and animations by **Kay Lousberg** — [KayKit](https://kaylousberg.com),

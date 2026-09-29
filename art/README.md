@@ -25,6 +25,7 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 | `nature/` | Trees (3 variants + stump), autumn pines, rocks, berry bush |
 | `props/camp.py` | Campfire, tent, fence, watch post, torch, woodpile, crate, barrel, toadstools |
 | `props/forage.py` | Feature 017: clay pit, mushroom patch and junk pile (each with a gathered variant), snap trap (base plus a jaw that Godot animates), glow lantern, glow shard, hearth ring. Decimated to the 1.4k prop budget |
+| `characters/bramble_beast.py` | Feature 018: the Bramble Beast. The imp's method (metaballs on the Skeleton Minion rig), but gorilla-shaped, with bark, moss, thorns, a leafy crown and ember eyes |
 | `characters/shadow_imp.py` | Brand-new imp body (metaballs along the Skeleton Minion rig, auto-weighted) with horns, wings, tail and glowing eyes |
 | `characters/leo.py`, `nela.py` | Leo and Nela, modelled from the concept art on the KayKit adventurer rig (all 76 clips). The concept sheets are the reference for faces, outfits and gear (feature 012); each script's docstring lists what it follows |
 | `characters/chibi.py` | Kit for the kids: fused, auto-weighted clothing; rigid gear; face decals (eyes, brows, smile); hair locks; boots, backpack parts. `QUICK=1` previews without baking |

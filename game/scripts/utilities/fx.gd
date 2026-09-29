@@ -234,6 +234,8 @@ const BURSTS: Dictionary = {
 	&"mushrooms": [12, 0.8, Color(0.75, 0.5, 0.3), Color(0.95, 0.9, 0.75, 0), 2.4, -5.0, 0.12, false, 60.0],
 	&"scrap": [12, 0.6, Color(0.7, 0.72, 0.78), Color(0.6, 0.35, 0.2, 0), 3.5, -9.0, 0.1, false, 70.0],
 	&"shard": [16, 0.9, Color(0.6, 1.0, 1.0), Color(0.5, 0.4, 1.0, 0), 2.0, 2.0, 0.14, true, 60.0],
+	&"bramble_spawn": [34, 1.4, Color(0.45, 0.35, 0.22, 0.9), Color(0.3, 0.45, 0.15, 0), 2.2, -3.0, 0.5, false, 50.0],
+	&"bramble_death": [30, 1.2, Color(0.45, 0.7, 0.22), Color(0.85, 0.5, 0.18, 0), 3.2, -4.0, 0.2, false, 80.0],
 }
 
 static var _soft_texture: Texture2D = null

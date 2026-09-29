@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3 uid="uid://b0campsiteworld01"]
+[gd_scene load_steps=24 format=3 uid="uid://b0campsiteworld01"]
 
 [ext_resource type="PackedScene" uid="uid://b0campsitebase01" path="res://scenes/base/CampfireCore.tscn" id="1_campfire"]
 [ext_resource type="PackedScene" uid="uid://b0campsiteplayer01" path="res://scenes/player/PlayerBoy.tscn" id="2_player"]
@@ -15,6 +15,7 @@
 [ext_resource type="Script" path="res://scripts/world/world_dressing.gd" id="14_dressing"]
 [ext_resource type="Script" path="res://scripts/world/navigation_baker.gd" id="15_nav"]
 [ext_resource type="Resource" uid="uid://b0campsitemobdefshadowimp" path="res://resources/mobs/shadow_imp.tres" id="10_mobdef"]
+[ext_resource type="Resource" uid="uid://b0campsitemobdefbramble" path="res://resources/mobs/bramble_beast.tres" id="23_bramble"]
 [ext_resource type="PackedScene" uid="uid://b0campsiteclaypit01" path="res://scenes/resources/ClayPit.tscn" id="20_clay"]
 [ext_resource type="PackedScene" uid="uid://b0campsitemushroom01" path="res://scenes/resources/MushroomPatch.tscn" id="21_mush"]
 [ext_resource type="PackedScene" uid="uid://b0campsitejunkpile01" path="res://scenes/resources/JunkPile.tscn" id="22_junk"]
@@ -183,6 +184,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 1.5)
 [node name="MobSpawner" type="Node3D" parent="."]
 script = ExtResource("8_spawner")
 mob_definition = ExtResource("10_mobdef")
+heavy_definition = ExtResource("23_bramble")
 spawn_interval_seconds = 2.5
 initial_delay_seconds = 2.0
 
