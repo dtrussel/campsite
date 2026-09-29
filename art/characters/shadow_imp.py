@@ -475,7 +475,9 @@ def head_tuft(body):
 
 
 def eyes(body):
-    """Oversized round eyes with black slit pupils, set in the sockets."""
+    """Oversized eyes with black slit pupils, set in the sockets. As in the
+    concept they are slightly squinted: a little flatter, with the upper
+    lid sloping down toward the nose for a cheeky look."""
     glows, pupils = [], []
     for side in (-1, 1):
         loc, normal = _surface(body, HEAD_C + Vector((side * 0.08, 0, EYE_Z - HEAD_C.z)), Vector((side * 0.42, -1.0, 0.1)))
@@ -484,18 +486,24 @@ def eyes(body):
         bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=12, radius=0.16)
         for v in bm.verts:
             v.co.y *= 0.42
+            v.co.z *= 0.88
+            # The squint: a straight upper lid, low at the inner corner.
+            t = max(-1.0, min(1.0, side * v.co.x / 0.16))
+            lid = 0.075 + 0.04 * t
+            if v.co.z > lid:
+                v.co.z = lid + (v.co.z - lid) * 0.15
         bmesh.ops.transform(bm, verts=bm.verts, matrix=rot.to_4x4())
         bmesh.ops.translate(bm, verts=bm.verts, vec=loc + normal * 0.005)
         glows.append(common.mesh_object("eye", bm))
         bm = bmesh.new()
         bmesh.ops.create_uvsphere(bm, u_segments=12, v_segments=10, radius=0.09)
         for v in bm.verts:
-            v.co.x *= 0.26   # a vertical slit
-            v.co.z *= 1.2
+            v.co.x *= 0.26   # a vertical slit, short enough to fit under the lid
+            v.co.z *= 0.85
             v.co.y *= 0.3
         bmesh.ops.transform(bm, verts=bm.verts, matrix=rot.to_4x4())
         # Pupils sit a little toward the nose: looking at you.
-        bmesh.ops.translate(bm, verts=bm.verts, vec=loc + normal * 0.078 - Vector((side * 0.025, 0, 0.012)))
+        bmesh.ops.translate(bm, verts=bm.verts, vec=loc + normal * 0.078 - Vector((side * 0.025, 0, 0.03)))
         pupils.append(common.mesh_object("pupil", bm))
     glow = common.join(glows, "ShadowImp_Eyes")
     common.shade_smooth(glow)

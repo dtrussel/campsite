@@ -22,3 +22,12 @@
   - The death (20 frames, about 0.83 s) lands before the corpse squash.
 - **No gameplay changes.** The speed, damage and targeting are
   untouched.
+
+## Follow-up: squinted eyes (team request)
+
+- The eyes were too round. They are now slightly squinted, as in the
+  concept: 12% flatter, with a straight upper lid that dips toward the
+  nose (lid height 0.035 at the inner corner, 0.115 at the outer). That
+  gives a cheeky, mischievous look without turning it angry.
+- The slit pupils are shorter and sit a little lower, so they fit under
+  the lid. The portrait is re-rendered.
