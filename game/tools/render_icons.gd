@@ -9,7 +9,8 @@ extends Node
 ##   xvfb-run -a godot --path game --rendering-driver opengl3 \
 ##       res://tools/render_icons.tscn
 ##
-## The PNGs are committed; re-run only when the art changes.
+## The PNGs are committed; re-run only when the art changes. Pass icon
+## names after `--` to render just those (e.g. `-- clay trap`).
 
 const OUT_DIR: String = "res://assets/icons/"
 const SIZE: int = 128
@@ -41,9 +42,24 @@ func _ready() -> void:
 		["bush", func() -> Node3D: return _custom("berry_bush.glb", 1.0), 2.6, 1.8, 0.4, 0.3],
 		["tree", func() -> Node3D: return _custom("tree_a.glb", 1.0), 2.6, 1.2, 0.4, 0.3],
 		["pumpkin", func() -> Node3D: return _model("halloween/pumpkin_orange_jackolantern.gltf", 1.0), 2.4, 1.2, 0.6, 0.0],
+		# Feature 017: new items, buildings and upgrades.
+		["clay", func() -> Node3D: return _custom("clay_pit.glb", 1.0), 2.6, 1.8, 0.3, 0.4],
+		["mushrooms", func() -> Node3D: return _custom("mushrooms.glb", 1.0), 2.4, 1.6, 0.3, 0.3],
+		["scrap", func() -> Node3D: return _custom("junk_pile.glb", 1.0), 2.6, 1.8, 0.3, 0.5],
+		["glow_shards", _glow_shard, 1.6, 1.0, 0.25, 0.3],
+		["snack", _snack, 1.8, 1.4, 0.2, 0.0],
+		["trap", _trap, 2.2, 2.0, 0.15, 0.5],
+		["lantern", func() -> Node3D: return _custom("glow_lantern.glb", 1.0), 4.0, 2.4, 0.9, 0.5],
+		["hearth", _hearth, 3.2, 2.4, 0.25, 0.3],
 	]
+	var only: PackedStringArray = OS.get_cmdline_user_args()
 	for job in jobs:
-		await _render(job[0], (job[1] as Callable).call(), job[2], job[3], job[4], job[5])
+		if only.is_empty() or only.has(job[0]):
+			await _render(job[0], (job[1] as Callable).call(), job[2], job[3], job[4], job[5])
+	if not only.is_empty():
+		print("render_icons: done")
+		get_tree().quit()
+		return
 	# Portraits: head-and-shoulders of each character.
 	await _portrait("portrait_leo", "custom/leo.glb", "hero", ["Leo_Stick"], 0.48, 2.4)
 	await _portrait("portrait_nela", "custom/nela.glb", "hero", ["Nela_Lantern", "Nela_LanternGlow"], 0.16, 2.7)
@@ -250,6 +266,53 @@ func _resin() -> Node3D:
 	drop.scale = Vector3(1.0, 1.25, 1.0)
 	root.add_child(drop)
 	root.add_child(_sphere(0.1, Color(1.0, 0.8, 0.3), Vector3(0.18, 0.1, 0.1), 0.5))
+	return root
+
+
+func _glow_shard() -> Node3D:
+	var root: Node3D = _custom("glow_shard.glb", 1.0)
+	var light: OmniLight3D = OmniLight3D.new()
+	light.light_color = Color(0.5, 0.95, 1.0)
+	light.light_energy = 1.5
+	light.omni_range = 1.5
+	light.position = Vector3(0, 0.2, 0.3)
+	root.add_child(light)
+	return root
+
+
+## Berry Snack: a leaf plate with berries and a little mushroom.
+func _snack() -> Node3D:
+	var root: Node3D = Node3D.new()
+	var plate: MeshInstance3D = _sphere(0.45, Color(0.4, 0.7, 0.25), Vector3.ZERO)
+	plate.scale = Vector3(1.0, 0.12, 0.8)
+	root.add_child(plate)
+	for p in [Vector3(-0.12, 0.1, 0.05), Vector3(0.05, 0.1, 0.12), Vector3(0.12, 0.1, -0.05), Vector3(-0.02, 0.2, 0.0),
+			Vector3(-0.15, 0.1, -0.12)]:
+		root.add_child(_sphere(0.1, Color(0.9, 0.12, 0.28), p, 0.2))
+	var stem: MeshInstance3D = _sphere(0.06, Color(0.95, 0.9, 0.78), Vector3(0.22, 0.12, 0.12))
+	stem.scale = Vector3(1.0, 2.0, 1.0)
+	root.add_child(stem)
+	var cap: MeshInstance3D = _sphere(0.13, Color(0.6, 0.36, 0.2), Vector3(0.22, 0.25, 0.12))
+	cap.scale = Vector3(1.0, 0.6, 1.0)
+	root.add_child(cap)
+	return root
+
+
+## Snap trap with its jaws open, as it sits in the world.
+func _trap() -> Node3D:
+	var root: Node3D = _custom("snap_trap_base.glb", 1.0)
+	for side in [-1.0, 1.0]:
+		var hinge: Node3D = Node3D.new()
+		hinge.position = Vector3(side * 0.05, 0.1, 0)
+		hinge.rotation = Vector3(0, 0.0 if side > 0 else PI, deg_to_rad(35))
+		hinge.add_child(_custom("snap_trap_jaw.glb", 1.0))
+		root.add_child(hinge)
+	return root
+
+
+func _hearth() -> Node3D:
+	var root: Node3D = _campfire_custom()
+	root.add_child(_custom("hearth_ring.glb", 1.0))
 	return root
 
 

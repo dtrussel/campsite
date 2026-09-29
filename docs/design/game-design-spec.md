@@ -163,6 +163,15 @@ guidelines; final recipes will live in `.tres` data files.
 | Scrap       | Rare     | 30    | Improvised tools, weapon upgrades, complex devices.           |
 | Glow Shards | Rare     | 20    | Magical upgrades, night defenses, vision items.               |
 
+*Feature 017 status:* every resource now has a source and a use.
+
+| Resource | Source | Uses |
+|----------|--------|------|
+| Clay | Clay pits in the NE and SW corners | Stone Hearth |
+| Mushrooms | Mushroom patches in the NW and SE corners | Berry Snack |
+| Scrap | Junk piles near the E and S spawn lanes | Snap Trap, Glow Lantern |
+| Glow Shards | Every third imp kill drops one as a pickup | Glow Lantern |
+
 ### Display
 
 Each resource has:
@@ -194,6 +203,8 @@ These are stored as `ResourceDefinition` `.tres` files; see the architecture doc
 | Watch Post     | Elevated post; companions can guard from here.               |
 | Storage Crate  | Increases resource storage cap. *(optional in prototype)*    |
 | Crafting Table | Unlocks simple recipes. *(optional in prototype)*            |
+| Snap Trap      | *(017)* Snaps the first imp on it: 10 damage, held 2.5 s; 3 snaps. 2 Wood + 1 Fiber + 1 Scrap. |
+| Glow Lantern   | *(017)* A torch that never burns out: slows and zaps imps within 5 m. 2 Glow Shards + 1 Scrap + 2 Wood. |
 
 ### Prototype subset
 
@@ -217,6 +228,15 @@ These are stored as `ResourceDefinition` `.tres` files; see the architecture doc
 - HP at zero destroys the building (no repair allowed).
 - Players or companions with the Repair task can restore HP at a fraction
   of the original resource cost.
+  *Feature 017:*
+  - Leo right-clicks a damaged building, walks over and hammers it. Each
+    tap costs 1 Wood and restores 12 HP.
+  - The campfire is fed at the crafting panel (Feed the Fire: 1 Wood,
+    +20 HP).
+  - Nela's Repair task (**V**) fixes the most damaged structure, the
+    campfire first when it is low. She guards the camp when there is
+    nothing to fix.
+  - Snap Traps are rebuilt, not repaired.
 
 ## H. Crafting system
 
@@ -232,6 +252,17 @@ These are stored as `ResourceDefinition` `.tres` files; see the architecture doc
 
 These numbers are placeholder; final values live in `CraftingRecipe`
 resources.
+
+*Implemented at the campfire (feature 017):*
+
+| Recipe | Inputs | Result |
+|--------|--------|--------|
+| Feed the Fire | 1 Wood | +20 campfire HP (only while it is damaged) |
+| Torch | 1 Wood + 1 Resin + 1 Leaves | A torch (plant with Q) |
+| Berry Snack | 2 Berries + 1 Mushroom | A snack (R: +35 HP); mushrooms replace leaves to give mushrooms a use |
+| Stone Hearth | 5 Clay + 4 Stone | Campfire +75 max HP, fully healed; once per run |
+
+The Simple Trap became the Snap Trap building (build menu 3).
 
 ### Prototype subset
 

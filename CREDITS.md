@@ -5,7 +5,9 @@
 **Original art.** Leo, Nela (modelled from the project's own concept
 art) and the Shadow Imp, the hand-painted ground textures, trees, pines,
 rocks, berry bushes and camp props (campfire, tent, fence, watch post,
-torch, woodpile, crate, barrel, toadstools) are original to this project.
+torch, woodpile, crate, barrel, toadstools, and the feature 017 clay
+pit, mushroom patch, junk pile, snap trap, glow lantern, glow shard and
+hearth ring) are original to this project.
 They are generated and hand-paint-baked by the Blender scripts in `art/`
 (`tools/build_art.sh`) and written to `game/assets/custom/`.
 

@@ -218,6 +218,74 @@ def task(v):
     return reverb(out, 0.2, 0.8)
 
 
+def repair(v):
+    """A hammer tap on wood: a bright knock with a short metal ring."""
+    d = 0.5
+    t = t_axis(d)
+    ring = sum(a * np.sin(2 * np.pi * f * t) for f, a in ((2300 + 120 * v, 0.5), (3900 + 150 * v, 0.25))) * np.exp(-t / 0.05)
+    out = knock(620 + 40 * v, 0.25, seed=420 + v, q=5.0) * 0.9
+    out = np.concatenate([out, np.zeros(len(t) - len(out))])
+    return reverb(out + ring * 0.35, 0.15, 0.6)
+
+
+def clay(v):
+    """Digging clay: a wet squelch and a soft plop."""
+    d = 0.4
+    t = t_axis(d)
+    squelch = lowpass(noise(d, 430 + v), 700 + 500 * np.sin(np.pi * t / d)) * env_adsr(d, 0.02, 0.2) * 1.8
+    plop = sine(sweep(260 + 30 * v, 120, 0.12, 0.6), 0.12) * env_perc(0.12, 0.002, 0.03)
+    out = squelch
+    place(out, plop * 0.8, 0.18)
+    return out
+
+
+def mushrooms(v):
+    """Picking a mushroom: a soft snap and a little pop."""
+    out = rustle(0.25, 440 + v, 3000) * 0.5
+    snap_ = bandpass(noise(0.05, 450 + v), 1800, 2.0) * env_perc(0.05, 0.0005, 0.008) * 1.5
+    pop = sine(sweep(380 + 60 * v, 900, 0.08, 0.5), 0.08) * env_perc(0.08, 0.001, 0.025)
+    place(out, snap_, 0.05)
+    place(out, pop * 0.7, 0.08)
+    return out
+
+
+def scrap(v):
+    """Rummaging junk: a tinny clank with a rattle."""
+    d = 0.6
+    t = t_axis(d)
+    out = np.zeros(len(t))
+    r = rng(460 + v)
+    for k in range(3):
+        base = r.uniform(900, 1600)
+        tone = sum(a * np.sin(2 * np.pi * base * m * t) for m, a in ((1.0, 0.6), (2.3, 0.35), (3.7, 0.2))) * np.exp(-t / 0.06)
+        place(out, tone[: int(0.3 * RATE)] * r.uniform(0.4, 0.8), k * r.uniform(0.05, 0.1))
+    place(out, knock(400, 0.2, seed=470 + v) * 0.5, 0.0)
+    return reverb(out, 0.15, 0.6)
+
+
+def shard(v):
+    """Picking up a Glow Shard: a sparkly rising chime."""
+    out = silence(1.2)
+    notes = (84, 88, 91, 96) if v == 0 else (86, 89, 93, 98)
+    for i, n in enumerate(notes):
+        place(out, bell(midi_hz(n), 0.7, 0.8) * (0.6 - 0.08 * i), i * 0.05)
+    place(out, highpass(noise(0.6, 480 + v), 7000) * env_adsr(0.6, 0.05, 0.5) * 0.06, 0.05)
+    return reverb(out, 0.35, 1.4)
+
+
+def trap_snap(v):
+    """The snap trap closing: a hard wooden clack and a spring twang."""
+    d = 0.6
+    clack = knock(900 + 80 * v, 0.15, seed=490 + v, q=3.0) * 1.3
+    t = t_axis(0.5)
+    twang = np.sin(2 * np.pi * (180 + 20 * v) * t + 3 * np.sin(2 * np.pi * 7 * t)) * np.exp(-t / 0.12) * 0.35
+    out = np.zeros(int(d * RATE))
+    place(out, clack, 0.0)
+    place(out, twang, 0.01)
+    place(out, sine(sweep(140, 60, 0.2), 0.2) * env_perc(0.2, 0.001, 0.04) * 0.8, 0.0)
+    return out
+
+
 def camp_hit(v):
     """Imp hitting the campfire: a thud and a spray of sparks."""
     d = 0.6
@@ -283,6 +351,12 @@ SOUNDS = {
     "sibling_hurt": (sibling_hurt, 3),
     "structure_hit": (structure_hit, 3),
     "task": (task, 3),
+    "repair": (repair, 3),
+    "clay": (clay, 2),
+    "mushrooms": (mushrooms, 2),
+    "scrap": (scrap, 3),
+    "shard": (shard, 2),
+    "trap_snap": (trap_snap, 2),
     "sunset": (sunset, 1),
     "win": (win, 1),
     "lose": (lose, 1),

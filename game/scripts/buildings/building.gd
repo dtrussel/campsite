@@ -17,6 +17,9 @@ signal destroyed
 
 ## Height of the overhead HP label; set per scene.
 @export var hp_label_height: float = 1.6
+## Hammer taps (Repair) restore this much HP each; 0 = not repairable
+## (traps are rebuilt, not repaired).
+@export var repair_per_tap: int = 12
 ## Optional defensive behaviour (Watch Post): damage the nearest mob in
 ## range every interval. 0 damage disables it.
 @export var auto_attack_damage: int = 0
@@ -34,6 +37,8 @@ func _ready() -> void:
 		current_hp = definition.max_hp
 	else:
 		push_warning("Building '%s' has no definition" % name)
+	if not has_meta(&"build_ghost") and repair_per_tap > 0:
+		add_to_group(Repair.GROUP)
 	if not has_meta(&"build_ghost"):
 		_hp_bar = HealthBar3D.attach(self, hp_label_height, "structure", 1.1)
 		_hp_bar.hide_when_full = true
@@ -83,6 +88,14 @@ func _refresh_hp_label() -> void:
 	if _hp_bar == null or definition == null:
 		return
 	_hp_bar.set_value(current_hp, definition.max_hp)
+
+
+func get_max_hp() -> int:
+	return definition.max_hp if definition != null else current_hp
+
+
+func get_missing_hp() -> int:
+	return maxi(0, get_max_hp() - current_hp) if current_hp > 0 else 0
 
 
 func repair(amount: int) -> void:

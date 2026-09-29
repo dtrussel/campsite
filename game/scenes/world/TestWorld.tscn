@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://b0campsiteworld01"]
+[gd_scene load_steps=23 format=3 uid="uid://b0campsiteworld01"]
 
 [ext_resource type="PackedScene" uid="uid://b0campsitebase01" path="res://scenes/base/CampfireCore.tscn" id="1_campfire"]
 [ext_resource type="PackedScene" uid="uid://b0campsiteplayer01" path="res://scenes/player/PlayerBoy.tscn" id="2_player"]
@@ -15,6 +15,9 @@
 [ext_resource type="Script" path="res://scripts/world/world_dressing.gd" id="14_dressing"]
 [ext_resource type="Script" path="res://scripts/world/navigation_baker.gd" id="15_nav"]
 [ext_resource type="Resource" uid="uid://b0campsitemobdefshadowimp" path="res://resources/mobs/shadow_imp.tres" id="10_mobdef"]
+[ext_resource type="PackedScene" uid="uid://b0campsiteclaypit01" path="res://scenes/resources/ClayPit.tscn" id="20_clay"]
+[ext_resource type="PackedScene" uid="uid://b0campsitemushroom01" path="res://scenes/resources/MushroomPatch.tscn" id="21_mush"]
+[ext_resource type="PackedScene" uid="uid://b0campsitejunkpile01" path="res://scenes/resources/JunkPile.tscn" id="22_junk"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 size = Vector2(120, 120)
@@ -142,6 +145,25 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, 7)
 
 [node name="Pine3" parent="Resources" instance=ExtResource("11_pine")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, -9)
+
+[node name="ClayPit1" parent="Resources" instance=ExtResource("20_clay")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11, 0, -11)
+
+[node name="ClayPit2" parent="Resources" instance=ExtResource("20_clay")]
+transform = Transform3D(0.8, 0, 0.6, 0, 1, 0, -0.6, 0, 0.8, -12, 0, 10)
+
+[node name="Mushrooms1" parent="Resources" instance=ExtResource("21_mush")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11, 0, -11)
+
+[node name="Mushrooms2" parent="Resources" instance=ExtResource("21_mush")]
+transform = Transform3D(0.6, 0, -0.8, 0, 1, 0, 0.8, 0, 0.6, 12, 0, 10)
+
+[node name="JunkPile1" parent="Resources" instance=ExtResource("22_junk")]
+transform = Transform3D(0.8, 0, -0.6, 0, 1, 0, 0.6, 0, 0.8, 13, 0, 6)
+
+[node name="JunkPile2" parent="Resources" instance=ExtResource("22_junk")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 14)
+
 
 [node name="WorldLighting" type="Node" parent="."]
 script = ExtResource("7_worldlight")

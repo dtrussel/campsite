@@ -98,6 +98,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_select_index(0)
 	elif event.is_action_pressed("select_building_2"):
 		_select_index(1)
+	elif event.is_action_pressed("select_building_3"):
+		_select_index(2)
+	elif event.is_action_pressed("select_building_4"):
+		_select_index(3)
 	elif event.is_action_pressed("confirm_build"):
 		_try_confirm()
 		get_viewport().set_input_as_handled()
@@ -275,7 +279,8 @@ func _update_validity(is_valid: bool, force: bool) -> void:
 
 func _collect_meshes(node: Node, out: Array[MeshInstance3D]) -> void:
 	for child in node.get_children():
-		if child is MeshInstance3D:
+		# Range rings (Glow Lantern) keep their own faint look as a preview.
+		if child is MeshInstance3D and not child.has_meta(&"build_ghost_keep"):
 			out.append(child)
 		if child.get_child_count() > 0:
 			_collect_meshes(child, out)

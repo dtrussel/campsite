@@ -1,0 +1,35 @@
+[gd_scene load_steps=6 format=3 uid="uid://b0campsitebuildsnaptrap01"]
+
+[ext_resource type="Script" path="res://scripts/buildings/snap_trap.gd" id="1_trap"]
+[ext_resource type="Resource" uid="uid://b0campsitebuilddefsnaptrap" path="res://resources/buildings/snap_trap.tres" id="2_def"]
+[ext_resource type="PackedScene" path="res://assets/custom/snap_trap_base.glb" id="3_base"]
+[ext_resource type="PackedScene" path="res://assets/custom/snap_trap_jaw.glb" id="4_jaw"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_trap"]
+size = Vector3(0.9, 0.3, 0.7)
+
+[node name="SnapTrap" type="StaticBody3D"]
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("1_trap")
+definition = ExtResource("2_def")
+hp_label_height = 0.9
+repair_per_tap = 0
+
+[node name="Visual" type="Node3D" parent="."]
+
+[node name="Base" parent="Visual" instance=ExtResource("3_base")]
+
+[node name="JawA" type="Node3D" parent="Visual"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 0.1, 0)
+
+[node name="Model" parent="Visual/JawA" instance=ExtResource("4_jaw")]
+
+[node name="JawB" type="Node3D" parent="Visual"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -0.05, 0.1, 0)
+
+[node name="Model" parent="Visual/JawB" instance=ExtResource("4_jaw")]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
+shape = SubResource("BoxShape3D_trap")

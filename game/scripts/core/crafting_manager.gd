@@ -35,7 +35,7 @@ func get_recipes() -> Array[CraftingRecipe]:
 
 
 func can_craft(recipe: CraftingRecipe) -> bool:
-	return recipe != null and ResourceManager.can_afford(recipe.inputs)
+	return recipe != null and ResourceManager.can_afford(recipe.inputs) and _effect_possible(recipe.effect)
 
 
 func craft(recipe: CraftingRecipe, crafter: Node) -> bool:
@@ -43,9 +43,12 @@ func craft(recipe: CraftingRecipe, crafter: Node) -> bool:
 		return false
 	if not ResourceManager.spend_costs(recipe.inputs):
 		return false
-	is_crafting = true
-	ResourceManager.add(recipe.output_id, recipe.output_amount)
-	is_crafting = false
+	if recipe.effect != &"":
+		_apply_effect(recipe.effect)
+	if recipe.output_id != &"":
+		is_crafting = true
+		ResourceManager.add(recipe.output_id, recipe.output_amount)
+		is_crafting = false
 	if crafter != null:
 		ProgressionManager.award_xp(crafter, recipe.xp_reward, &"craft")
 	GameManager.record(&"crafted", recipe.output_amount)
@@ -53,3 +56,36 @@ func craft(recipe: CraftingRecipe, crafter: Node) -> bool:
 	AudioManager.play_sfx(&"craft")
 	crafted.emit(recipe, crafter)
 	return true
+
+
+func _campfire() -> BaseCore:
+	return get_tree().get_first_node_in_group("base_core") as BaseCore
+
+
+## Whether an effect recipe can do anything right now (no wasted wood on
+## a full campfire, and the hearth only once).
+func _effect_possible(effect: StringName) -> bool:
+	match effect:
+		&"":
+			return true
+		&"feed_fire":
+			var fire: BaseCore = _campfire()
+			return fire != null and fire.get_missing_hp() > 0
+		&"stone_hearth":
+			var fire: BaseCore = _campfire()
+			return fire != null and not fire.has_hearth and not fire.is_destroyed
+	return false
+
+
+func _apply_effect(effect: StringName) -> void:
+	var fire: BaseCore = _campfire()
+	if fire == null:
+		return
+	match effect:
+		&"feed_fire":
+			fire.repair(fire.repair_per_tap)
+			Fx.burst(&"repair", fire.global_position + Vector3(0, 0.8, 0))
+			Fx.float_text(fire, "+%d" % fire.repair_per_tap, Color(0.55, 1.0, 0.6), 1.8)
+			GameManager.record(&"repairs")
+		&"stone_hearth":
+			fire.build_hearth()

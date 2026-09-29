@@ -235,8 +235,8 @@ art track in parallel.
 | Feature | Goal |
 |---------|------|
 | 016 Audio &amp; feel | **Done.** Procedural sound for everything, music and ambience moods, hit-stop, sunset cue, volume settings. |
-| 017 Repair and resources | **Repair:** right-click a damaged building or the campfire, for a share of its cost; Nela gets a Repair task. **Resources:** Clay, Mushrooms, Scrap and Glow Shards get sources (Glow Shards drop from imps). **New recipes:** Berry Snack, Simple Trap and Glow Lantern. |
+| 017 Repair and resources | **Done.** Repair by Leo (hammer) and Nela (task V), and Feed the Fire. Clay pits, mushroom patches and junk piles; Glow Shards from imps. Berry Snack and Stone Hearth recipes; Snap Trap and Glow Lantern buildings. |
 | 018 Bramble Beast | A slow, tanky, fence-breaking mob. Waves become a mix of mob types. |
-| 019 Buildings | Reinforced Wall, Storage Crate, placeable Simple Trap, and a Crafting Table that unlocks advanced recipes. |
+| 019 Buildings | Reinforced Wall (Clay + Stone), Storage Crate, and a Crafting Table that unlocks advanced recipes. The trap moved to 017. |
 | 020 Longer runs + save/load | 7-night and endless modes, with Phase 8 save/load. |
 | Art (parallel) | Shadow Imp remodel with the hero pipeline, then gather, attack and hit animations, then painted environment and props. |

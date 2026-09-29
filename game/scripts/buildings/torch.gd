@@ -11,14 +11,21 @@ extends Node3D
 @export var slow_factor: float = 0.45
 @export var burn_damage: int = 1
 @export var burn_interval_seconds: float = 1.0
+## Torches burn out at dawn; a Glow Lantern's aura (same script) does not.
+@export var burns_out_at_dawn: bool = true
 
 var _burn_timer: float = 0.0
 var _is_burning_out: bool = false
 
 
 func _ready() -> void:
+	# Inside a build-mode ghost (the Glow Lantern preview) stay inert.
+	if owner != null and owner.has_meta(&"build_ghost"):
+		set_physics_process(false)
+		return
 	add_to_group("torches")
-	TimeManager.dawn_started.connect(_on_dawn_started)
+	if burns_out_at_dawn:
+		TimeManager.dawn_started.connect(_on_dawn_started)
 
 
 func affects(point: Vector3) -> bool:

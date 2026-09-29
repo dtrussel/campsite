@@ -66,6 +66,8 @@ func _validate_data() -> void:
 			continue
 		_check_id(mob.id, mob.resource_path, mob_ids)
 		_check_scene(mob.scene_path, mob.resource_path)
+		if mob.drop_item != &"" and not item_ids.has(mob.drop_item):
+			_fail("%s drops unknown item '%s'" % [mob.resource_path, mob.drop_item])
 
 	var recipe_ids: Dictionary = {}
 	for res in DefinitionLoader.load_all("res://resources/recipes/"):
@@ -75,8 +77,13 @@ func _validate_data() -> void:
 			continue
 		_check_id(recipe.id, recipe.resource_path, recipe_ids)
 		_check_items(recipe.inputs, item_ids, recipe.resource_path)
-		if not item_ids.has(recipe.output_id):
-			_fail("%s outputs unknown item '%s'" % [recipe.resource_path, recipe.output_id])
+		if recipe.effect != &"" and not CraftingRecipe.EFFECTS.has(recipe.effect):
+			_fail("%s has unknown effect '%s'" % [recipe.resource_path, recipe.effect])
+		if recipe.effect == &"" or recipe.output_id != &"":
+			if not item_ids.has(recipe.output_id):
+				_fail("%s outputs unknown item '%s'" % [recipe.resource_path, recipe.output_id])
+		if recipe.result_icon() == null:
+			_fail("%s has no result icon (output item icon or icon_name)" % recipe.resource_path)
 
 	_validate_audio()
 
@@ -84,7 +91,12 @@ func _validate_data() -> void:
 	# as a resource node yield/bonus or as a recipe output.
 	var obtainable: Dictionary = {}
 	for res in DefinitionLoader.load_all("res://resources/recipes/"):
-		obtainable[(res as CraftingRecipe).output_id] = true
+		if (res as CraftingRecipe).output_id != &"":
+			obtainable[(res as CraftingRecipe).output_id] = true
+	for res in DefinitionLoader.load_all("res://resources/mobs/"):
+		var drop: StringName = (res as MobDefinition).drop_item
+		if drop != &"" and (res as MobDefinition).drop_every_n_kills > 0:
+			obtainable[drop] = true
 	var node_scenes: PackedStringArray = PackedStringArray()
 	_collect("res://scenes/resources/", node_scenes)
 	for scene_path in node_scenes:

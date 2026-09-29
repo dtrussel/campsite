@@ -36,7 +36,7 @@ func _run_win_scenario() -> void:
 	_check(GameManager.is_playing(), "run is PLAYING after scene load")
 	_check(TimeManager.is_running, "clock is running")
 	_check(ResourceManager.get_definitions().size() >= 11, "items loaded (%d)" % ResourceManager.get_definitions().size())
-	_check(BuildManager.get_known_definitions().size() == 2, "2 buildings loaded")
+	_check(BuildManager.get_known_definitions().size() == 4, "4 buildings loaded")
 	_check(CraftingManager.get_recipes().size() >= 1, "recipes loaded")
 
 	var player: Node3D = get_tree().get_first_node_in_group("player")
@@ -67,7 +67,7 @@ func _run_win_scenario() -> void:
 	_check(ResourceManager.get_count(&"resin") >= 1, "gathered resin")
 
 	# Craft and plant a torch.
-	var torch_recipe: CraftingRecipe = CraftingManager.get_recipes()[0]
+	var torch_recipe: CraftingRecipe = _recipe(&"torch")
 	_check(CraftingManager.craft(torch_recipe, player), "crafted a torch")
 	_check(ResourceManager.get_count(&"torch") == 1, "torch in inventory")
 	player.call("_try_place_torch")
@@ -82,6 +82,8 @@ func _run_win_scenario() -> void:
 	fence.global_position = Vector3(0, 0, -4)
 	fence.take_damage(5)
 	_check(fence.current_hp == fence_def.max_hp - 5, "fence takes damage")
+
+	await _check_feature_017(player, companion, fence)
 
 	# LoL-style commands: navmesh, move, gather, attack.
 	var nav: NavigationRegion3D = get_tree().current_scene.find_child("Navigation", true, false) as NavigationRegion3D
@@ -143,6 +145,119 @@ func _run_win_scenario() -> void:
 	_check(int(GameManager.stats[&"kills"]) > 0, "kills recorded (%d)" % GameManager.stats[&"kills"])
 	_check(get_tree().paused, "world frozen behind end screen")
 	_check(AudioManager.mood == &"", "music stops for the win stinger")
+	var shards_seen: int = ResourceManager.get_count(&"glow_shards") + get_tree().get_nodes_in_group("pickups").size()
+	_check(shards_seen >= int(GameManager.stats[&"kills"]) / 3 - 1, "imps dropped glow shards (%d for %d kills)" % [shards_seen, GameManager.stats[&"kills"]])
+
+
+## Feature 017: repair, the new resources, recipes, traps and lanterns.
+func _check_feature_017(player: Node3D, companion: Node3D, fence: Building) -> void:
+	# New resource nodes all gather.
+	for item in [&"clay", &"mushrooms", &"scrap"]:
+		var node: ResourceNode = _find_resource_node(item)
+		_check(node != null and node.begin_gather(player), "gather started on %s" % item)
+		if node != null:
+			await _wait(node.gather_time_seconds + 0.3)
+		_check(ResourceManager.get_count(item) >= 1, "gathered %s" % item)
+
+	# Repair: one tap spends a wood and fixes the fence.
+	ResourceManager.add(&"wood", 5)
+	var wood_before: int = ResourceManager.get_count(&"wood")
+	var hp_before: int = fence.current_hp
+	_check(Repair.needs_repair(fence), "damaged fence needs repair")
+	_check(Repair.tap(fence, player), "repair tap succeeded")
+	_check(fence.current_hp > hp_before and ResourceManager.get_count(&"wood") == wood_before - 1,
+		"repair restored HP (%d -> %d) for 1 wood" % [hp_before, fence.current_hp])
+	_check(not Repair.needs_repair(fence), "fence fully repaired")
+
+	# Leo's repair command walks over and hammers.
+	fence.take_damage(20)
+	player.command_repair(fence)
+	var t: float = 0.0
+	while Repair.needs_repair(fence) and t < 10.0:
+		await _wait(0.25)
+		t += 0.25
+	_check(not Repair.needs_repair(fence), "repair command fixed the fence (%.1fs)" % t)
+
+	# Nela's Repair task fixes the campfire.
+	var fire: BaseCore = _campfire()
+	fire.take_damage(30)
+	companion.call("set_task", 4)
+	t = 0.0
+	while fire.get_missing_hp() > 0 and t < 15.0:
+		await _wait(0.25)
+		t += 0.25
+	_check(fire.get_missing_hp() == 0, "Nela repaired the campfire (%.1fs)" % t)
+	companion.call("set_task", 0)
+
+	# Feed the Fire only while the campfire is damaged.
+	var feed: CraftingRecipe = _recipe(&"feed_fire")
+	_check(feed != null and not CraftingManager.can_craft(feed), "feed the fire disabled at full HP")
+	fire.take_damage(25)
+	var fire_hp: int = fire.current_hp
+	_check(CraftingManager.craft(feed, player) and fire.current_hp == fire_hp + fire.repair_per_tap, "fed the fire (+%d)" % fire.repair_per_tap)
+
+	# Stone Hearth: once per run, more max HP.
+	ResourceManager.add(&"clay", 5)
+	ResourceManager.add(&"stone", 4)
+	var hearth: CraftingRecipe = _recipe(&"stone_hearth")
+	var max_before: int = fire.max_hp
+	_check(CraftingManager.craft(hearth, player), "built the stone hearth")
+	_check(fire.has_hearth and fire.max_hp == max_before + fire.hearth_bonus_hp and fire.current_hp == fire.max_hp,
+		"hearth raised campfire max HP to %d and healed it" % fire.max_hp)
+	ResourceManager.add(&"clay", 5)
+	ResourceManager.add(&"stone", 4)
+	_check(not CraftingManager.can_craft(hearth), "hearth only once per run")
+
+	# Berry Snack: crafted, then eaten first with R.
+	ResourceManager.add(&"berries", 2)
+	ResourceManager.add(&"mushrooms", 1)
+	_check(CraftingManager.craft(_recipe(&"berry_snack"), player) and ResourceManager.get_count(&"snack") == 1, "cooked a berry snack")
+	player.set("_invulnerable_remaining", 0.0)
+	player.take_damage(40)
+	var hp: int = player.current_hp
+	player.call("_try_eat_berries")
+	_check(player.current_hp == hp + int(player.heal_per_snack) and ResourceManager.get_count(&"snack") == 0,
+		"ate the snack (+%d HP)" % player.heal_per_snack)
+
+	# Snap trap: holds and hurts the first imp, uses a charge.
+	var trap: SnapTrap = (load("res://scenes/buildings/SnapTrap.tscn") as PackedScene).instantiate() as SnapTrap
+	get_tree().current_scene.add_child(trap)
+	trap.global_position = Vector3(-14, 0, -4)
+	var trapped: Mob = (load("res://scenes/mobs/ShadowImp.tscn") as PackedScene).instantiate() as Mob
+	get_tree().current_scene.add_child(trapped)
+	trapped.global_position = Vector3(-14, 0, -4.2)
+	var trapped_hp: int = trapped.current_hp
+	t = 0.0
+	while trap.current_hp == 3 and t < 5.0:
+		await _wait(0.1)
+		t += 0.1
+	_check(trap.current_hp == 2 and trapped.current_hp < trapped_hp and trapped.is_stunned(),
+		"snap trap caught an imp (hp %d -> %d, charges left %d)" % [trapped_hp, trapped.current_hp, trap.current_hp])
+	trapped.take_damage(999, player)
+
+	# Glow Lantern: a permanent aura that slows and zaps imps.
+	var lantern: Building = (load("res://scenes/buildings/GlowLantern.tscn") as PackedScene).instantiate() as Building
+	get_tree().current_scene.add_child(lantern)
+	lantern.global_position = Vector3(14, 0, -4)
+	var zapped: Mob = (load("res://scenes/mobs/ShadowImp.tscn") as PackedScene).instantiate() as Mob
+	get_tree().current_scene.add_child(zapped)
+	zapped.global_position = Vector3(12, 0, -4)
+	zapped.set_physics_process(false)
+	var zapped_hp: int = zapped.current_hp
+	await _wait(2.3)
+	_check(zapped.call("_torch_slow_factor") < 1.0, "lantern aura slows imps")
+	_check(zapped.current_hp < zapped_hp, "lantern aura zaps imps (%d -> %d)" % [zapped_hp, zapped.current_hp])
+	zapped.take_damage(999, player)
+	var aura: Node = lantern.get_node("Aura")
+	_check(not TimeManager.dawn_started.is_connected(aura.get("_on_dawn_started")), "lantern aura does not burn out at dawn")
+	lantern.queue_free()
+
+
+func _recipe(id: StringName) -> CraftingRecipe:
+	for recipe in CraftingManager.get_recipes():
+		if recipe.id == id:
+			return recipe
+	return null
 
 
 func _survive_night(night: int, player: Node3D) -> void:
@@ -220,8 +335,10 @@ func _campfire() -> BaseCore:
 	return get_tree().get_first_node_in_group("base_core") as BaseCore
 
 
+## Waits `game_seconds` of game time at the test speed. It uses SPEED,
+## not Engine.time_scale, which a hit-stop briefly lowers.
 func _wait(game_seconds: float) -> void:
-	await get_tree().create_timer(game_seconds / Engine.time_scale, true, false, true).timeout
+	await get_tree().create_timer(game_seconds / SPEED, true, false, true).timeout
 
 
 func _check(condition: bool, label: String) -> void:

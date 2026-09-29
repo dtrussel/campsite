@@ -13,7 +13,7 @@ fragile camping trip into a magical woodland fortress.
 
 ## Status
 
-**Prototype, ready for first playtest (v0.11.0-playtest1).** Hand-painted,
+**Prototype, ready for first playtest (v0.12.0-playtest1).** Hand-painted,
 LoL-inspired 3D art: **Leo** (the big brother, played by you), his little
 sister **Nela**, the Shadow Imps, trees, rocks, camp props and the painted
 ground are modelled, painted and texture-baked by the scripts in
@@ -30,8 +30,15 @@ A complete 3-night run is playable:
 4. A win or loss screen, and restart.
 
 Roadmap phases 0–7 are implemented, plus the audio & feel pass
-(feature 016). Next: repair and the unused resources (017), the Bramble
-Beast (018), more buildings (019), and longer runs with save/load (020). See [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md)
+(feature 016) and repair with the full resource set (feature 017):
+- clay pits, mushroom patches and junk piles;
+- Glow Shards from imps;
+- Feed the Fire, the Berry Snack and the Stone Hearth at the campfire;
+- Snap Traps and Glow Lanterns in the build menu;
+- hammer repairs by Leo and by Nela.
+
+Next: the Bramble Beast (018), more buildings (019), and longer runs
+with save/load (020). See [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md)
 and [`.features/005-first-playtest-build/handoff.md`](.features/005-first-playtest-build/handoff.md).
 
 **Playtesters:** follow [`docs/testing/playtest-001.md`](docs/testing/playtest-001.md).
@@ -68,16 +75,16 @@ Controls (LoL-style; also shown in-game with **H**):
 
 | Input | Action |
 |-------|--------|
-| Right click | Move / attack an imp / gather a resource / use the campfire |
+| Right click | Move / attack an imp / gather a resource / use the campfire / repair a damaged building |
 | Left click | Attack or use what you click (never moves) |
 | Mouse wheel | Zoom |
 | Space | Attack the nearest imp |
 | E | Gather the nearest resource |
 | Q | Plant a crafted torch |
-| R | Eat 2 berries to heal |
+| R | Eat: a Berry Snack (+35 HP) if you have one, else 2 berries (+15 HP) |
 | C | Crafting panel (near the campfire) |
-| B, then 1 / 2 | Build: Wooden Fence / Watch Post (R rotate, LMB place, RMB/Esc cancel) |
-| F / G / T / Y | Sibling: follow / guard camp / gather / idle |
+| B, then 1–4 | Build: Wooden Fence / Watch Post / Snap Trap / Glow Lantern (R rotate, LMB place, RMB/Esc cancel) |
+| F / G / T / Y / V | Nela: follow / guard camp / gather / idle / repair |
 | N | Call the night early (daytime) |
 | W A S D | Walk directly (optional) |
 | H / Esc | Help / Pause menu (with Music and Sounds volume) |
@@ -174,7 +181,7 @@ Start here if you are a new contributor or coding agent:
 6. [Test strategy](docs/testing/test-strategy.md)
 7. [ADR-0001: Engine & language selection](docs/decisions/ADR-0001-engine-and-language-selection.md)
 8. [Agent feature workflow](.features/README.md)
-9. [Latest feature handoff](.features/016-audio-and-feel/handoff.md)
+9. [Latest feature handoff](.features/017-repair-and-resources/handoff.md)
 10. [Playtest 001 script](docs/testing/playtest-001.md)
 
 ## Development workflow

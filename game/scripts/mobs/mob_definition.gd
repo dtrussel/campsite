@@ -17,6 +17,10 @@ extends Resource
 @export var aggro_radius: float = 4.0
 @export var attack_cooldown_seconds: float = 1.0
 @export var xp_reward: int = 5
+## Loot: every `drop_every_n_kills`-th kill of this mob type (counted
+## per run) leaves a `drop_item` pickup (Glow Shards for imps). 0 = never.
+@export var drop_item: StringName = &""
+@export var drop_every_n_kills: int = 0
 @export var ui_color: Color = Color(0.6, 0.4, 0.7, 1)
 
 

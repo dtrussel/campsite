@@ -12,7 +12,11 @@ signal task_changed(new_task: int)
 signal health_changed(current_hp: int, max_hp: int)
 signal knocked_out_changed(is_knocked_out: bool)
 
-enum Task { IDLE, FOLLOW_PLAYER, GUARD_BASE, GATHER_NEAREST }
+enum Task { IDLE, FOLLOW_PLAYER, GUARD_BASE, GATHER_NEAREST, REPAIR }
+
+## Seconds between Nela's hammer taps (a bit slower than Leo's).
+const REPAIR_TAP_SECONDS: float = 1.0
+const REPAIR_REACH: float = 1.9
 
 @export var definition: CompanionDefinition
 @export var stats: CharacterStatsDefinition
@@ -38,6 +42,7 @@ var _base_core: Node3D = null
 var _attack_cooldown_remaining: float = 0.0
 var _current_attack_damage: int = 0
 var _active_resource_node: Node = null   # ResourceNode currently being gathered
+var _repair_timer: float = 0.0
 
 
 func _ready() -> void:
@@ -123,6 +128,7 @@ func get_task_name() -> String:
 		Task.FOLLOW_PLAYER: return "Follow Player"
 		Task.GUARD_BASE: return "Guard Base"
 		Task.GATHER_NEAREST: return "Gather"
+		Task.REPAIR: return "Repair"
 	return "?"
 
 
@@ -147,6 +153,8 @@ func _physics_process(delta: float) -> void:
 			_tick_guard_base()
 		Task.GATHER_NEAREST:
 			_tick_gather_nearest()
+		Task.REPAIR:
+			_tick_repair(delta)
 
 	var planar_speed: float = Vector2(velocity.x, velocity.z).length()
 	_visual.set_locomotion(planar_speed)
@@ -237,6 +245,45 @@ func _tick_gather_nearest() -> void:
 		return
 	velocity = to_target.normalized() * definition.move_speed
 	move_and_slide()
+
+
+## Fixes the most damaged structure (the campfire first when it is
+## low), fighting any imp that comes within reach. With nothing to fix,
+## or no wood left, she guards the camp instead.
+func _tick_repair(delta: float) -> void:
+	_repair_timer = maxf(0.0, _repair_timer - delta)
+	var mob: Node3D = _find_nearest_mob(definition.attack_range)
+	var target: Node3D = Repair.most_damaged(get_tree())
+	if mob != null or target == null or not ResourceManager.has(Repair.WOOD_ID, Repair.WOOD_PER_TAP):
+		_tick_guard_base()
+		return
+	var to_target: Vector3 = target.global_position - global_position
+	to_target.y = 0.0
+	if to_target.length() > REPAIR_REACH + _target_radius(target):
+		velocity = to_target.normalized() * definition.move_speed
+		move_and_slide()
+		return
+	velocity = Vector3.ZERO
+	move_and_slide()
+	_visual.face(to_target, delta)
+	if _repair_timer <= 0.0:
+		_repair_timer = REPAIR_TAP_SECONDS
+		if Repair.tap(target, self):
+			_visual.play_action(&"gather", 1.6)
+
+
+func _target_radius(node: Node3D) -> float:
+	var shape: CollisionShape3D = node.get_node_or_null("Collision") as CollisionShape3D
+	if shape == null:
+		return 0.5
+	if shape.shape is BoxShape3D:
+		var box: Vector3 = (shape.shape as BoxShape3D).size
+		return maxf(box.x, box.z) * 0.5
+	if shape.shape is SphereShape3D:
+		return (shape.shape as SphereShape3D).radius
+	if shape.shape is CylinderShape3D:
+		return (shape.shape as CylinderShape3D).radius
+	return 0.5
 
 
 func _begin_gather_on(node: Node) -> void:

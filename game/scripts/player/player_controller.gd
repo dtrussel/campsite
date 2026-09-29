@@ -5,7 +5,9 @@ extends CharacterBody3D
 ## LoL-style command movement. The pointer (see PointerCommands) issues
 ## commands: move to a point, attack an imp (walk into range, then
 ## auto-attack until it dies), gather a resource node (walk to it,
-## then gather), or use the campfire (walk to it, open crafting).
+## then gather), use the campfire (walk to it, open crafting), or
+## repair a damaged building (walk to it, then hammer until it is fixed
+## or the wood runs out; see Repair).
 ## Paths come from the world's navigation mesh; WASD still works as a
 ## direct override and cancels the current command.
 ##
@@ -18,16 +20,19 @@ signal command_changed(command: int, target: Node)
 signal attacked(target: Node)
 
 enum PlayerState { IDLE, MOVING, GATHERING, KNOCKED_OUT }
-enum Command { NONE, MOVE, ATTACK, GATHER, CAMPFIRE }
+enum Command { NONE, MOVE, ATTACK, GATHER, CAMPFIRE, REPAIR }
 
 const TORCH_SCENE: PackedScene = preload("res://scenes/buildings/Torch.tscn")
 const TORCH_ITEM_ID: StringName = &"torch"
 const BERRY_ITEM_ID: StringName = &"berries"
 const BERRIES_PER_MEAL: int = 2
+const SNACK_ITEM_ID: StringName = &"snack"
 ## Distance at which a gather command starts gathering.
 const GATHER_REACH: float = 1.5
 ## Distance at which a campfire command opens crafting.
 const CAMPFIRE_REACH: float = 2.6
+## Distance (plus the target's radius) at which a repair command hammers.
+const REPAIR_REACH: float = 1.4
 ## Seconds into the swing when damage lands (the "wind-up").
 const ATTACK_WINDUP: float = 0.18
 const REPATH_SECONDS: float = 0.25
@@ -45,6 +50,7 @@ const REPATH_SECONDS: float = 0.25
 @export var regen_per_second: float = 1.5
 @export var hurt_invulnerability_seconds: float = 0.6
 @export var heal_per_meal: int = 15
+@export var heal_per_snack: int = 35
 ## Half-size of the playable square around the campfire; keeps the boy
 ## inside the area the camera and mob spawns are designed around.
 @export var play_area_half_extent: float = 19.0
@@ -64,6 +70,7 @@ var _invulnerable_remaining: float = 0.0
 var _regen_accumulator: float = 0.0
 var _move_goal: Vector3 = Vector3.ZERO
 var _repath_timer: float = 0.0
+var _repair_timer: float = 0.0
 var _agent: NavigationAgent3D = null
 var _hp_bar: HealthBar3D = null
 
@@ -138,6 +145,15 @@ func command_campfire(base: Node3D) -> void:
 	_cancel_active_gather()
 	_set_command(Command.CAMPFIRE, base)
 	_agent.target_position = base.global_position
+
+
+func command_repair(target: Node3D) -> void:
+	if not _can_command() or not Repair.needs_repair(target):
+		return
+	_cancel_active_gather()
+	_set_command(Command.REPAIR, target)
+	_repair_timer = 0.0
+	_agent.target_position = target.global_position
 
 
 func stop_commands() -> void:
@@ -269,6 +285,22 @@ func _tick_command(delta: float) -> Vector3:
 					panel.open()
 				return Vector3.ZERO
 			return _path_velocity(command_target.global_position)
+		Command.REPAIR:
+			if not Repair.needs_repair(command_target):
+				_set_command(Command.NONE, null)
+				return Vector3.ZERO
+			if _flat_distance(command_target.global_position) <= REPAIR_REACH + _node_radius(command_target):
+				_visual.face(command_target.global_position - global_position, delta)
+				_repair_timer -= delta
+				if _repair_timer <= 0.0:
+					_repair_timer = Repair.TAP_SECONDS
+					if Repair.tap(command_target, self):
+						_visual.play_action(&"chop", 1.8)
+					else:
+						Fx.icon_popup(self, Fx.icon("wood"), "", Color.WHITE, true)
+						_set_command(Command.NONE, null)
+				return Vector3.ZERO
+			return _path_velocity(command_target.global_position)
 	return Vector3.ZERO
 
 
@@ -317,6 +349,9 @@ func _node_radius(node: Node3D) -> float:
 		return (shape.shape as CylinderShape3D).radius
 	if shape != null and shape.shape is SphereShape3D:
 		return (shape.shape as SphereShape3D).radius
+	if shape != null and shape.shape is BoxShape3D:
+		var box: Vector3 = (shape.shape as BoxShape3D).size
+		return maxf(box.x, box.z) * 0.5
 	return 0.4
 
 
@@ -415,15 +450,19 @@ func _try_place_torch() -> void:
 	PlaytestLog.write("torch_placed day=%d phase=%s" % [TimeManager.day_number, TimeManager.get_phase_name()])
 
 
+## R: eat a Berry Snack if there is one (+35 HP), else 2 berries (+15).
 func _try_eat_berries() -> void:
 	if current_hp >= max_hp:
+		Fx.icon_popup(self, Fx.icon("snack" if ResourceManager.has(SNACK_ITEM_ID, 1) else "berries"), "", Color.WHITE, true)
+		return
+	var amount: int = heal_per_meal
+	if ResourceManager.spend(SNACK_ITEM_ID, 1):
+		amount = heal_per_snack
+	elif not ResourceManager.spend(BERRY_ITEM_ID, BERRIES_PER_MEAL):
 		Fx.icon_popup(self, Fx.icon("berries"), "", Color.WHITE, true)
 		return
-	if not ResourceManager.spend(BERRY_ITEM_ID, BERRIES_PER_MEAL):
-		Fx.icon_popup(self, Fx.icon("berries"), "", Color.WHITE, true)
-		return
-	heal(heal_per_meal)
-	Fx.float_text(self, "+%d HP" % heal_per_meal, Color(0.5, 1, 0.5))
+	heal(amount)
+	Fx.float_text(self, "+%d HP" % amount, Color(0.5, 1, 0.5))
 	Fx.burst(&"heal", global_position)
 
 

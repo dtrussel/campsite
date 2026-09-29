@@ -20,7 +20,8 @@ const _PHASE_COLOR_NIGHT: Color = Color(0.75, 0.65, 1.0)
 const _PHASE_COLOR_DAWN: Color = Color(1, 0.88, 0.65)
 
 var _vignette: TextureRect = null
-const _TRAY_ITEMS: Array[StringName] = [&"wood", &"stone", &"berries", &"fiber", &"leaves", &"resin", &"torch"]
+const _TRAY_ITEMS: Array[StringName] = [&"wood", &"stone", &"berries", &"fiber", &"leaves", &"resin", &"clay",
+	&"mushrooms", &"scrap", &"glow_shards", &"torch", &"snack"]
 const _ICON_DIR: String = "res://assets/icons/"
 
 var _player: Node = null
@@ -147,11 +148,11 @@ func _build_sibling_frame(root: Control) -> void:
 	_sibling_hp.custom_minimum_size = Vector2(200, 14)
 	_sibling_hp.show_text = false
 	column.add_child(_sibling_hp)
-	# Task picker: idle, follow, guard, gather (Companion.Task order).
+	# Task picker: idle, follow, guard, gather, repair (Companion.Task order).
 	var tasks: HBoxContainer = HBoxContainer.new()
 	tasks.add_theme_constant_override("separation", 4)
 	column.add_child(tasks)
-	var specs: Array = [["zzz", "Y"], ["footsteps", "F"], ["shield", "G"], ["basket", "T"]]
+	var specs: Array = [["zzz", "Y"], ["footsteps", "F"], ["shield", "G"], ["basket", "T"], ["hammer", "V"]]
 	for i in range(specs.size()):
 		var button: Button = Button.new()
 		button.custom_minimum_size = Vector2(46, 46)
@@ -247,9 +248,9 @@ func _build_hero_bar(root: Control) -> void:
 		[&"attack", "axe", "SP", "Attack (Space, or click an imp)"],
 		[&"gather", "wood", "E", "Gather the nearest resource (E, or right-click it)"],
 		[&"torch", "torch", "Q", "Plant a torch (Q). Craft torches at the campfire."],
-		[&"eat", "berries", "R", "Eat 2 berries: +15 HP (R)"],
+		[&"eat", "berries", "R", "Eat (R): a Berry Snack gives +35 HP, else 2 berries give +15 HP"],
 		[&"craft", "campfire", "C", "Crafting (C, near the campfire)"],
-		[&"build", "fence", "B", "Build fences and watch posts (B)"],
+		[&"build", "fence", "B", "Build (B), then 1-4: fence, watch post, snap trap, glow lantern"],
 	]
 	for entry in definitions:
 		var slot: HudWidgets.AbilitySlot = HudWidgets.AbilitySlot.new(_icon(entry[1]), entry[2])
@@ -360,8 +361,17 @@ func _refresh_slots() -> void:
 	(_slots[&"gather"] as HudWidgets.AbilitySlot).set_state(true)
 	var torches: int = ResourceManager.get_count(&"torch")
 	(_slots[&"torch"] as HudWidgets.AbilitySlot).set_state(torches > 0, str(torches) if torches > 0 else "")
-	var berries: int = ResourceManager.get_count(&"berries")
-	(_slots[&"eat"] as HudWidgets.AbilitySlot).set_state(berries >= 2, str(berries) if berries > 0 else "")
+	var eat_slot: HudWidgets.AbilitySlot = _slots[&"eat"] as HudWidgets.AbilitySlot
+	var snacks: int = ResourceManager.get_count(&"snack")
+	var eat_icon: Texture2D = _icon("snack" if snacks > 0 else "berries")
+	if eat_slot.icon != eat_icon:
+		eat_slot.icon = eat_icon
+		eat_slot.queue_redraw()
+	if snacks > 0:
+		eat_slot.set_state(true, str(snacks))
+	else:
+		var berries: int = ResourceManager.get_count(&"berries")
+		eat_slot.set_state(berries >= 2, str(berries) if berries > 0 else "")
 	var craft_ready: bool = false
 	for recipe in CraftingManager.get_recipes():
 		craft_ready = craft_ready or CraftingManager.can_craft(recipe)
@@ -463,9 +473,17 @@ func _refresh_build_label(definition: BuildingDefinition) -> void:
 		return
 	for child in _build_row.get_children():
 		child.queue_free()
-	var building_icon: String = "fence" if definition.id == &"wooden_fence" else "tower"
+	# Number chips for every building; the active one is lit.
+	var known: Array[BuildingDefinition] = BuildManager.get_known_definitions()
+	for i in range(known.size()):
+		var chip: Control = HudWidgets.AbilitySlot.new(known[i].icon, str(i + 1))
+		chip.custom_minimum_size = Vector2(40, 40)
+		(chip as HudWidgets.AbilitySlot).set_state(ResourceManager.can_afford(known[i].cost))
+		(chip as HudWidgets.AbilitySlot).highlight = known[i] == definition
+		chip.tooltip_text = "%s (%d): %s" % [known[i].display_name, i + 1, known[i].description]
+		_build_row.add_child(chip)
 	var picture: TextureRect = TextureRect.new()
-	picture.texture = _icon(building_icon)
+	picture.texture = definition.icon
 	picture.custom_minimum_size = Vector2(56, 56)
 	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

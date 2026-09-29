@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="BuildingDefinition" load_steps=2 format=3 uid="uid://b0campsitebuilddefwoodenfence"]
+[gd_resource type="Resource" script_class="BuildingDefinition" load_steps=3 format=3 uid="uid://b0campsitebuilddefwoodenfence"]
 
 [ext_resource type="Script" path="res://scripts/buildings/building_definition.gd" id="1_def"]
+[ext_resource type="Texture2D" path="res://assets/icons/fence.png" id="9_icon"]
 
 [resource]
 script = ExtResource("1_def")
@@ -16,3 +17,4 @@ max_hp = 50
 footprint_size = Vector3(1.6, 1.2, 0.3)
 ui_color = Color(0.55, 0.36, 0.18, 1)
 sort_order = 10
+icon = ExtResource("9_icon")

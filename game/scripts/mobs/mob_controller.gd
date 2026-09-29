@@ -24,6 +24,7 @@ const KNOCKBACK_DECAY: float = 10.0
 const CAMPFIRE_REACH_BONUS: float = 0.7
 ## Seconds a defeated mob lingers for its collapse animation.
 const CORPSE_SECONDS: float = 1.4
+const PICKUP_SCENE: PackedScene = preload("res://scenes/world/ItemPickup.tscn")
 
 @export var definition: MobDefinition
 
@@ -37,6 +38,7 @@ var _attack_cooldown_remaining: float = 0.0
 var _last_damage_source: Node = null
 var _knockback: Vector3 = Vector3.ZERO
 var _spawn_remaining: float = 0.0
+var _stun_remaining: float = 0.0
 var _hp_bar: HealthBar3D = null
 
 @onready var _visual: CharacterVisual = get_node_or_null("Visual") as CharacterVisual
@@ -95,6 +97,7 @@ func _die() -> void:
 	collision_mask = 0
 	_award_kill_xp()
 	GameManager.record(&"kills")
+	_maybe_drop_loot()
 	defeated.emit(self)
 	if _hp_bar != null:
 		_hp_bar.visible = false
@@ -106,6 +109,27 @@ func _die() -> void:
 	tween.tween_property(self, "scale", Vector3(1.0, 0.02, 1.0), CORPSE_SECONDS * 0.4) \
 		.set_ease(Tween.EASE_IN)
 	tween.tween_callback(queue_free)
+
+
+## Holds the mob in place (snap traps). Longer stuns replace shorter.
+func stun(seconds: float) -> void:
+	_stun_remaining = maxf(_stun_remaining, seconds)
+
+
+func is_stunned() -> bool:
+	return _stun_remaining > 0.0
+
+
+## Predictable loot for young players: every Nth kill drops a pickup.
+func _maybe_drop_loot() -> void:
+	if definition == null or definition.drop_item == &"" or definition.drop_every_n_kills <= 0:
+		return
+	if int(GameManager.stats.get(&"kills", 0)) % definition.drop_every_n_kills != 0:
+		return
+	var pickup: Node3D = PICKUP_SCENE.instantiate() as Node3D
+	pickup.set("item_id", definition.drop_item)
+	get_tree().current_scene.add_child(pickup)
+	pickup.global_position = Vector3(global_position.x, 0.0, global_position.z)
 
 
 func _award_kill_xp() -> void:
@@ -126,6 +150,13 @@ func _physics_process(delta: float) -> void:
 	if _spawn_remaining > 0.0:
 		# Still clawing out of the ground.
 		_spawn_remaining -= delta
+		return
+	if _stun_remaining > 0.0:
+		# Held by a snap trap: no moving, no attacking.
+		_stun_remaining -= delta
+		velocity = Vector3.ZERO
+		if _visual != null:
+			_visual.set_locomotion(0.0)
 		return
 	if _base == null or not is_instance_valid(_base):
 		_refresh_base()

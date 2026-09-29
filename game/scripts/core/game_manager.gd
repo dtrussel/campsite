@@ -61,13 +61,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	if run_state != RunState.PLAYING or get_tree().paused:
 		return
 	if event.is_action_pressed("assign_idle"):
-		_assign_to_all_companions(0)
+		assign_companion_task(0)
 	elif event.is_action_pressed("assign_follow"):
-		_assign_to_all_companions(1)
+		assign_companion_task(1)
 	elif event.is_action_pressed("assign_guard"):
-		_assign_to_all_companions(2)
+		assign_companion_task(2)
 	elif event.is_action_pressed("assign_gather"):
-		_assign_to_all_companions(3)
+		assign_companion_task(3)
+	elif event.is_action_pressed("assign_repair"):
+		assign_companion_task(4)
 	elif event.is_action_pressed("skip_to_night"):
 		if TimeManager.current_phase == TimeManager.Phase.DAY:
 			TimeManager.skip_phase()
@@ -123,6 +125,8 @@ func _reset_stats() -> void:
 		&"built": 0,
 		&"crafted": 0,
 		&"torches_placed": 0,
+		&"repairs": 0,
+		&"shards": 0,
 		&"nights_survived": 0,
 	}
 

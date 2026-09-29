@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="BuildingDefinition" load_steps=3 format=3 uid="uid://b0campsitebuilddefsnaptrap"]
+
+[ext_resource type="Script" path="res://scripts/buildings/building_definition.gd" id="1_def"]
+[ext_resource type="Texture2D" path="res://assets/icons/trap.png" id="9_icon"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"snap_trap"
+display_name = "Snap Trap"
+description = "Snaps the first Shadow Imp that steps on it: 10 damage and holds it still. 3 snaps, then it breaks."
+scene_path = "res://scenes/buildings/SnapTrap.tscn"
+cost = {
+&"wood": 2,
+&"fiber": 1,
+&"scrap": 1
+}
+max_hp = 3
+footprint_size = Vector3(0.9, 0.3, 0.7)
+ui_color = Color(0.6, 0.5, 0.35, 1)
+sort_order = 30
+icon = ExtResource("9_icon")

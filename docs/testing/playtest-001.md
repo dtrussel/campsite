@@ -1,6 +1,6 @@
 # Playtest 001: first human playtest
 
-> Build: `Campsite-0.11.0-playtest1-windows.zip` (produced by
+> Build: `Campsite-0.12.0-playtest1-windows.zip` (produced by
 > `tools/export_playtest.sh`). Target session length: **20–30 minutes**
 > (about 10 minutes per run, 2 runs).
 
@@ -50,6 +50,13 @@ worked:
 - [ ] Right-click the campfire (or press **C** next to it) and craft a Torch
       (1 Wood, 1 Resin, 1 Leaves).
 - [ ] Plant the torch with **Q** somewhere imps will pass.
+- [ ] Gather clay, mushrooms and scrap from the far corners of the map.
+- [ ] Right-click a damaged fence to fix it; give Nela the Repair task
+      with **V**.
+- [ ] At the campfire: Feed the Fire, cook a Berry Snack (eat it with
+      **R**), and lay the Stone Hearth.
+- [ ] Pick up a Glow Shard an imp dropped; build a Snap Trap (**B**, **3**)
+      and a Glow Lantern (**B**, **4**).
 - [ ] Send the sibling to guard the camp with **G**.
 - [ ] Press **N** to call the night early.
 - [ ] Right-click an imp to attack it (the boy keeps swinging until it dies); also try **Space**.
@@ -70,7 +77,8 @@ worked:
 | Crafting | Did they discover crafting on their own? At the campfire? | |
 | Night | Did the sunset warning register? Did they go back to the fire? | |
 | Combat | Was it clear when they hit an imp, or got hit? | |
-| Sibling | Did they use F/G/T/Y? Which task, and why? | |
+| Sibling | Did they use F/G/T/Y/V? Which task, and why? | |
+| Repair & loot | Did they notice damaged fences can be fixed? Did they chase the Glow Shards? Too much wood spent on repairs? | |
 | Difficulty | Which night was hardest? Did they lose? Why? | |
 | Bugs | Anything stuck, glitchy, or crashing? | |
 
