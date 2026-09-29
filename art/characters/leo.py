@@ -651,6 +651,14 @@ def build():
         obj.modifiers.new("Armature", "ARMATURE").object = rig
 
     meshes = [body, head, hair, walking_stick]
+    # Game budget (~35k): each mesh is decimated; its dense copy carries
+    # the paint and is baked onto it (HIGH_POLY=1 keeps the dense meshes).
+    highs = {}
+    if not os.environ.get("HIGH_POLY"):
+        chibi.report(meshes)
+        budget = {body: 20000, head: 4500, hair: 9000, walking_stick: 1500}
+        highs = {mesh: chibi.lowpoly(mesh, tris) for mesh, tris in budget.items()}
+
     if os.environ.get("SCULPT"):
         print("leo tris:", common.triangle_count(meshes))
         sculpt_previews(rig, meshes, "leo", ("Running_A", 8), ("1H_Melee_Attack_Chop", 14))
@@ -672,7 +680,7 @@ def build():
                      shadow=(0.84, 0.58, 0.5), light=(1.12, 1.03, 0.94), key_strength=0.35,
                      curvature_tint=((0.9, 0.7, 0.64), (1.05, 1.03, 1.02), 0.45)) \
             if mesh is head else dict(cavity=0.3)
-        paint_bake.paint(mesh, source="attribute", **dict(params, **extra))
+        paint_bake.paint(mesh, source="attribute", high=highs.get(mesh), **dict(params, **extra))
     rig.data.pose_position = "POSE"
     common.export_glb(os.path.join(common.OUT_DIR, "leo.glb"), [rig] + meshes, animations=True, image_format="WEBP")
     print("leo tris:", common.triangle_count(meshes))

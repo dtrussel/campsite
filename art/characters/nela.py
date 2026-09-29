@@ -643,6 +643,14 @@ def build():
         obj.modifiers.new("Armature", "ARMATURE").object = rig
 
     meshes = [body, head, hair_obj, lamp, plush]
+    # Game budget (~35k): each mesh is decimated; its dense copy carries
+    # the paint and is baked onto it (HIGH_POLY=1 keeps the dense meshes).
+    highs = {}
+    if not os.environ.get("HIGH_POLY"):
+        chibi.report(meshes)
+        budget = {body: 18000, head: 4500, hair_obj: 10000, lamp: 1500, plush: 1500}
+        highs = {mesh: chibi.lowpoly(mesh, tris) for mesh, tris in budget.items()}
+
     if os.environ.get("SCULPT"):
         print("nela tris:", common.triangle_count(meshes + [glow]))
         sculpt_previews(rig, meshes + [glow], "nela", ("Running_A", 8), ("PickUp", 12))
@@ -665,7 +673,7 @@ def build():
                      shadow=(0.84, 0.58, 0.5), light=(1.12, 1.03, 0.94), key_strength=0.35,
                      curvature_tint=((0.9, 0.7, 0.64), (1.05, 1.03, 1.02), 0.45)) \
             if mesh is head else dict(cavity=0.3)
-        paint_bake.paint(mesh, source="attribute", **dict(params, **extra))
+        paint_bake.paint(mesh, source="attribute", high=highs.get(mesh), **dict(params, **extra))
     paint_bake.flat_material(glow, GLOW, emission=3.0, name="lantern_glow")
     rig.data.pose_position = "POSE"
     common.export_glb(os.path.join(common.OUT_DIR, "nela.glb"), [rig] + meshes + [glow], animations=True, image_format="WEBP")

@@ -327,6 +327,21 @@ def decimate_tris(obj, target):
         common.apply_all_modifiers(obj)
 
 
+def lowpoly(obj, target):
+    """Game-budget mesh with the paint of the dense one: copies `obj` (the
+    dense 'high' mesh keeps colours, folds and face UVs for the bake) and
+    decimates `obj` itself to about `target` triangles. Skin weights,
+    parenting and the armature modifier stay on `obj`. Returns the copy,
+    to pass to paint_bake.paint(obj, high=copy)."""
+    high = obj.copy()
+    high.data = obj.data.copy()
+    high.name = obj.name + "_high"
+    obj.users_collection[0].objects.link(high)
+    high.hide_render = True    # shown again only for its own bake
+    decimate_tris(obj, target)
+    return high
+
+
 def fuse(parts, name, voxel=0.014, smooth=2, faces=None):
     """Union of overlapping closed primitives -> one watertight mesh.
     faces: triangle budget."""

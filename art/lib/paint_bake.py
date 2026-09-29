@@ -276,13 +276,18 @@ def draft_size():
     return int(value) if value else None
 
 
-def paint(obj, source="attribute", name=None, emissive=None, **params):
+def paint(obj, source="attribute", name=None, emissive=None, high=None, **params):
     """Bakes the painted look into a new texture on `obj`.
 
     source: "attribute" (face colours in 'Col') or the name of an existing
     UV map whose material texture provides the base colours.
     emissive: optional (r,g,b,strength) to make the exported material glow.
+    high: optional dense copy of `obj` (chibi.lowpoly): the look is painted
+    on it (colours, folds, AO and curvature at full density), then
+    transferred onto the low-poly `obj`, and the copy is deleted.
     """
+    if high is not None:
+        return _paint_high_to_low(obj, high, source, name, emissive, params)
     p = dict(DEFAULTS)
     p.update(params)
     if draft_size():
@@ -321,7 +326,24 @@ def paint(obj, source="attribute", name=None, emissive=None, **params):
     common.select_only([obj])
     bpy.ops.object.bake(type="EMIT")
 
-    # Final material: painted texture, matte.
+    final = _final_material(obj, image, name, emissive)
+
+    # Keep only the painted UVs so glTF exports one TEXCOORD.
+    for layer in list(mesh.uv_layers):
+        if layer.name != "PaintUV":
+            mesh.uv_layers.remove(layer)
+    mesh.uv_layers["PaintUV"].active_render = True
+    if "Col" in mesh.color_attributes:
+        mesh.color_attributes.remove(mesh.color_attributes["Col"])
+    bpy.data.materials.remove(bake_mat)
+    for m in old_materials:
+        if m is not None and m.users == 0:
+            bpy.data.materials.remove(m)
+    return final
+
+
+def _final_material(obj, image, name, emissive):
+    """Swaps in the plain matte material showing the painted texture."""
     final = bpy.data.materials.new(name + "_painted")
     final.use_nodes = True
     tree = final.node_tree
@@ -335,20 +357,78 @@ def paint(obj, source="attribute", name=None, emissive=None, **params):
         bsdf.inputs["Emission Color"].default_value = (*emissive[:3], 1)
         bsdf.inputs["Emission Strength"].default_value = emissive[3]
     image.pack()
-    mesh.materials.clear()
-    mesh.materials.append(final)
+    obj.data.materials.clear()
+    obj.data.materials.append(final)
+    return final
 
-    # Keep only the painted UVs so glTF exports one TEXCOORD.
+
+def _paint_high_to_low(low, high, source, name, emissive, params):
+    """Paints the dense copy (with the low mesh hidden, so it cannot shadow
+    it), then transfers that texture onto the low mesh's own UVs with a
+    selected-to-active colour bake."""
+    name = name or low.name
+    low.hide_render = True
+    high.hide_render = False
+    painted = paint(high, source=source, name=name + "_high", **params)
+    low.hide_render = False
+    size = draft_size() or params.get("size", DEFAULTS["size"])
+    margin = params.get("margin", DEFAULTS["margin"])
+    if draft_size():
+        margin = max(2, margin * draft_size() // 1024)
+    scene = bpy.context.scene
+    scene.cycles.samples = 1
+
+    mesh = low.data
     for layer in list(mesh.uv_layers):
-        if layer.name != "PaintUV":
-            mesh.uv_layers.remove(layer)
+        mesh.uv_layers.remove(layer)
+    paint_uv = mesh.uv_layers.new(name="PaintUV")
+    mesh.uv_layers.active = paint_uv
+    common.select_only([low])
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=0.01, area_weight=0.6)
+    bpy.ops.uv.pack_islands(margin=0.004)
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+    image = bpy.data.images.new(name + "_paint", size, size, alpha=False)
+    target_mat = bpy.data.materials.new(name + "_target")
+    target_mat.use_nodes = True
+    target = target_mat.node_tree.nodes.new("ShaderNodeTexImage")
+    target.image = image
+    target_mat.node_tree.nodes.active = target
+    old_materials = [s.material for s in low.material_slots]
+    mesh.materials.clear()
+    mesh.materials.append(target_mat)
+
+    bake = scene.render.bake
+    bake.margin = margin
+    bake.use_selected_to_active = True
+    bake.cage_extrusion = params.get("cage_extrusion", 0.012)
+    bake.max_ray_distance = params.get("max_ray_distance", 0.04)
+    bake.use_pass_direct = False
+    bake.use_pass_indirect = False
+    bake.use_pass_color = True
+    common.select_only([high, low])
+    bpy.context.view_layer.objects.active = low
+    bpy.ops.object.bake(type="DIFFUSE", pass_filter={"COLOR"})
+    bake.use_selected_to_active = False
+
+    final = _final_material(low, image, name, emissive)
     mesh.uv_layers["PaintUV"].active_render = True
     if "Col" in mesh.color_attributes:
         mesh.color_attributes.remove(mesh.color_attributes["Col"])
-    bpy.data.materials.remove(bake_mat)
+    bpy.data.materials.remove(target_mat)
     for m in old_materials:
         if m is not None and m.users == 0:
             bpy.data.materials.remove(m)
+    high_image = painted.node_tree.nodes.get("Image Texture").image if painted else None
+    high_data = high.data
+    bpy.data.objects.remove(high)
+    bpy.data.meshes.remove(high_data)
+    if painted is not None and painted.users == 0:
+        bpy.data.materials.remove(painted)
+    if high_image is not None and high_image.users == 0:
+        bpy.data.images.remove(high_image)
     return final
 
 
