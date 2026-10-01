@@ -109,13 +109,27 @@ Controls (LoL-style; also shown in-game with **H**):
 
 ```
 tools/check.sh            # headless: import, validate all data, full smoke run
-tools/export_playtest.sh  # Windows zip + self-tested Linux export in build/
+tools/export_playtest.sh  # Windows + Linux zips in build/ (Linux build self-tested);
+                          # --split also makes the Windows build as program + data zips
 tools/fetch_assets.sh     # re-vendor the CC0 models and fonts (only when the list changes)
 tools/build_audio.sh      # rebuild the procedural sound into game/assets/audio/
 ```
 
 Both scripts use `godot` on PATH, or `$GODOT`. Exports need the Godot
 4.3 export templates.
+
+### Continuous integration
+
+`.github/workflows/build.yml` runs on every push and pull request:
+`tools/check.sh`, then `tools/export_playtest.sh`. The Windows and Linux
+zips are attached to the run as the `Campsite-<version>` artifact (kept
+14 days). CI caches Godot and the export templates it needs; it does not
+rebuild the art (the baked assets are committed).
+
+To publish a release, bump `config/version` in `game/project.godot`,
+then push a matching tag, e.g. `git tag v0.25.0-playtest1 && git push
+origin v0.25.0-playtest1`. The tag's run creates a GitHub Release with
+both zips (a pre-release when the version has a `-suffix`).
 
 ## Repository structure
 

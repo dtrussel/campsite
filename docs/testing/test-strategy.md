@@ -61,6 +61,9 @@ all green and `handoff.md` is updated.
   Xvfb for visual review.
 - Exported builds support `-- --selftest` to prove the PCK loads its
   data.
+- CI (`.github/workflows/build.yml`) runs `tools/check.sh` and
+  `tools/export_playtest.sh` (including the Linux self-test) on every
+  push and pull request.
 - Headless tests run as **scenes**, not `-s` scripts, because `-s`
   runs without autoloads.
 
