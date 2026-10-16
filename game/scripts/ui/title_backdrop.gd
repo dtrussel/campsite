@@ -107,7 +107,7 @@ func _build_environment() -> void:
 	env.fog_density = 0.018
 	env.adjustment_enabled = true
 	env.adjustment_contrast = 1.1
-	env.adjustment_saturation = 1.2
+	env.adjustment_saturation = 1.28
 	var world_env: WorldEnvironment = WorldEnvironment.new()
 	world_env.environment = env
 	add_child(world_env)
@@ -117,3 +117,8 @@ func _build_environment() -> void:
 	sun.light_energy = dusk["sun_energy"]
 	sun.shadow_enabled = true
 	add_child(sun)
+	# Feature 031: the same tilt-shift and warm grade as in a run, at dusk.
+	var post: PostFx = PostFx.new()
+	post.follow_time = false
+	post.night_amount = 0.4
+	add_child(post)

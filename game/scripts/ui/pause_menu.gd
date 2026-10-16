@@ -36,6 +36,7 @@ func _ready() -> void:
 	column.add_child(UiKit.divider(280))
 	column.add_child(_volume_row("Music", AudioManager.music_volume, AudioManager.set_music_volume))
 	column.add_child(_volume_row("Sounds", AudioManager.sfx_volume, AudioManager.set_sfx_volume))
+	column.add_child(_toggle_row("Blur", PostFx.is_blur_enabled(), PostFx.set_blur_enabled))
 	_root.visible = false
 
 
@@ -57,6 +58,22 @@ func _volume_row(caption: String, value: float, on_changed: Callable) -> HBoxCon
 	slider.focus_mode = Control.FOCUS_NONE
 	slider.value_changed.connect(on_changed)
 	row.add_child(slider)
+	return row
+
+
+## A labelled on/off switch; changes apply (and are saved) at once.
+func _toggle_row(caption: String, value: bool, on_toggled: Callable) -> HBoxContainer:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	var label: Label = UiKit.label(caption.to_upper(), 18)
+	label.custom_minimum_size = Vector2(96, 0)
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(label)
+	var toggle: CheckButton = CheckButton.new()
+	toggle.button_pressed = value
+	toggle.focus_mode = Control.FOCUS_NONE
+	toggle.toggled.connect(on_toggled)
+	row.add_child(toggle)
 	return row
 
 

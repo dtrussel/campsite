@@ -5,12 +5,14 @@ extends Node3D
 ## LoL-style camera rig: a fixed, north-up, steep angle that smoothly
 ## follows the boy. The mouse wheel zooms between `min_zoom` and
 ## `max_zoom`; Fx.shake() adds decaying trauma for hit feedback.
+## A narrow lens from further back (feature 031) flattens perspective
+## toward the miniature-diorama look of the concept art.
 
 @export var target_path: NodePath
 @export var smoothing: float = 6.0
 @export var offset: Vector3 = Vector3.ZERO
-@export var pitch_degrees: float = 48.0
-@export var distance: float = 15.0
+@export var pitch_degrees: float = 50.0
+@export var distance: float = 18.5
 @export var min_zoom: float = 0.65
 @export var max_zoom: float = 1.3
 @export var zoom_step: float = 0.1
