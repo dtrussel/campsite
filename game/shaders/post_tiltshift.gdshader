@@ -19,7 +19,7 @@ uniform float max_lod = 2.2;                               // mip level at full 
 uniform float grade_strength : hint_range(0.0, 1.0) = 1.0;
 uniform float night_amount : hint_range(0.0, 1.0) = 0.0;
 uniform vec3 day_shadow : source_color = vec3(0.55, 0.36, 0.42);
-uniform vec3 day_highlight : source_color = vec3(1.0, 0.84, 0.6);
+uniform vec3 day_highlight : source_color = vec3(1.0, 0.9, 0.74);
 uniform vec3 night_shadow : source_color = vec3(0.26, 0.36, 0.62);
 uniform vec3 night_highlight : source_color = vec3(1.0, 0.74, 0.46);
 uniform float vignette : hint_range(0.0, 1.0) = 0.32;
@@ -48,7 +48,7 @@ void fragment() {
 	vec3 highlight_tint = mix(day_highlight, night_highlight, night_amount);
 	vec3 tint = mix(shadow_tint, highlight_tint, smoothstep(0.05, 0.75, luma));
 	tint /= max(dot(tint, vec3(0.299, 0.587, 0.114)), 0.001);
-	col = mix(col, col * tint, 0.22 * grade_strength);
+	col = mix(col, col * tint, 0.18 * grade_strength);
 
 	// Vignette, a little stronger at night.
 	vec2 centered = (uv - vec2(0.5, focus_center)) * vec2(1.0, 1.25);

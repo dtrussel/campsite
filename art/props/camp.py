@@ -1,5 +1,6 @@
 """Camp props in the chunky, painted style: campfire (stones + teepee
-logs), kid's striped tent, stake fence, watch post, torch, woodpile,
+logs), the cream A-frame tent with crossed poles (feature 031, after
+the October concept art), stake fence, watch post, torch, woodpile,
 crate, barrel and toadstools. Each prop is built from bevelled blocks,
 logs and ropes, coloured per part, then painted-baked.
 
@@ -29,6 +30,7 @@ ROPE = (0.86, 0.74, 0.5)
 IRON = (0.3, 0.32, 0.38)
 CANVAS = (0.95, 0.88, 0.72)
 STRIPE = (0.86, 0.26, 0.2)
+CANVAS_SHADE = (0.8, 0.68, 0.5)
 ROOF = (0.72, 0.22, 0.16)
 ROOF_LIGHT = (0.92, 0.42, 0.24)
 
@@ -162,11 +164,11 @@ def finish_prop(parts, name, size=512, preview_elevation=35, **paint):
 def campfire():
     common.reset(3)
     parts = []
-    for i in range(11):
-        a = i / 11 * math.tau
-        s = boulder("stone%d" % i, 200 + i, (1.0, 0.8, 0.7), moss=False)
-        s.scale = (0.5, 0.5, 0.5)
-        s.location = (math.cos(a) * 0.82, math.sin(a) * 0.82, 0)
+    for i in range(12):
+        a = i / 12 * math.tau
+        s = boulder("stone%d" % i, 200 + i, (1.0, 0.85, 0.75), moss=False)
+        s.scale = (0.56, 0.56, 0.56)
+        s.location = (math.cos(a) * 0.86, math.sin(a) * 0.86, 0)
         s.rotation_euler = (0, 0, a)
         common.apply_transform(s)
         common.select_only([s])
@@ -235,27 +237,38 @@ def tent():
     common.shade_smooth(canvas, auto_angle=40)
 
     def canvas_colour(pos, normal):
-        stripe = math.sin(pos.x * math.pi * 2.6) > 0.35
-        base = STRIPE if stripe else CANVAS
-        if pos.x > length / 2 - 0.05:
-            base = CANVAS
+        # Cream canvas with darker seams and a weathered hem.
+        seam = abs(math.sin(pos.x * math.pi * 1.8)) < 0.12
+        base = common.lerp(CANVAS, CANVAS_SHADE, 0.55) if seam else CANVAS
+        if pos.z < 0.32:
+            base = common.lerp(base, CANVAS_SHADE, 0.6)
         return base
     common.color_by(canvas, canvas_colour, smooth=False)
     parts = [canvas]
     # Front flaps rolled open, dark opening inside.
     for side in (-1, 1):
         roll = log(1.3, 0.09, seed=side + 5)
-        common.set_color(roll, STRIPE)
+        common.set_color(roll, CANVAS_SHADE)
         roll.rotation_euler = (math.atan2(h, half_w) * side, math.radians(90), 0)
         roll.location = (-length / 2 - 0.05, side * half_w * 0.48, h * 0.52)
         parts.append(roll)
     inner = block((0.02, half_w * 1.6, h * 0.8), location=(-length / 2 + 0.25, 0, h * 0.4), bevel=0.0)
-    common.set_color(inner, (0.12, 0.1, 0.14))
+    common.set_color(inner, (0.24, 0.16, 0.12))
     parts.append(inner)
-    # Poles and pegs with ropes.
+    # A rolled bedroll and a pillow just inside the opening.
+    bedroll = log(0.9, 0.16, rotation=(0, 0, math.pi / 2), location=(-length / 2 + 0.6, 0.15, 0.2), taper=1.0, seed=9)
+    common.set_color(bedroll, (0.36, 0.42, 0.62))
+    parts.append(bedroll)
+    pillow = block((0.36, 0.5, 0.14), location=(-length / 2 + 0.6, -0.38, 0.12), bevel=0.06)
+    common.set_color(pillow, (0.62, 0.36, 0.48))
+    parts.append(pillow)
+    # Crossed A-frame poles at both ends, their tips poking past the ridge.
     for x in (-length / 2 - 0.08, length / 2 + 0.08):
-        pole = stake(h + 0.15, 0.045, location=(x, 0, 0), seed=int(x * 10))
-        parts.append(pole)
+        for side in (-1, 1):
+            # Leaning inward: the pair crosses just above the ridge.
+            pole = stake(h + 0.6, 0.04, location=(x, side * half_w * 0.82, 0), tilt=(side * math.radians(27), 0),
+                         seed=int(x * 10) + side)
+            parts.append(pole)
     for sx in (-1, 1):
         for sy in (-1, 1):
             peg = stake(0.28, 0.035, location=(sx * length * 0.42, sy * (half_w + 0.35), 0), seed=sx * 3 + sy)

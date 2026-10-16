@@ -16,8 +16,8 @@ from mathutils import Vector, noise
 
 from lib import common, paint_bake, preview
 
-STONE = (0.5, 0.53, 0.64)
-STONE_WARM = (0.68, 0.63, 0.58)
+STONE = (0.6, 0.57, 0.54)  # warm beige-grey (feature 031)
+STONE_WARM = (0.78, 0.7, 0.58)
 MOSS = (0.35, 0.58, 0.18)
 MOSS_LIGHT = (0.62, 0.78, 0.25)
 

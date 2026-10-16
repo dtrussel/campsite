@@ -14,8 +14,8 @@ extends Node
 ## phase -> palette. Angles are the sun's pitch in degrees.
 const PALETTES: Dictionary = {
 	0: {  # DAY: golden hour (concept 01/02)
-		"sun_color": Color(1.0, 0.84, 0.6), "sun_energy": 1.0, "sun_pitch": -42.0,
-		"ambient": Color(0.66, 0.58, 0.52), "ambient_energy": 0.42,
+		"sun_color": Color(1.0, 0.88, 0.7), "sun_energy": 1.0, "sun_pitch": -42.0,
+		"ambient": Color(0.62, 0.6, 0.6), "ambient_energy": 0.42,
 		"sky_top": Color(0.36, 0.56, 0.86), "sky_horizon": Color(0.98, 0.84, 0.62),
 		"fog": Color(0.95, 0.8, 0.6), "fog_density": 0.006, "fire": 0.75,
 	},

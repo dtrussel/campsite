@@ -33,7 +33,7 @@ const FOLIAGE_SHADER: Shader = preload("res://shaders/painted_foliage.gdshader")
 
 ## Shared tints so the world stays colour-consistent.
 const TINT_FOLIAGE: Color = Color(0.92, 0.78, 0.48)
-const TINT_ROCK: Color = Color(0.62, 0.63, 0.7)
+const TINT_ROCK: Color = Color(0.8, 0.76, 0.7)
 
 static var _cache: Dictionary = {}  # "<instance id>|<profile>" -> Material
 

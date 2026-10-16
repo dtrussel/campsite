@@ -6,7 +6,9 @@ render_mode diffuse_lambert, specular_disabled;
 // A worn dirt clearing around the campfire with a ragged edge, and a
 // darker, cooler leaf-litter "haunted" forest floor toward the edge
 // where the night mobs come from. Two rotated samples per texture,
-// blended by large-scale noise, hide the tiling.
+// blended by large-scale noise, hide the tiling. Feature 031: a wider
+// clearing and a winding dirt path out to the south lane, after the
+// concept art.
 
 uniform sampler2D grass_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D dirt_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -14,8 +16,12 @@ uniform sampler2D leaves_tex : source_color, filter_linear_mipmap_anisotropic, r
 uniform float grass_tile = 7.0;
 uniform float dirt_tile = 5.0;
 uniform float leaves_tile = 5.5;
-uniform vec4 edge_tint : source_color = vec4(0.46, 0.44, 0.58, 1.0);
-uniform float clearing_radius = 4.2;
+uniform vec4 edge_tint : source_color = vec4(0.56, 0.5, 0.54, 1.0);
+uniform float clearing_radius = 5.4;
+// Keep in sync with WorldDressing.on_path().
+uniform vec2 path_dir = vec2(0.0, 1.0);
+uniform float path_width = 0.85;
+uniform float path_length = 20.0;
 uniform float edge_start = 17.0;
 uniform float edge_end = 30.0;
 
@@ -71,6 +77,13 @@ void fragment() {
 	float r = length(p);
 	float ragged = (fbm(p * 0.8) - 0.5) * 1.6;
 	float dirt_mask = 1.0 - smoothstep(clearing_radius - 0.5, clearing_radius + 0.3, r + ragged);
+	// Winding path: distance across a sine-wobbled line along path_dir.
+	float along = dot(p, path_dir);
+	float across = dot(p, vec2(-path_dir.y, path_dir.x)) - sin(along * 0.28) * 1.3 + ragged * 0.35;
+	float path_mask = (1.0 - smoothstep(path_width - 0.25, path_width + 0.25, abs(across)))
+		* smoothstep(clearing_radius - 1.5, clearing_radius, along)
+		* (1.0 - smoothstep(path_length - 5.0, path_length, along));
+	dirt_mask = max(dirt_mask, path_mask);
 	vec3 dirt = untiled(dirt_tex, p, dirt_tile, macro);
 	// Darker scorched ring right around the fire.
 	dirt = mix(dirt * vec3(0.5, 0.45, 0.42), dirt, smoothstep(0.7, 1.9, r));
@@ -86,7 +99,7 @@ void fragment() {
 	vec3 leaves = untiled(leaves_tex, p, leaves_tile, macro);
 	color = mix(color, leaves, litter * 0.85);
 	float edge = smoothstep(edge_start, edge_end, edge_d);
-	color = mix(color, color * edge_tint.rgb, edge * 0.8);
+	color = mix(color, color * edge_tint.rgb, edge * 0.65);
 
 	ALBEDO = color;
 	ROUGHNESS = 1.0;

@@ -131,8 +131,9 @@ def grass(seed=11):
     macro = tile_noise(rng, 3.2)
     mid = tile_noise(rng, 2.2, low_cut=6.0)
     t = np.clip(macro * 0.75 + mid * 0.35 - 0.05, 0, 1)
-    canvas = palette_lerp([(0.0, rgb(0.16, 0.34, 0.14)), (0.4, rgb(0.28, 0.5, 0.19)), (0.7, rgb(0.42, 0.62, 0.23)),
-                           (1.0, rgb(0.6, 0.72, 0.3))], t)
+    # Feature 031: deeper greens with warm, sunlit yellow-green tops.
+    canvas = palette_lerp([(0.0, rgb(0.12, 0.27, 0.11)), (0.4, rgb(0.23, 0.43, 0.15)), (0.7, rgb(0.4, 0.56, 0.19)),
+                           (1.0, rgb(0.62, 0.66, 0.26))], t)
     # Painted clumps: soft darker undersides with sunlit tops.
     for _ in range(420):
         x, y = rng.uniform(0, SIZE, 2)
@@ -154,11 +155,12 @@ def grass(seed=11):
     for _ in range(1400):
         x, y = rng.uniform(0, SIZE, 2)
         stroke(canvas, x, y, -math.pi / 2 + rng.normal(0, 0.4), rng.uniform(8, 16), 2.5,
-               rgb(0.55, 0.75, 0.3), rgb(0.85, 0.92, 0.5), opacity=0.55)
+               rgb(0.55, 0.7, 0.26), rgb(0.92, 0.88, 0.42), opacity=0.55)
     # A few flower clusters (white daisies and yellow buttercups).
-    for _ in range(26):
+    for _ in range(60):
         cx, cy = rng.uniform(0, SIZE, 2)
-        petal = rgb(1.0, 0.98, 0.92) if rng.random() < 0.55 else rgb(1.0, 0.85, 0.25)
+        roll = rng.random()
+        petal = rgb(1.0, 0.98, 0.92) if roll < 0.45 else rgb(1.0, 0.85, 0.25) if roll < 0.85 else rgb(0.66, 0.5, 0.9)
         for _ in range(rng.integers(2, 5)):
             fx, fy = cx + rng.normal(0, 14), cy + rng.normal(0, 14)
             blob(canvas, fx + 1.5, fy + 2, 6, 6, rgb(0.1, 0.25, 0.1), opacity=0.4)
@@ -174,8 +176,9 @@ def dirt(seed=23):
     macro = tile_noise(rng, 3.0)
     mid = tile_noise(rng, 2.0, low_cut=8.0)
     t = np.clip(macro * 0.7 + mid * 0.4 - 0.05, 0, 1)
-    canvas = palette_lerp([(0.0, rgb(0.34, 0.24, 0.16)), (0.45, rgb(0.5, 0.37, 0.24)), (0.8, rgb(0.62, 0.48, 0.32)),
-                           (1.0, rgb(0.72, 0.58, 0.4))], t)
+    # Feature 031: warm ochre earth that glows orange in the sun.
+    canvas = palette_lerp([(0.0, rgb(0.4, 0.25, 0.14)), (0.45, rgb(0.58, 0.39, 0.22)), (0.8, rgb(0.72, 0.51, 0.3)),
+                           (1.0, rgb(0.82, 0.62, 0.38))], t)
     # Broad sideways brush strokes of packed earth.
     for _ in range(2600):
         x, y = rng.uniform(0, SIZE, 2)
@@ -195,7 +198,7 @@ def dirt(seed=23):
         x, y = rng.uniform(0, SIZE, 2)
         r = rng.uniform(3.5, 11) if rng.random() < 0.85 else rng.uniform(12, 20)
         a = rng.uniform(0, math.pi)
-        stone = rgb(0.58, 0.54, 0.5) * rng.uniform(0.85, 1.15) + rgb(0.04, 0.02, 0.0) * rng.uniform(-1, 1)
+        stone = rgb(0.66, 0.6, 0.52) * rng.uniform(0.85, 1.15) + rgb(0.04, 0.02, 0.0) * rng.uniform(-1, 1)
         blob(canvas, x + r * 0.35, y + r * 0.45, r * 1.05, r * 0.8, rgb(0.2, 0.14, 0.1), opacity=0.55, angle=a, softness=0.6)
         blob(canvas, x, y, r, r * 0.75, stone, angle=a, softness=0.25,
              light=(rgb(0.9, 0.88, 0.82), stone * 0.55 + rgb(0.02, 0.0, 0.05)))

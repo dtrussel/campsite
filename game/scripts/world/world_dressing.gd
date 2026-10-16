@@ -6,6 +6,8 @@ extends Node3D
 ## deterministically (fixed seed), so the map looks hand-dressed without
 ## hundreds of hand-placed nodes:
 ##   - a grass field (one MultiMesh, wind-animated, with a few flowers),
+##   - wildflower drifts: daisy/buttercup clumps and purple lupine
+##     spikes (two more MultiMeshes, feature 031),
 ##   - a dense forest border that frames the arena,
 ##   - a spooky edge (dead trees, jack-o'-lanterns) near the mob spawns,
 ##   - camp props around the campfire (tent, woodpile, crates, lanterns).
@@ -16,7 +18,12 @@ const GRASS_SHADER: Shader = preload("res://shaders/grass.gdshader")
 @export var dressing_seed: int = 1337
 @export var grass_count: int = 3200
 @export var grass_extent: float = 24.0
-@export var clearing_radius: float = 4.6
+@export var clearing_radius: float = 5.8
+## The dirt path out to the south lane; keep in sync with
+## painted_ground.gdshader (path_dir, path_width, path_length).
+@export var path_width: float = 0.85
+@export var path_length: float = 20.0
+@export var flower_drifts: int = 70
 @export var border_inner: float = 21.5
 @export var border_outer: float = 36.0
 ## Mob spawn directions (degrees) get the haunted props.
@@ -31,6 +38,7 @@ func _ready() -> void:
 	_rng.seed = dressing_seed
 	_collect_keep_out()
 	_build_grass()
+	_build_flowers()
 	_build_border()
 	_build_haunted_edges()
 	_build_camp()
@@ -55,7 +63,7 @@ func _build_grass() -> void:
 			continue
 		if r < 8.0 and _rng.randf() < 0.45:
 			continue
-		if _blocked(p, 0.2):
+		if _blocked(p, 0.2) or on_path(p, 0.3):
 			continue
 		var s: float = _rng.randf_range(0.7, 1.35)
 		var basis: Basis = Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3(s, s * _rng.randf_range(0.8, 1.3), s))
@@ -84,7 +92,7 @@ func _tuft_color() -> Color:
 	if roll < 0.055:
 		return Color(0.85, 0.5, 0.95)  # violet
 	var g: float = _rng.randf()
-	return Color(0.46, 0.68, 0.26).lerp(Color(0.66, 0.8, 0.34), g)
+	return Color(0.32, 0.52, 0.18).lerp(Color(0.56, 0.68, 0.26), g)
 
 
 ## Three crossed, tapering blades (about 0.45 m tall).
@@ -106,6 +114,114 @@ func _make_tuft_mesh() -> ArrayMesh:
 	return st.commit()
 
 
+## True when `p` (x, z) lies on the winding dirt path (plus `margin`).
+func on_path(p: Vector2, margin: float = 0.0) -> bool:
+	var along: float = p.y
+	if along < clearing_radius - 1.5 or along > path_length:
+		return false
+	return absf(-p.x - sin(along * 0.28) * 1.3) < path_width + margin
+
+
+# --- Wildflowers (feature 031) ---------------------------------------------
+
+const FLOWER_COLORS: Array = [Color(1.0, 0.82, 0.2), Color(1.0, 0.9, 0.35), Color(0.98, 0.97, 0.92)]
+const LUPINE_COLORS: Array = [Color(0.6, 0.44, 0.92), Color(0.76, 0.5, 0.9), Color(0.5, 0.42, 0.86)]
+
+
+## Drifts of flowers: each drift is one colour family, so the meadow reads
+## in painted patches like the concept art, thickest around the camp's
+## edge and toward the trees.
+func _build_flowers() -> void:
+	var clumps: Array = [[], []]   # transforms, colors
+	var spikes: Array = [[], []]
+	for i in range(flower_drifts):
+		var angle: float = _rng.randf() * TAU
+		var radius: float = _rng.randf_range(clearing_radius + 0.8, 10.0) if i % 5 < 2 else _rng.randf_range(10.0, 20.5)
+		var center: Vector2 = Vector2(cos(angle), sin(angle)) * radius
+		var lupine: bool = _rng.randf() < 0.3
+		var target: Array = spikes if lupine else clumps
+		var family: Color = (LUPINE_COLORS if lupine else FLOWER_COLORS)[_rng.randi() % 3]
+		for k in range(_rng.randi_range(6, 13)):
+			var p: Vector2 = center + Vector2(_rng.randfn(0.0, 0.9), _rng.randfn(0.0, 0.9))
+			if p.length() < clearing_radius + 0.3 or _blocked(p, 0.3) or on_path(p, 0.2):
+				continue
+			var s: float = _rng.randf_range(0.8, 1.25)
+			var basis: Basis = Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3(s, s, s))
+			target[0].append(Transform3D(basis, Vector3(p.x, 0.0, p.y)))
+			target[1].append(family.lerp(Color.WHITE, _rng.randf_range(0.0, 0.15)))
+	_add_flower_multimesh("Flowers", _make_flower_mesh(), clumps)
+	_add_flower_multimesh("Lupines", _make_lupine_mesh(), spikes)
+
+
+func _add_flower_multimesh(node_name: String, mesh: ArrayMesh, data: Array) -> void:
+	var multimesh: MultiMesh = MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	multimesh.use_colors = true
+	multimesh.mesh = mesh
+	multimesh.instance_count = data[0].size()
+	for i in range(data[0].size()):
+		multimesh.set_instance_transform(i, data[0][i])
+		multimesh.set_instance_color(i, data[1][i])
+	var instance: MultiMeshInstance3D = MultiMeshInstance3D.new()
+	instance.name = node_name
+	instance.multimesh = multimesh
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var material: ShaderMaterial = ShaderMaterial.new()
+	material.shader = GRASS_SHADER
+	material.set_shader_parameter("color_height", 0.26)
+	material.set_shader_parameter("wind_strength", 0.08)
+	instance.material_override = material
+	add_child(instance)
+
+
+## Four stems, each topped by a flat five-petal head (about 0.3-0.4 m).
+func _make_flower_mesh() -> ArrayMesh:
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var heads: Array = [Vector3(0.0, 0.36, 0.0), Vector3(0.12, 0.3, 0.05), Vector3(-0.08, 0.32, 0.11),
+		Vector3(-0.04, 0.28, -0.12)]
+	for head in heads:
+		_add_stem(st, Vector3(head.x * 0.6, 0.0, head.z * 0.6), head, 0.012)
+		var petal_r: float = 0.075
+		for k in range(5):
+			var a0: float = TAU * float(k) / 5.0
+			var a1: float = a0 + TAU / 10.0
+			var a2: float = a0 + TAU / 5.0
+			var tip: Vector3 = head + Vector3(cos(a1), 0.0, sin(a1)) * petal_r
+			for v in [head, head + Vector3(cos(a0), 0.0, sin(a0)) * petal_r * 0.45, tip,
+					head, tip, head + Vector3(cos(a2), 0.0, sin(a2)) * petal_r * 0.45]:
+				st.set_normal(Vector3.UP)
+				st.add_vertex(v)
+	return st.commit()
+
+
+## A stem with stacked, tapering crossed quads: a lupine spike (~0.65 m).
+func _make_lupine_mesh() -> ArrayMesh:
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for spike in [Vector3(0.0, 0.0, 0.0), Vector3(0.14, 0.0, 0.06)]:
+		var size: float = 1.0 if spike == Vector3.ZERO else 0.75
+		_add_stem(st, spike, spike + Vector3(0, 0.3 * size, 0), 0.014)
+		var bottom: float = 0.26 * size
+		var top: float = 0.68 * size
+		for side in [Vector3(1, 0, 0), Vector3(0, 0, 1)]:
+			var w0: Vector3 = side * 0.06 * size
+			var w1: Vector3 = side * 0.012
+			var a: Vector3 = spike + Vector3(0, bottom, 0)
+			var b: Vector3 = spike + Vector3(0, top, 0)
+			for v in [a - w0, a + w0, b + w1, a - w0, b + w1, b - w1]:
+				st.set_normal(Vector3.UP)
+				st.add_vertex(v)
+	return st.commit()
+
+
+func _add_stem(st: SurfaceTool, from: Vector3, to: Vector3, width: float) -> void:
+	var side: Vector3 = Vector3(width, 0.0, 0.0)
+	for v in [from - side, from + side, to + side, from - side, to + side, to - side]:
+		st.set_normal(Vector3.UP)
+		st.add_vertex(v)
+
+
 # --- Forest border ---------------------------------------------------------
 
 func _build_border() -> void:
@@ -113,13 +229,17 @@ func _build_border() -> void:
 		["custom/tree_a.glb", 0.85, 1.1],
 		["custom/tree_b.glb", 0.85, 1.1],
 		["custom/tree_c.glb", 0.85, 1.1],
-		["custom/pine_a.glb", 0.8, 1.05],
-		["custom/pine_b.glb", 0.8, 1.05],
+		["custom/pine_c.glb", 0.8, 1.05],
+		["custom/pine_d.glb", 0.8, 1.05],
+		["custom/pine_c.glb", 0.85, 1.1],
+		["custom/flower_bush.glb", 0.9, 1.3],
 	]
 	var far_models: Array = [
 		["custom/tree_a.glb", 1.1, 1.5],
 		["custom/tree_b.glb", 1.1, 1.5],
 		["custom/tree_c.glb", 1.1, 1.5],
+		["custom/pine_d.glb", 1.1, 1.4],
+		["custom/pine_c.glb", 1.1, 1.4],
 		["custom/pine_b.glb", 1.1, 1.4],
 		["custom/hill_a.glb", 4.5, 6.0],
 		["custom/hill_b.glb", 4.5, 6.0],

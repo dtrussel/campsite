@@ -1,6 +1,8 @@
 """Berry bush: a low mound of leafy clumps studded with big, glossy
 cartoon berries (red with a white catch-light). Outputs berry_bush.glb
-(full) and berry_bush_picked.glb (depleted, no berries)."""
+(full) and berry_bush_picked.glb (depleted, no berries). Feature 031
+adds flower_bush.glb: the same mound dotted with yellow and white
+blossoms, a decor shrub after the October concept art."""
 
 import math
 import os
@@ -21,6 +23,7 @@ LEAF_LIGHT = (0.55, 0.76, 0.24)
 BERRY = (0.9, 0.08, 0.22)
 BERRY_DARK = (0.5, 0.02, 0.12)
 SHINE = (1.0, 0.9, 0.9)
+BLOSSOMS = [((1.0, 0.82, 0.18), (0.95, 0.55, 0.08)), ((1.0, 0.98, 0.9), (0.98, 0.78, 0.2))]
 
 
 def clumps(rng, count, radius, seed, squash=0.75):
@@ -97,6 +100,45 @@ def colour_berry(obj, center):
     common.color_by(obj, colour, smooth=False)
 
 
+def colour_blossom(obj, petal, heart):
+    zs = [v.co.z for v in obj.data.vertices]
+    top = max(zs)
+
+    def colour(pos, normal):
+        return heart if pos.z > top - 0.012 else petal
+    common.color_by(obj, colour, smooth=False)
+
+
+def build_flowering():
+    seed = 13
+    common.reset(seed)
+    rng = random.Random(seed)
+    leaves = common.join(clumps(rng, 6, 0.85, seed), "leaves")
+    common.decimate(leaves, 1100)
+    common.shade_smooth(leaves)
+    colour_leaves(leaves, seed)
+    parts = [leaves]
+    # Reuse the berry placement; each "berry" becomes a flat blossom.
+    for i, b in enumerate(berries(rng, 12, leaves)):
+        # Bigger, slightly flattened blossoms, scaled about their own centre.
+        verts = b.data.vertices
+        c = sum((v.co for v in verts), Vector()) / len(verts)
+        for v in verts:
+            d = v.co - c
+            v.co = c + Vector((d.x * 1.5, d.y * 1.5, d.z * 0.9))
+        petal, heart = BLOSSOMS[(i // 3) % 2]
+        colour_blossom(b, petal, heart)
+        parts.append(b)
+    bush = common.join(parts, "flower_bush")
+    mod = bush.modifiers.new("Decimate", "DECIMATE")
+    mod.ratio = min(1.0, 2200 / common.triangle_count([bush]))
+    common.apply_all_modifiers(bush)
+    paint_bake.paint(bush, size=512, ao_distance=0.4, ao_strength=0.7, edge_strength=0.0, noise_scale=4.0)
+    common.export_glb(os.path.join(common.OUT_DIR, "flower_bush.glb"), [bush])
+    print("flower_bush tris:", common.triangle_count([bush]))
+    preview.render([bush], "flower_bush")
+
+
 def build(picked):
     seed = 5
     common.reset(seed)
@@ -123,3 +165,4 @@ def build(picked):
 if __name__ == "__main__":
     build(False)
     build(True)
+    build_flowering()

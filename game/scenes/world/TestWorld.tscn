@@ -50,7 +50,7 @@ tonemap_mode = 2
 tonemap_exposure = 0.9
 tonemap_white = 2.2
 glow_enabled = true
-glow_intensity = 0.55
+glow_intensity = 0.45
 glow_strength = 0.8
 glow_bloom = 0.0
 glow_blend_mode = 2
@@ -62,7 +62,7 @@ fog_sky_affect = 0.3
 adjustment_enabled = true
 adjustment_brightness = 1.02
 adjustment_contrast = 1.12
-adjustment_saturation = 1.28
+adjustment_saturation = 1.22
 
 [node name="TestWorld" type="Node3D"]
 

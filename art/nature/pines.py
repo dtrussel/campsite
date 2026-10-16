@@ -1,6 +1,10 @@
-"""Stylized autumn pines (the Resin trees): a slim trunk carrying
-stacked, drooping tiers with scalloped, pointed hems, painted from deep
-red underneath to glowing orange and golden tips. Outputs pine_a/b.glb."""
+"""Stylized pines: a slim trunk carrying stacked, drooping tiers with
+scalloped, pointed hems.
+
+- pine_a/b.glb: the autumn Resin trees, painted from deep red underneath
+  to glowing orange and golden tips.
+- pine_c/d.glb (feature 031): green border pines after the October
+  concept art, deep green underneath to yellow-green sunlit tips."""
 
 import math
 import os
@@ -20,6 +24,8 @@ BARK_LIGHT = (0.58, 0.4, 0.26)
 NEEDLE_DARK = (0.48, 0.12, 0.08)
 NEEDLE = (0.86, 0.36, 0.1)
 NEEDLE_LIGHT = (1.0, 0.72, 0.25)
+AUTUMN = (NEEDLE_DARK, NEEDLE, NEEDLE_LIGHT)
+GREEN = ((0.08, 0.24, 0.12), (0.2, 0.46, 0.18), (0.66, 0.78, 0.26))
 
 
 def tier(rng, z, radius, height, points, droop, seed):
@@ -76,7 +82,8 @@ def trunk(height):
     return obj
 
 
-def build(name, seed, tiers, base_radius, total):
+def build(name, seed, tiers, base_radius, total, palette=AUTUMN):
+    dark, mid, light = palette
     common.reset(seed)
     rng = random.Random(seed)
     parts = [trunk(total * 0.5)]
@@ -99,9 +106,9 @@ def build(name, seed, tiers, base_radius, total):
         n = noise.noise(pos * 2.2 + Vector((seed, 0, 0)))
         up = max(0.0, normal.z)
         t = max(0.0, min(1.0, up * 0.8 + h * 0.3 + n * 0.35 + r * 0.12))
-        c = common.lerp(NEEDLE_DARK, NEEDLE, min(1.0, t * 1.5))
+        c = common.lerp(dark, mid, min(1.0, t * 1.5))
         if t > 0.5:
-            c = common.lerp(c, NEEDLE_LIGHT, min(1.0, (t - 0.5) * 2.0))
+            c = common.lerp(c, light, min(1.0, (t - 0.5) * 2.0))
         return c
     common.color_by(tree, colour)
     paint_bake.paint(tree, size=1024, ao_distance=0.7, ao_strength=0.7, edge_strength=0.25, edge_radius=0.05,
@@ -114,3 +121,5 @@ def build(name, seed, tiers, base_radius, total):
 if __name__ == "__main__":
     build("pine_a", 11, 4, 1.35, 3.8)
     build("pine_b", 23, 5, 1.2, 4.4)
+    build("pine_c", 31, 4, 1.3, 4.0, GREEN)
+    build("pine_d", 47, 5, 1.15, 4.8, GREEN)

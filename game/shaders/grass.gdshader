@@ -9,11 +9,14 @@ render_mode cull_disabled, diffuse_lambert, specular_disabled;
 uniform vec4 base_color : source_color = vec4(0.34, 0.56, 0.23, 1.0);
 uniform float wind_strength = 0.12;
 uniform float wind_speed = 1.3;
+// Height (m) where the instance colour has fully taken over; flowers
+// (feature 031) use a low value so their heads read as solid colour.
+uniform float color_height = 0.45;
 
 varying float blade_height;
 
 void vertex() {
-	blade_height = clamp(VERTEX.y / 0.45, 0.0, 1.0);
+	blade_height = clamp(VERTEX.y / color_height, 0.0, 1.0);
 	vec3 world = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 	float wave = sin(world.x * 0.35 + world.z * 0.2 + TIME * wind_speed)
 		+ 0.5 * sin(world.x * 1.1 - TIME * wind_speed * 1.7);
