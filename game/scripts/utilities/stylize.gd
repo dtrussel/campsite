@@ -139,7 +139,7 @@ static func _make_painted(base: StandardMaterial3D, profile: String) -> Material
 	material.set_shader_parameter("rim_amount", 0.35 if character else 0.15)
 	if character:
 		# Characters move: lighter texel noise and no ground contact shade.
-		material.set_shader_parameter("texel_amount", 0.03)
+		material.set_shader_parameter("texel_amount", 0.02)
 		material.set_shader_parameter("contact_dark", 0.0)
 	var outline: ShaderMaterial = ShaderMaterial.new()
 	outline.shader = OUTLINE_SHADER

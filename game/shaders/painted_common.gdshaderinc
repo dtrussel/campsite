@@ -11,8 +11,8 @@ uniform vec3 shade_tint : source_color = vec3(0.52, 0.34, 0.26);
 uniform float under_dark = 0.32;
 uniform float contact_height = 0.4;
 uniform float contact_dark = 0.32;
-uniform float texel_size = 0.05;
-uniform float texel_amount = 0.07;
+uniform float texel_size = 0.025;
+uniform float texel_amount = 0.04;
 uniform float blotch_amount = 0.08;
 
 float painted_hash(vec3 p) {

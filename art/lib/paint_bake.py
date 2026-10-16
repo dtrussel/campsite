@@ -432,6 +432,73 @@ def _paint_high_to_low(low, high, source, name, emissive, params):
     return final
 
 
+def paint_direct(low, high, name=None, emissive=None, **params):
+    """High-to-low in one bake (props, feature 031 M6): the painted look
+    (colours, top light, AO, cavity, edges, strokes) is evaluated on the
+    dense `high` mesh and baked straight into `low`'s texture, with no
+    intermediate texture on the dense mesh, so fine detail stays crisp.
+    The dense copy is deleted afterwards."""
+    p = dict(DEFAULTS)
+    p.update(params)
+    if draft_size():
+        p["size"] = draft_size()
+        p["samples"] = min(p["samples"], 8)
+        p["margin"] = max(2, p["margin"] * draft_size() // 1024)
+    name = name or low.name
+    scene = bpy.context.scene
+    scene.cycles.samples = p["samples"]
+
+    mesh = low.data
+    for layer in list(mesh.uv_layers):
+        mesh.uv_layers.remove(layer)
+    mesh.uv_layers.new(name="PaintUV")
+    common.select_only([low])
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=0.01, area_weight=0.6)
+    bpy.ops.uv.pack_islands(margin=0.004)
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+    bake_mat = _build_bake_material(high, "attribute", p)
+    high.data.materials.clear()
+    high.data.materials.append(bake_mat)
+    high.hide_render = False
+
+    image = bpy.data.images.new(name + "_paint", p["size"], p["size"], alpha=False)
+    target_mat = bpy.data.materials.new(name + "_target")
+    target_mat.use_nodes = True
+    target = target_mat.node_tree.nodes.new("ShaderNodeTexImage")
+    target.image = image
+    target_mat.node_tree.nodes.active = target
+    old_materials = [s.material for s in low.material_slots]
+    mesh.materials.clear()
+    mesh.materials.append(target_mat)
+
+    bake = scene.render.bake
+    bake.margin = p["margin"]
+    bake.use_selected_to_active = True
+    bake.cage_extrusion = params.get("cage_extrusion", 0.02)
+    bake.max_ray_distance = params.get("max_ray_distance", 0.05)
+    common.select_only([high, low])
+    bpy.context.view_layer.objects.active = low
+    bpy.ops.object.bake(type="EMIT")
+    bake.use_selected_to_active = False
+
+    final = _final_material(low, image, name, emissive)
+    mesh.uv_layers["PaintUV"].active_render = True
+    if "Col" in mesh.color_attributes:
+        mesh.color_attributes.remove(mesh.color_attributes["Col"])
+    bpy.data.materials.remove(target_mat)
+    for m in old_materials:
+        if m is not None and m.users == 0:
+            bpy.data.materials.remove(m)
+    high_data = high.data
+    bpy.data.objects.remove(high)
+    bpy.data.meshes.remove(high_data)
+    bpy.data.materials.remove(bake_mat)
+    return final
+
+
 def flat_material(obj, color, emission=0.0, name="flat"):
     """Plain (unbaked) material, e.g. for glowing eyes."""
     mat = bpy.data.materials.new(name)

@@ -17,7 +17,7 @@ import bpy  # noqa: E402,F401
 import bmesh  # noqa: E402
 from mathutils import Vector, noise  # noqa: E402
 
-from lib import common, paint_bake, preview  # noqa: E402
+from lib import common, detail, paint_bake, preview  # noqa: E402
 from props.camp import (CANVAS, IRON, ROOF, ROOF_LIGHT, ROPE, WOOD, WOOD_DARK, WOOD_LIGHT, block,  # noqa: E402
                         colour_wood, log, rope_ring)
 from props.forage import _decimate_to, finish_prop  # noqa: E402
@@ -80,11 +80,14 @@ def export_with_glow(parts, name, glow_parts, budget, size=256):
 # --- Props -----------------------------------------------------------------
 
 def log_seat():
+    """A bark log on two notched chocks; the top is adzed flat to sit on."""
     common.reset(61)
-    parts = [log(1.3, 0.2, location=(0, 0, 0.21), seed=3)]
+    seat = detail.bark_log(1.3, 0.2, location=(0, 0, 0.21), seed=3, adze=0.93)
+    parts = [seat]
     for x in (-0.42, 0.42):
-        parts.append(post((0.12, 0.38, 0.1), (x, 0, 0.05), int(x * 10)))
-    finish_prop(parts, "log_seat", size=256, budget=700)
+        parts.append(detail.plank((0.12, 0.42, 0.12), location=(x, 0, 0.06), seed=int(x * 10) + 5,
+                                  base=WOOD_DARK, light=WOOD, knots=False))
+    detail.bake_prop(parts, "log_seat", budget=800, size=512)
 
 
 def stump_seat():
