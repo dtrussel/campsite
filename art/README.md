@@ -19,6 +19,7 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 
 | Path | What |
 |------|------|
+| `reference/concept-2026-10/` | The team's concept art (WebP, reference only) and its index. The style guide is [`docs/design/art-direction.md`](../docs/design/art-direction.md) |
 | `lib/common.py` | Scene reset, mesh helpers, sRGB→linear colours, per-vertex/face colouring, painted grime, remesh/decimate, glTF export |
 | `lib/paint_bake.py` | **The painted look**: bakes base colour, a warm-top/cool-bottom tint, AO, edge highlights and brush noise into one texture (`<name>_painted` material) |
 | `lib/preview.py` | Preview renders |

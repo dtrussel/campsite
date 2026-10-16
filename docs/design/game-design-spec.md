@@ -394,6 +394,10 @@ more strategic feel is wanted.
 
 ## L. Art direction
 
+The concrete target look (golden-hour tilt-shift diorama, palette, props)
+is in [`art-direction.md`](art-direction.md), distilled from the team's
+concept art in `art/reference/concept-2026-10/`.
+
 - **Stylized 3D.** Low-poly, hand-painted-feeling textures, clear
   silhouettes.
 - **Strong readability** from the top-down / iso camera: characters and
