@@ -3,30 +3,28 @@ extends Node3D
 ## WorldDressing
 ##
 ## Builds the non-interactive art around the play area at load time,
-## deterministically (fixed seed), so the map looks hand-dressed without
-## hundreds of hand-placed nodes:
-##   - a grass field (one MultiMesh, wind-animated, with a few flowers),
-##   - wildflower drifts: daisy/buttercup clumps and purple lupine
-##     spikes (two more MultiMeshes, feature 031),
-##   - a dense forest border that frames the arena,
-##   - a spooky edge (dead trees, jack-o'-lanterns) near the mob spawns,
-##   - camp props around the campfire (tent, woodpile, crates, lanterns),
-##     and the feature 031 homestead decor after the concept art: log and
-##     stump seats, a cooking tripod, the tent-glyph signpost, lantern
-##     posts, a striped market stall and a stone well.
-## Nothing here affects gameplay except the tent, woodpile, stall and
-## well colliders. Decor stays off the mob lanes (the axes) and the path.
+## deterministically (fixed seed), following the map plan in WorldLayout
+## (feature 032): a camp yard in a forest clearing, four themed groves
+## in the corners between the mob lanes, footpaths out to them and the
+## old road south. It builds:
+##   - the painted ground's paths and grove grounds (via WorldLayout),
+##   - a grass field (one MultiMesh, wind-animated), wildflower drifts
+##     (daisies, buttercups, lupines) thickest in the Berry Hollow,
+##     ferns in the shady groves and reeds round the pond,
+##   - each grove's dressing and landmark: the giant pine, the pond,
+##     the woodcutters' stumps and woodpile, the great oak's fairy ring,
+##   - a forest wall that matches the grove behind it, with gaps where
+##     the mob lanes come in (dead trees and jack-o'-lanterns there),
+##   - the camp props and the feature 031 homestead decor.
+## Nothing here affects gameplay except the colliders of the tent,
+## woodpile, stall, well and pond. Solid decor stays off the mob lanes.
 
 const GRASS_SHADER: Shader = preload("res://shaders/grass.gdshader")
+const WATER_SHADER: Shader = preload("res://shaders/pond_water.gdshader")
 
 @export var dressing_seed: int = 1337
-@export var grass_count: int = 3200
+@export var grass_count: int = 3400
 @export var grass_extent: float = 24.0
-@export var clearing_radius: float = 5.8
-## The dirt path out to the south lane; keep in sync with
-## painted_ground.gdshader (path_dir, path_width, path_length).
-@export var path_width: float = 0.85
-@export var path_length: float = 20.0
 @export var flower_drifts: int = 70
 @export var border_inner: float = 21.5
 @export var border_outer: float = 36.0
@@ -41,11 +39,22 @@ var _scene_cache: Dictionary = {}
 func _ready() -> void:
 	_rng.seed = dressing_seed
 	_collect_keep_out()
+	_apply_ground()
+	_build_camp()
+	_build_groves()
 	_build_grass()
 	_build_flowers()
 	_build_border()
 	_build_haunted_edges()
-	_build_camp()
+
+
+func _apply_ground() -> void:
+	var ground: MeshInstance3D = get_parent().get_node_or_null("Ground/GroundMesh") as MeshInstance3D
+	if ground == null:
+		return
+	var material: ShaderMaterial = ground.get_surface_override_material(0) as ShaderMaterial
+	if material != null:
+		WorldLayout.apply_to_ground(material)
 
 
 # --- Grass ---------------------------------------------------------------
@@ -63,11 +72,17 @@ func _build_grass() -> void:
 		var p: Vector2 = Vector2(_rng.randf_range(-grass_extent, grass_extent), _rng.randf_range(-grass_extent, grass_extent))
 		# Denser toward the edges, sparse in the worn camp area.
 		var r: float = p.length()
-		if r < clearing_radius + _rng.randf_range(-0.3, 1.2):
+		if r < WorldLayout.CAMP_RADIUS + _rng.randf_range(-0.3, 1.2):
 			continue
 		if r < 8.0 and _rng.randf() < 0.45:
 			continue
-		if _blocked(p, 0.2) or on_path(p, 0.3):
+		if _blocked(p, 0.2) or on_path(p, 0.3) or WorldLayout.in_pond(p, 0.5):
+			continue
+		# Needle litter under the pines and the trodden lane trails stay thin.
+		var zone: WorldLayout.Zone = WorldLayout.zone_at(p)
+		if zone == WorldLayout.Zone.PINE_GROVE and _rng.randf() < 0.6:
+			continue
+		if WorldLayout.in_lane(p, -2.2) and r > 11.0 and _rng.randf() < 0.6:
 			continue
 		var s: float = _rng.randf_range(0.7, 1.35)
 		var basis: Basis = Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3(s, s * _rng.randf_range(0.8, 1.3), s))
@@ -131,12 +146,9 @@ func _make_tuft_mesh() -> ArrayMesh:
 	return st.commit()
 
 
-## True when `p` (x, z) lies on the winding dirt path (plus `margin`).
+## True when `p` (x, z) lies on a footpath or the road (plus `margin`).
 func on_path(p: Vector2, margin: float = 0.0) -> bool:
-	var along: float = p.y
-	if along < clearing_radius - 1.5 or along > path_length:
-		return false
-	return absf(-p.x + sin(along * 0.28) * 1.3) < path_width + margin
+	return WorldLayout.on_path(p, margin)
 
 
 # --- Wildflowers (feature 031) ---------------------------------------------
@@ -152,15 +164,14 @@ func _build_flowers() -> void:
 	var clumps: Array = [[], []]   # transforms, colors
 	var spikes: Array = [[], []]
 	for i in range(flower_drifts):
-		var angle: float = _rng.randf() * TAU
-		var radius: float = _rng.randf_range(clearing_radius + 0.8, 10.0) if i % 5 < 2 else _rng.randf_range(10.0, 20.5)
-		var center: Vector2 = Vector2(cos(angle), sin(angle)) * radius
+		var center: Vector2 = _drift_centre(i)
 		var lupine: bool = _rng.randf() < 0.3
 		var target: Array = spikes if lupine else clumps
 		var family: Color = (LUPINE_COLORS if lupine else FLOWER_COLORS)[_rng.randi() % 3]
 		for k in range(_rng.randi_range(6, 13)):
 			var p: Vector2 = center + Vector2(_rng.randfn(0.0, 0.9), _rng.randfn(0.0, 0.9))
-			if p.length() < clearing_radius + 0.3 or _blocked(p, 0.3) or on_path(p, 0.2):
+			if p.length() < WorldLayout.CAMP_RADIUS + 0.3 or _blocked(p, 0.3) or on_path(p, 0.2) \
+					or WorldLayout.in_pond(p, 0.6) or WorldLayout.zone_at(p) == WorldLayout.Zone.PINE_GROVE:
 				continue
 			var s: float = _rng.randf_range(0.8, 1.25)
 			var basis: Basis = Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3(s, s, s))
@@ -170,7 +181,19 @@ func _build_flowers() -> void:
 	_add_flower_multimesh("Lupines", _make_lupine_mesh(), spikes)
 
 
-func _add_flower_multimesh(node_name: String, mesh: ArrayMesh, data: Array) -> void:
+## Drift centres: two in five ring the camp yard, two in five fill the
+## Berry Hollow, the rest are spread over the meadow and the woodlot.
+func _drift_centre(i: int) -> Vector2:
+	if i % 5 == 1 or i % 5 == 3:
+		var hollow: Array = WorldLayout.GROVES[3]
+		return hollow[1] + Vector2.from_angle(_rng.randf() * TAU) * _rng.randf_range(0.0, hollow[2])
+	var angle: float = _rng.randf() * TAU
+	var radius: float = _rng.randf_range(WorldLayout.CAMP_RADIUS + 0.8, 10.0) if i % 5 == 0 else _rng.randf_range(9.0, 19.0)
+	return Vector2(cos(angle), sin(angle)) * radius
+
+
+func _add_flower_multimesh(node_name: String, mesh: ArrayMesh, data: Array, color_height: float = 0.26,
+		wind: float = 0.08) -> void:
 	var multimesh: MultiMesh = MultiMesh.new()
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	multimesh.use_colors = true
@@ -185,8 +208,8 @@ func _add_flower_multimesh(node_name: String, mesh: ArrayMesh, data: Array) -> v
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var material: ShaderMaterial = ShaderMaterial.new()
 	material.shader = GRASS_SHADER
-	material.set_shader_parameter("color_height", 0.26)
-	material.set_shader_parameter("wind_strength", 0.08)
+	material.set_shader_parameter("color_height", color_height)
+	material.set_shader_parameter("wind_strength", wind)
 	instance.material_override = material
 	add_child(instance)
 
@@ -270,71 +293,97 @@ func _add_stem(st: SurfaceTool, from: Vector3, to: Vector3, width: float) -> voi
 
 # --- Forest border ---------------------------------------------------------
 
+const BROADLEAF: Array = ["custom/tree_a.glb", "custom/tree_b.glb", "custom/tree_c.glb"]
+const GREEN_PINES: Array = ["custom/pine_c.glb", "custom/pine_d.glb"]
+const BOULDERS: Array = ["custom/rock_a.glb", "custom/rock_b.glb", "custom/rock_c.glb"]
+const TALL_SOUTH_LIMIT: float = 16.5
+
+## The wall behind each grove matches it: pines behind the Pine Grove,
+## pines and boulders behind the pond, broadleaf woods behind the
+## Woodlot and the Berry Hollow. [path, min scale, max scale]
+const WALL_NEAR: Dictionary = {
+	WorldLayout.Zone.PINE_GROVE: [["custom/pine_c.glb", 0.85, 1.15], ["custom/pine_d.glb", 0.85, 1.15],
+		["custom/pine_c.glb", 0.9, 1.2], ["custom/tree_c.glb", 0.85, 1.05]],
+	WorldLayout.Zone.STONY_POND: [["custom/pine_c.glb", 0.85, 1.15], ["custom/pine_d.glb", 0.85, 1.15],
+		["custom/rock_a.glb", 1.3, 2.0], ["custom/rock_b.glb", 1.3, 2.0], ["custom/tree_a.glb", 0.85, 1.05]],
+	WorldLayout.Zone.WOODLOT: [["custom/tree_a.glb", 0.85, 1.15], ["custom/tree_b.glb", 0.85, 1.15],
+		["custom/tree_c.glb", 0.85, 1.15], ["custom/pine_d.glb", 0.85, 1.0]],
+	WorldLayout.Zone.BERRY_HOLLOW: [["custom/tree_a.glb", 0.85, 1.15], ["custom/tree_b.glb", 0.85, 1.15],
+		["custom/tree_c.glb", 0.85, 1.15], ["custom/flower_bush.glb", 0.9, 1.3]],
+}
+const WALL_FAR: Dictionary = {
+	WorldLayout.Zone.PINE_GROVE: [["custom/pine_c.glb", 1.1, 1.5], ["custom/pine_d.glb", 1.1, 1.5],
+		["custom/hill_a.glb", 4.5, 6.0]],
+	WorldLayout.Zone.STONY_POND: [["custom/pine_c.glb", 1.1, 1.5], ["custom/pine_d.glb", 1.1, 1.5],
+		["custom/rock_b.glb", 2.2, 3.2], ["custom/hill_b.glb", 4.5, 6.0]],
+	WorldLayout.Zone.WOODLOT: [["custom/tree_a.glb", 1.1, 1.5], ["custom/tree_b.glb", 1.1, 1.5],
+		["custom/tree_c.glb", 1.1, 1.5], ["custom/hill_a.glb", 4.5, 6.0]],
+	WorldLayout.Zone.BERRY_HOLLOW: [["custom/tree_a.glb", 1.1, 1.5], ["custom/tree_b.glb", 1.1, 1.5],
+		["custom/tree_c.glb", 1.1, 1.5], ["custom/hill_b.glb", 4.5, 6.0]],
+}
+
+
 func _build_border() -> void:
-	var near_models: Array = [
-		["custom/tree_a.glb", 0.85, 1.1],
-		["custom/tree_b.glb", 0.85, 1.1],
-		["custom/tree_c.glb", 0.85, 1.1],
-		["custom/pine_c.glb", 0.8, 1.05],
-		["custom/pine_d.glb", 0.8, 1.05],
-		["custom/pine_c.glb", 0.85, 1.1],
-		["custom/flower_bush.glb", 0.9, 1.3],
-	]
-	var far_models: Array = [
-		["custom/tree_a.glb", 1.1, 1.5],
-		["custom/tree_b.glb", 1.1, 1.5],
-		["custom/tree_c.glb", 1.1, 1.5],
-		["custom/pine_d.glb", 1.1, 1.4],
-		["custom/pine_c.glb", 1.1, 1.4],
-		["custom/pine_b.glb", 1.1, 1.4],
-		["custom/hill_a.glb", 4.5, 6.0],
-		["custom/hill_b.glb", 4.5, 6.0],
-	]
 	var backdrop: Array = [
 		["custom/mountain_a.glb", 7.0, 9.0],
 		["custom/mountain_b.glb", 7.0, 9.0],
 		["custom/hill_c.glb", 6.0, 8.0],
 	]
-	# Inner ring: individual trees just past the play boundary.
+	# Inner wall: individual trees just past the play boundary, with a
+	# gap where each mob lane comes in.
+	for i in range(90):
+		var angle: float = _rng.randf() * TAU
+		var p: Vector2 = _square_ring(angle, _rng.randf_range(border_inner - 1.5, border_inner + 3.0))
+		if _lane_gap(p, 3.6):
+			continue
+		_place_from(WALL_NEAR[WorldLayout.corner_zone(p)], p)
+	# Middle ring: denser woods behind.
 	for i in range(70):
 		var angle: float = _rng.randf() * TAU
-		var r: float = _rng.randf_range(border_inner - 1.5, border_inner + 3.0)
-		_place_square_ring(near_models, angle, r)
-	# Middle ring: tree clusters.
-	for i in range(60):
-		var angle: float = _rng.randf() * TAU
-		_place_square_ring(far_models, angle, _rng.randf_range(border_inner + 3.0, border_outer - 6.0))
+		var p: Vector2 = _square_ring(angle, _rng.randf_range(border_inner + 3.0, border_outer - 6.0))
+		if _lane_gap(p, 2.4):
+			continue
+		_place_from(WALL_FAR[WorldLayout.corner_zone(p)], p)
 	# Backdrop: hills and mountains to close the horizon.
 	for i in range(26):
 		var angle: float = TAU * float(i) / 26.0 + _rng.randf_range(-0.08, 0.08)
-		_place_square_ring(backdrop, angle, _rng.randf_range(border_outer - 4.0, border_outer + 4.0))
+		_place_from(backdrop, _square_ring(angle, _rng.randf_range(border_outer - 4.0, border_outer + 4.0)))
 
 
-## Places a random model from `models` on a rounded square ring so the
-## border follows the square play area.
-func _place_square_ring(models: Array, angle: float, radius: float) -> void:
+## A point on a rounded square ring, so the border follows the square
+## play area.
+func _square_ring(angle: float, radius: float) -> Vector2:
 	var dir: Vector2 = Vector2(cos(angle), sin(angle))
 	var squareness: float = maxf(absf(dir.x), absf(dir.y))
-	var p: Vector2 = dir / squareness * radius * 0.92
+	return dir / squareness * radius * 0.92
+
+
+## True near a lane axis: the forest opens there for the mob trails.
+func _lane_gap(p: Vector2, half_width: float) -> bool:
+	return absf(p.x) < half_width or absf(p.y) < half_width
+
+
+func _place_from(models: Array, p: Vector2) -> Node3D:
 	var pick: Array = models[_rng.randi() % models.size()]
-	_spawn_model(pick[0], Vector3(p.x, 0.0, p.y), _rng.randf_range(pick[1], pick[2]), _rng.randf() * TAU)
+	return _spawn_model(pick[0], Vector3(p.x, 0.0, p.y), _rng.randf_range(pick[1], pick[2]), _rng.randf() * TAU)
 
 
-# --- Haunted edges near mob spawns ---------------------------------------
+# --- Haunted lane mouths near the mob spawns -------------------------------
 
+## Where each lane leaves the forest: a ragged gate of dead trees either
+## side of the trail, and a glowing jack-o'-lantern by it.
 func _build_haunted_edges() -> void:
 	var dead: Array = ["custom/dead_tree_a.glb", "custom/dead_tree_b.glb", "custom/dead_tree_c.glb"]
 	for spawn_angle in spawn_angles:
 		var base: float = deg_to_rad(spawn_angle)
 		var dir: Vector3 = Vector3(sin(base), 0, -cos(base))
 		var side: Vector3 = Vector3(-dir.z, 0, dir.x)
-		for i in range(5):
-			var along: float = _rng.randf_range(17.5, 23.0)
-			var offset: float = _rng.randf_range(2.0, 6.0) * (1.0 if i % 2 == 0 else -1.0)
+		for i in range(6):
+			var along: float = _rng.randf_range(17.0, 24.0)
+			var offset: float = _rng.randf_range(2.4, 4.6) * (1.0 if i % 2 == 0 else -1.0)
 			var pos: Vector3 = dir * along + side * offset
 			_spawn_model(dead[_rng.randi() % dead.size()], pos, _rng.randf_range(0.9, 1.3), _rng.randf() * TAU)
-		# A glowing jack-o'-lantern marks each lane.
-		var lantern_pos: Vector3 = dir * 18.5 + side * _rng.randf_range(2.5, 3.5)
+		var lantern_pos: Vector3 = dir * 17.5 + side * _rng.randf_range(2.2, 2.8)
 		var pumpkin: Node3D = _spawn_model("custom/jack_o_lantern.glb", lantern_pos, 0.85, _rng.randf() * TAU)
 		if pumpkin != null:
 			var glow: OmniLight3D = OmniLight3D.new()
@@ -367,46 +416,300 @@ func _build_camp() -> void:
 			light.omni_range = 4.0
 			light.position = Vector3(0, 0.75, 0)
 			lantern.add_child(light)
-	# Toadstool clusters dotted around the clearing edge and forest.
-	for i in range(14):
-		var angle: float = _rng.randf() * TAU
-		var r: float = _rng.randf_range(6.0, 19.0)
-		var p: Vector2 = Vector2(cos(angle), sin(angle)) * r
-		if _blocked(p, 0.8):
-			continue
-		_spawn_model("custom/toadstools.glb", Vector3(p.x, 0, p.y), _rng.randf_range(0.7, 1.2), _rng.randf() * TAU)
-	# A few loose boulders for texture.
-	for i in range(8):
-		var angle2: float = _rng.randf() * TAU
-		var p2: Vector2 = Vector2(cos(angle2), sin(angle2)) * _rng.randf_range(9.0, 19.0)
-		if _blocked(p2, 1.2):
-			continue
-		var rock: String = ["custom/rock_a.glb", "custom/rock_b.glb", "custom/rock_c.glb"][_rng.randi() % 3]
-		_spawn_model(rock, Vector3(p2.x, 0, p2.y), _rng.randf_range(0.5, 0.9), _rng.randf() * TAU)
 
 
-## Feature 031: the cozy decor of concept 01/02, on the diagonals between
-## the mob lanes. Warm lights in the lantern posts and inside the tent
-## make the night pools of light of concept 03.
+## Feature 031: the cozy decor of concept 01/02. Feature 032: lantern
+## posts mark where the footpaths and the road leave the yard; flower
+## bushes ring the yard between them. Warm lights in the lantern posts
+## and inside the tent make the night pools of light of concept 03.
 func _build_homestead(tent: Node3D) -> void:
 	_spawn_model("custom/log_seat.glb", Vector3(-1.95, 0, 0.7), 1.0, deg_to_rad(75.0))
 	_spawn_model("custom/stump_seat.glb", Vector3(1.75, 0, 1.25), 0.95, 0.4)
 	_spawn_model("custom/stump_seat.glb", Vector3(0.35, 0, 2.15), 0.8, 1.9)
 	_spawn_model("custom/cook_tripod.glb", Vector3(1.7, 0, -1.7), 1.0, 0.3)
-	_spawn_model("custom/camp_sign.glb", Vector3(-4.7, 0, 3.7), 1.0, deg_to_rad(15.0))
-	for spot in [Vector3(4.3, 0, 3.9), Vector3(-6.0, 0, -4.4), Vector3(-0.9, 0, 6.3)]:
+	# The signpost stands where the road and the woodlot path part.
+	_spawn_model("custom/camp_sign.glb", Vector3(-2.5, 0, 5.4), 1.0, deg_to_rad(20.0))
+	for spot in [Vector3(3.2, 0, 5.7), Vector3(-3.0, 0, -7.0), Vector3(-0.9, 0, 6.6), Vector3(7.0, 0, -2.6)]:
 		var lamp: Node3D = _spawn_model("custom/lantern_post.glb", spot, 1.0, _rng.randf_range(-0.6, 0.6) + PI)
 		if lamp != null:
 			lamp.add_child(_warm_light(Vector3(0.44, 1.36, 0.0), 1.6, 5.5))
 	var stall: Node3D = _spawn_model("custom/market_stall.glb", Vector3(3.9, 0, -5.7), 1.0, deg_to_rad(-15.0))
 	_add_blocker(stall, Vector3(2.0, 1.0, 1.1))
-	var well: Node3D = _spawn_model("custom/stone_well.glb", Vector3(5.8, 0, 4.8), 1.0, deg_to_rad(10.0))
+	var well: Node3D = _spawn_model("custom/stone_well.glb", Vector3(6.8, 0, 3.7), 1.0, deg_to_rad(10.0))
 	_add_blocker(well, Vector3(1.6, 1.0, 1.6))
-	for spot in [Vector3(-7.0, 0, 2.2), Vector3(7.4, 0, 2.6), Vector3(-1.0, 0, -6.8), Vector3(3.2, 0, 6.6),
-			Vector3(-6.8, 0, 6.0), Vector3(10.0, 0, -4.0)]:
-		_spawn_model("custom/flower_bush.glb", spot, _rng.randf_range(0.6, 0.85), _rng.randf() * TAU)
+	for i in range(14):
+		var angle: float = TAU * (float(i) + _rng.randf_range(-0.3, 0.3)) / 14.0
+		var p: Vector2 = Vector2(cos(angle), sin(angle)) * _rng.randf_range(6.3, 7.4)
+		if _clear(p, 0.9):
+			_spawn_model("custom/flower_bush.glb", Vector3(p.x, 0, p.y), _rng.randf_range(0.55, 0.8), _rng.randf() * TAU)
 	if tent != null:
 		tent.add_child(_warm_light(Vector3(-0.55, 0.5, 0.0), 0.8, 2.6))
+
+
+# --- Groves (feature 032) ----------------------------------------------------
+
+func _build_groves() -> void:
+	_build_pine_grove()
+	_build_pond()
+	_build_woodlot()
+	_build_berry_hollow()
+	_build_ferns()
+	# Small stones along the road's verges.
+	for i in range(10):
+		var z: float = _rng.randf_range(7.0, 19.0)
+		var x: float = _rng.randf_range(1.4, 2.4) * (1.0 if i % 2 == 0 else -1.0)
+		var p: Vector2 = Vector2(x, z)
+		if _clear(p, 0.3, false):
+			_spawn_model(BOULDERS[_rng.randi() % 3], Vector3(p.x, 0, p.y), _rng.randf_range(0.22, 0.35), _rng.randf() * TAU)
+
+
+## NW: a stand of tall green pines round one giant old pine, a fallen
+## log and toadstools in the needle litter.
+func _build_pine_grove() -> void:
+	_landmark("custom/pine_d.glb", Vector2(-15.0, -14.2), 1.8, 1.0)
+	_spawn_model("custom/log_seat.glb", Vector3(-12.8, 0, -6.6), 1.35, 0.5)
+	_scatter_grove(0, GREEN_PINES, 9, 13.5, 0.85, 1.25, 1.4, true)
+	_scatter_grove(0, ["custom/toadstools.glb"], 4, 9.0, 0.7, 1.1, 0.8)
+
+
+## NE: the pond, ringed with stones and reeds, lily pads on the water,
+## clay banks (the resource nodes) and boulders and pines behind.
+func _build_pond() -> void:
+	var centre: Vector2 = WorldLayout.POND_CENTRE
+	var water: MeshInstance3D = MeshInstance3D.new()
+	water.name = "Pond"
+	water.mesh = _make_pond_mesh(WorldLayout.POND_RADIUS + 0.25)
+	var material: ShaderMaterial = ShaderMaterial.new()
+	material.shader = WATER_SHADER
+	water.material_override = material
+	water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	water.position = Vector3(centre.x, 0.03, centre.y)
+	add_child(water)
+	var body: StaticBody3D = StaticBody3D.new()
+	body.collision_layer = 4
+	body.collision_mask = 0
+	var shape: CollisionShape3D = CollisionShape3D.new()
+	var cylinder: CylinderShape3D = CylinderShape3D.new()
+	cylinder.radius = WorldLayout.POND_RADIUS - 0.2
+	cylinder.height = 1.0
+	shape.shape = cylinder
+	shape.position = Vector3(0, 0.5, 0)
+	body.add_child(shape)
+	add_child(body)
+	body.position = Vector3(centre.x, 0, centre.y)
+	# Stones round the rim, leaving the shore open where the path arrives.
+	var approach: float = (Vector2(9.0, -9.0) - centre).angle()
+	var reeds: Array = [[], []]
+	for i in range(26):
+		var a: float = TAU * float(i) / 26.0 + _rng.randf_range(-0.08, 0.08)
+		if absf(angle_difference(a, approach)) < 0.6:
+			continue
+		var rim: Vector2 = centre + Vector2.from_angle(a) * (WorldLayout.POND_RADIUS + _rng.randf_range(0.0, 0.35))
+		if i % 2 == 0:
+			_spawn_model(BOULDERS[_rng.randi() % 3], Vector3(rim.x, 0, rim.y), _rng.randf_range(0.3, 0.55), _rng.randf() * TAU)
+		elif absf(angle_difference(a, approach + PI)) < 2.0:
+			# Reed beds on the far shore.
+			for k in range(3):
+				var q: Vector2 = rim + Vector2(_rng.randfn(0.0, 0.3), _rng.randfn(0.0, 0.3))
+				var s: float = _rng.randf_range(0.8, 1.2)
+				reeds[0].append(Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3(s, s, s)), Vector3(q.x, 0, q.y)))
+				reeds[1].append(Color(0.5, 0.6, 0.26).lerp(Color(0.7, 0.68, 0.34), _rng.randf()))
+	_add_flower_multimesh("Reeds", _make_reed_mesh(), reeds, 0.5, 0.1)
+	# Lily pads.
+	var pads: Array = [[], []]
+	for i in range(9):
+		var q2: Vector2 = centre + Vector2.from_angle(_rng.randf() * TAU) * _rng.randf_range(0.8, WorldLayout.POND_RADIUS - 0.5)
+		var s2: float = _rng.randf_range(0.7, 1.2)
+		pads[0].append(Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3(s2, 1, s2)), Vector3(q2.x, 0.04, q2.y)))
+		pads[1].append(Color(0.36, 0.56, 0.22).lerp(Color(0.5, 0.66, 0.26), _rng.randf()))
+	_add_flower_multimesh("LilyPads", _make_lily_mesh(), pads, 0.005, 0.015)
+	_scatter_grove(1, BOULDERS, 6, 14.5, 0.9, 1.6, 1.4)
+	_scatter_grove(1, GREEN_PINES, 4, 15.5, 0.85, 1.15, 1.4, true)
+
+
+## SW: the woodcutters' glade: cut stumps among the standing trees, a
+## stacked woodpile, a chopping stump and a felled trunk, with taller
+## woods behind.
+func _build_woodlot() -> void:
+	var pile: Node3D = _spawn_model("custom/woodpile.glb", Vector3(-12.4, 0, 6.4), 1.1, deg_to_rad(70.0))
+	_add_blocker(pile, Vector3(1.4, 0.8, 0.9))
+	_spawn_model("custom/stump_seat.glb", Vector3(-10.4, 0, 5.2), 1.0, 0.8)
+	_spawn_model("custom/log_seat.glb", Vector3(-9.0, 0, 13.4), 1.5, deg_to_rad(-30.0))
+	_scatter_grove(2, ["custom/tree_stump.glb"], 6, 7.5, 0.85, 1.15, 0.9)
+	_scatter_grove(2, BROADLEAF, 5, 14.5, 0.9, 1.2, 1.6, true)
+
+
+## SE: the lush hollow round a giant old stump with a fairy ring of
+## toadstools (the mushroom patches grow beside it) and flowering bushes.
+## The landmark is low on purpose: the sun casts shadows north, and
+## anything tall here would darken the east lane and hide the kids.
+func _build_berry_hollow() -> void:
+	var stump: Vector2 = Vector2(12.8, 12.2)
+	_landmark("custom/tree_stump.glb", stump, 2.6, 1.3)
+	for i in range(10):
+		var a: float = TAU * float(i) / 10.0 + _rng.randf_range(-0.15, 0.15)
+		var q: Vector2 = stump + Vector2.from_angle(a) * _rng.randf_range(1.9, 2.3)
+		if _clear(q, 0.3, false):
+			_spawn_model("custom/toadstools.glb", Vector3(q.x, 0, q.y), _rng.randf_range(0.55, 0.8), _rng.randf() * TAU)
+	_scatter_grove(3, ["custom/flower_bush.glb"], 6, 8.0, 0.7, 1.05, 1.0)
+	_scatter_grove(3, BROADLEAF, 4, 14.5, 0.9, 1.2, 1.6, true)
+
+
+## A large landmark model; reserves its footprint so nothing else
+## crowds it.
+func _landmark(path: String, p: Vector2, scale: float, footprint: float) -> Node3D:
+	_keep_out.append([p, footprint])
+	return _spawn_model(path, Vector3(p.x, 0, p.y), scale, _rng.randf() * TAU)
+
+
+## Places `count` random models from `paths` inside grove `index`, at
+## least `min_r` from the camp centre, off paths, lanes and each other.
+## The camera looks north, so `tall` models in the southern groves keep
+## to the back (south of z = TALL_SOUTH_LIMIT) where they cannot hide
+## the kids.
+func _scatter_grove(index: int, paths: Array, count: int, min_r: float, min_s: float, max_s: float, spacing: float,
+		tall: bool = false) -> void:
+	var grove: Array = WorldLayout.GROVES[index]
+	var placed: int = 0
+	var tries: int = 0
+	while placed < count and tries < count * 30:
+		tries += 1
+		var p: Vector2 = grove[1] + Vector2.from_angle(_rng.randf() * TAU) * sqrt(_rng.randf()) * (float(grove[2]) + 3.0)
+		if p.length() < min_r or maxf(absf(p.x), absf(p.y)) > border_inner or not _clear(p, spacing):
+			continue
+		if tall and p.y > 0.0 and p.y < TALL_SOUTH_LIMIT:
+			continue
+		_keep_out.append([p, spacing * 0.5])
+		var path: String = paths[_rng.randi() % paths.size()]
+		_spawn_model(path, Vector3(p.x, 0, p.y), _rng.randf_range(min_s, max_s), _rng.randf() * TAU)
+		placed += 1
+
+
+# --- Ferns and water plants ------------------------------------------------
+
+## Ferns carpet the shade of the Pine Grove and the back of the Woodlot,
+## with a few under the great oak.
+func _build_ferns() -> void:
+	var data: Array = [[], []]
+	for spec in [[0, 70], [2, 40], [3, 14]]:
+		var grove: Array = WorldLayout.GROVES[spec[0]]
+		var made: int = 0
+		var tries: int = 0
+		while made < spec[1] and tries < spec[1] * 10:
+			tries += 1
+			var p: Vector2 = grove[1] + Vector2.from_angle(_rng.randf() * TAU) * sqrt(_rng.randf()) * (float(grove[2]) + 2.0)
+			if p.length() < 9.0 or not _clear(p, 0.4, false) or WorldLayout.in_lane(p, -1.5):
+				continue
+			var s: float = _rng.randf_range(1.1, 1.7)
+			data[0].append(Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3(s, s, s)), Vector3(p.x, 0, p.y)))
+			data[1].append(Color(0.38, 0.6, 0.2).lerp(Color(0.55, 0.72, 0.26), _rng.randf()))
+			made += 1
+	_add_flower_multimesh("Ferns", _make_fern_mesh(), data, 0.5, 0.06)
+
+
+## Seven arching fronds, each a tapering rachis with paired leaflets;
+## darker at the heart (about 0.5 m tall, 1 m across).
+func _make_fern_mesh() -> ArrayMesh:
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 7
+	for i in range(7):
+		var angle: float = TAU * float(i) / 7.0 + rng.randf_range(-0.2, 0.2)
+		var out: Vector3 = Vector3(cos(angle), 0, sin(angle))
+		var across: Vector3 = Vector3(-out.z, 0, out.x)
+		var length: float = rng.randf_range(0.42, 0.55)
+		var lift: float = rng.randf_range(0.42, 0.55)
+		var steps: int = 6
+		for k in range(steps):
+			var t0: float = float(k) / steps
+			var t1: float = float(k + 1) / steps
+			var p0: Vector3 = out * length * t0 + Vector3(0, lift * sin(t0 * PI * 0.8), 0)
+			var p1: Vector3 = out * length * t1 + Vector3(0, lift * sin(t1 * PI * 0.8), 0)
+			var w: float = 0.11 * (1.0 - t0 * 0.85)
+			var shade: Color = Color.WHITE.darkened(0.45 * (1.0 - t0))
+			# A pair of leaflets: from the rachis out and forward.
+			for side in [1.0, -1.0]:
+				var tip: Vector3 = p0.lerp(p1, 0.7) + across * w * side + Vector3(0, -0.02, 0)
+				for v in [p0, p1, tip]:
+					st.set_color(shade)
+					st.set_normal(Vector3.UP)
+					st.add_vertex(v)
+	return st.commit()
+
+
+## A clump of tall reed blades and two cattail heads (about 0.9 m).
+func _make_reed_mesh() -> ArrayMesh:
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 11
+	for i in range(7):
+		var angle: float = rng.randf() * TAU
+		var out: Vector3 = Vector3(cos(angle), 0, sin(angle))
+		var across: Vector3 = Vector3(-out.z, 0, out.x)
+		var height: float = rng.randf_range(0.6, 0.95)
+		var base: Vector3 = out * rng.randf_range(0.0, 0.08)
+		var tip: Vector3 = base + out * rng.randf_range(0.08, 0.2) + Vector3(0, height, 0)
+		for v in [base - across * 0.025, base + across * 0.025, tip]:
+			st.set_color(Color.WHITE)
+			st.set_normal(Vector3.UP)
+			st.add_vertex(v)
+	var head_colour: Color = Color(0.45, 0.3, 0.18)
+	for spot in [Vector3(0.04, 0.0, 0.02), Vector3(-0.05, 0.0, -0.03)]:
+		var h: float = 0.85 if spot.x > 0.0 else 0.72
+		_add_stem(st, spot, spot + Vector3(0, h, 0), 0.01)
+		for side in [Vector3(0.03, 0, 0), Vector3(0, 0, 0.03)]:
+			var a: Vector3 = spot + Vector3(0, h - 0.2, 0)
+			var b: Vector3 = spot + Vector3(0, h - 0.04, 0)
+			for v in [a - side, a + side, b + side, a - side, b + side, b - side]:
+				st.set_color(head_colour)
+				st.set_normal(Vector3.UP)
+				st.add_vertex(v)
+	return st.commit()
+
+
+## A round lily pad with a notch (about 0.4 m across), lying flat.
+func _make_lily_mesh() -> ArrayMesh:
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var segments: int = 10
+	for k in range(segments - 1):
+		var a0: float = 0.35 + (TAU - 0.7) * float(k) / (segments - 1)
+		var a1: float = 0.35 + (TAU - 0.7) * float(k + 1) / (segments - 1)
+		for v in [Vector3(0, 0.01, 0), Vector3(cos(a1) * 0.2, 0.01, sin(a1) * 0.2), Vector3(cos(a0) * 0.2, 0.01, sin(a0) * 0.2)]:
+			st.set_color(Color.WHITE)
+			st.set_normal(Vector3.UP)
+			st.add_vertex(v)
+	return st.commit()
+
+
+## A flat disc with a softly wobbling shoreline. UV.x carries the
+## distance from the centre (0) to the shore (1) for the water shader.
+func _make_pond_mesh(radius: float) -> ArrayMesh:
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var segments: int = 40
+	var rim: Array = []
+	for k in range(segments):
+		var a: float = TAU * float(k) / segments
+		var wobble: float = 1.0 + 0.07 * sin(a * 3.0 + 0.6) + 0.04 * sin(a * 7.0 + 1.3)
+		rim.append(Vector3(cos(a), 0, sin(a)) * radius * wobble)
+	for k in range(segments):
+		var r0: Vector3 = rim[k]
+		var r1: Vector3 = rim[(k + 1) % segments]
+		for ring in range(2):
+			# Two rings: an inner disc and an outer band, so the shore
+			# gradient interpolates smoothly.
+			var f0: float = 0.6 if ring == 1 else 0.0
+			var f1: float = 1.0 if ring == 1 else 0.6
+			var quad: Array = [[r0 * f0, f0], [r1 * f0, f0], [r1 * f1, f1], [r0 * f1, f1]]
+			var tris: Array = [quad[0], quad[2], quad[1], quad[0], quad[3], quad[2]] if ring == 1 else [quad[0], quad[3], quad[2]]
+			for v in tris:
+				st.set_uv(Vector2(v[1], 0.0))
+				st.set_normal(Vector3.UP)
+				st.add_vertex(v[0])
+	return st.commit()
 
 
 func _warm_light(at: Vector3, energy: float, reach: float) -> OmniLight3D:
@@ -432,6 +735,15 @@ func _blocked(p: Vector2, margin: float) -> bool:
 		if p.distance_to(zone[0]) < float(zone[1]) + margin:
 			return true
 	return false
+
+
+## True when solid decor may go at `p`: off resource nodes and reserved
+## spots, footpaths and the pond, and (with `keep_lanes_open`) out of the
+## mob lanes.
+func _clear(p: Vector2, margin: float, keep_lanes_open: bool = true) -> bool:
+	if _blocked(p, margin) or on_path(p, margin * 0.5 + 0.2) or WorldLayout.in_pond(p, margin * 0.5 + 0.3):
+		return false
+	return not (keep_lanes_open and WorldLayout.in_lane(p, margin * 0.5))
 
 
 func _spawn_model(path: String, position: Vector3, uniform_scale: float, yaw: float) -> Node3D:
@@ -470,3 +782,4 @@ func _add_blocker(owner_node: Node3D, size: Vector3) -> void:
 	add_child(body)
 	body.global_position = owner_node.global_position
 	body.rotation.y = owner_node.rotation.y
+	_keep_out.append([Vector2(owner_node.position.x, owner_node.position.z), maxf(size.x, size.z) * 0.5])

@@ -67,6 +67,21 @@ The mob sheets in the concept set (06–08) are **not** adopted. The Shadow Imp,
 Bramble Beast and Mushroom Gremlin keep the designs from features 026–028.
 Each mob still reads by its own palette against the warm ground (spec §L, colour coding).
 
+## Map layout (feature 032)
+
+The camp sits in a forest clearing. Four mob lanes come in along the axes as open, trodden trails. The corners between them are four groves, each with its resource, ground, landmark and forest wall:
+
+| Corner | Grove |
+|---|---|
+| NW | Pine Grove |
+| NE | Stony Pond |
+| SW | Woodlot |
+| SE | Berry Hollow |
+
+Footpaths lead to each grove, and the old road runs south.
+
+The plan lives in `WorldLayout`. The rules and the map are in [`.features/032-world-layout/plan.md`](../../.features/032-world-layout/plan.md).
+
 ## Out of scope for now
 
 The river, waterfall and bridge (10), the ruins (11) and the village houses (12)

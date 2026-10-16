@@ -9,7 +9,7 @@
 - **Dressing:** `world_dressing.gd` (flowers, border, homestead).
 - **Props:** `art/props/homestead.py`.
 
-**Keep in sync:** the path curve is in two places, `painted_ground.gdshader` (`path_*`) and `WorldDressing.on_path`.
+**Map layout:** feature 032 moved the paths, groves and pond into `WorldLayout`, which drives the ground shader.
 
 **Open / ideas:**
 - Measure FPS on a real Windows GPU. In the cloud session it only ran under Xvfb with software GL.
