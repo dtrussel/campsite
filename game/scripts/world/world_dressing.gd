@@ -99,22 +99,35 @@ func _tuft_color() -> Color:
 	return Color(0.32, 0.52, 0.18).lerp(Color(0.56, 0.68, 0.26), g)
 
 
-## Three crossed, tapering blades (about 0.45 m tall).
+## Five blades fanning out and curving over (about 0.3-0.45 m
+## tall); each blade is three tapering segments, so tufts read as
+## painted blades instead of flat cards (feature 031 M6).
 func _make_tuft_mesh() -> ArrayMesh:
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for i in range(3):
-		var angle: float = TAU * float(i) / 3.0 + 0.3
-		var side: Vector3 = Vector3(cos(angle), 0, sin(angle)) * 0.13
-		var lean: Vector3 = Vector3(-sin(angle), 0, cos(angle)) * 0.06
-		var a: Vector3 = -side
-		var b: Vector3 = side
-		var c: Vector3 = side * 0.55 + Vector3(0, 0.2, 0) + lean * 0.5
-		var d: Vector3 = -side * 0.55 + Vector3(0, 0.2, 0) + lean * 0.5
-		var tip: Vector3 = Vector3(0, 0.38, 0) + lean
-		for v in [a, b, c, a, c, d, d, c, tip]:
-			st.set_normal(Vector3.UP)
-			st.add_vertex(v)
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 31
+	for i in range(5):
+		var angle: float = TAU * float(i) / 5.0 + rng.randf_range(-0.3, 0.3)
+		var out: Vector3 = Vector3(cos(angle), 0, sin(angle))
+		var across: Vector3 = Vector3(-out.z, 0, out.x)
+		var height: float = rng.randf_range(0.26, 0.44)
+		var bend: float = rng.randf_range(0.08, 0.16)
+		var root: Vector3 = out * rng.randf_range(0.0, 0.05)
+		var points: Array = []
+		for k in range(4):
+			var t: float = float(k) / 3.0
+			points.append(root + out * bend * t * t + Vector3(0, height * (t - 0.12 * t * t), 0))
+		for k in range(3):
+			var w0: float = 0.05 * (1.0 - float(k) / 3.5)
+			var w1: float = 0.05 * (1.0 - float(k + 1) / 3.5)
+			var p0: Vector3 = points[k]
+			var p1: Vector3 = points[k + 1]
+			var quad: Array = [p0 - across * w0, p0 + across * w0, p1 + across * w1, p1 - across * w1]
+			var tris: Array = [quad[0], quad[1], quad[2], quad[0], quad[2], quad[3]] if k < 2 else [quad[0], quad[1], p1]
+			for v in tris:
+				st.set_normal(Vector3.UP)
+				st.add_vertex(v)
 	return st.commit()
 
 
@@ -178,28 +191,47 @@ func _add_flower_multimesh(node_name: String, mesh: ArrayMesh, data: Array) -> v
 	add_child(instance)
 
 
-## Four stems, each topped by a flat five-petal head (about 0.3-0.4 m).
+## Four stems, each topped by a shallow cup of five rounded petals
+## around a warm centre (about 0.3-0.4 m). Vertex colours multiply the
+## instance colour: white petals keep the drift colour, the centre
+## goes golden.
 func _make_flower_mesh() -> ArrayMesh:
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var heads: Array = [Vector3(0.0, 0.36, 0.0), Vector3(0.12, 0.3, 0.05), Vector3(-0.08, 0.32, 0.11),
 		Vector3(-0.04, 0.28, -0.12)]
+	var centre_colour: Color = Color(1.0, 0.62, 0.16)
 	for head in heads:
 		_add_stem(st, Vector3(head.x * 0.6, 0.0, head.z * 0.6), head, 0.012)
 		var petal_r: float = 0.075
 		for k in range(5):
+			var a: float = TAU * float(k) / 5.0
+			var dir: Vector3 = Vector3(cos(a), 0.0, sin(a))
+			var side: Vector3 = Vector3(-dir.z, 0.0, dir.x)
+			# A petal: narrow at the centre, wide and lifted at the rim.
+			var base: Vector3 = head + dir * petal_r * 0.18
+			var mid_l: Vector3 = head + dir * petal_r * 0.6 + side * petal_r * 0.32 + Vector3(0, 0.012, 0)
+			var mid_r: Vector3 = head + dir * petal_r * 0.6 - side * petal_r * 0.32 + Vector3(0, 0.012, 0)
+			var tip: Vector3 = head + dir * petal_r + Vector3(0, 0.022, 0)
+			for v in [base, mid_r, mid_l, mid_l, mid_r, tip]:
+				st.set_color(Color.WHITE)
+				st.set_normal(Vector3.UP)
+				st.add_vertex(v)
+		# Raised centre.
+		for k in range(5):
 			var a0: float = TAU * float(k) / 5.0
-			var a1: float = a0 + TAU / 10.0
-			var a2: float = a0 + TAU / 5.0
-			var tip: Vector3 = head + Vector3(cos(a1), 0.0, sin(a1)) * petal_r
-			for v in [head, head + Vector3(cos(a0), 0.0, sin(a0)) * petal_r * 0.45, tip,
-					head, tip, head + Vector3(cos(a2), 0.0, sin(a2)) * petal_r * 0.45]:
+			var a1: float = TAU * float(k + 1) / 5.0
+			for v in [head + Vector3(0, 0.014, 0), head + Vector3(cos(a1), 0.0, sin(a1)) * petal_r * 0.26,
+					head + Vector3(cos(a0), 0.0, sin(a0)) * petal_r * 0.26]:
+				st.set_color(centre_colour)
 				st.set_normal(Vector3.UP)
 				st.add_vertex(v)
 	return st.commit()
 
 
-## A stem with stacked, tapering crossed quads: a lupine spike (~0.65 m).
+## A stem with a tapering spike of floret tiers on three crossed planes:
+## a lupine (~0.65 m). Each tier flares out a little, so the spike reads
+## as stacked florets, darker toward the base.
 func _make_lupine_mesh() -> ArrayMesh:
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -208,20 +240,30 @@ func _make_lupine_mesh() -> ArrayMesh:
 		_add_stem(st, spike, spike + Vector3(0, 0.3 * size, 0), 0.014)
 		var bottom: float = 0.26 * size
 		var top: float = 0.68 * size
-		for side in [Vector3(1, 0, 0), Vector3(0, 0, 1)]:
-			var w0: Vector3 = side * 0.06 * size
-			var w1: Vector3 = side * 0.012
-			var a: Vector3 = spike + Vector3(0, bottom, 0)
-			var b: Vector3 = spike + Vector3(0, top, 0)
-			for v in [a - w0, a + w0, b + w1, a - w0, b + w1, b - w1]:
-				st.set_normal(Vector3.UP)
-				st.add_vertex(v)
+		var tiers: int = 6
+		for side in [Vector3(1, 0, 0), Vector3(0.5, 0, 0.866), Vector3(-0.5, 0, 0.866)]:
+			for t in range(tiers):
+				var f0: float = float(t) / tiers
+				var f1: float = float(t + 1) / tiers
+				var y0: float = lerpf(bottom, top, f0)
+				var y1: float = lerpf(bottom, top, f1)
+				# Flared tier: wide at its bottom, pinched at its top.
+				var w0: Vector3 = side * lerpf(0.065, 0.016, f0) * size
+				var w1: Vector3 = side * lerpf(0.065, 0.016, f1) * size * 0.55
+				var shade: Color = Color.WHITE.darkened(0.25 * (1.0 - f0))
+				var a: Vector3 = spike + Vector3(0, y0, 0)
+				var b: Vector3 = spike + Vector3(0, y1, 0)
+				for v in [a - w0, a + w0, b + w1, a - w0, b + w1, b - w1]:
+					st.set_color(shade)
+					st.set_normal(Vector3.UP)
+					st.add_vertex(v)
 	return st.commit()
 
 
 func _add_stem(st: SurfaceTool, from: Vector3, to: Vector3, width: float) -> void:
 	var side: Vector3 = Vector3(width, 0.0, 0.0)
 	for v in [from - side, from + side, to + side, from - side, to + side, to - side]:
+		st.set_color(Color.WHITE)
 		st.set_normal(Vector3.UP)
 		st.add_vertex(v)
 
