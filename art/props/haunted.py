@@ -394,9 +394,22 @@ def moss_strand(top, length, seed):
 
 
 def dead_tree(name, seed, height, limbs):
+    """A bare, twisted tree: the skin_trunk modelled dense with carved,
+    weathered bark (deep vertical cracks, pale silvery ridges, a mossy
+    foot), thin twigs and hanging moss, baked onto the budget mesh."""
     common.reset(seed)
     rng = random.Random(seed)
-    trunk, tips = skin_trunk(rng, height, limbs, base_radius=0.26)
+    trunk, tips = skin_trunk(rng, height, limbs, base_radius=0.26, subsurf=3, budget=None)
+    off = Vector((seed * 0.37, seed * 0.11, seed * 0.07))
+
+    def ridge_at(p):
+        q = Vector((p.x * 10.0, p.y * 10.0, p.z * 0.6)) + off
+        return min(1.0, abs(noise.noise(q)) * 6.0)
+    mesh = trunk.data
+    for v in mesh.vertices:
+        v.co = v.co - v.normal * (1.0 - ridge_at(v.co)) * 0.026
+    mesh.update()
+    common.shade_smooth(trunk)
     # A second, thinner set of twigs off the limb tips.
     twigs = []
     for i, tip in enumerate(tips):
@@ -414,46 +427,46 @@ def dead_tree(name, seed, height, limbs):
     wood = common.join([trunk] + twigs, name)
 
     def colour(pos, normal):
-        streak = noise.noise(Vector((pos.x * 9.0, pos.y * 9.0, pos.z * 1.5 + seed)))
-        c = common.lerp(DEAD_BARK, DEAD_BARK_LIGHT, max(0.0, min(1.0, 0.5 + streak)))
-        if streak < -0.2:
-            c = common.lerp(c, DEAD_BARK_DARK, min(1.0, (-0.2 - streak) * 3.0))
+        r = ridge_at(pos)
+        streak = noise.noise(Vector((pos.x * 3.0, pos.y * 3.0, pos.z * 0.6 + seed)))
+        c = common.lerp(DEAD_BARK, DEAD_BARK_LIGHT, max(0.0, min(1.0, 0.45 + streak * 0.8)))
+        c = common.lerp(DEAD_BARK_DARK, c, 0.3 + 0.7 * r)
+        if r > 0.85 and normal.z > -0.2:
+            c = common.lerp(c, DEAD_BARK_LIGHT, 0.35)
+        foot = max(0.0, 1.0 - pos.z / 0.5)
+        m = noise.noise(pos * 4.0 + off) * 0.5 + 0.5
+        if foot > 0 and m > 0.45:
+            c = common.lerp(c, MOSS_GREY, min(1.0, (m - 0.45) * 4.0) * foot * 0.8)
         return c
-    common.color_by(wood, colour, smooth=False)
+    common.color_by(wood, colour)
     parts = [wood]
     for i, tip in enumerate(tips[:3]):
         parts.append(moss_strand(tip + Vector((0, 0, -0.1)), rng.uniform(0.35, 0.6), seed + i))
-    finish_prop(parts, name, size=512, budget=1400, preview_elevation=20, edge_strength=0.2)
+    detail.bake_prop(parts, name, 1400, size=512, preview_elevation=20, ray=0.06, edge_strength=0.2, cavity=0.5)
 
 
 # --- Far hills ---------------------------------------------------------------------------
 
 def tree_clump(center, size, seed, autumn=False):
-    bm = bmesh.new()
-    bmesh.ops.create_icosphere(bm, subdivisions=2, radius=size)
-    for v in bm.verts:
-        v.co.z *= 0.9
-        v.co += Vector((noise.noise(v.co * 5 + Vector((seed, 0, 0))), noise.noise(v.co * 5 + Vector((0, seed, 0))), 0)) * size * 0.2
-    bmesh.ops.translate(bm, verts=bm.verts, vec=center)
-    obj = common.mesh_object("clump", bm)
-    common.shade_smooth(obj)
-    top = center.z + size
-
-    def colour(pos, normal):
-        t = max(0.0, min(1.0, (pos.z - center.z + size) / (2 * size) * 0.7 + normal.z * 0.4))
-        main = LEAF_AUTUMN if autumn else LEAF
-        return common.lerp(LEAF_DARK, main, t)
-    common.color_by(obj, colour, smooth=False)
+    """A far tree crown: a small tufted leaf clump with a sunny top."""
+    obj = detail.leaf_clump(center, size, seed, tufts=7, bump=0.28, squash=0.9, under=10.0, wobble=0.12,
+                            noise_freq=2.5, noise_offset=(seed, 0, 0), subdivisions=2)
+    main = LEAF_AUTUMN if autumn else LEAF
+    light = (1.0, 0.72, 0.3) if autumn else (0.62, 0.8, 0.28)
+    dark = (0.42, 0.16, 0.06) if autumn else LEAF_DARK
+    detail.colour_foliage(obj, dark, main, light, seed, lo=center.z - size, hi=center.z + size, fleck=0.0)
     return obj
 
 
 def backdrop_mound(name, seed, width, height, clumps, rocky):
     """A mound about `width` across and `height` tall (KayKit hex tile
-    scale: the dressing scales it by 4.5-9), dotted with tree clumps."""
+    scale: the dressing scales it by 4.5-9), dotted with tufted tree
+    clumps; soft grass with sunny patches, rocky mountains get faceted
+    stone bands. Kept cheap: it sits in the blurred background."""
     common.reset(seed)
     rng = random.Random(seed)
     bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=10, radius=1.0)
+    bmesh.ops.create_uvsphere(bm, u_segments=28, v_segments=14, radius=1.0)
     for v in bm.verts:
         if v.co.z < 0:
             v.co.z = 0.0
@@ -463,17 +476,22 @@ def backdrop_mound(name, seed, width, height, clumps, rocky):
         v.co.z *= height * (0.85 + n * 0.3 if rocky else 1.0 + n * 0.12)
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.001)
     mound = common.mesh_object("mound", bm)
-    common.shade_smooth(mound)
+    common.shade_smooth(mound, auto_angle=50 if rocky else None)
 
     def colour(pos, normal):
         n = noise.noise(pos * 4.0 + Vector((seed, 0, 0)))
+        patch = noise.noise(pos * 9.0 + Vector((0, seed, 0)))
         if rocky and normal.z < 0.55:
-            return common.lerp(ROCK, DIRT, max(0.0, min(1.0, 0.4 + n)))
-        c = common.lerp(GRASS, GRASS_LIGHT, max(0.0, min(1.0, 0.5 + n + normal.z * 0.3)))
+            band = math.sin(pos.z * 22.0 + n * 2.0) * 0.5 + 0.5
+            c = common.lerp(ROCK, DIRT, max(0.0, min(1.0, 0.35 + n * 0.8)))
+            return common.lerp(c, (0.68, 0.64, 0.6), band * 0.35 * max(0.0, normal.z + 0.2))
+        c = common.lerp(GRASS, GRASS_LIGHT, max(0.0, min(1.0, 0.45 + n * 0.8 + normal.z * 0.3)))
+        if patch > 0.35:
+            c = common.lerp(c, (0.78, 0.82, 0.36), min(1.0, (patch - 0.35) * 2.5) * 0.6)
         if normal.z < 0.3:
             c = common.lerp(c, DIRT, 0.5)
         return c
-    common.color_by(mound, colour, smooth=False)
+    common.color_by(mound, colour, smooth=True)
     parts = [mound]
     for i in range(clumps):
         a = rng.uniform(0, math.tau)
@@ -484,7 +502,7 @@ def backdrop_mound(name, seed, width, height, clumps, rocky):
         z = height * math.sqrt(max(0.0, 1.0 - d)) * (0.9 if rocky else 1.0)
         size = rng.uniform(0.1, 0.2) * width
         parts.append(tree_clump(Vector((x, y, z + size * 0.3)), size, seed * 10 + i, autumn=rng.random() < 0.3))
-    finish_prop(parts, name, size=512, budget=2600, preview_elevation=25, edge_strength=0.0, ao_distance=0.3)
+    finish_prop(parts, name, size=512, budget=1300, preview_elevation=25, edge_strength=0.0, ao_distance=0.3)
 
 
 PROPS = {

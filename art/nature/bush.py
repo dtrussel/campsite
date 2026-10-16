@@ -15,7 +15,7 @@ import bpy  # noqa: E402
 import bmesh  # noqa: E402
 from mathutils import Vector, noise  # noqa: E402
 
-from lib import common, paint_bake, preview  # noqa: E402
+from lib import common, detail, paint_bake, preview  # noqa: E402
 
 LEAF_DARK = (0.1, 0.28, 0.18)
 LEAF = (0.22, 0.52, 0.2)
@@ -24,6 +24,59 @@ BERRY = (0.9, 0.08, 0.22)
 BERRY_DARK = (0.5, 0.02, 0.12)
 SHINE = (1.0, 0.9, 0.9)
 BLOSSOMS = [((1.0, 0.82, 0.18), (0.95, 0.55, 0.08)), ((1.0, 0.98, 0.9), (0.98, 0.78, 0.2))]
+
+
+def leafy_clumps(rng, count, radius, seed, squash=0.75):
+    """clumps() with the same rng use, each a dense tufted leaf_clump."""
+    parts = []
+    for i in range(count):
+        a = i / count * math.tau + rng.uniform(-0.3, 0.3)
+        d = rng.uniform(0.25, 0.55) * radius
+        center = Vector((math.cos(a) * d, math.sin(a) * d, radius * rng.uniform(0.35, 0.55)))
+        if i == 0:
+            center = Vector((0, 0, radius * 0.7))
+        r = radius * rng.uniform(0.42, 0.55)
+        parts.append(detail.leaf_clump(center, r, seed * 17 + i, tufts=20, bump=0.3, squash=squash, under=10.0,
+                                       wobble=0.16, noise_freq=2.0, noise_offset=(i, seed, 0), name="clump%d" % i))
+    return parts
+
+
+def dense_leaves(rng, count, radius, seed, budget):
+    """Returns (low, high): the tufted leaf mound decimated to `budget`
+    and its dense copy, both painted with colour_foliage."""
+    parts = leafy_clumps(rng, count, radius, seed)
+    detail.cull_hidden(parts, parts, margin=0.03)
+    high = common.join(parts, "leaves_high")
+    common.shade_smooth(high)
+    detail.colour_foliage(high, LEAF_DARK, LEAF, LEAF_LIGHT, seed)
+    low = high.copy()
+    low.data = high.data.copy()
+    low.name = "leaves"
+    high.users_collection[0].objects.link(low)
+    detail.decimate_tris(low, budget)
+    return low, high
+
+
+def bake_bush(low_parts, high_parts, name, size=512, **params):
+    """Joins the low and dense parts, paints the dense look onto the low
+    mesh and exports it (only the leaves are decimated; berries and
+    blossoms are the same in both)."""
+    low = common.join(low_parts, name)
+    high = common.join(high_parts, name + "_high")
+    p = dict(ao_distance=0.4, ao_strength=0.75, edge_strength=0.0, noise_scale=4.0, cavity=0.5,
+             max_ray_distance=0.1, cage_extrusion=0.05)
+    p.update(params)
+    paint_bake.paint_direct(low, high, size=size, **p)
+    common.export_glb(os.path.join(common.OUT_DIR, name + ".glb"), [low])
+    print(name, "tris:", common.triangle_count([low]))
+    preview.render([low], name)
+
+
+def _dup(obj):
+    c = obj.copy()
+    c.data = obj.data.copy()
+    obj.users_collection[0].objects.link(c)
+    return c
 
 
 def clumps(rng, count, radius, seed, squash=0.75):
@@ -109,18 +162,30 @@ def colour_blossom(obj, petal, heart):
     common.color_by(obj, colour, smooth=False)
 
 
+def build(picked):
+    seed = 5
+    common.reset(seed)
+    rng = random.Random(seed)
+    radius = 0.95
+    low, high = dense_leaves(rng, 6, radius, seed, 1600)
+    lows, highs = [low], [high]
+    if not picked:
+        for b in berries(rng, 8, high):
+            common.shade_smooth(b)
+            colour_berry(b, None)
+            lows.append(b)
+            highs.append(_dup(b))
+    name = "berry_bush_picked" if picked else "berry_bush"
+    bake_bush(lows, highs, name)
+
+
 def build_flowering():
     seed = 13
     common.reset(seed)
     rng = random.Random(seed)
-    leaves = common.join(clumps(rng, 6, 0.85, seed), "leaves")
-    common.decimate(leaves, 1100)
-    common.shade_smooth(leaves)
-    colour_leaves(leaves, seed)
-    parts = [leaves]
-    # Reuse the berry placement; each "berry" becomes a flat blossom.
-    for i, b in enumerate(berries(rng, 12, leaves)):
-        # Bigger, slightly flattened blossoms, scaled about their own centre.
+    low, high = dense_leaves(rng, 6, 0.85, seed, 1150)
+    lows, highs = [low], [high]
+    for i, b in enumerate(berries(rng, 12, high)):
         verts = b.data.vertices
         c = sum((v.co for v in verts), Vector()) / len(verts)
         for v in verts:
@@ -128,41 +193,17 @@ def build_flowering():
             v.co = c + Vector((d.x * 1.5, d.y * 1.5, d.z * 0.9))
         petal, heart = BLOSSOMS[(i // 3) % 2]
         colour_blossom(b, petal, heart)
-        parts.append(b)
-    bush = common.join(parts, "flower_bush")
-    mod = bush.modifiers.new("Decimate", "DECIMATE")
-    mod.ratio = min(1.0, 2200 / common.triangle_count([bush]))
-    common.apply_all_modifiers(bush)
-    paint_bake.paint(bush, size=512, ao_distance=0.4, ao_strength=0.7, edge_strength=0.0, noise_scale=4.0)
-    common.export_glb(os.path.join(common.OUT_DIR, "flower_bush.glb"), [bush])
-    print("flower_bush tris:", common.triangle_count([bush]))
-    preview.render([bush], "flower_bush")
-
-
-def build(picked):
-    seed = 5
-    common.reset(seed)
-    rng = random.Random(seed)
-    radius = 0.95
-    leaves = common.join(clumps(rng, 6, radius, seed), "leaves")
-    common.decimate(leaves, 1300)
-    common.shade_smooth(leaves)
-    colour_leaves(leaves, seed)
-    parts = [leaves]
-    if not picked:
-        for b in berries(rng, 8, leaves):
-            common.shade_smooth(b)
-            colour_berry(b, None)
-            parts.append(b)
-    name = "berry_bush_picked" if picked else "berry_bush"
-    bush = common.join(parts, name)
-    paint_bake.paint(bush, size=512, ao_distance=0.4, ao_strength=0.75, edge_strength=0.0, noise_scale=4.0)
-    common.export_glb(os.path.join(common.OUT_DIR, name + ".glb"), [bush])
-    print(name, "tris:", common.triangle_count([bush]))
-    preview.render([bush], name)
+        highs.append(_dup(b))
+        detail.decimate_tris(b, 34)
+        lows.append(b)
+    bake_bush(lows, highs, "flower_bush")
 
 
 if __name__ == "__main__":
-    build(False)
-    build(True)
-    build_flowering()
+    only = sys.argv[1:]
+    if not only or "berry_bush" in only:
+        build(False)
+    if not only or "berry_bush_picked" in only:
+        build(True)
+    if not only or "flower_bush" in only:
+        build_flowering()
