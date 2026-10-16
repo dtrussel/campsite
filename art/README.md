@@ -22,7 +22,7 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 | `reference/concept-2026-10/` | The team's concept art (WebP, reference only) and its index. The style guide is [`docs/design/art-direction.md`](../docs/design/art-direction.md) |
 | `lib/common.py` | Scene reset, mesh helpers, sRGB→linear colours, per-vertex/face colouring, painted grime, remesh/decimate, glTF export |
 | `lib/paint_bake.py` | **The painted look**: bakes base colour, a warm-top/cool-bottom tint, AO, edge highlights and brush noise into one texture (`<name>_painted` material) |
-| `lib/detail.py` | Feature 031 M6: **dense detail**. `bake_prop` and `bake_prop_lows` model a prop dense and bake its painted look onto the budget mesh (`paint_bake.paint_direct`). Dense helpers: `bark_log`, `plank`, `leaf_clump`, `colour_foliage`, `cull_hidden` |
+| `lib/detail.py` | Feature 031 M6: **dense detail**. `bake_prop` and `bake_prop_lows` model a prop dense and bake its painted look onto the budget mesh (`paint_bake.paint_direct`). Dense helpers: `bark_log`, `plank`, `leaf_clump`, `colour_foliage`, `cull_hidden`. M8: `scatter_leaves` and `leaf_colour` put individual leaves or needles over a foliage shell |
 | `lib/preview.py` | Preview renders |
 | `nature/` | Trees (3 variants + stump), autumn pines (the Resin trees) and green border pines (`pine_c/d`), rocks, berry bush and flowering shrub (`flower_bush`) |
 | `props/camp.py` | Campfire, tent, fence, watch post, torch, woodpile, crate, barrel, toadstools |
@@ -50,7 +50,7 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
   (`scripts/utilities/stylize.gd`). The hero and shadow profiles also add an
   ink outline.
 - **Emissive** flat materials (eyes, wand star, embers) render unshaded.
-- **Triangle budgets:** imps ≤ 12k; the hero kids ≤ 40k (about 35k: body and clothes ~18–20k, head and ears ~4.5k, hair ~9–10k, each prop ~1.5k; Godot makes distance LODs on import), trees ≤ 3k, props ≤ 1.5k. The kids bake at 1024 (they are under 100 px on screen) and export WebP textures.
+- **Triangle budgets:** imps ≤ 12k; the hero kids ≤ 40k (about 35k: body and clothes ~18–20k, head and ears ~4.5k, hair ~9–10k, each prop ~1.5k; Godot makes distance LODs on import), trees ≤ 5.2k (M8: about 4k of it is scattered leaves; pines 3.6k, berry bush 4.5k), props ≤ 1.5k. The kids bake at 1024 (they are under 100 px on screen) and export WebP textures.
 - **High-to-low bake:** the kid scripts build dense meshes (voxel cloth with folds, the 100-ring head loft, per-vertex colours) and `chibi.lowpoly(mesh, tris)` decimates each one to its budget while keeping a dense copy. `paint_bake.paint(mesh, high=copy)` paints the look on the dense copy (so stripes, folds, AO and the face stay crisp), then transfers it onto the low mesh with a selected-to-active colour bake. `HIGH_POLY=1` skips the decimation, to compare.
 - **Prop detail:** model props dense and finish them with `detail.bake_prop(parts, name, budget, ray=...)`, so carved detail (bark, plank seams, tiles, stitching) lives in the texture. Check a model in the game look with `game/tools/model_gallery.tscn` (usage is in its header).
 - **Draft bakes:** `BAKE_SIZE=512 .venv-blender/bin/python art/characters/nela.py` bakes the painted look at low resolution with fewer samples (about a minute per kid at 256, a few minutes at 512–1024) and renders the previews, but never exports to `game/assets` (unless `DRAFT_EXPORT=1`, for a quick look in Godot; do not commit those). Use it to review paint between milestones; run the full 1024 bake only for a release.

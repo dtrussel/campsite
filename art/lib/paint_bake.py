@@ -432,6 +432,26 @@ def _paint_high_to_low(low, high, source, name, emissive, params):
     return final
 
 
+def _near_cage(low, extrusion):
+    """A bake cage for a low mesh with a 'cage_near' point attribute
+    (feature 031 M8: scattered leaves that are their own bake source).
+    Marked vertices sit just off their surface, so a ray cannot pick up
+    an overlapping neighbour; the rest get the usual extrusion. Returns
+    None when nothing is marked."""
+    attr = low.data.attributes.get("cage_near")
+    if attr is None:
+        return None
+    near = [a.value for a in attr.data]
+    cage = low.copy()
+    cage.data = low.data.copy()
+    cage.name = low.name + "_cage"
+    low.users_collection[0].objects.link(cage)
+    for v in cage.data.vertices:
+        v.co += v.normal * extrusion * (1.0 - 0.9 * near[v.index])
+    cage.hide_render = True
+    return cage
+
+
 def paint_direct(low, high, name=None, emissive=None, **params):
     """High-to-low in one bake (props, feature 031 M6): the painted look
     (colours, top light, AO, cavity, edges, strokes) is evaluated on the
@@ -479,10 +499,20 @@ def paint_direct(low, high, name=None, emissive=None, **params):
     bake.use_selected_to_active = True
     bake.cage_extrusion = params.get("cage_extrusion", 0.02)
     bake.max_ray_distance = params.get("max_ray_distance", 0.05)
+    cage = _near_cage(low, bake.cage_extrusion)
+    if cage is not None:
+        bake.use_cage = True
+        bake.cage_object = cage
     common.select_only([high, low])
     bpy.context.view_layer.objects.active = low
     bpy.ops.object.bake(type="EMIT")
     bake.use_selected_to_active = False
+    if cage is not None:
+        bake.use_cage = False
+        bake.cage_object = None
+        cage_data = cage.data
+        bpy.data.objects.remove(cage)
+        bpy.data.meshes.remove(cage_data)
 
     final = _final_material(low, image, name, emissive)
     mesh.uv_layers["PaintUV"].active_render = True

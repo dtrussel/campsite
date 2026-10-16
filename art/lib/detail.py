@@ -259,6 +259,107 @@ def leaf_clump(center, radius, seed, tufts=16, bump=0.2, squash=0.82, under=0.35
     return obj
 
 
+def scatter_leaves(shell, seed, length=0.3, width=0.16, coverage=1.3, max_count=1400, tilt=0.55, sink=0.03,
+                   droop=0.3, min_up=-0.45, colour=None, outward=0.0, needle=False, name="leaves"):
+    """Covers a leaf-clump shell with individual leaves (feature 031 M8),
+    so a canopy reads as many small leaves with dark gaps between them
+    instead of a smooth blob. Each leaf is a cupped oval (four
+    triangles), its base sunk into the shell and its tip
+    tilted out of the surface and drooping, so tips break the
+    silhouette. Leaves are spread by face area over the shell's faces
+    whose normal.z > `min_up` (undersides stay bare: the dark shell).
+    `colour(pos, normal, rnd, along)` gives a leaf's colour at a point
+    (`along` 0 base .. 1 tip); default is a flat green. `outward` (0..1)
+    turns leaves to point away from the vertical axis (down a pine
+    tier's slope); `needle` makes each a pointed two-triangle blade."""
+    import random
+    rng = random.Random(seed)
+    mesh = shell.data
+    mw = shell.matrix_world
+    faces = []
+    total = 0.0
+    for poly in mesh.polygons:
+        n = (mw.to_3x3() @ poly.normal).normalized()
+        if n.z < min_up:
+            continue
+        weight = poly.area * (0.55 + 0.45 * max(0.0, n.z))
+        total += weight
+        faces.append((total, poly, n))
+    count = min(max_count, int(coverage * total / (0.5 * length * width)))
+    bm = bmesh.new()
+    colours = []
+    keys = [f[0] for f in faces]
+    import bisect
+    for i in range(count):
+        k = bisect.bisect_left(keys, rng.random() * total)
+        _, poly, n = faces[min(k, len(faces) - 1)]
+        vs = [mw @ mesh.vertices[j].co for j in poly.vertices]
+        a, b = rng.random(), rng.random()
+        if a + b > 1.0:
+            a, b = 1.0 - a, 1.0 - b
+        p = vs[0] + (vs[1] - vs[0]) * a + (vs[-1] - vs[0]) * b
+        # A random direction in the tangent plane, lifted out by `tilt`.
+        t = n.orthogonal().normalized()
+        ang = rng.random() * math.tau
+        d = (t * math.cos(ang) + n.cross(t) * math.sin(ang)).normalized()
+        radial = Vector((p.x, p.y, 0.0))
+        radial = radial - n * radial.dot(n)
+        if outward > 0.0 and radial.length > 1e-4:
+            d = d.lerp(radial.normalized(), outward).normalized()
+        tl = tilt * rng.uniform(0.6, 1.3)
+        axis = (d * math.cos(tl) + n * math.sin(tl) + Vector((0, 0, -droop))).normalized()
+        face_n = (n - axis * n.dot(axis)).normalized()
+        side = axis.cross(face_n).normalized()
+        size = rng.uniform(0.75, 1.2)
+        L, W = length * size, width * size
+        base = p - n * sink * size
+        cup = face_n * W * 0.16
+        # A rounded oval: base, two pairs of side points, tip (four triangles).
+        if needle:
+            outline = [(0.0, 0.0), (0.35, -0.5), (1.0, 0.0), (0.35, 0.5)]
+            tris = ((0, 3, 1), (1, 3, 2))
+        else:
+            outline = [(0.0, 0.0), (0.28, -0.46), (0.7, -0.4), (1.0, 0.0), (0.7, 0.4), (0.28, 0.46)]
+            tris = ((0, 5, 1), (1, 5, 4), (1, 4, 2), (2, 4, 3))
+        pts = [base + axis * L * a + side * W * b - (cup if b else Vector()) for a, b in outline]
+        v = [bm.verts.new(c) for c in pts]
+        for tri in tris:
+            bm.faces.new([v[k] for k in tri])
+        rnd = rng.random()
+        for (a, b), c in zip(outline, pts):
+            colours.append((0.25, 0.5, 0.2) if colour is None else colour(c, n, rnd, a))
+    obj = common.mesh_object(name, bm)
+    for poly in obj.data.polygons:
+        poly.use_smooth = False
+    common.color_by(obj, lambda pos, normal: (0, 0, 0))
+    col = obj.data.color_attributes["Col"]
+    per_vertex = [common.srgb(c) for c in colours]
+    for loop in obj.data.loops:
+        col.data[loop.index].color = (*per_vertex[loop.vertex_index], 1.0)
+    near = obj.data.attributes.new("cage_near", "FLOAT", "POINT")
+    for a in near.data:
+        a.value = 1.0
+    print(name, "leaves:", count)
+    return obj
+
+
+def leaf_colour(dark, mid, light, lo, hi, seed=0, lift=0.15):
+    """A colour(pos, normal, rnd, along) for scatter_leaves: sunlit,
+    yellow-green leaves on top, cooler and darker low down and
+    underneath, each leaf a little different, bases darker than tips."""
+    def colour(pos, normal, rnd, along):
+        h = (pos.z - lo) / max(hi - lo, 0.01)
+        n = noise.noise(pos * 1.4 + Vector((seed, 0, seed)))
+        t = h * 0.55 + normal.z * 0.35 + n * 0.25 + (rnd - 0.5) * 0.45 + lift
+        t = max(0.0, min(1.0, t))
+        c = common.lerp(dark, mid, min(1.0, t * 1.8))
+        if t > 0.5:
+            c = common.lerp(c, light, min(1.0, (t - 0.5) * 2.2))
+        # Darker at the stalk, lighter at the tip.
+        return common.lerp(common.lerp(c, dark, 0.3), common.lerp(c, light, 0.2), along)
+    return colour
+
+
 def cull_hidden(targets, containers, margin=0.03):
     """Deletes faces of each target whose vertices all lie deeper than
     `margin` inside another (closed) container mesh: hidden clump and

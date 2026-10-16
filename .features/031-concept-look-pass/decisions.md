@@ -94,3 +94,24 @@
   - **Soles** follow the foot's outline (`chibi.sole_slab`).
 - **Kept:** Nela's bun. The ponytail was tried twice and read worse from above.
 
+
+## D17: Foliage from individual leaves (user and agent)
+- **Context.** The user picked foliage as the next art pass. The trees and bushes read as smooth, glossy blobs and the resin pines as plastic cones; the concept's canopies are built from many small leaves with dark gaps between them.
+- **Decision.**
+  - **Leaves:** keep the clump shell, painted darker as the shade between leaves, and scatter solid leaves over it (`detail.scatter_leaves`). They are not transparent cards.
+    - Trees and bushes get rounded ovals: four triangles each, cupped, with the tip tilted out of the shell.
+    - Pines get pointed needle blades that run down each tier's slope.
+  - **Export:** the leaves go into the game mesh as they are; only the shell and trunk are decimated.
+  - **Bake cage:** leaves carry a `cage_near` attribute, and `paint_bake.paint_direct` gives those vertices a near cage, so a bake ray cannot pick up an overlapping neighbour's colour.
+  - **Double-sided shader:** the foliage shader is double-sided, with the normal flipped for back faces.
+- **Cost.**
+
+  | Model | Triangles before | Triangles now |
+  |---|---|---|
+  | Broadleaf tree | 2.9k | 5.1k |
+  | Pine | 2.95k | 3.6k |
+  | Berry bush | — | 4.5k |
+  | Flower bush | — | 3.3k |
+
+  Godot's import LODs reduce the far border trees.
+- **Not chosen:** alpha-cut leaf cards would need a second material and texture per tree and an alpha-scissor path in the foliage shader.

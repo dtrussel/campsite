@@ -184,8 +184,19 @@ def build(name, seed, tiers, base_radius, total, palette=AUTUMN):
     per_vertex = [common.srgb(c) for c in colours]
     for loop in mesh.loops:
         col.data[loop.index].color = (*per_vertex[loop.vertex_index], 1.0)
-    detail.bake_prop([tree], name, 2950, size=1024, preview_elevation=25, ray=0.02, ao_distance=0.7,
-                     ao_strength=0.7, edge_strength=0.25, edge_radius=0.05, noise_scale=3.0, cavity=0.0)
+    # Needle tufts (M8): pointed blades running down every tier's slope
+    # and drooping past the hem, so the tiers read shaggy, not smooth.
+    tufts_obj = detail.scatter_leaves(tree, seed, length=0.34, width=0.12, coverage=1.4, max_count=850, tilt=0.2,
+                                      sink=0.02, droop=0.3, min_up=0.15, outward=0.8, needle=True,
+                                      colour=detail.leaf_colour(dark, mid, light, lo, hi, seed, lift=0.2),
+                                      name="needles")
+    tufts_high = tufts_obj.copy()
+    tufts_high.data = tufts_obj.data.copy()
+    tufts_obj.users_collection[0].objects.link(tufts_high)
+    detail.bake_prop_lows([tree], name, 3600, lows=[tufts_obj], dense_only=[tufts_high], size=1024, ray=0.02,
+                          ao_distance=0.6, ao_strength=0.5, edge_strength=0.25, edge_radius=0.05, noise_scale=3.0,
+                          cavity=0.0)
+    preview.render([bpy.data.objects[name]], name, elevation=25)
 
 
 SPECS = {

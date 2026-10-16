@@ -131,3 +131,12 @@
 - **Re-rendered:** both portraits.
 - **Checks:** `tools/check.sh` passes.
 
+
+## 2026-10-16: Milestone 8 (art pass picked by the user)
+The user picked foliage, the campfire and hearth, the lanterns and the shadow imp. The ground is left as it is.
+
+**Foliage (D17).**
+- **Broadleaf trees `tree_a`–`c`:** about 1,000 rounded leaves over a dark shell. Sunlit yellow-green leaf tops, shade between the leaves and a jagged leafy silhouette.
+- **Berry and flower bushes:** 380–450 smaller leaves. The berries and blossoms sit a little further out.
+- **Pines `pine_a`–`d`:** about 600 needle blades running down the tiers. The tier hems still read.
+- **Checks:** gallery before/after; day, sunset and night screenshots; `tools/check.sh` passes.

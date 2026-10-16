@@ -43,3 +43,7 @@
   - **Logos:** paint them into the clothing colour function. Painting a big logo needs a dense high mesh (`faces=30000` on the tee); the game mesh budget is unchanged.
   - **Colour check:** check clothing colours in a day screenshot crop, not just the gallery; the warm grade pulls blues toward grey and purples toward pink.
   - **Hair:** the crown is what the game camera sees, so a hair change must keep it textured.
+
+**Foliage (M8, D17):** canopies are a shell plus `detail.scatter_leaves`. Tune leaf size, coverage, tilt and droop in each nature script.
+- Leaves are their own bake source, so they need the `cage_near` cage (it is set automatically).
+- Bake rays from the full cage would pick up overlapping leaves and muddy the colours.

@@ -17,6 +17,7 @@ from mathutils import Vector, noise  # noqa: E402
 
 from lib import common, detail, paint_bake, preview  # noqa: E402
 
+LEAF_SHADE = (0.05, 0.15, 0.1)
 LEAF_DARK = (0.1, 0.28, 0.18)
 LEAF = (0.22, 0.52, 0.2)
 LEAF_LIGHT = (0.55, 0.76, 0.24)
@@ -41,20 +42,27 @@ def leafy_clumps(rng, count, radius, seed, squash=0.75):
     return parts
 
 
-def dense_leaves(rng, count, radius, seed, budget):
-    """Returns (low, high): the tufted leaf mound decimated to `budget`
-    and its dense copy, both painted with colour_foliage."""
+def dense_leaves(rng, count, radius, seed, budget, leaf_count=450):
+    """Returns (low, high, leaves): the tufted leaf mound decimated to
+    `budget`, its dense copy (painted with colour_foliage, darker: the
+    shade between leaves) and `leaf_count` scattered leaves over it
+    (M8), which go into the low mesh as they are."""
     parts = leafy_clumps(rng, count, radius, seed)
     detail.cull_hidden(parts, parts, margin=0.03)
     high = common.join(parts, "leaves_high")
     common.shade_smooth(high)
-    detail.colour_foliage(high, LEAF_DARK, LEAF, LEAF_LIGHT, seed)
+    zs = [v.co.z for v in high.data.vertices]
+    lo, hi = min(zs), max(zs)
+    detail.colour_foliage(high, LEAF_SHADE, LEAF, LEAF_LIGHT, seed, fleck=0.3)
+    leaves = detail.scatter_leaves(high, seed, length=0.26, width=0.2, coverage=3.2, max_count=leaf_count, tilt=0.3,
+                                   droop=0.15, min_up=-0.5, sink=0.02,
+                                   colour=detail.leaf_colour(LEAF_DARK, LEAF, LEAF_LIGHT, lo, hi, seed, lift=0.28))
     low = high.copy()
     low.data = high.data.copy()
     low.name = "leaves"
     high.users_collection[0].objects.link(low)
     detail.decimate_tris(low, budget)
-    return low, high
+    return low, high, leaves
 
 
 def bake_bush(low_parts, high_parts, name, size=512, **params):
@@ -63,7 +71,7 @@ def bake_bush(low_parts, high_parts, name, size=512, **params):
     blossoms are the same in both)."""
     low = common.join(low_parts, name)
     high = common.join(high_parts, name + "_high")
-    p = dict(ao_distance=0.4, ao_strength=0.75, edge_strength=0.0, noise_scale=4.0, cavity=0.5,
+    p = dict(ao_distance=0.3, ao_strength=0.4, edge_strength=0.0, noise_scale=4.0, cavity=0.5,
              max_ray_distance=0.1, cage_extrusion=0.05)
     p.update(params)
     paint_bake.paint_direct(low, high, size=size, **p)
@@ -123,7 +131,7 @@ def berries(rng, count, leaves):
             offset = side * math.cos(k * 2.09) * 0.09 + up * math.sin(k * 2.09) * 0.09
             bm = bmesh.new()
             bmesh.ops.create_uvsphere(bm, u_segments=8, v_segments=6, radius=0.085)
-            bmesh.ops.translate(bm, verts=bm.verts, vec=hit + normal * 0.05 + offset)
+            bmesh.ops.translate(bm, verts=bm.verts, vec=hit + normal * 0.11 + offset)
             parts.append(common.mesh_object("berry%d_%d" % (i, k), bm))
     return parts
 
@@ -167,8 +175,8 @@ def build(picked):
     common.reset(seed)
     rng = random.Random(seed)
     radius = 0.95
-    low, high = dense_leaves(rng, 6, radius, seed, 1600)
-    lows, highs = [low], [high]
+    low, high, leaves = dense_leaves(rng, 6, radius, seed, 800)
+    lows, highs = [low, leaves], [high, _dup(leaves)]
     if not picked:
         for b in berries(rng, 8, high):
             common.shade_smooth(b)
@@ -183,8 +191,8 @@ def build_flowering():
     seed = 13
     common.reset(seed)
     rng = random.Random(seed)
-    low, high = dense_leaves(rng, 6, 0.85, seed, 1150)
-    lows, highs = [low], [high]
+    low, high, leaves = dense_leaves(rng, 6, 0.85, seed, 600, leaf_count=380)
+    lows, highs = [low, leaves], [high, _dup(leaves)]
     for i, b in enumerate(berries(rng, 12, high)):
         verts = b.data.vertices
         c = sum((v.co for v in verts), Vector()) / len(verts)

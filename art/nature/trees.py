@@ -19,6 +19,7 @@ from lib import common, detail, paint_bake, preview  # noqa: E402
 BARK_DARK = (0.3, 0.19, 0.13)
 BARK = (0.52, 0.34, 0.22)
 BARK_LIGHT = (0.66, 0.47, 0.3)
+LEAF_SHADE = (0.05, 0.16, 0.12)
 LEAF_DARK = (0.12, 0.3, 0.2)
 LEAF = (0.27, 0.55, 0.22)
 LEAF_LIGHT = (0.64, 0.8, 0.26)
@@ -218,13 +219,22 @@ def build_tree(name, seed, height, limbs, spread):
     trunk, tips = bark_trunk(rng, height, limbs, 0.34, seed)
     clumps = leafy_canopy(rng, tips, height, spread, seed)
     detail.cull_hidden(clumps + [trunk], clumps, margin=0.04)
-    leaves = common.join(clumps, "canopy")
-    common.shade_smooth(leaves)
-    zs = [v.co.z for v in leaves.data.vertices]
-    detail.colour_foliage(leaves, LEAF_DARK, LEAF, LEAF_LIGHT, seed, lo=min(zs), hi=max(zs))
-    detail.bake_prop([trunk, leaves], name, 2900, size=1024, preview_elevation=30, ray=0.12,
-                     ao_distance=0.9, ao_strength=0.8, edge_strength=0.0, noise_scale=2.5,
-                     stroke_strength=0.1, cavity=0.5)
+    shell = common.join(clumps, "canopy")
+    common.shade_smooth(shell)
+    zs = [v.co.z for v in shell.data.vertices]
+    lo, hi = min(zs), max(zs)
+    # The shell is the shade between the leaves (M8): dark and cool.
+    detail.colour_foliage(shell, LEAF_SHADE, LEAF_DARK, LEAF, seed, lo=lo, hi=hi, fleck=0.3)
+    leaves = detail.scatter_leaves(shell, seed, length=0.42, width=0.32, coverage=3.2, max_count=1000, tilt=0.3,
+                                   droop=0.2, min_up=-0.7,
+                                   colour=detail.leaf_colour(LEAF_DARK, LEAF, LEAF_LIGHT, lo, hi, seed))
+    leaves_high = leaves.copy()
+    leaves_high.data = leaves.data.copy()
+    leaves.users_collection[0].objects.link(leaves_high)
+    detail.bake_prop_lows([trunk, shell], name, 5100, lows=[leaves], dense_only=[leaves_high], size=1024,
+                          ray=0.12, ao_distance=0.45, ao_strength=0.35, edge_strength=0.0, noise_scale=2.5,
+                          stroke_strength=0.1, cavity=0.3)
+    preview.render([bpy.data.objects[name]], name, elevation=30)
 
 
 def _stump_ridge(p):

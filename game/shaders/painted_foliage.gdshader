@@ -5,7 +5,7 @@ shader_type spatial;
 // The trunk stays put: sway fades in from `sway_start` of the height.
 // Feature 031 M4: the shared painted finish (sunny crown tops, warm
 // shaded undersides, leaf texel detail).
-render_mode diffuse_lambert_wrap, specular_disabled;
+render_mode diffuse_lambert_wrap, specular_disabled, cull_disabled;
 
 #include "res://shaders/painted_common.gdshaderinc"
 
@@ -40,7 +40,9 @@ void vertex() {
 
 void fragment() {
 	vec4 c = texture(albedo_texture, UV) * albedo_color;
-	ALBEDO = painted_finish(c.rgb, local_pos, world_pos, normalize(world_normal));
+	// Double-sided leaves (M8): a leaf seen from behind shades as its front.
+	vec3 n = normalize(world_normal) * (FRONT_FACING ? 1.0 : -1.0);
+	ALBEDO = painted_finish(c.rgb, local_pos, world_pos, n);
 	ROUGHNESS = 1.0;
 	METALLIC = 0.0;
 	SPECULAR = 0.0;
