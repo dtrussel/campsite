@@ -26,6 +26,9 @@ WOOD_DARK = (0.36, 0.22, 0.13)
 BARK = (0.42, 0.27, 0.17)
 END_GRAIN = (0.9, 0.7, 0.45)
 CHAR = (0.12, 0.09, 0.08)
+COBBLE = (0.4, 0.41, 0.43)
+COBBLE_LIGHT = (0.62, 0.62, 0.61)
+COBBLE_DARK = (0.22, 0.22, 0.24)
 ROPE = (0.86, 0.74, 0.5)
 IRON = (0.3, 0.32, 0.38)
 CANVAS = (0.95, 0.88, 0.72)
@@ -632,12 +635,16 @@ def campfire():
     common.reset(3)
     rng = random.Random(3)
     parts = []
-    for i in range(12):
-        a = i / 12 * math.tau
-        s = boulder("stone%d" % i, 200 + i, (1.0, 0.85, 0.75), subdiv=2, moss=False)
-        s.scale = (0.56, 0.56, 0.56)
-        s.location = (math.cos(a) * 0.86, math.sin(a) * 0.86, 0)
-        s.rotation_euler = (0, 0, a)
+    # M8: rounded grey cobbles of mixed sizes (were pale, chiselled boulders
+    # that the budget turned into angular facets).
+    count = 14
+    for i in range(count):
+        a = i / count * math.tau + rng.uniform(-0.06, 0.06)
+        big = 1.0 if i % 3 else 1.18
+        size = (rng.uniform(0.38, 0.46) * big, rng.uniform(0.3, 0.36) * big, rng.uniform(0.24, 0.3) * big)
+        r = 0.88 + rng.uniform(-0.03, 0.04)
+        s = stone(size, location=(math.cos(a) * r, math.sin(a) * r, -0.02), rotation=(0, 0, a + rng.uniform(-0.3, 0.3)),
+                  seed=200 + i, base=COBBLE, light=COBBLE_LIGHT, dark=COBBLE_DARK, moss=0.25 if i % 4 == 1 else 0.0)
         _apply(s)
 
         def soot(p, n, a=a):
@@ -646,9 +653,9 @@ def campfire():
             return _clamp(inward * 1.4 - 0.2) * _clamp(low) * 0.8 + _clamp(noise.noise(p * 9.0 + Vector((i, 0, 0))) - 0.35) * 0.6
         common.grime(s, (0.17, 0.13, 0.11), soot)
         parts.append(s)
-    for i in range(5):
-        a = i / 5 * math.tau + 0.3
-        lg = detail.bark_log(0.95, 0.085, seed=i + 2, segments=48, groove=0.14)
+    for i in range(6):
+        a = i / 6 * math.tau + 0.3
+        lg = detail.bark_log(0.95, 0.11, seed=i + 2, segments=48, groove=0.14)
         lg.rotation_euler = (0, math.radians(-55), a + math.pi)
         lg.location = (math.cos(a) * 0.3, math.sin(a) * 0.3, 0.36)
         _apply(lg)
@@ -690,7 +697,7 @@ def campfire():
         if r < 0.28:
             common.grime(chunk, EMBER, lambda p, n: _clamp(noise.noise(p * 40.0) * 3 - 0.3) * 0.9)
         parts.append(chunk)
-    detail.bake_prop_lows(parts, "campfire", budget=1500, lows=[low_bed], dense_only=[bed], size=1024, ray=0.08)
+    detail.bake_prop_lows(parts, "campfire", budget=2800, lows=[low_bed], dense_only=[bed], size=1024, ray=0.08)
 
 
 def _tri_grid(bm, a, b, c, n):

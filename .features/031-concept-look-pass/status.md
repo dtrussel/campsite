@@ -140,3 +140,7 @@ The user picked foliage, the campfire and hearth, the lanterns and the shadow im
 - **Berry and flower bushes:** 380–450 smaller leaves. The berries and blossoms sit a little further out.
 - **Pines `pine_a`–`d`:** about 600 needle blades running down the tiers. The tier hems still read.
 - **Checks:** gallery before/after; day, sunset and night screenshots; `tools/check.sh` passes.
+
+**Campfire and hearth.**
+- **Campfire:** 14 rounded grey cobbles of mixed sizes (the dense `stone` helper) replace the pale chiselled boulders, which the old 1.5k budget had turned into angular cream facets. They are sooted on the side facing the fire, with a little moss. Six thicker charred logs. The budget is now 2.8k (`campfire` sits in the middle of every shot).
+- **Hearth ring:** the bricks vary in size and set angle, about a third are burnt darker, and all are slightly dustier. The budget is unchanged.

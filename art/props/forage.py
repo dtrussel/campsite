@@ -870,15 +870,23 @@ def hearth_ring():
     count = 16
 
     def brick(size, seed, angle, radius, z):
-        b = dense_block(size, location=(0, 0, z), bevel=0.018, density=0.012, warp=0.012, seed=seed)
+        # M8: hand-made, uneven bricks: sizes, angles and firing vary.
+        jit = random.Random(seed)
+        size = (size[0] * jit.uniform(0.88, 1.1), size[1] * jit.uniform(0.9, 1.08), size[2] * jit.uniform(0.9, 1.1))
+        b = dense_block(size, location=(0, 0, z), bevel=0.024, density=0.012, warp=0.02, seed=seed)
         displace(b, lambda p, n: -max(0.0, noise.noise(p * 9.0 + Vector((seed, 0, 0))) - 0.25) * 0.05)
-        _place(b, (math.cos(angle) * radius, math.sin(angle) * radius, 0), (0, 0, angle + math.pi / 2))
+        _place(b, (math.cos(angle) * radius, math.sin(angle) * radius, 0),
+               (jit.uniform(-0.05, 0.05), jit.uniform(-0.06, 0.06), angle + math.pi / 2 + jit.uniform(-0.12, 0.12)))
         fired = noise.noise(Vector((seed * 1.7, 0.3, 0.2))) * 0.5 + 0.5
+        burnt = jit.random() < 0.3
         clay = _clay_dense_colour(seed, wet_below=0.0, pebbles=False)
 
         def colour(p, n):
             c = clay(p, n)
             c = common.lerp(c, (0.6, 0.27, 0.16), fired * 0.5)
+            c = common.lerp(c, (0.62, 0.5, 0.42), 0.18)  # a little dustier than raw clay
+            if burnt:
+                c = common.lerp(c, (0.3, 0.17, 0.12), 0.45)
             chip = noise.noise(p * 9.0 + Vector((seed, 0, 0)))
             if chip > 0.35:
                 c = common.lerp(c, CLAY_LIGHT, 0.4)  # fresh chipped clay
