@@ -59,7 +59,7 @@ LEAF = (0.36, 0.62, 0.2)
 RED = (0.86, 0.16, 0.14)
 METAL = (0.72, 0.68, 0.6)
 
-HEAD = chibi.HeadFrame((0, -0.01, 1.565), (0.214, 0.235, 0.225))
+HEAD = chibi.HeadFrame((0, -0.01, 1.51), (0.214, 0.235, 0.225))  # low: a short chibi neck
 PROP = chibi.Proportions(legs=1.85, spine=1.3, arms=1.25)
 FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "leo_face.png")
 # From the concept art: a round, open 7-year-old face. Big bright-blue

@@ -59,7 +59,7 @@ BRONZE = (0.58, 0.38, 0.18)
 BRONZE_DARK = (0.3, 0.17, 0.08)
 GLOW = (1.0, 0.8, 0.38)
 
-HEAD = chibi.HeadFrame((0, -0.01, 1.57), (0.242, 0.252, 0.235))
+HEAD = chibi.HeadFrame((0, -0.01, 1.515), (0.242, 0.252, 0.235))  # low: a short chibi neck
 PROP = chibi.Proportions(legs=1.3, spine=1.1, arms=1.1)
 FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "nela_face.png")
 # From the concept art: a 3-year-old's face. A big round cranium with the

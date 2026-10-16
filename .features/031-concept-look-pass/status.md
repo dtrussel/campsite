@@ -123,6 +123,7 @@
 | Leo | Saturated sky-blue tee. Teal-blue denim shorts with a light rolled cuff and two mended patches (no lime bands). Big painted camp logo (globe, hill, pines, sun) in the centre of the tee. Compass moved from the neck cord to his right strap. Light-blue socks, a brighter blue bedroll, rounded soles. | Logo as stacked decal geometry: the ink line and the bake turned it to mush, so it is painted into a denser tee instead. |
 | Nela | Violet trousers with thinner cream zigzags (purple dominates). Big pale-blue heart on the tee. Less dirt. A brighter purple hair tie. Compass clipped to her strap (no cord across the heart). Rounded soles. | High ponytail (two attempts). From the game camera the crown read as a smooth, bright blob, and the old bun reads better, so the bun was kept. |
 
+- **Shorter necks (user follow-up):** both heads sit 0.055 lower in rest space (`HEAD` z), so the chin meets the collar like a chibi. No clipping in the idle, run, attack or pick-up poses; the portrait cameras were lowered to match.
 - **Triangles:** Leo 35.0k, Nela 35.7k, unchanged.
 - **Unchanged:** rigs, clips, proportions and attach points.
 - **Re-rendered:** both portraits.

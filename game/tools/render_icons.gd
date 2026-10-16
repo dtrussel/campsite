@@ -66,8 +66,8 @@ func _ready() -> void:
 			await _render(job[0], (job[1] as Callable).call(), job[2], job[3], job[4], job[5])
 	# Portraits: head-and-shoulders of each character.
 	var portraits: Array = [
-		["portrait_leo", "custom/leo.glb", "hero", ["Leo_Stick"], 0.48, 2.4],
-		["portrait_nela", "custom/nela.glb", "hero", ["Nela_Lantern", "Nela_LanternGlow"], 0.16, 2.7],
+		["portrait_leo", "custom/leo.glb", "hero", ["Leo_Stick"], 0.43, 2.4],
+		["portrait_nela", "custom/nela.glb", "hero", ["Nela_Lantern", "Nela_LanternGlow"], 0.11, 2.7],
 		["portrait_imp", "custom/shadow_imp.glb", "shadow", [], -0.12, 3.1, {&"idle": "Imp_Idle", &"move": "Imp_Run"}],
 	]
 	for p in portraits:
