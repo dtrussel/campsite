@@ -13,7 +13,7 @@ By night it becomes **a deep blue world with warm pools of fire and lantern ligh
 ## Pillars
 
 1. **Tilt-shift miniature.**
-   - The camera looks down from high up, at about 45–50°, with a fairly narrow lens.
+   - The camera looks down at about 42°, close to the kids, with a fairly narrow lens.
    - The top and bottom of the frame blur softly; the play band in the middle stays crisp.
    - The UI is never blurred.
 2. **Golden hour by day.**

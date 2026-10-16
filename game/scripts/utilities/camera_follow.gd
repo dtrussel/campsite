@@ -11,8 +11,8 @@ extends Node3D
 @export var target_path: NodePath
 @export var smoothing: float = 6.0
 @export var offset: Vector3 = Vector3.ZERO
-@export var pitch_degrees: float = 50.0
-@export var distance: float = 18.5
+@export var pitch_degrees: float = 42.0
+@export var distance: float = 15.5
 @export var min_zoom: float = 0.65
 @export var max_zoom: float = 1.3
 @export var zoom_step: float = 0.1
