@@ -150,3 +150,8 @@ The user picked foliage, the campfire and hearth, the lanterns and the shadow im
 - **Lantern post:** the glass is now amber.
 - **Why it was cream:** `paint_bake.flat_material` takes linear colour, so GLOW (1.0, 0.66, 0.26) displayed as cream. The glow colours are now converted with `common.srgb`.
 - **Glow lantern:** keeps its cyan crystal (the gameplay glow shard).
+
+**Shadow imp (D18).**
+- **Aura:** a glowing violet smoke aura as in concept 08 (`scripts/mobs/shadow_aura.gd`, the `Aura` node in `ShadowImp.tscn`). Additive violet puffs rise off the imp and trail behind it in world space, with a few bright motes. It stops emitting on `defeated`.
+- **Model:** unchanged; the feature 028 design is kept.
+- **Checks:** night screenshots; `tools/check.sh` passes.

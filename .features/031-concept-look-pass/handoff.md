@@ -18,7 +18,6 @@
   - the river, waterfall and bridge (concept 10);
   - a chicken critter;
   - more lived-in clutter (a supply table with mugs and a map).
-- The imp's purple smoke aura (concept 08) as a spawn VFX.
 
 **Milestone 4 (HD-2D finish):**
 - **Where to tune:**
@@ -47,3 +46,7 @@
 **Foliage (M8, D17):** canopies are a shell plus `detail.scatter_leaves`. Tune leaf size, coverage, tilt and droop in each nature script.
 - Leaves are their own bake source, so they need the `cage_near` cage (it is set automatically).
 - Bake rays from the full cage would pick up overlapping leaves and muddy the colours.
+
+**Imp aura (M8, D18):** tune it in `scripts/mobs/shadow_aura.gd` (amount, size, colour ramp).
+- It is additive, so many imps stacked together brighten.
+- Lower the ramp alpha if late waves get too hazy.

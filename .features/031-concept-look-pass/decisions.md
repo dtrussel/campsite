@@ -115,3 +115,10 @@
 
   Godot's import LODs reduce the far border trees.
 - **Not chosen:** alpha-cut leaf cards would need a second material and texture per tree and an alpha-scissor path in the foliage shader.
+
+## D18: Imp smoke as particles, not mesh (agent)
+- **Context.** The plan was to model wisps into the imp's mesh.
+- **Decision.** The smoke is a looping additive CPUParticles3D on the mob scene instead.
+- **Why not mesh.** The game's materials are opaque, so modelled wisps would read as purple hair or flames, not smoke.
+- **Why additive.** Dark violet puffs blended normally were invisible on the night ground, and mostly hidden behind the body.
+- **Kept.** The imp's feature 028 model and paint (purple body, cream eyes) are unchanged.

@@ -1,9 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://b0campsitemobshadowimp01"]
+[gd_scene load_steps=7 format=3 uid="uid://b0campsitemobshadowimp01"]
 
 [ext_resource type="Script" path="res://scripts/mobs/mob_controller.gd" id="1_mob"]
 [ext_resource type="Resource" uid="uid://b0campsitemobdefshadowimp" path="res://resources/mobs/shadow_imp.tres" id="2_def"]
 [ext_resource type="Script" path="res://scripts/utilities/character_visual.gd" id="3_visual"]
 [ext_resource type="PackedScene" path="res://assets/custom/shadow_imp.glb" id="4_model"]
+[ext_resource type="Script" path="res://scripts/mobs/shadow_aura.gd" id="5_aura"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_mob"]
 radius = 0.32
@@ -35,3 +36,6 @@ clips = {
 reference_speed = 2.4
 footstep_dust = &"step_dust"
 step_distance = 0.7
+
+[node name="Aura" type="CPUParticles3D" parent="."]
+script = ExtResource("5_aura")
