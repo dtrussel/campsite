@@ -43,7 +43,7 @@ Reference `13_style_target_village.webp` sets the finish on top of the pillars:
   - `screenshots.tscn` day shots are measured against these numbers.
 - **Painted detail.** Smooth surfaces carry fine texel and blotch noise (`painted_common.gdshaderinc`, ground `texel_*`). They never read as plastic.
 - **Ink line.** Props get a thin warm-brown inverted-hull outline; heroes a darker one; imps a heavy purple one.
-- **Strong tilt-shift.** A narrow crisp band with a light sharpen; the foreground blurs more than the background, into soft bokeh.
+- **Tilt-shift.** A crisp middle band with a light sharpen; the foreground blurs more than the background, into soft bokeh.
 - **Grade on luminance.** Contrast and the S-curve act on brightness only, so the hues survive. The grade fades to neutral at night, where the blue world and warm pools come from the lighting.
 
 ## Palette

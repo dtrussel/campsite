@@ -60,3 +60,17 @@
 ## D13: The grade fades out at night (agent)
 - **Context.** The day exposure and contrast crushed the dark night blues to black. Only the warm firelight survived, so the night read warm.
 - **Decision.** Exposure, colour balance and contrast blend to neutral with `night_amount`.
+
+## D14: Softer tilt-shift (user)
+- **Context.** After M4 the user found the blur a bit too strong.
+- **Decision.** The tilt-shift is softened, roughly halfway back toward its pre-M4 strength. The grade is unchanged.
+
+| Setting | M4 | Now |
+|---|---|---|
+| `focus_band` | 0.08 | 0.12 |
+| `falloff` | 0.26 | 0.32 |
+| `max_radius` (px at 1080p) | 11 | 7 |
+| `max_lod` | 2.6 | 2.0 |
+| `bottom_boost` | 1.3 | 1.2 |
+| Blur amount cap | 1.3 | 1.15 |
+| `haze` | 0.05 | 0.04 |

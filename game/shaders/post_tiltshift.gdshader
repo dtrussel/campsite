@@ -1,7 +1,7 @@
 shader_type canvas_item;
 
 // Full-screen look pass (feature 031, docs/design/art-direction.md):
-// a strong tilt-shift that keeps a narrow horizontal band crisp (with a
+// a tilt-shift that keeps a horizontal horizontal band crisp (with a
 // light sharpen) and melts the top and bottom of the frame into soft
 // bokeh (the "miniature diorama" of the concept art and the HD-2D style
 // target), then a warm filmic grade: S-curve, brown-lifted blacks,
@@ -13,11 +13,11 @@ uniform sampler2D screen_tex : hint_screen_texture, filter_linear_mipmap, repeat
 
 uniform float blur_enabled : hint_range(0.0, 1.0) = 1.0;
 uniform float focus_center : hint_range(0.0, 1.0) = 0.53;  // screen y of the crisp band
-uniform float focus_band : hint_range(0.0, 0.5) = 0.08;    // half height kept sharp
-uniform float falloff : hint_range(0.01, 1.0) = 0.26;      // distance to full blur
-uniform float bottom_boost = 1.3;                          // the foreground blurs more
-uniform float max_radius = 11.0;                           // disc radius at full blur, px at 1080p
-uniform float max_lod = 2.6;                               // mip level at full blur
+uniform float focus_band : hint_range(0.0, 0.5) = 0.12;    // half height kept sharp
+uniform float falloff : hint_range(0.01, 1.0) = 0.32;      // distance to full blur
+uniform float bottom_boost = 1.2;                          // the foreground blurs more
+uniform float max_radius = 7.0;                            // disc radius at full blur, px at 1080p
+uniform float max_lod = 2.0;                               // mip level at full blur
 uniform float sharpen : hint_range(0.0, 1.0) = 0.22;        // unsharp mask in the band
 
 uniform float grade_strength : hint_range(0.0, 1.0) = 1.0;
@@ -32,7 +32,7 @@ uniform vec3 night_highlight : source_color = vec3(1.0, 0.74, 0.46);
 uniform vec3 day_lift : source_color = vec3(0.045, 0.022, 0.01);
 uniform vec3 night_lift : source_color = vec3(0.02, 0.03, 0.07);
 uniform vec3 haze_color : source_color = vec3(1.0, 0.76, 0.5);
-uniform float haze : hint_range(0.0, 1.0) = 0.05;
+uniform float haze : hint_range(0.0, 1.0) = 0.04;
 uniform float exposure = 0.8;
 uniform float contrast = 1.22;                             // around a low pivot: deep shadows
 uniform float pivot = 0.4;
@@ -49,7 +49,7 @@ void fragment() {
 	vec2 uv = SCREEN_UV;
 	float d = uv.y - focus_center;  // > 0 below the band (foreground)
 	float amount = smoothstep(focus_band, focus_band + falloff, abs(d));
-	amount = min(amount * (d > 0.0 ? bottom_boost : 1.0), 1.3) * blur_enabled;
+	amount = min(amount * (d > 0.0 ? bottom_boost : 1.0), 1.15) * blur_enabled;
 
 	vec3 sharp = textureLod(screen_tex, uv, 0.0).rgb;
 	vec3 col = sharp;
