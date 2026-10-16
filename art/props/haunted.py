@@ -23,10 +23,11 @@ import bpy  # noqa: E402
 import bmesh  # noqa: E402
 from mathutils import Vector, noise  # noqa: E402
 
-from lib import common, paint_bake, preview  # noqa: E402
+from lib import common, detail, paint_bake, preview  # noqa: E402
 from nature.trees import skin_trunk  # noqa: E402
 from props.camp import IRON, WOOD, WOOD_DARK, WOOD_LIGHT, block, colour_wood, log, rope_ring  # noqa: E402
-from props.forage import _decimate_to, _place, finish_prop  # noqa: E402
+from props.forage import (_decimate_to, _place, _wood_grain, board, dense_block, dense_cylinder, displace,  # noqa: E402
+                          finish_prop, iron_colour, rivets, torus)
 
 PUMPKIN = (0.95, 0.5, 0.12)
 PUMPKIN_DARK = (0.66, 0.26, 0.06)
@@ -50,85 +51,179 @@ WATER = (0.3, 0.55, 0.75)
 
 # --- Pumpkins -------------------------------------------------------------------
 
-def pumpkin_body(radius, height, colour_main, colour_dark, seed, face=False):
+FLESH = (0.98, 0.78, 0.38)
+
+
+def pumpkin_body(radius, height, colour_main, colour_dark, seed):
+    """A dense ribbed pumpkin on z = 0: 8 deep ribs with soft grooves,
+    fine vertical striations, speckles and a blemish or two."""
     bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=32, v_segments=16, radius=1.0)
+    bmesh.ops.create_uvsphere(bm, u_segments=128, v_segments=64, radius=1.0)
     for v in bm.verts:
         angle = math.atan2(v.co.y, v.co.x)
-        rib = 1.0 - 0.08 * (0.5 + 0.5 * math.cos(angle * 8))  # 8 ribs
+        g = 0.5 + 0.5 * math.cos(angle * 8)
+        rib = 1.0 - 0.1 * (1.0 - g ** 0.6)  # rounded lobes, sharper grooves
+        rib *= 1.0 + noise.noise(Vector((math.cos(angle) * 2, math.sin(angle) * 2, v.co.z + seed))) * 0.03
         v.co.x *= radius * rib
         v.co.y *= radius * rib
         v.co.z = (v.co.z * 0.5 + 0.5) * height  # sit on z = 0
-        # Pinch the top and bottom in, like a real pumpkin.
         pinch = 1.0 - 0.18 * (abs(v.co.z / height - 0.5) * 2) ** 3
         v.co.x *= pinch
         v.co.y *= pinch
+    bm.normal_update()
     obj = common.mesh_object("pumpkin", bm)
     common.shade_smooth(obj)
 
     def colour(pos, normal):
         angle = math.atan2(pos.y, pos.x)
         groove = 0.5 + 0.5 * math.cos(angle * 8)
-        c = common.lerp(colour_dark, colour_main, min(1.0, groove * 1.3 + 0.1 + noise.noise(pos * 5 + Vector((seed, 0, 0))) * 0.15))
-        if face and normal.y < -0.5:
-            # Carved face on the -Y side: two triangle eyes and a toothy grin.
-            x, z = pos.x / radius, pos.z / height
-            for side in (-1, 1):
-                ex, ez = x - side * 0.32, z - 0.62
-                if ez > -0.08 and ez < 0.1 and abs(ex) < 0.12 - ez * 0.9:
-                    return CARVED
-            if 0.26 < z < 0.44 and abs(x) < 0.5 - (0.44 - z) * 0.8:
-                tooth = math.sin(x * 22.0) > 0.4 and z > 0.37
-                return common.lerp(colour_main, colour_dark, 0.3) if tooth else CARVED
+        streak = noise.noise(Vector((math.cos(angle) * 30, math.sin(angle) * 30, pos.z * 2.0 + seed)))
+        c = common.lerp(colour_dark, colour_main, min(1.0, groove * 1.2 + 0.15 + streak * 0.18
+                                                      + noise.noise(pos * 5 + Vector((seed, 0, 0))) * 0.12))
+        speck = noise.noise(pos * 60.0 + Vector((0, seed, 0)))
+        if speck > 0.55:
+            c = common.lerp(c, PUMPKIN_YELLOW, 0.5)
+        blem = noise.noise(pos * 4.0 + Vector((seed * 3, 1, 2)))
+        if blem > 0.55:
+            c = common.lerp(c, (0.55, 0.42, 0.2), min(1.0, (blem - 0.55) * 6) * 0.5)  # weathered scar
+        t = pos.z / height
+        if t > 0.86 or t < 0.08:
+            c = common.lerp(c, (0.5, 0.48, 0.2), 0.35 * min(1.0, abs(t - 0.5) * 5 - 1.8))  # greenish poles
         return c
-    common.color_by(obj, colour, smooth=False)
+    common.color_by(obj, colour, smooth=True)
     return obj
 
 
-def pumpkin_stem(height, seed):
-    stem = log(0.22, 0.07, rotation=(0, math.radians(-80), 0.3), location=(0.02, 0, height + 0.07), taper=0.6, seed=seed)
-    common.set_color(stem, STEM)
+def pumpkin_stem(height, seed, scale=1.0, bend_deg=35.0):
+    """A ridged, slightly curled stem with a cut, paler tip."""
+    stem = dense_cylinder(0.07 * scale, 0.24 * scale, location=(0, 0, 0.12 * scale), segments=32, radius2=0.042 * scale)
+    displace(stem, lambda p, n: (0.012 * scale * (math.cos(math.atan2(p.y, p.x) * 5) - 0.5)
+                                 if abs(n.z) < 0.7 else 0.0) + noise.noise(p * 40.0 / scale) * 0.003 * scale)
+    bend = stem.modifiers.new("Bend", "SIMPLE_DEFORM")
+    bend.deform_method = "BEND"
+    bend.angle = math.radians(bend_deg)
+    bend.deform_axis = "Y"
+    common.apply_all_modifiers(stem)
+    common.shade_smooth(stem, auto_angle=60)
+
+    def colour(p, n):
+        if n.z > 0.75 and p.z > 0.2 * scale:
+            return (0.78, 0.74, 0.5)
+        a = math.atan2(p.y, p.x)
+        ridge = 0.5 + 0.5 * math.cos(a * 5)
+        c = common.lerp((0.26, 0.28, 0.1), STEM, ridge * 0.8 + noise.noise(Vector((math.cos(a) * 9, math.sin(a) * 9, p.z * 6 + seed))) * 0.2)
+        if p.z < 0.04 * scale:
+            c = common.lerp(c, (0.3, 0.26, 0.1), 0.5)
+        return c
+    common.color_by(stem, colour)
+    stem.location = (0.02 * scale, 0, height + 0.085 * scale)
+    stem.rotation_euler = (0, 0, 0.3 + seed)
     return stem
 
 
-def face_glow(radius, height):
-    """Emissive shapes just inside the carved face, so it glows at night."""
-    bm = bmesh.new()
-    y = -radius * 0.9
+def _face_shapes():
+    """The carved face as 2D outlines in (x / radius, z / height): two
+    triangle eyes and a curved grin with two square teeth, jittered a
+    little like a hand-cut carving."""
+    shapes = []
     for side in (-1, 1):
-        cx = side * 0.32 * radius
-        pts = [(cx - 0.12 * radius, y, 0.62 * height - 0.06 * height), (cx + 0.12 * radius, y, 0.62 * height - 0.06 * height),
-               (cx, y, 0.62 * height + 0.1 * height)]
-        bm.faces.new([bm.verts.new(p) for p in pts])
-    mouth = [(-0.38 * radius, y, 0.42 * height), (0.38 * radius, y, 0.42 * height), (0.26 * radius, y, 0.28 * height),
-             (-0.26 * radius, y, 0.28 * height)]
-    bm.faces.new([bm.verts.new(p) for p in mouth])
-    obj = common.mesh_object("face_glow", bm)
-    solid = obj.modifiers.new("Solid", "SOLIDIFY")
-    solid.thickness = 0.02
-    common.apply_all_modifiers(obj)
-    paint_bake.flat_material(obj, GLOW, emission=3.0, name="jack_glow")
-    return obj
+        cx = side * 0.32
+        shapes.append([(cx - 0.19, 0.54), (cx + 0.19, 0.54), (cx + side * 0.02, 0.75)])
+    mouth = []
+    for k in range(9):  # bottom edge, curved up at the corners
+        x = -0.36 + 0.72 * k / 8
+        mouth.append((x, 0.26))
+    mouth += [(0.5, 0.44), (0.22, 0.44), (0.22, 0.36), (0.1, 0.36), (0.1, 0.44), (-0.1, 0.44), (-0.1, 0.36),
+              (-0.22, 0.36), (-0.22, 0.44), (-0.5, 0.44)]
+    mouth = [(x, z + 0.08 * (x / 0.5) ** 2) for x, z in mouth]
+    shapes.append(mouth)
+    out = []
+    for i, shape in enumerate(shapes):
+        out.append([(x + noise.noise(Vector((x * 7, z * 7, i))) * 0.012, z + noise.noise(Vector((z * 7, x * 7, i + 5))) * 0.012)
+                    for x, z in shape])
+    return out
+
+
+def _surface_y(x, z, radius, height):
+    """Front (-Y) surface of the pumpkin body at (x, z), lobe crest."""
+    t = z / height
+    pinch = 1.0 - 0.18 * (abs(t - 0.5) * 2) ** 3
+    ring = radius * pinch * math.sqrt(max(0.0, 1.0 - (2 * t - 1) ** 2))
+    return -math.sqrt(max(0.0, ring * ring - x * x))
+
+
+def carve_face(body, radius, height, depth):
+    """Boolean-cuts the face `depth` into the -Y side. Returns the glow
+    (emissive copies of the pocket floors) and paints the pocket walls
+    pale flesh."""
+    bm = bmesh.new()
+    floors = []
+    for shape in _face_shapes():
+        front = [bm.verts.new((x * radius, -radius * 1.3, z * height)) for x, z in shape]
+        back = [bm.verts.new((x * radius, _surface_y(x * radius, z * height, radius, height) + depth, z * height))
+                for x, z in shape]
+        n = len(shape)
+        bm.faces.new(front)
+        bm.faces.new(list(reversed(back)))
+        floors.append([v.co.copy() for v in back])
+        for k in range(n):
+            bm.faces.new((front[k], front[(k + 1) % n], back[(k + 1) % n], back[k]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    cutter = common.mesh_object("cutter", bm)
+    mod = body.modifiers.new("Carve", "BOOLEAN")
+    mod.operation = "DIFFERENCE"
+    mod.solver = "EXACT"
+    mod.object = cutter
+    common.apply_all_modifiers(body)
+    bpy.data.objects.remove(cutter)
+    # Pocket walls and floors: pale, glow-lit flesh.
+    shapes = _face_shapes()
+
+    def in_cut(x, z, tol):
+        for shape in shapes:
+            pts = [(sx * radius, sz * height) for sx, sz in shape]
+            inside = False
+            near = False
+            for k in range(len(pts)):
+                (x1, z1), (x2, z2) = pts[k], pts[(k + 1) % len(pts)]
+                if (z1 > z) != (z2 > z) and x < x1 + (z - z1) * (x2 - x1) / (z2 - z1):
+                    inside = not inside
+                ex, ez = x2 - x1, z2 - z1
+                t = max(0.0, min(1.0, ((x - x1) * ex + (z - z1) * ez) / max(1e-9, ex * ex + ez * ez)))
+                if math.hypot(x - x1 - ex * t, z - z1 - ez * t) < tol:
+                    near = True
+            if inside or near:
+                return True
+        return False
+    pocket = [p.index for p in body.data.polygons
+              if p.center.y < -radius * 0.4 and in_cut(p.center.x, p.center.z, 0.006)]
+    common.set_color(body, FLESH, faces=pocket)
+    # Glow: the floors, nudged toward the viewer.
+    gm = bmesh.new()
+    for floor in floors:
+        gm.faces.new([gm.verts.new(co - Vector((0, 0.004, 0))) for co in floor])
+    bmesh.ops.triangulate(gm, faces=gm.faces[:])
+    glow = common.mesh_object("face_glow", gm)
+    paint_bake.flat_material(glow, GLOW, emission=3.0, name="jack_glow")
+    return glow
 
 
 def jack_o_lantern():
     common.reset(41)
-    r, h = 0.7, 1.15
-    body = pumpkin_body(r, h, PUMPKIN, PUMPKIN_DARK, 1, face=True)
-    parts = [body, pumpkin_stem(h, 2)]
-    obj = common.join(parts, "jack_o_lantern")
-    _decimate_to(obj, 1800)
-    paint_bake.paint(obj, size=512, ao_distance=0.2, ao_strength=0.6, edge_strength=0.3, edge_radius=0.02, noise_scale=6.0)
-    glow = face_glow(r, h)
-    common.export_glb(os.path.join(common.OUT_DIR, "jack_o_lantern.glb"), [obj, glow])
-    print("jack_o_lantern tris:", common.triangle_count([obj, glow]))
-    preview.render([obj, glow], "jack_o_lantern", elevation=15, azimuth=float(os.environ.get("AZ", "200")))
+    r, h = 0.672, 1.15
+    body = pumpkin_body(r, h, PUMPKIN, PUMPKIN_DARK, 1)
+    glow = carve_face(body, r, h, 0.07)
+    parts = [body, pumpkin_stem(h, 2, scale=1.15)]
+    detail.bake_prop(parts, "jack_o_lantern", budget=1460, size=512, ray=0.08, extra=[glow], preview_elevation=15,
+                     ao_distance=0.2, ao_strength=0.6, edge_strength=0.3)
 
 
 def pumpkin_small():
     common.reset(42)
-    body = pumpkin_body(0.3, 0.48, PUMPKIN_YELLOW, (0.8, 0.5, 0.12), 3)
-    finish_prop([body, pumpkin_stem(0.48, 4)], "pumpkin_small", size=256, budget=1000, edge_strength=0.3)
+    body = pumpkin_body(0.285, 0.48, PUMPKIN_YELLOW, (0.8, 0.5, 0.12), 3)
+    detail.bake_prop([body, pumpkin_stem(0.48, 4, scale=0.95, bend_deg=10.0)], "pumpkin_small", budget=1000, size=512, ray=0.02,
+                     edge_strength=0.3)
 
 
 # --- Lantern and bucket ------------------------------------------------------------
@@ -138,29 +233,41 @@ def camp_lantern():
     with a warm flame inside (separate emissive mesh)."""
     common.reset(43)
     parts = []
-    base = block((0.5, 0.5, 0.1), location=(0, 0, 0.05), bevel=0.02)
-    common.set_color(base, IRON)
-    parts.append(base)
+    parts.append(dense_block((0.5, 0.5, 0.1), location=(0, 0, 0.05), bevel=0.02, density=0.012, colour=iron_colour(1, rust=0.12),
+                             dent=0.003, seed=1))
     for sx in (-1, 1):
         for sy in (-1, 1):
-            post = block((0.05, 0.05, 0.55), location=(sx * 0.2, sy * 0.2, 0.37), bevel=0.01)
-            colour_wood(post, sx + sy * 2, base=WOOD_DARK, light=WOOD)
-            parts.append(post)
-    roof = block((0.56, 0.56, 0.08), location=(0, 0, 0.68), bevel=0.02)
-    common.set_color(roof, IRON)
+            parts.append(board((0.55, 0.05, 0.05), location=(sx * 0.2, sy * 0.2, 0.37), rotation=(0, math.pi / 2, 0),
+                               seed=sx + sy * 2 + 4, base=WOOD_DARK, light=WOOD, bevel=0.01, knots=False))
+    parts.append(rivets([(sx * 0.2, sy * 0.2, 0.1) for sx in (-1, 1) for sy in (-1, 1)], 0.014))
+    roof = dense_block((0.56, 0.56, 0.08), location=(0, 0, 0.68), bevel=0.02, density=0.012, colour=iron_colour(2, rust=0.12),
+                       dent=0.003, seed=2)
     parts.append(roof)
-    cap = block((0.3, 0.3, 0.1), location=(0, 0, 0.77), bevel=0.02)
-    common.set_color(cap, IRON)
-    parts.append(cap)
-    handle = rope_ring(0.12, 0.018, (0, 0, 0.88), rotation=(math.pi / 2, 0, 0))
-    common.set_color(handle, IRON)
-    parts.append(handle)
-    candle = log(0.2, 0.06, rotation=(0, math.radians(-90), 0), location=(0, 0, 0.2), taper=1.0, seed=5)
-    common.set_color(candle, (0.95, 0.9, 0.78))
+    parts.append(rivets([(sx * 0.2, sy * 0.2, 0.72) for sx in (-1, 1) for sy in (-1, 1)], 0.014))
+    parts.append(dense_block((0.3, 0.3, 0.1), location=(0, 0, 0.77), bevel=0.02, density=0.012, colour=iron_colour(3, rust=0.12),
+                             dent=0.003, seed=3))
+    # Vent holes around the cap.
+    parts.append(rivets([((sx * 0.152, y, 0.77), (sx, 0, 0)) for sx in (-1, 1) for y in (-0.08, 0.0, 0.08)], 0.012,
+                        colour=(0.1, 0.08, 0.08)))
+    parts.append(torus(0.12, 0.018, location=(0, 0, 0.88), rotation=(math.pi / 2, 0, 0), segments=40, tube=10,
+                       colour=iron_colour(4, rust=0.12)))
+    # Candle with wax drips, standing in a puddle of wax.
+    candle = dense_cylinder(0.06, 0.2, location=(0, 0, 0.2), segments=24, rings=20)
+
+    def drip(p, n):
+        a = math.atan2(p.y, p.x)
+        d = max(0.0, math.sin(a * 5 + 1.0)) ** 4
+        reach = 0.1 - d * 0.16 + noise.noise(Vector((math.cos(a) * 3, math.sin(a) * 3, 0))) * 0.03
+        return 0.006 * d if abs(n.z) < 0.5 and p.z > reach - 0.1 else 0.0
+    displace(candle, drip)
+    common.color_by(candle, lambda p, n: common.lerp((0.95, 0.9, 0.78), (1.0, 0.97, 0.88),
+                                                     max(0.0, min(1.0, (p.z + 0.1) / 0.2))))
     parts.append(candle)
-    body = common.join(parts, "camp_lantern")
-    _decimate_to(body, 1200)
-    paint_bake.paint(body, size=256, ao_distance=0.15, ao_strength=0.6, edge_strength=0.35, edge_radius=0.015, noise_scale=6.0)
+    puddle = dense_cylinder(0.085, 0.012, location=(0, 0, 0.105), segments=24, rings=2, bevel=0.004)
+    displace(puddle, lambda p, n: noise.noise(p * 30.0) * 0.006 if abs(n.z) < 0.5 else 0.0)
+    common.color_by(puddle, lambda p, n: (0.93, 0.88, 0.74))
+    parts.append(puddle)
+    parts.append(dense_cylinder(0.006, 0.03, location=(0, 0, 0.31), segments=6, colour=lambda p, n: (0.1, 0.08, 0.06)))
     bm = bmesh.new()
     bmesh.ops.create_uvsphere(bm, u_segments=10, v_segments=8, radius=0.06)
     for v in bm.verts:
@@ -168,34 +275,96 @@ def camp_lantern():
     bmesh.ops.translate(bm, verts=bm.verts, vec=(0, 0, 0.4))
     flame = common.mesh_object("flame", bm)
     paint_bake.flat_material(flame, GLOW, emission=3.5, name="lantern_flame_glow")
-    common.export_glb(os.path.join(common.OUT_DIR, "camp_lantern.glb"), [body, flame])
-    print("camp_lantern tris:", common.triangle_count([body, flame]))
-    preview.render([body, flame], "camp_lantern", elevation=25)
+    detail.bake_prop(parts, "camp_lantern", budget=1200, size=512, ray=0.02, extra=[flame], preview_elevation=25,
+                     ao_distance=0.15, ao_strength=0.6, edge_strength=0.35, edge_radius=0.015)
 
 
 def water_bucket():
+    """Twelve staves (each its own tone), two riveted iron hoops, a
+    rippled water surface sunk below the rim and a bail handle."""
     common.reset(44)
+    staves = 12
     bm = bmesh.new()
-    bmesh.ops.create_cone(bm, cap_ends=True, segments=16, radius1=0.2, radius2=0.25, depth=0.4)
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=96, radius1=0.2, radius2=0.25, depth=0.4)
+    side = [e for e in bm.edges if abs(e.verts[0].co.z - e.verts[1].co.z) > 0.2]
+    bmesh.ops.subdivide_edges(bm, edges=side, cuts=40, use_grid_fill=True)
     bmesh.ops.translate(bm, verts=bm.verts, vec=(0, 0, 0.2))
+    top = [f for f in bm.faces if f.normal.z > 0.9 and f.calc_center_median().z > 0.39]
+    res = bmesh.ops.inset_region(bm, faces=top, thickness=0.022, depth=0.0)
+    for f in top:
+        for v in f.verts:
+            v.co.z -= 0.035
+    for v in bm.verts:
+        a = math.atan2(v.co.y, v.co.x)
+        f = (a / math.tau * staves) % 1.0
+        if 0.012 < v.co.z < 0.385 and Vector((v.co.x, v.co.y)).length > 0.19 + v.co.z * 0.12:
+            k = 1.0 - (0.012 if (f < 0.04 or f > 0.96) else 0.0) / max(0.05, Vector((v.co.x, v.co.y)).length)
+            v.co.x *= k
+            v.co.y *= k
+    bm.normal_update()
     bucket = common.mesh_object("bucket", bm)
     common.shade_smooth(bucket, auto_angle=40)
 
     def colour(pos, normal):
-        if normal.z > 0.9 and pos.z > 0.35:
-            return WATER
-        stave = math.sin(math.atan2(pos.y, pos.x) * 10) > 0.85
-        return WOOD_DARK if stave else common.lerp(WOOD, WOOD_LIGHT, 0.5 + noise.noise(pos * 9) * 0.5)
-    common.color_by(bucket, colour, smooth=False)
-    parts = [bucket]
-    for z, r in ((0.08, 0.215), (0.32, 0.245)):
-        band = rope_ring(r, 0.015, (0, 0, z))
-        common.set_color(band, IRON)
-        parts.append(band)
-    handle = rope_ring(0.24, 0.012, (0, 0, 0.42), rotation=(math.pi / 2, 0, 0))
-    common.set_color(handle, IRON)
-    parts.append(handle)
-    finish_prop(parts, "water_bucket", size=256, budget=900, edge_strength=0.35)
+        if normal.z > 0.9 and pos.z > 0.33 and pos.z < 0.38:
+            ripple = math.sin(Vector((pos.x - 0.05, pos.y + 0.03)).length * 160.0)
+            c = common.lerp(WATER, (0.55, 0.78, 0.9), max(0.0, ripple) * 0.5)
+            return common.lerp(c, (0.18, 0.32, 0.45), max(0.0, noise.noise(pos * 10.0)) * 0.6)
+        a = math.atan2(pos.y, pos.x)
+        idx = int((a / math.tau * staves) % staves)
+        f = (a / math.tau * staves) % 1.0
+        if f < 0.05 or f > 0.95:
+            return WOOD_DARK
+        tone = (idx * 0.37) % 1.0
+        g = noise.noise(Vector((math.cos(a) * 40, math.sin(a) * 40, pos.z * 3.0 + idx)))
+        c = common.lerp(WOOD, WOOD_LIGHT, max(0.0, min(1.0, 0.25 + tone * 0.5 + g * 0.4)))
+        if g < -0.4:
+            c = common.lerp(c, WOOD_DARK, 0.5)
+        if pos.z > 0.39 or normal.z > 0.9:
+            c = common.lerp(c, (0.88, 0.7, 0.46), 0.4)  # end grain on the rim
+        if pos.z < 0.05:
+            c = common.lerp(c, (0.3, 0.22, 0.14), 0.5 * (1 - pos.z / 0.05))  # damp foot
+        return c
+    common.color_by(bucket, colour, smooth=True)
+    # Water: a dense disc just below the sunk rim, rippling out from a drip.
+    wm = bmesh.new()
+    rings, segs, wr, wz = 10, 64, 0.226, 0.368
+    centre = wm.verts.new((0, 0, wz))
+    prev = None
+    for i in range(1, rings + 1):
+        row = [wm.verts.new((math.cos(k / segs * math.tau) * wr * i / rings, math.sin(k / segs * math.tau) * wr * i / rings,
+                             wz)) for k in range(segs)]
+        for k in range(segs):
+            if prev is None:
+                wm.faces.new((centre, row[k], row[(k + 1) % segs]))
+            else:
+                wm.faces.new((prev[k], row[k], row[(k + 1) % segs], prev[(k + 1) % segs]))
+        prev = row
+    water = common.mesh_object("water", wm)
+
+    def water_colour(p, n):
+        d = Vector((p.x - 0.05, p.y + 0.03)).length
+        ripple = math.sin(d * 120.0) * max(0.0, 1.0 - d * 4.0)
+        c = common.lerp(WATER, (0.62, 0.84, 0.94), max(0.0, ripple) * 0.6)
+        c = common.lerp(c, (0.2, 0.36, 0.5), max(0.0, noise.noise(p * 9.0)) * 0.5)
+        if Vector((p.x, p.y)).length > wr * 0.9:
+            c = common.lerp(c, (0.22, 0.34, 0.4), 0.5)  # shade under the rim
+        return c
+    common.color_by(water, water_colour)
+    parts = [bucket, water]
+    for z, r in ((0.08, 0.212), (0.32, 0.242)):
+        hoop = torus(r, 0.014, location=(0, 0, z), segments=64, tube=8, colour=iron_colour(int(z * 100), rust=0.3))
+        for v in hoop.data.vertices:
+            v.co.z *= 1.9
+        parts.append(hoop)
+        parts.append(rivets([((math.cos(a) * (r + 0.012), math.sin(a) * (r + 0.012), z), (math.cos(a), math.sin(a), 0))
+                             for a in (0.3, 0.3 + math.tau / 3, 0.3 + 2 * math.tau / 3)], 0.008))
+    parts.append(torus(0.24, 0.012, location=(0, 0, 0.42), rotation=(math.pi / 2, 0, 0), segments=48, tube=8,
+                       colour=iron_colour(9)))
+    for sx in (-1, 1):  # ear lugs holding the bail
+        parts.append(dense_block((0.03, 0.05, 0.08), location=(sx * 0.245, 0, 0.37), bevel=0.008, density=0.008,
+                                 colour=_wood_grain(sx + 3, base=WOOD_DARK, light=WOOD)))
+    detail.bake_prop(parts, "water_bucket", budget=900, size=512, ray=0.02, edge_strength=0.35)
 
 
 # --- Dead trees --------------------------------------------------------------------------
