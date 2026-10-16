@@ -108,3 +108,23 @@
 - The UI icons and the imp portrait were re-rendered.
 
 **Checks.** `tools/check.sh` passes after every batch. The day grade stats are unchanged.
+
+## 2026-10-16: Milestone 7 (Leo and Nela)
+**Diagnosis.** In game a kid is about 100 px tall, so the gains are colour blocks and silhouette, not seams. Compared with the concept turnarounds (04, 05):
+- The warm grade washed Leo's sky-blue tee to grey and turned Nela's purple trousers maroon or pink.
+- Both boots stood on box soles that read as planks.
+- Leo's shorts had lime bands instead of denim.
+- The chest emblems were small or missing.
+
+**Results (D16).**
+
+| Kid | Improved | Tried and dropped |
+|---|---|---|
+| Leo | Saturated sky-blue tee. Teal-blue denim shorts with a light rolled cuff and two mended patches (no lime bands). Big painted camp logo (globe, hill, pines, sun) in the centre of the tee. Compass moved from the neck cord to his right strap. Light-blue socks, a brighter blue bedroll, rounded soles. | Logo as stacked decal geometry: the ink line and the bake turned it to mush, so it is painted into a denser tee instead. |
+| Nela | Violet trousers with thinner cream zigzags (purple dominates). Big pale-blue heart on the tee. Less dirt. A brighter purple hair tie. Compass clipped to her strap (no cord across the heart). Rounded soles. | High ponytail (two attempts). From the game camera the crown read as a smooth, bright blob, and the old bun reads better, so the bun was kept. |
+
+- **Triangles:** Leo 35.0k, Nela 35.7k, unchanged.
+- **Unchanged:** rigs, clips, proportions and attach points.
+- **Re-rendered:** both portraits.
+- **Checks:** `tools/check.sh` passes.
+

@@ -85,3 +85,12 @@
 - **Gate.** Each model was rendered in game (`tools/model_gallery.tscn`) before and after.
   - Kept as is: `rock_pebbles`, Leo and Nela.
   - Everything else was committed.
+
+## D16: Kids: colour and silhouette over seams (user and agent)
+- **Context.** The user asked to improve Leo and Nela after M6 kept them as they were.
+- **Decision.** Change only what reads at game scale (about 100 px tall), each change checked in the gallery and in a day screenshot crop:
+  - **Palette:** the clothes are saturated past the concept's RGB, so they survive the warm day grade. Tee `TEE` (0.24, 0.52, 0.96); trousers `PANTS` (0.40, 0.20, 0.86).
+  - **Emblems** are painted into the tee's colour function on a denser tee (30k faces before the bake), not built as decal geometry.
+  - **Soles** follow the foot's outline (`chibi.sole_slab`).
+- **Kept:** Nela's bun. The ponytail was tried twice and read worse from above.
+

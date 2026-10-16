@@ -15,4 +15,5 @@
 - [x] M5: the softer blur keeps the day grade stats (median 123, G/R 0.79, B/R 0.28).
 - [x] M6: every model has a before/after gallery render, and only improved models are committed (status.md table).
 - [x] M6: bounds stay within ±10 % and props within budget (well and stall about 2.6k). Mob rigs, bones and clip names are unchanged.
+- [x] M7: Leo and Nela have before/after gallery renders and a day-screenshot crop. The tee reads blue and the trousers purple in game, there are no plank soles, triangles are unchanged and smoke passes.
 - [ ] **On a real GPU (Windows):** FPS with the new tree canopies and grass tufts (5 curved blades, about 3k instances).

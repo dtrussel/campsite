@@ -39,4 +39,7 @@
   - **Collapse decimation tears thin sheets.** Give canvas, awnings and roof panels a hand-made low twin with `bake_prop_lows`.
   - **Slow vertex loops.** Reading `v.normal` while moving vertices is very slow; read all the normals first.
 - **Characters:** a denser body voxel causes black blotches in the bake, so mob detail comes from colour functions at the current density.
-- **Open:** Leo and Nela's tees are too coarse (12k faces) for seams to read. A cloth-detail pass would need a denser tee, which needs its own budget.
+- **Kids (M7, D16):**
+  - **Logos:** paint them into the clothing colour function. Painting a big logo needs a dense high mesh (`faces=30000` on the tee); the game mesh budget is unchanged.
+  - **Colour check:** check clothing colours in a day screenshot crop, not just the gallery; the warm grade pulls blues toward grey and purples toward pink.
+  - **Hair:** the crown is what the game camera sees, so a hair change must keep it textured.
