@@ -1064,6 +1064,28 @@ def hands(skin, radius=0.075, mitten=False, crease=None, sculpted=False, size=1.
     return parts
 
 
+def sole_slab(x, cy, half_w, half_l, thick, z, bevel=0.01, power=2.4, segments=40):
+    """A boot sole slab with a rounded foot outline (a superellipse whose
+    heel end is a little narrower than the ball of the foot), not a box."""
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=segments, radius1=1.0, radius2=1.0, depth=thick)
+    for v in bm.verts:
+        a = math.atan2(v.co.y, v.co.x)
+        c, s = math.cos(a), math.sin(a)
+        ex = math.copysign(abs(c) ** (2 / power), c)
+        ey = math.copysign(abs(s) ** (2 / power), s)
+        w = half_w * (1.0 - 0.14 * max(0.0, ey))
+        v.co = Vector((x + w * ex, cy + half_l * ey, z + v.co.z))
+    obj = common.mesh_object("sole", bm)
+    if bevel:
+        mod = obj.modifiers.new("Bevel", "BEVEL")
+        mod.width = bevel
+        mod.segments = 2
+        common.apply_all_modifiers(obj)
+    common.shade_smooth(obj, auto_angle=40)
+    return obj
+
+
 def sculpted_boot(side, upper, sole, toe, lace, collar=None, scale=1.0, tread=None, eyelet=(0.75, 0.72, 0.65),
                   height=1.0):
     """A chunky stylised hiking boot: shaft, vamp and heel fused into one
@@ -1100,11 +1122,11 @@ def sculpted_boot(side, upper, sole, toe, lace, collar=None, scale=1.0, tread=No
     cap = ellipsoid((x, -0.175 * k, 0.058 * k), (0.082 * k, 0.07 * k, 0.05 * k), name="toecap", segs=(18, 12))
     common.set_color(cap, toe)
     parts.append(cap)
-    # Thick sole with a toe spring, and a darker tread lip below it.
-    for thick, grow, z, colour in ((0.042, 0.0, 0.028, sole), (0.02, 0.008, 0.01, tread or
+    # Thick sole following the foot's rounded outline, with a toe spring,
+    # and a darker tread lip below it.
+    for thick, grow, z, colour in ((0.042, 0.0, 0.028, sole), (0.02, 0.004, 0.01, tread or
                                                                 common.lerp(sole, (0, 0, 0), 0.45))):
-        slab = box((0.19 * k + grow, 0.35 * k + grow, thick * k), (x, -0.055 * k, z * k), bevel=0.012 * k,
-                   name="sole", segments=2)
+        slab = sole_slab(x, -0.055 * k, 0.093 * k + grow, 0.178 * k + grow, thick * k, z * k, bevel=0.01 * k)
         for v in slab.data.vertices:
             front = max(0.0, (-v.co.y - 0.12 * k) / (0.11 * k))
             v.co.z += 0.03 * k * front ** 2
@@ -1204,8 +1226,8 @@ def compass(center, gold, face=(0.98, 0.95, 0.85), needle=(0.9, 0.2, 0.15), cord
             f.data.flip_normals()
         common.set_color(f, col)
         parts.append(f)
-    # Cord up around the neck.
-    for side in (-1, 1):
+    # Cord up around the neck (neck_z None: no cord, e.g. clipped to a strap).
+    for side in ((-1, 1) if neck_z is not None else ()):
         t = tube([c + Vector((0, 0, radius + 0.02)), Vector((side * 0.09, c.y + 0.04, neck_z - 0.04)),
                   Vector((side * 0.12, 0.0, neck_z + 0.02))], [0.007, 0.007, 0.007], name="cord", levels=0)
         common.set_color(t, cord)
