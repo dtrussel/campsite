@@ -123,8 +123,8 @@ func _render(model: String, out_dir: String) -> void:
 	Stylize.apply(node, CHARACTERS.get(model, "prop"))
 	var player: AnimationPlayer = node.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if player != null:
-		for clip in ["Idle", "idle", "Idle_A"]:
-			if player.has_animation(clip):
+		for clip in player.get_animation_list():
+			if clip.to_lower().ends_with("idle"):
 				player.play(clip)
 				break
 	await get_tree().process_frame
