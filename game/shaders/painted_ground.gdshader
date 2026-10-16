@@ -8,7 +8,7 @@ render_mode diffuse_lambert, specular_disabled;
 // where the night mobs come from. Two rotated samples per texture,
 // blended by large-scale noise, hide the tiling. Feature 031: a wider
 // clearing and a winding dirt path out to the south lane, after the
-// concept art.
+// concept art. Milestone 4: fine texel mottling (HD-2D target).
 
 uniform sampler2D grass_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D dirt_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -24,6 +24,8 @@ uniform float path_width = 0.85;
 uniform float path_length = 20.0;
 uniform float edge_start = 17.0;
 uniform float edge_end = 30.0;
+uniform float texel_size = 0.06;
+uniform float texel_amount = 0.12;
 
 varying vec3 world_pos;
 
@@ -101,6 +103,8 @@ void fragment() {
 	float edge = smoothstep(edge_start, edge_end, edge_d);
 	color = mix(color, color * edge_tint.rgb, edge * 0.65);
 
+	// Crisp painted texels.
+	color *= 1.0 + (hash(floor(p / texel_size)) - 0.5) * texel_amount;
 	ALBEDO = color;
 	ROUGHNESS = 1.0;
 }

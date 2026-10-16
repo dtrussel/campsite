@@ -19,3 +19,10 @@
   - a chicken critter;
   - more lived-in clutter (a supply table with mugs and a map).
 - The imp's purple smoke aura (concept 08) as a spawn VFX.
+
+**Milestone 4 (HD-2D finish):**
+- **Where to tune:**
+  - Look numbers live in `post_tiltshift.gdshader` uniforms: `exposure`, `contrast`, `pivot`, `day_balance`, `focus_*` and `sharpen`.
+  - The material finish is in `painted_common.gdshaderinc` (`top_light`, `under_dark`, `contact_*`, `texel_*`).
+- **Measuring:** `screenshots.tscn` day shots against `13_style_target_village.webp`. Compare median brightness, the darkest and brightest 5 %, and the R:G:B ratios (see status).
+- **MSAA is off (D12).** Turning it on under Compatibility broke the night lighting in the Xvfb test.

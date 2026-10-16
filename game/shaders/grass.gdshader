@@ -4,14 +4,16 @@ render_mode cull_disabled, diffuse_lambert, specular_disabled;
 // Stylized grass tufts for a MultiMesh. Blades sway in a slow wind
 // that travels across the field; colour grades from a dark base to the
 // per-instance tip colour (INSTANCE COLOR), which also lets a few tufts
-// read as flowers.
+// read as flowers. Feature 031 M4: a deeper base and sunlit tips give
+// the blade texture of the HD-2D target.
 
-uniform vec4 base_color : source_color = vec4(0.34, 0.56, 0.23, 1.0);
+uniform vec4 base_color : source_color = vec4(0.18, 0.3, 0.1, 1.0);
 uniform float wind_strength = 0.12;
 uniform float wind_speed = 1.3;
 // Height (m) where the instance colour has fully taken over; flowers
 // (feature 031) use a low value so their heads read as solid colour.
 uniform float color_height = 0.45;
+uniform float tip_glow = 0.12;
 
 varying float blade_height;
 
@@ -30,6 +32,7 @@ void fragment() {
 	// Two-sided blades: light back faces like front faces.
 	NORMAL = FRONT_FACING ? NORMAL : -NORMAL;
 	vec3 tip = COLOR.rgb;
+	tip *= 1.0 + tip_glow * smoothstep(0.6, 1.0, blade_height);
 	ALBEDO = mix(base_color.rgb, tip, smoothstep(0.0, 0.9, blade_height));
 	ROUGHNESS = 1.0;
 }

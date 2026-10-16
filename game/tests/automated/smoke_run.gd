@@ -532,7 +532,8 @@ func _check_animation_layers(player: Node3D) -> void:
 	var swaying: bool = false
 	for mesh in tree_node.find_children("*", "MeshInstance3D", true, false):
 		var m: MeshInstance3D = mesh as MeshInstance3D
-		if m.mesh != null and m.get_surface_override_material(0) is ShaderMaterial:
+		var leaf: ShaderMaterial = m.get_surface_override_material(0) as ShaderMaterial if m.mesh != null else null
+		if leaf != null and leaf.shader == Stylize.FOLIAGE_SHADER:
 			swaying = true
 	_check(swaying, "trees use the swaying foliage material")
 	var ambience: WorldAmbience = get_tree().current_scene.find_child("WorldAmbience", true, false) as WorldAmbience

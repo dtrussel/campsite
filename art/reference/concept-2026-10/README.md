@@ -22,6 +22,7 @@ The work that applies them is
 | `10_river_bridge_environment.webp` | A waterfall, a river and a plank bridge | Future (out of scope for 031) |
 | `11_ancient_ruins_environment.webp` | Mossy stone ruins | Future biome (out of scope) |
 | `12_forest_village_environment.webp` | Cottages, a well and a market stall | Well and stall props; houses are future scope |
+| `13_style_target_village.webp` | A village square in an HD-2D style (supplied 2026-10-16) | **Style target only** (milestone 4): contrast, warm grade, strong tilt-shift, ink line, painted detail. Its props are not adopted |
 
 Sheets 04–12 are crops from a contact sheet, so they are small and soft.
 Use them for shapes and colours, not detail.

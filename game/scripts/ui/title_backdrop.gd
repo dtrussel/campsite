@@ -100,14 +100,14 @@ func _build_environment() -> void:
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.tonemap_white = 2.2
 	env.glow_enabled = true
-	env.glow_intensity = 0.5
-	env.glow_hdr_threshold = 1.2
+	env.glow_intensity = 0.6
+	env.glow_hdr_threshold = 1.0
 	env.fog_enabled = true
 	env.fog_light_color = dusk["fog"]
 	env.fog_density = 0.018
 	env.adjustment_enabled = true
 	env.adjustment_contrast = 1.1
-	env.adjustment_saturation = 1.28
+	env.adjustment_saturation = 1.15
 	var world_env: WorldEnvironment = WorldEnvironment.new()
 	world_env.environment = env
 	add_child(world_env)

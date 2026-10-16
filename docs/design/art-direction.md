@@ -33,6 +33,19 @@ By night it becomes **a deep blue world with warm pools of fire and lantern ligh
    - Fireflies drift in the dark.
    - Mobs bring their own glow (imp eyes, beast eyes, Glow Shards).
 
+## The HD-2D finish (milestone 4)
+
+Reference `13_style_target_village.webp` sets the finish on top of the pillars:
+
+- **Contrast.** Lit tops glow; sides and undersides fall into deep warm-brown shade.
+  - Day frame target: median brightness about 120–125 of 255, darkest 5 % near 50, brightest 5 % near 190.
+  - Colour balance about R:G:B = 1 : 0.77 : 0.30.
+  - `screenshots.tscn` day shots are measured against these numbers.
+- **Painted detail.** Smooth surfaces carry fine texel and blotch noise (`painted_common.gdshaderinc`, ground `texel_*`). They never read as plastic.
+- **Ink line.** Props get a thin warm-brown inverted-hull outline; heroes a darker one; imps a heavy purple one.
+- **Strong tilt-shift.** A narrow crisp band with a light sharpen; the foreground blurs more than the background, into soft bokeh.
+- **Grade on luminance.** Contrast and the S-curve act on brightness only, so the hues survive. The grade fades to neutral at night, where the blue world and warm pools come from the lighting.
+
 ## Palette
 
 These colours are sampled from the camp scenes (sRGB, median-cut on 01–03). The accent colours are picked by eye. Use them as targets for

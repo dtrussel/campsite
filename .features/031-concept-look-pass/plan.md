@@ -106,3 +106,16 @@ Props:
    - Check that the HUD is unblurred, the fire and lanterns bloom at night, and mobs stay readable (NFR-6, readability over realism) with the blur band on.
 4. **Performance.** Keep the grass MultiMesh count about the same. The post shader is one full-screen pass. Sanity-check FPS in the smoke run log if it is printed.
 5. **Setting.** Toggling tilt-shift off removes the blur but keeps the grade.
+
+## Milestone 4: HD-2D style finish (requested after M3)
+- **Target:** the team's village screenshot (`13_style_target_village.webp`), for its overall graphic style only. No prop changes.
+- **Post pass:**
+  - a stronger and narrower tilt-shift with bokeh and a sharpen;
+  - a warm filmic grade on luminance;
+  - a warm vignette and haze.
+- **Lighting:** higher contrast (strong sun, low warm ambient).
+- **Materials:**
+  - a shared painted shader (top light, contact shade, texel detail);
+  - ink lines on props;
+  - grass and ground detail.
+- **Verification:** measure the screenshots against the target numbers, then run `tools/check.sh`.

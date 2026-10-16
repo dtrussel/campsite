@@ -3,7 +3,8 @@ extends Node
 ## WorldLighting
 ##
 ## Blends sun, ambient light, sky and fog between four hand-picked
-## palettes as TimeManager changes phase: golden-hour day, orange-pink sunset,
+## palettes as TimeManager changes phase: golden-hour day (strong low
+## sun, low warm ambient so shadows read warm brown, feature 031 M4), orange-pink sunset,
 ## blue moonlit night (the campfire becomes the key light), and a soft
 ## dawn. Transitions tween over the phase so the sky visibly turns.
 
@@ -14,14 +15,14 @@ extends Node
 ## phase -> palette. Angles are the sun's pitch in degrees.
 const PALETTES: Dictionary = {
 	0: {  # DAY: golden hour (concept 01/02)
-		"sun_color": Color(1.0, 0.88, 0.7), "sun_energy": 1.0, "sun_pitch": -42.0,
-		"ambient": Color(0.62, 0.6, 0.6), "ambient_energy": 0.42,
+		"sun_color": Color(1.0, 0.84, 0.6), "sun_energy": 1.25, "sun_pitch": -36.0,
+		"ambient": Color(0.62, 0.48, 0.42), "ambient_energy": 0.16,
 		"sky_top": Color(0.36, 0.56, 0.86), "sky_horizon": Color(0.98, 0.84, 0.62),
-		"fog": Color(0.95, 0.8, 0.6), "fog_density": 0.006, "fire": 0.75,
+		"fog": Color(0.98, 0.78, 0.55), "fog_density": 0.004, "fire": 0.75,
 	},
 	1: {  # SUNSET: deep amber
-		"sun_color": Color(1.0, 0.5, 0.24), "sun_energy": 1.05, "sun_pitch": -16.0,
-		"ambient": Color(0.74, 0.44, 0.42), "ambient_energy": 0.5,
+		"sun_color": Color(1.0, 0.5, 0.24), "sun_energy": 1.25, "sun_pitch": -16.0,
+		"ambient": Color(0.74, 0.44, 0.42), "ambient_energy": 0.34,
 		"sky_top": Color(0.3, 0.24, 0.5), "sky_horizon": Color(1.0, 0.52, 0.28),
 		"fog": Color(0.88, 0.48, 0.36), "fog_density": 0.008, "fire": 1.05,
 	},
@@ -32,8 +33,8 @@ const PALETTES: Dictionary = {
 		"fog": Color(0.05, 0.09, 0.17), "fog_density": 0.014, "fire": 1.6,
 	},
 	3: {  # DAWN
-		"sun_color": Color(1.0, 0.76, 0.56), "sun_energy": 0.9, "sun_pitch": -24.0,
-		"ambient": Color(0.6, 0.52, 0.58), "ambient_energy": 0.5,
+		"sun_color": Color(1.0, 0.76, 0.56), "sun_energy": 1.1, "sun_pitch": -24.0,
+		"ambient": Color(0.62, 0.5, 0.5), "ambient_energy": 0.34,
 		"sky_top": Color(0.38, 0.48, 0.8), "sky_horizon": Color(1.0, 0.74, 0.56),
 		"fog": Color(0.85, 0.7, 0.62), "fog_density": 0.008, "fire": 0.9,
 	},

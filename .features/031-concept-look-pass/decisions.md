@@ -38,3 +38,25 @@
 ## D9: The decor has no gameplay (agent)
 - **Decision.** The well, stall, seats, tripod and sign are dressing.
 - **Note.** A gameplay use, such as the well as a water source, is a possible follow-up.
+
+## D10: Painted materials become one shader (agent)
+- **Context.** The style target needs sunny tops, contact shade and fine detail. StandardMaterial3D cannot do these.
+- **Decision.**
+  - Painted props and characters now use `painted_prop.gdshader`.
+  - Emissive bits stay unshaded StandardMaterial3D.
+  - The shared finish lives in `painted_common.gdshaderinc`.
+  - The noise is in object space so it never swims on moving characters. Characters get less texel noise and no contact shade.
+
+## D11: Props get an ink line (agent)
+- **Decision.** Every painted prop gets a thin warm-brown inverted-hull outline: 0.011 m, `Stylize.PROP_OUTLINE_*`.
+- **Cost.** This adds one extra draw per prop surface. If the FPS check on a real GPU fails, drop it from rocks and small props first.
+- **Foliage.** Swaying foliage has no outline, because the hull would not sway with it.
+
+## D12: No MSAA (agent)
+- **Context.** `msaa_3d` 2× under Compatibility (tested under Xvfb) left the night lit like dusk.
+- **Decision.** MSAA stays off.
+- **Revisit.** Retry on a real GPU before revisiting.
+
+## D13: The grade fades out at night (agent)
+- **Context.** The day exposure and contrast crushed the dark night blues to black. Only the warm firelight survived, so the night read warm.
+- **Decision.** Exposure, colour balance and contrast blend to neutral with `night_amount`.
