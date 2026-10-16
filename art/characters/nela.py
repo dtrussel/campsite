@@ -31,17 +31,19 @@ HAIR_DARK = (0.52, 0.32, 0.13)
 TEE = (0.68, 0.78, 0.9)
 TEE_DARK = (0.46, 0.56, 0.72)
 DIRT = (0.52, 0.38, 0.24)
-PANTS = (0.4, 0.1, 0.32)
-PANTS_DARK = (0.22, 0.04, 0.17)
-PATTERN = (0.94, 0.84, 0.82)
-PATTERN_PINK = (0.78, 0.42, 0.66)
+PANTS = (0.4, 0.2, 0.86)
+PANTS_DARK = (0.22, 0.1, 0.52)
+PATTERN = (0.96, 0.88, 0.92)
+PATTERN_PINK = (0.9, 0.56, 0.9)
+HEART = (0.36, 0.62, 1.0)
+HEART_DARK = (0.14, 0.3, 0.72)
 SOCK = (0.92, 0.88, 0.78)
 BOOT = (0.44, 0.27, 0.14)
 BOOT_TOE = (0.58, 0.4, 0.24)
 SOLE = (0.24, 0.16, 0.1)
 LACE = (0.82, 0.62, 0.36)
 MUD = (0.28, 0.2, 0.13)
-TIE = (0.5, 0.16, 0.5)
+TIE = (0.62, 0.2, 0.7)
 SCARF = (0.52, 0.16, 0.56)
 SCARF_DARK = (0.3, 0.07, 0.34)
 PACK = (0.34, 0.38, 0.2)
@@ -118,6 +120,24 @@ def skin_piece():
     return body
 
 
+def heart(pos, normal):
+    """The big pale-blue heart painted on the front of her tee (the art),
+    with a darker outline. Rest-pose space: z is squashed by the spine
+    stretch so the heart ends up the right shape. None outside it."""
+    if normal.y > -0.2:
+        return None
+    for scale, colour in ((0.078, HEART_DARK), (0.066, HEART)):
+        u = pos.x / scale
+        w = (pos.z - 0.86) * PROP.spine / scale + 0.15
+        f = (u * u + w * w - 1.0) ** 3 - u * u * w ** 3
+        if f > 0.0:
+            return None if colour is HEART_DARK else HEART_DARK
+    # A soft light catch on the upper left lobe.
+    if math.hypot(pos.x + 0.03, (pos.z - 0.88) * PROP.spine) < 0.016:
+        return common.lerp(HEART, (1, 1, 1), 0.45)
+    return HEART
+
+
 def shirt_piece():
     parts = [
         chibi.ellipsoid((0, 0, 1.01), (0.225, 0.19, 0.21), name="chest"),
@@ -132,7 +152,7 @@ def shirt_piece():
     parts.append(chibi.limb([(0, -0.02, 0.7), (0, -0.02, 0.6), (0, -0.02, 0.53)],
                             [(0.25, 0.225), (0.27, 0.235), (0.275, 0.238)], up=(0, -1, 0), name="skirt"))
     parts.append(chibi.hem_ring((0, -0.02, 0.535), (0.275, 0.238), 0.009, name="hem", axis="Z"))
-    shirt = chibi.fuse(parts, "Shirt", voxel=0.0065, faces=12000)
+    shirt = chibi.fuse(parts, "Shirt", voxel=0.0065, faces=30000)  # dense: the painted heart
     for s in (-1, 1):
         chibi.cut_open(shirt, (s * 0.355, 0, 0), (s, 0, 0))
     chibi.cut_open(shirt, (0, 0, 0.525), (0, 0, -1))
@@ -145,6 +165,9 @@ def shirt_piece():
                seed=25)
 
     def colour(pos, normal):
+        logo = heart(pos, normal)
+        if logo is not None:
+            return logo
         if abs(pos.x) > 0.315:
             return TEE_DARK  # sleeve hem
         if pos.z < 0.56:
@@ -158,22 +181,23 @@ def shirt_piece():
         return common.lerp(c, (0.86, 0.92, 0.98), max(0.0, min(0.3, -fold * 0.3)))
     common.color_by(shirt, colour)
     # A well-played-in tee: brown smudges and dirt splotches (the art).
-    common.grime(shirt, DIRT, lambda p, n: max(0.0, noise.noise(p * 11.0 + Vector((5, 1, 3))) - 0.1) * 2.2)
+    common.grime(shirt, DIRT, lambda p, n: 0.0 if heart(p, n) else
+                 max(0.0, noise.noise(p * 11.0 + Vector((5, 1, 3))) - 0.15) * 1.4)
     return shirt
 
 
 def folk_pattern(pos, leg_x):
-    """Bold cream zigzag bands and dotted rows on plum, wrapped around
-    the leg (big enough to read at game scale)."""
+    """Cream zigzag lines and dotted rows on purple, wrapped around the
+    leg (thin enough that the purple reads at game scale)."""
     a = math.atan2(pos.y, pos.x - leg_x)
     u = a / math.tau * 12.0  # 12 repeats around the leg
     band = 0.065
     v = (pos.z % band) / band
     zig = abs((u % 1.0) * 2.0 - 1.0)
-    if abs(v - (0.12 + zig * 0.3)) < 0.1:
+    if abs(v - (0.12 + zig * 0.3)) < 0.06:
         return PATTERN
     du = abs(((u + 0.5) % 1.0) - 0.5)
-    if du < 0.16 and abs(v - 0.78) < 0.11:
+    if du < 0.12 and abs(v - 0.78) < 0.08:
         return PATTERN_PINK
     return PANTS
 
@@ -620,8 +644,12 @@ def build():
     soft = [skin_piece(), shirt_piece(), pants_piece()]
     rigid = hands_and_feet() + cuffs()
     # Compass clipped to her left shoulder strap, hanging at the hip (art).
-    for part in chibi.compass((0.16, -0.265, 0.84), GOLD, neck_z=0.95, radius=0.04):
+    for part in chibi.compass((0.16, -0.265, 0.84), GOLD, neck_z=None, radius=0.04):
         rigid.append((part, "chest"))
+    tab = chibi.tube([Vector((0.16, -0.262, 0.89)), Vector((0.165, -0.27, 0.95))], [0.008, 0.008], name="cord",
+                     levels=0)
+    common.set_color(tab, LEATHER)
+    rigid.append((tab, "chest"))
     for part in backpack():
         part.data.transform(Matrix.Translation((0, -0.04, 0)))
         rigid.append((part, "chest"))
