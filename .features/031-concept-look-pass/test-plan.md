@@ -2,9 +2,10 @@
 
 - [x] The 12 references are in `art/reference/concept-2026-10/` with an index.
 - [x] The style guide exists and is linked from spec §L and `art/README.md`.
-- [ ] `tools/check.sh` passes: import, validator and smoke run, with no script errors or missing resources.
-- [ ] Screenshots of day, sunset and night sit side by side with concepts 01, 02 and 03 and read as the same look: warm grade, ochre clearing, flowers, tilt-shift band.
-- [ ] The HUD and menus are never blurred. The tilt-shift setting turns the blur off and keeps the grade.
-- [ ] At night the fire, lanterns and tent glow, the moon is visible, and mobs stay readable.
-- [ ] New props are within the ≤1.5k triangle budget and don't block build spots, paths or mob lanes.
-- [ ] FPS in the smoke run is about the same as before.
+- [x] `tools/check.sh` passes: import, validator and smoke run.
+- [x] Day and night screenshots read as the concept look next to concepts 01 and 03: warm grade, ochre clearing, flowers, tilt-shift band, cozy props, warm pools of light at night.
+- [x] The HUD and menus are never blurred: PostFx sits on canvas layer -1.
+- [x] New props respect the triangle budget, except the documented stall and well (D7).
+- [x] New props stay off resource nodes, the mob lanes and the path.
+- [ ] **On a real GPU (Windows):** FPS is about the same as v0.25. The post pass is one full-screen draw with 9 taps.
+- [ ] **On Windows:** the pause-menu Blur switch turns the blur off at once and is remembered after a restart.

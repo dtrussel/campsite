@@ -133,29 +133,28 @@ def cook_tripod():
 
 
 def camp_sign():
-    """The carved tent-glyph signpost of the concept art (front: -Y)."""
+    """The carved tent-glyph signpost of the concept art (front: -Y). The
+    glyph is real geometry (a cream inlay with a dark door), so it stays
+    crisp at the prop budget."""
     common.reset(64)
     parts = [post((0.14, 0.14, 1.35), (0, 0.04, 0.67), 1)]
-    board = panel(0.95, 0.6, 28, 18, thickness=0.09)
-
-    def colour(pos, normal):
-        grain = noise.noise(Vector((pos.x * 1.5, pos.y * 16.0, 0.0)))
-        c = common.lerp(WOOD, WOOD_LIGHT, max(0.0, min(1.0, 0.5 + grain * 0.6)))
-        if normal.z > 0.6:  # the front face, before the board is stood up
-            u, v = pos.x, pos.y
-            tent = -0.19 < v < 0.21 and abs(u) < (0.21 - v) * 0.62
-            door = -0.19 < v < 0.02 and abs(u) < (0.02 - v) * 0.35
-            if tent and not door:
-                return CREAM
-            if abs(abs(pos.x) - 0.41) < 0.02 or abs(abs(pos.y) - 0.24) < 0.02:
-                return WOOD_DARK  # a darker painted border
-        return c
-    common.color_by(board, colour, smooth=False)
-    place(board, (0, -0.04, 1.08), (math.radians(90), 0, 0))
+    board = block((0.95, 0.09, 0.6), location=(0, -0.04, 1.08), bevel=0.03)
+    colour_wood(board, 2, base=WOOD, light=WOOD_LIGHT)
     parts.append(board)
-    for x in (-0.36, 0.36):
+    for points, y, colour in (([(-0.25, -0.2), (0.25, -0.2), (0.0, 0.22)], -0.09, CREAM),
+                              ([(-0.08, -0.2), (0.08, -0.2), (0.0, 0.02)], -0.1, WOOD_DARK)):
+        bm = bmesh.new()
+        verts = [bm.verts.new((x, y, 1.08 + z)) for x, z in points]
+        bm.faces.new(verts)
+        inlay = common.mesh_object("glyph", bm)
+        mod = inlay.modifiers.new("Solidify", "SOLIDIFY")
+        mod.thickness = 0.012
+        common.apply_all_modifiers(inlay)
+        common.set_color(inlay, colour)
+        parts.append(inlay)
+    for x in (-0.38, 0.38):
         for z in (0.88, 1.28):
-            nail = block((0.04, 0.03, 0.04), location=(x, -0.1, z), bevel=0.01)
+            nail = block((0.04, 0.03, 0.04), location=(x, -0.09, z), bevel=0.01)
             common.set_color(nail, IRON)
             parts.append(nail)
     finish_prop(parts, "camp_sign", size=512, budget=1400, edge_strength=0.3)
@@ -193,8 +192,18 @@ def lantern_post():
     export_with_glow(parts, "lantern_post", [glass], budget=1200)
 
 
+STRIPES = 8
+
+
+def stripes(width):
+    def colour(pos, normal):
+        return AWNING if int((pos.x + width / 2) / (width / STRIPES)) % 2 == 0 else CANVAS
+    return colour
+
+
 def market_stall():
-    """Counter, striped awning and fruit crates (front: -Y)."""
+    """Counter, striped awning and fruit crates (front: -Y). One per map,
+    so like the well it may use a little over the prop budget."""
     common.reset(66)
     w, d = 1.8, 0.9
     parts = []
@@ -211,12 +220,13 @@ def market_stall():
     # Awning: sloped striped canvas, back high, overhanging the front.
     depth = d + 0.55
     slope = math.atan2(0.4, depth)
-    awning = panel(w + 0.35, depth / math.cos(slope), 22, 6, thickness=0.03)
-    common.color_by(awning, lambda pos, n: AWNING if math.sin(pos.x * math.pi * 3.6) > 0 else CANVAS, smooth=False)
+    # One face column per stripe, so the stripes survive any decimation.
+    awning = panel(w + 0.35, depth / math.cos(slope), STRIPES, 1, thickness=0.03)
+    common.color_by(awning, stripes(w + 0.35), smooth=False)
     place(awning, (0, d / 2 - depth / 2, 1.82), (slope, 0, 0))
     parts.append(awning)
-    valance = panel(w + 0.35, 0.16, 22, 2, thickness=0.02)
-    common.color_by(valance, lambda pos, n: AWNING if math.sin(pos.x * math.pi * 3.6) > 0 else CANVAS, smooth=False)
+    valance = panel(w + 0.35, 0.16, STRIPES, 1, thickness=0.02)
+    common.color_by(valance, stripes(w + 0.35), smooth=False)
     place(valance, (0, d / 2 - depth - 0.01, 1.55), (math.radians(90), 0, 0))
     parts.append(valance)
     rng = random.Random(66)
@@ -227,7 +237,7 @@ def market_stall():
         colour = FRUIT[i % len(FRUIT)]
         for k in range(6):
             bm = bmesh.new()
-            bmesh.ops.create_icosphere(bm, subdivisions=1, radius=0.065)
+            bmesh.ops.create_icosphere(bm, subdivisions=0, radius=0.07)
             bmesh.ops.translate(bm, verts=bm.verts, vec=(x + (k % 3 - 1) * 0.13 + rng.uniform(-0.02, 0.02),
                                                          -0.05 + (k // 3 - 0.5) * 0.13, 1.08))
             fruit = common.mesh_object("fruit", bm)
@@ -238,7 +248,7 @@ def market_stall():
         crate = block((s, s, s * 0.8), location=(x, -0.1, s * 0.4), rotation=(0, 0, 0.2 * x), bevel=0.02)
         colour_wood(crate, int(x * 10))
         parts.append(crate)
-    finish_prop(parts, "market_stall", size=1024, budget=1500, edge_strength=0.3)
+    finish_prop(parts, "market_stall", size=1024, budget=2600, edge_strength=0.3)
 
 
 def stone_well():

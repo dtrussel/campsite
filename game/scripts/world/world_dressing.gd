@@ -10,8 +10,12 @@ extends Node3D
 ##     spikes (two more MultiMeshes, feature 031),
 ##   - a dense forest border that frames the arena,
 ##   - a spooky edge (dead trees, jack-o'-lanterns) near the mob spawns,
-##   - camp props around the campfire (tent, woodpile, crates, lanterns).
-## Nothing here affects gameplay except the tent and woodpile colliders.
+##   - camp props around the campfire (tent, woodpile, crates, lanterns),
+##     and the feature 031 homestead decor after the concept art: log and
+##     stump seats, a cooking tripod, the tent-glyph signpost, lantern
+##     posts, a striped market stall and a stone well.
+## Nothing here affects gameplay except the tent, woodpile, stall and
+## well colliders. Decor stays off the mob lanes (the axes) and the path.
 
 const GRASS_SHADER: Shader = preload("res://shaders/grass.gdshader")
 
@@ -119,7 +123,7 @@ func on_path(p: Vector2, margin: float = 0.0) -> bool:
 	var along: float = p.y
 	if along < clearing_radius - 1.5 or along > path_length:
 		return false
-	return absf(-p.x - sin(along * 0.28) * 1.3) < path_width + margin
+	return absf(-p.x + sin(along * 0.28) * 1.3) < path_width + margin
 
 
 # --- Wildflowers (feature 031) ---------------------------------------------
@@ -311,6 +315,7 @@ func _build_camp() -> void:
 	_spawn_model("custom/crate.glb", Vector3(-4.7, 0, 0.1), 0.65, 1.1)
 	_spawn_model("custom/barrel.glb", Vector3(-5.8, 0, 0.5), 0.9, 0.0)
 	_spawn_model("custom/water_bucket.glb", Vector3(1.6, 0, -3.6), 1.2, 0.0)
+	_build_homestead(tent)
 	for pos in [Vector3(-2.1, 0, 2.9), Vector3(3.1, 0, 1.2)]:
 		var lantern: Node3D = _spawn_model("custom/camp_lantern.glb", pos, 1.0, _rng.randf() * TAU)
 		if lantern != null:
@@ -336,6 +341,39 @@ func _build_camp() -> void:
 			continue
 		var rock: String = ["custom/rock_a.glb", "custom/rock_b.glb", "custom/rock_c.glb"][_rng.randi() % 3]
 		_spawn_model(rock, Vector3(p2.x, 0, p2.y), _rng.randf_range(0.5, 0.9), _rng.randf() * TAU)
+
+
+## Feature 031: the cozy decor of concept 01/02, on the diagonals between
+## the mob lanes. Warm lights in the lantern posts and inside the tent
+## make the night pools of light of concept 03.
+func _build_homestead(tent: Node3D) -> void:
+	_spawn_model("custom/log_seat.glb", Vector3(-1.95, 0, 0.7), 1.0, deg_to_rad(75.0))
+	_spawn_model("custom/stump_seat.glb", Vector3(1.75, 0, 1.25), 0.95, 0.4)
+	_spawn_model("custom/stump_seat.glb", Vector3(0.35, 0, 2.15), 0.8, 1.9)
+	_spawn_model("custom/cook_tripod.glb", Vector3(1.7, 0, -1.7), 1.0, 0.3)
+	_spawn_model("custom/camp_sign.glb", Vector3(-4.7, 0, 3.7), 1.0, deg_to_rad(15.0))
+	for spot in [Vector3(4.3, 0, 3.9), Vector3(-6.0, 0, -4.4), Vector3(-0.9, 0, 6.3)]:
+		var lamp: Node3D = _spawn_model("custom/lantern_post.glb", spot, 1.0, _rng.randf_range(-0.6, 0.6) + PI)
+		if lamp != null:
+			lamp.add_child(_warm_light(Vector3(0.44, 1.36, 0.0), 1.6, 5.5))
+	var stall: Node3D = _spawn_model("custom/market_stall.glb", Vector3(3.9, 0, -5.7), 1.0, deg_to_rad(-15.0))
+	_add_blocker(stall, Vector3(2.0, 1.0, 1.1))
+	var well: Node3D = _spawn_model("custom/stone_well.glb", Vector3(5.8, 0, 4.8), 1.0, deg_to_rad(10.0))
+	_add_blocker(well, Vector3(1.6, 1.0, 1.6))
+	for spot in [Vector3(-7.0, 0, 2.2), Vector3(7.4, 0, 2.6), Vector3(-1.0, 0, -6.8), Vector3(3.2, 0, 6.6),
+			Vector3(-6.8, 0, 6.0), Vector3(10.0, 0, -4.0)]:
+		_spawn_model("custom/flower_bush.glb", spot, _rng.randf_range(0.6, 0.85), _rng.randf() * TAU)
+	if tent != null:
+		tent.add_child(_warm_light(Vector3(-0.55, 0.5, 0.0), 0.8, 2.6))
+
+
+func _warm_light(at: Vector3, energy: float, reach: float) -> OmniLight3D:
+	var light: OmniLight3D = OmniLight3D.new()
+	light.light_color = Color(1.0, 0.7, 0.38)
+	light.light_energy = energy
+	light.omni_range = reach
+	light.position = at
+	return light
 
 
 # --- Helpers -----------------------------------------------------------------

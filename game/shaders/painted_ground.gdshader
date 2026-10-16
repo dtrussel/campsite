@@ -79,7 +79,7 @@ void fragment() {
 	float dirt_mask = 1.0 - smoothstep(clearing_radius - 0.5, clearing_radius + 0.3, r + ragged);
 	// Winding path: distance across a sine-wobbled line along path_dir.
 	float along = dot(p, path_dir);
-	float across = dot(p, vec2(-path_dir.y, path_dir.x)) - sin(along * 0.28) * 1.3 + ragged * 0.35;
+	float across = dot(p, vec2(-path_dir.y, path_dir.x)) + sin(along * 0.28) * 1.3 + ragged * 0.35;
 	float path_mask = (1.0 - smoothstep(path_width - 0.25, path_width + 0.25, abs(across)))
 		* smoothstep(clearing_radius - 1.5, clearing_radius, along)
 		* (1.0 - smoothstep(path_length - 5.0, path_length, along));

@@ -23,9 +23,10 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 | `lib/common.py` | Scene reset, mesh helpers, sRGB→linear colours, per-vertex/face colouring, painted grime, remesh/decimate, glTF export |
 | `lib/paint_bake.py` | **The painted look**: bakes base colour, a warm-top/cool-bottom tint, AO, edge highlights and brush noise into one texture (`<name>_painted` material) |
 | `lib/preview.py` | Preview renders |
-| `nature/` | Trees (3 variants + stump), autumn pines, rocks, berry bush |
+| `nature/` | Trees (3 variants + stump), autumn pines (the Resin trees) and green border pines (`pine_c/d`), rocks, berry bush and flowering shrub (`flower_bush`) |
 | `props/camp.py` | Campfire, tent, fence, watch post, torch, woodpile, crate, barrel, toadstools |
 | `props/forage.py` | Feature 017: clay pit, mushroom patch and junk pile (each with a gathered variant), snap trap (base plus a jaw that Godot animates), glow lantern, glow shard, hearth ring. Feature 019: reinforced wall, storage crate, crafting table. Decimated to the 1.4k prop budget |
+| `props/homestead.py` | Feature 031 decor after the October concept art: log and stump seats, cooking tripod, tent-glyph signpost, lantern post (emissive glass), striped market stall, stone well with a tile roof |
 | `props/haunted.py` | Feature 025: jack-o'-lantern (emissive face) and small pumpkin, camp lantern, water bucket, three dead trees, three hills and two mountains for the backdrop. Replaces the last KayKit props |
 | `characters/bramble_beast.py` | Feature 026 remodel of the Bramble Beast after `.features/026-bramble-remodel/reference/concept.png`: sculpted face, bark grain, moss mantle, log fists, antlers, leaf crown, berries, vines, thorns; lengthened forearms and wider legs on the Skeleton Minion rig; high-to-low bake |
 | `characters/beast_anims.py` | Feature 026: the beast's own hand-keyed clips (idle, walk, slam, hit, spawn, death, roar), replacing the rig's stock clips in its GLB |

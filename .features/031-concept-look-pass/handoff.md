@@ -1,17 +1,21 @@
 # Feature 031: Handoff
 
-**Done:** milestone 0, which covers the references, their index and the style guide.
+**Done:** milestones 0–3. See `status.md`.
 
-**Next:** milestone 1 (code only, no Blender needed):
-- `world_lighting.gd` palettes;
-- the TestWorld and title Environments;
-- a new `shaders/post_tiltshift.gdshader` with `scripts/world/post_fx.gd`;
-- camera FOV and distance in `camera_follow.gd`.
+**Where the look lives:**
+- **Lighting:** `world_lighting.gd` PALETTES and the TestWorld Environment.
+- **Post pass:** `PostFx` and `post_tiltshift.gdshader`. Tune `focus_center`, `focus_band`, `max_radius` and the tints there.
+- **Ground:** `painted_ground.gdshader`, plus `art/ground/textures.py`.
+- **Dressing:** `world_dressing.gd` (flowers, border, homestead).
+- **Props:** `art/props/homestead.py`.
 
-Then milestone 2 (ground and flora) and milestone 3 (camp props), which need `tools/setup_blender.sh`.
+**Keep in sync:** the path curve is in two places, `painted_ground.gdshader` (`path_*`) and `WorldDressing.on_path`.
 
-**Environment notes:**
-- Neither Godot nor Blender was installed in the cloud session. Download Godot 4.3-stable the way `.github/workflows/build.yml` does to run `tools/check.sh`.
-- The renderer is GL Compatibility, so there is no SSAO and no built-in DOF.
-
-**Open question:** should any new decor prop gain gameplay, such as the well as a water source? Not in this pass.
+**Open / ideas:**
+- Measure FPS on a real Windows GPU. In the cloud session it only ran under Xvfb with software GL.
+- A moon needs a camera that sees the sky (D8).
+- Further steps from the concept art:
+  - the river, waterfall and bridge (concept 10);
+  - a chicken critter;
+  - more lived-in clutter (a supply table with mugs and a map).
+- The imp's purple smoke aura (concept 08) as a spawn VFX.
