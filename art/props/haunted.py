@@ -35,6 +35,9 @@ PUMPKIN_YELLOW = (0.98, 0.78, 0.25)
 STEM = (0.38, 0.42, 0.16)
 CARVED = (0.18, 0.07, 0.03)
 GLOW = (1.0, 0.62, 0.18)
+AMBER = (1.0, 0.6, 0.2)  # sRGB, converted for flat_material
+BRASS = (0.78, 0.58, 0.26)
+BRASS_DARK = (0.42, 0.28, 0.12)
 DEAD_BARK = (0.36, 0.3, 0.28)
 DEAD_BARK_LIGHT = (0.55, 0.48, 0.44)
 DEAD_BARK_DARK = (0.2, 0.16, 0.16)
@@ -228,6 +231,15 @@ def pumpkin_small():
 
 # --- Lantern and bucket ------------------------------------------------------------
 
+def brass_colour(seed):
+    """Worn brass: warm yellow on the raised bits, dark in the creases."""
+    def colour(p, n):
+        t = noise.noise(p * 12.0 + Vector((seed, 0, 0))) * 0.5 + 0.5
+        c = common.lerp(BRASS_DARK, BRASS, 0.45 + 0.55 * t)
+        return common.lerp(c, (0.95, 0.8, 0.46), max(0.0, n.z) * 0.3)
+    return colour
+
+
 def camp_lantern():
     """A floor lantern: square base, four posts, a roof and a handle,
     with a warm flame inside (separate emissive mesh)."""
@@ -244,38 +256,27 @@ def camp_lantern():
                        dent=0.003, seed=2)
     parts.append(roof)
     parts.append(rivets([(sx * 0.2, sy * 0.2, 0.72) for sx in (-1, 1) for sy in (-1, 1)], 0.014))
-    parts.append(dense_block((0.3, 0.3, 0.1), location=(0, 0, 0.77), bevel=0.02, density=0.012, colour=iron_colour(3, rust=0.12),
+    parts.append(dense_block((0.3, 0.3, 0.1), location=(0, 0, 0.77), bevel=0.02, density=0.012, colour=brass_colour(3),
                              dent=0.003, seed=3))
     # Vent holes around the cap.
     parts.append(rivets([((sx * 0.152, y, 0.77), (sx, 0, 0)) for sx in (-1, 1) for y in (-0.08, 0.0, 0.08)], 0.012,
                         colour=(0.1, 0.08, 0.08)))
     parts.append(torus(0.12, 0.018, location=(0, 0, 0.88), rotation=(math.pi / 2, 0, 0), segments=40, tube=10,
-                       colour=iron_colour(4, rust=0.12)))
-    # Candle with wax drips, standing in a puddle of wax.
-    candle = dense_cylinder(0.06, 0.2, location=(0, 0, 0.2), segments=24, rings=20)
-
-    def drip(p, n):
-        a = math.atan2(p.y, p.x)
-        d = max(0.0, math.sin(a * 5 + 1.0)) ** 4
-        reach = 0.1 - d * 0.16 + noise.noise(Vector((math.cos(a) * 3, math.sin(a) * 3, 0))) * 0.03
-        return 0.006 * d if abs(n.z) < 0.5 and p.z > reach - 0.1 else 0.0
-    displace(candle, drip)
-    common.color_by(candle, lambda p, n: common.lerp((0.95, 0.9, 0.78), (1.0, 0.97, 0.88),
-                                                     max(0.0, min(1.0, (p.z + 0.1) / 0.2))))
-    parts.append(candle)
-    puddle = dense_cylinder(0.085, 0.012, location=(0, 0, 0.105), segments=24, rings=2, bevel=0.004)
-    displace(puddle, lambda p, n: noise.noise(p * 30.0) * 0.006 if abs(n.z) < 0.5 else 0.0)
-    common.color_by(puddle, lambda p, n: (0.93, 0.88, 0.74))
-    parts.append(puddle)
-    parts.append(dense_cylinder(0.006, 0.03, location=(0, 0, 0.31), segments=6, colour=lambda p, n: (0.1, 0.08, 0.06)))
-    bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=10, v_segments=8, radius=0.06)
-    for v in bm.verts:
-        v.co.z *= 1.7
-    bmesh.ops.translate(bm, verts=bm.verts, vec=(0, 0, 0.4))
-    flame = common.mesh_object("flame", bm)
-    paint_bake.flat_material(flame, GLOW, emission=3.5, name="lantern_flame_glow")
-    detail.bake_prop(parts, "camp_lantern", budget=1200, size=512, ray=0.02, extra=[flame], preview_elevation=25,
+                       colour=brass_colour(4)))
+    # M8: amber glass panes between the posts, lit from within (the old
+    # candle sat in an open frame and read as an empty grey box).
+    gm = bmesh.new()
+    bmesh.ops.create_cube(gm, size=1.0)
+    for v in gm.verts:
+        v.co = Vector((v.co.x * 0.37, v.co.y * 0.37, 0.375 + v.co.z * 0.5))
+    bmesh.ops.delete(gm, geom=[f for f in gm.faces if abs(f.normal.z) > 0.5], context="FACES")
+    glass = common.mesh_object("lantern_glass", gm)
+    paint_bake.flat_material(glass, common.srgb(AMBER), emission=2.0, name="lantern_glass_glow")
+    # A mid bar across each pane.
+    for sx, sy, rot in ((0, -1, 0), (0, 1, 0), (-1, 0, math.pi / 2), (1, 0, math.pi / 2)):
+        parts.append(dense_block((0.4, 0.025, 0.025), location=(sx * 0.19, sy * 0.19, 0.4), rotation=(0, 0, rot),
+                                 bevel=0.006, density=0.012, colour=iron_colour(sx + sy + 9), dent=0.0, seed=9))
+    detail.bake_prop(parts, "camp_lantern", budget=1200, size=512, ray=0.02, extra=[glass], preview_elevation=25,
                      ao_distance=0.15, ao_strength=0.6, edge_strength=0.35, edge_radius=0.015)
 
 

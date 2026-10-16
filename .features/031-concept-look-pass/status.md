@@ -144,3 +144,9 @@ The user picked foliage, the campfire and hearth, the lanterns and the shadow im
 **Campfire and hearth.**
 - **Campfire:** 14 rounded grey cobbles of mixed sizes (the dense `stone` helper) replace the pale chiselled boulders, which the old 1.5k budget had turned into angular cream facets. They are sooted on the side facing the fire, with a little moss. Six thicker charred logs. The budget is now 2.8k (`campfire` sits in the middle of every shot).
 - **Hearth ring:** the bricks vary in size and set angle, about a third are burnt darker, and all are slightly dustier. The budget is unchanged.
+
+**Lanterns.**
+- **Camp lantern:** amber glass panes lit from within, a mid bar on each pane, and a brass cap and handle. It replaces the candle in an open frame, which read as an empty grey box. The triangle count is unchanged.
+- **Lantern post:** the glass is now amber.
+- **Why it was cream:** `paint_bake.flat_material` takes linear colour, so GLOW (1.0, 0.66, 0.26) displayed as cream. The glow colours are now converted with `common.srgb`.
+- **Glow lantern:** keeps its cyan crystal (the gameplay glow shard).

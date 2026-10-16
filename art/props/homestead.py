@@ -299,7 +299,7 @@ def lantern_post():
                            seed=i + 5, base=STONE, light=STONE_LIGHT, moss=0.5))
     glass = block((0.15, 0.15, 0.26), location=c, bevel=0.01)
     glass = common.join([glass], "lantern_post_glass")
-    paint_bake.flat_material(glass, GLOW, emission=2.8, name="lantern_post_glow")
+    paint_bake.flat_material(glass, common.srgb((1.0, 0.6, 0.2)), emission=2.8, name="lantern_post_glow")
     detail.bake_prop(parts, "lantern_post", budget=1200, size=512, preview_elevation=25, ray=0.03, extra=[glass],
                      ao_distance=0.2, ao_strength=0.65, edge_strength=0.35, edge_radius=0.015)
 
