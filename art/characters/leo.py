@@ -363,7 +363,8 @@ def hair_and_cap():
     rng = random.Random(7)
 
     def fringe(yaw, pitch, drop, sweep, width, tier, lift=0.045, up_flick=0.0):
-        root, n = HEAD.point(yaw, pitch, -0.012)
+        yaw = max(-0.5, min(0.5, yaw))           # inside the cap's front opening
+        root, n = HEAD.point(yaw, pitch - 0.14, -0.012)
         side = Vector((-math.cos(yaw), -math.sin(yaw), 0))  # tangent toward his right
         controls = [root + F * 0.06 + U * (lift + up_flick),
                     root + F * 0.1 - U * (drop * 0.4 - up_flick * 1.5) + side * sweep * 0.55,
@@ -409,40 +410,90 @@ def hair_and_cap():
                                root - U * length + outv * 0.1 + sidev * 1.6], rng.uniform(0.05, 0.075), thickness=0.4,
               sharp=True, tier=k % 3)
 
-    # Backwards cap: snug crown, cut higher at the front.
-    cap_c = c + Vector((0, 0.018, 0.02))
-    cr = (r.x + 0.042, r.y + 0.042, r.z + 0.03)
-    dome = chibi.ellipsoid(cap_c, cr, name="cap", segs=(40, 24))
-    normal = Vector((0, 0.42 / cr[1], 1 / cr[2])).normalized()
+    # Full baseball cap worn backwards: a six-panel crown down to a band
+    # all round the head (at the hairline in front, a little lower at the
+    # back), the snapback opening arched over his forehead with the strap
+    # across it and the fringe bursting out, and the brim sticking out
+    # behind, angled a little to his left and up so it shows from the front.
+    cap_c = c + Vector((0, 0.01, 0.02))
+    cr = Vector((r.x + 0.035, r.y + 0.035, r.z + 0.03))
+    band_o = c + Vector((0, 0, 0.033))
+    slope = 0.122                             # band rises toward the front
+
+    def band_z(y):
+        return band_o.z - slope * (y - band_o.y)
+
+    def crown_point(yaw, dz, out=0.0):
+        """Point on the crown above the band in direction yaw (0 = ahead)."""
+        d = Vector((math.sin(yaw), -math.cos(yaw), 0))
+        q = cap_c
+        for _ in range(3):
+            z = band_z(q.y) + dz
+            sc = math.sqrt(max(0.0, 1.0 - ((z - cap_c.z) / cr.z) ** 2))
+            k = sc / math.sqrt((d.x / cr.x) ** 2 + (d.y / cr.y) ** 2)
+            q = Vector((cap_c.x + d.x * k, cap_c.y + d.y * k, z))
+        return q + d * out, d
+
+    opening_w, opening_h = 0.58, 0.13
+    dome = chibi.ellipsoid(cap_c, cr, name="cap", segs=(48, 28))
     bm = bmesh.new()
     bm.from_mesh(dome.data)
-    bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:],
-                           plane_co=cap_c + Vector((0, 0, 0.26 * cr[2])), plane_no=normal, clear_inner=True)
+    bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=band_o,
+                           plane_no=Vector((0, slope, 1)).normalized(), clear_inner=True)
+    # The snapback's arched opening in the front panels.
+    hole = []
+    for f in bm.faces:
+        q = f.calc_center_median()
+        rel = q - cap_c
+        yaw = math.atan2(rel.x, -rel.y)
+        if abs(yaw) < opening_w and rel.y < 0:
+            arch = opening_h * math.sqrt(max(0.0, 1.0 - (yaw / opening_w) ** 2))
+            if q.z - band_z(q.y) < 0.012 + arch and q.z - band_z(q.y) > 0.026:
+                hole.append(f)
+    bmesh.ops.delete(bm, geom=hole, context="FACES")
     bm.to_mesh(dome.data)
     bm.free()
     mod = dome.modifiers.new("Solid", "SOLIDIFY")
-    mod.thickness = 0.025
+    mod.thickness = 0.022
     common.apply_all_modifiers(dome)
     common.shade_smooth(dome)
 
     def cap_colour(pos, normal):
         rel = pos - cap_c
         a = math.atan2(rel.x, rel.y)
-        if abs(((a / (math.tau / 6)) % 1.0) - 0.5) > 0.465 and rel.z > 0.08:
+        if abs(((a / (math.tau / 6)) % 1.0) - 0.5) > 0.465 and pos.z - band_z(pos.y) > 0.03:
             return CAP_SEAM
         # Painted top light on the crown.
         return common.lerp(CAP, (0.3, 0.38, 0.62), max(0.0, normal.z - 0.6) * 0.8)
     common.color_by(dome, cap_colour, smooth=False)
     parts.append(dome)
-    button = chibi.ellipsoid(cap_c + Vector((0, 0, cr[2])), (0.03, 0.03, 0.016), name="button", segs=(12, 8))
+    button = chibi.ellipsoid(cap_c + Vector((0, 0, cr.z)), (0.03, 0.03, 0.016), name="button", segs=(12, 8))
     common.set_color(button, CAP_SEAM)
     parts.append(button)
-    # Big curved brim sticking out behind, tilted down a little.
-    brim = chibi.ellipsoid((0, 0, 0), (0.23, 0.2, 0.018), name="brim", segs=(32, 10))
+    # A darker band along the lower edge, tilted with it.
+    ring = chibi.hem_ring(band_o, (cr.x - 0.006, cr.y - 0.006), 0.013, name="cap", segs=(40, 6))
+    ring.data.transform(Matrix.Translation(band_o) @ Matrix.Rotation(-math.atan(slope), 4, "X")
+                        @ Matrix.Translation(-band_o))
+    common.set_color(ring, CAP_SEAM)
+    parts.append(ring)
+    # Snap strap across the bottom of the opening, with its peg holes.
+    pts, nrm = [], []
+    for k in range(11):
+        q, d = crown_point(-opening_w * 0.95 + 1.9 * opening_w * k / 10, 0.03, out=0.004)
+        pts.append(q)
+        nrm.append(d)
+    strap = chibi.webbing(pts, nrm, width=0.02, thick=0.007, name="snap")
+    common.color_by(strap, lambda p, n: (0.03, 0.04, 0.09) if int((p.x + 1.0) * 70) % 3 == 0 and abs(p.x) < 0.09
+                    else CAP_SEAM, smooth=False)
+    parts.append(strap)
+    # The brim behind: long, curved, a little off to his left and up.
+    yaw_b = math.pi - 0.26
+    root, d = crown_point(yaw_b, 0.006)
+    brim = chibi.ellipsoid((0, 0, 0), (0.21, 0.17, 0.016), name="brim", segs=(32, 10))
     for v in brim.data.vertices:
-        v.co.z -= (v.co.x ** 2) * 1.6  # strong LoL curve
-    brim.data.transform(Matrix.Translation(cap_c + Vector((0, cr[1] - 0.02, -0.03)))
-                        @ Matrix.Rotation(math.radians(-12), 4, "X"))
+        v.co.z -= (v.co.x ** 2) * 1.2      # curved sides
+    brim.data.transform(Matrix.Translation(root + Vector((0, 0, 0.004))) @ Matrix.Rotation(-0.26, 4, "Z")
+                        @ Matrix.Rotation(math.radians(8), 4, "X") @ Matrix.Translation((0, 0.08, 0)))
 
     def brim_colour(pos, normal):
         if normal.z < -0.3:
@@ -450,17 +501,6 @@ def hair_and_cap():
         return common.lerp(CAP, (0.3, 0.38, 0.62), max(0.0, normal.z - 0.5))
     common.color_by(brim, brim_colour, smooth=False)
     parts.append(brim)
-    # Snapback strap across the front opening, under the quiff.
-    strap_root, sn = HEAD.point(0, 0.64, 0.03)
-    strap = chibi.box((0.12, 0.018, 0.025), (0, 0, 0), bevel=0.006, name="snap")
-    strap.data.transform(Matrix.Translation(strap_root) @ sn.to_track_quat("Y", "Z").to_matrix().to_4x4())
-    common.set_color(strap, CAP_SEAM)
-    # Push the whole cap back on his head so the quiff can burst out.
-    pivot = c + Vector((0, r.y * 0.8, 0.0))
-    tilt = Matrix.Translation(pivot) @ Matrix.Rotation(math.radians(-6), 4, "X") @ Matrix.Translation(-pivot)
-    for obj in (dome, button, brim, strap):
-        obj.data.transform(tilt)
-    parts.append(strap)
     return parts
 
 

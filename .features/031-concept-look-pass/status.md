@@ -124,6 +124,7 @@
 | Nela | Violet trousers with thinner cream zigzags (purple dominates). Big pale-blue heart on the tee. Less dirt. A brighter purple hair tie. Compass clipped to her strap (no cord across the heart). Rounded soles. | High ponytail (two attempts). From the game camera the crown read as a smooth, bright blob, and the old bun reads better, so the bun was kept. |
 
 - **Shorter necks (user follow-up):** both heads sit 0.055 lower in rest space (`HEAD` z), so the chin meets the collar like a chibi. No clipping in the idle, run, attack or pick-up poses; the portrait cameras were lowered to match.
+- **Leo's cap (user follow-up):** now a full baseball cap worn backwards: a six-panel crown down to a band, the snapback opening and strap over his forehead with the fringe coming through, and the brim behind, angled a little to his left and up so it shows from the game camera.
 - **Triangles:** Leo 35.0k, Nela 35.7k, unchanged.
 - **Unchanged:** rigs, clips, proportions and attach points.
 - **Re-rendered:** both portraits.
