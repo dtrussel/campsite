@@ -1,6 +1,6 @@
 # Feature 031: Handoff
 
-**Done:** milestones 0–3. See `status.md`.
+**Done:** milestones 0–6. See `status.md`.
 
 **Where the look lives:**
 - **Lighting:** `world_lighting.gd` PALETTES and the TestWorld Environment.
@@ -26,3 +26,17 @@
   - The material finish is in `painted_common.gdshaderinc` (`top_light`, `under_dark`, `contact_*`, `texel_*`).
 - **Measuring:** `screenshots.tscn` day shots against `13_style_target_village.webp`. Compare median brightness, the darkest and brightest 5 %, and the R:G:B ratios (see status).
 - **MSAA is off (D12).** Turning it on under Compatibility broke the night lighting in the Xvfb test.
+
+**Milestones 5 and 6 (softer blur, model detail):**
+- **Model review:**
+  - Render a model in the game look with `xvfb-run -a godot --path game --resolution 960x540 res://tools/model_gallery.tscn -- <out_dir> <model ...>`, before and after a change.
+- **Detail pipeline (`art/lib/detail.py`):**
+  - `bake_prop` and `bake_prop_lows` bake the dense look onto the budget mesh.
+  - Dense helpers: `bark_log`, `plank`, `leaf_clump` and `colour_foliage`.
+  - The prop scripts carry more (`camp.py`: `board`, `bark_stake`, `shingles`, `rope_tube`; `forage.py`: `dense_block`, `twisted_rope`, `rivets`).
+- **Bake pitfalls:**
+  - **Black texels.** A bake ray that is too short leaves black texels; raise `ray` past the deepest carved detail.
+  - **Collapse decimation tears thin sheets.** Give canvas, awnings and roof panels a hand-made low twin with `bake_prop_lows`.
+  - **Slow vertex loops.** Reading `v.normal` while moving vertices is very slow; read all the normals first.
+- **Characters:** a denser body voxel causes black blotches in the bake, so mob detail comes from colour functions at the current density.
+- **Open:** Leo and Nela's tees are too coarse (12k faces) for seams to read. A cloth-detail pass would need a denser tee, which needs its own budget.

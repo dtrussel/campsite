@@ -12,3 +12,7 @@
 - [x] M4: the day HUD shot is within about 5 % of the style target's median brightness and colour balance (status.md table).
 - [x] M4: the night shot is still blue with warm pools, and the imps are readable.
 - [ ] **On a real GPU (Windows):** FPS with the 16-tap bokeh, 4-tap sharpen and prop outlines.
+- [x] M5: the softer blur keeps the day grade stats (median 123, G/R 0.79, B/R 0.28).
+- [x] M6: every model has a before/after gallery render, and only improved models are committed (status.md table).
+- [x] M6: bounds stay within ±10 % and props within budget (well and stall about 2.6k). Mob rigs, bones and clip names are unchanged.
+- [ ] **On a real GPU (Windows):** FPS with the new tree canopies and grass tufts (5 curved blades, about 3k instances).

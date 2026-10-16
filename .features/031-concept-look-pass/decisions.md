@@ -74,3 +74,14 @@
 | `bottom_boost` | 1.3 | 1.2 |
 | Blur amount cap | 1.3 | 1.15 |
 | `haze` | 0.05 | 0.04 |
+
+## D15: Model pass: dense detail, keep only what improved (user and agent)
+- **Context.** The user asked for one pass on every model, with a quality check after each, committing a model only if it actually improved.
+- **Pipeline.**
+  - Detail is modelled dense and baked onto the decimated game mesh in one selected-to-active emission bake (`paint_bake.paint_direct`, `detail.bake_prop`).
+  - The bake's ray length must cover the deepest carved detail.
+  - Thin open sheets (canvas, awnings) use hand-made low twins (`bake_prop_lows`), because collapse decimation tears them.
+- **This fixes D7.** Tile and stripe colours no longer depend on the triangle budget.
+- **Gate.** Each model was rendered in game (`tools/model_gallery.tscn`) before and after.
+  - Kept as is: `rock_pebbles`, Leo and Nela.
+  - Everything else was committed.

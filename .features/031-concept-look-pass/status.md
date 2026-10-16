@@ -76,3 +76,35 @@
   | Target | 122 | 50 | 189 | 0.77 | 0.30 |
 
 - **Checks:** `tools/check.sh` passes. The night shot keeps the blue world with the firelit centre, and the imps stay readable.
+
+## 2026-10-16: Milestone 5 (softer blur)
+- **What changed.** The user found the M4 blur a bit too strong, so the band is wider and the bokeh smaller (D14). The grade is unchanged.
+- **Measured.** The day stats are the same as M4: median 123, G/R 0.79, B/R 0.28.
+
+## 2026-10-16: Milestone 6 (model detail pass)
+**Method.**
+- Every model had at least one improvement pass. Each was checked in the in-game model gallery (`game/tools/model_gallery.tscn`), before against after, plus the triangle count and bounds (±10 %).
+- A model was committed only if it clearly improved (D15).
+- **New pipeline (`art/lib/detail.py`).** Props are modelled dense and the painted look is baked straight onto the budget mesh (`paint_bake.paint_direct`), so the detail lives in the texture.
+
+**Results.**
+
+| Group | Improved | Kept as is |
+|---|---|---|
+| Camp and homestead (16) | all: log and stump seats, campfire, tent, fence, watch post, torch, woodpile, crate, barrel, toadstools, tripod, sign, lantern post, market stall, stone well | none |
+| Forage and haunted props (18) | all: clay pit (+ dug), mushrooms (+ picked), junk pile (+ picked), snap trap base and jaw, glow lantern, glow shard, hearth ring, reinforced wall, storage crate, crafting table, jack-o'-lantern, small pumpkin, camp lantern, water bucket | none |
+| Nature (24) | trees a–c, tree stump, pines a–d, rocks a–c, rock cluster, berry bush (+ picked), flower bush, dead trees a–c, hills a–c, mountains a–b | `rock_pebbles`: cracks did not read at its size |
+| Characters (5) | shadow imp (ringed horns, veined wings, clean stripes), mushroom gremlin (soft raised cap spots instead of square pixels, gills), bramble beast (hooked thorns, leaf veins, moss; modest) | Leo and Nela: seams and smudges did not read at game scale |
+| Code meshes | grass tufts (5 curved blades), daisies (petal cups with a golden centre), lupines (floret tiers) | none |
+
+**Notable fixes.**
+- The well roof and stall awning were a scrambled checker (D7). They are now real tile courses and crisp stripes.
+- The watch post's side rails were rotated 90°.
+- The jack-o'-lantern's glow panels floated; its face is now carved into the body.
+- The campfire (7.4k) and watch post (5.2k triangles) are now within the 1.5k budget.
+
+**Also changed.**
+- The painted shader's texel noise is finer (0.025 m, 4 %), so it no longer reads as a checker up close.
+- The UI icons and the imp portrait were re-rendered.
+
+**Checks.** `tools/check.sh` passes after every batch. The day grade stats are unchanged.

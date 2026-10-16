@@ -119,3 +119,7 @@ Props:
   - ink lines on props;
   - grass and ground detail.
 - **Verification:** measure the screenshots against the target numbers, then run `tools/check.sh`.
+
+## Milestones 5 and 6 (requested after M4)
+- **M5:** soften the tilt-shift (D14).
+- **M6:** one detail pass on every model, keeping only what improved (D15). The per-model results are in status.md.
