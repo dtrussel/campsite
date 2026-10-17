@@ -42,3 +42,5 @@ __pycache__/
 
 # Python venv for procedural audio builds
 .venv-audio/
+# Voice TTS model files (art/audio/voice.py downloads them)
+art/audio/.voice-cache/

@@ -123,8 +123,22 @@ only, 038).
   `game/assets/audio/voice/<line id>.ogg`. See the README in that folder.
 - The game plays them on its own **Voice** bus, one line after another.
   A card stays up until its voices have finished (at least 6 s at dawn).
-- Until the recordings arrive every line shows as text only. The
-  validator reports how many lines are voiced.
+- For now every line is a **generated placeholder** (Kokoro TTS,
+  `art/audio/voice.py`, `tools/build_audio.sh voice`). A real recording
+  with the same name replaces one. A line without any file shows as
+  text only; the validator reports how many lines are voiced.
+- The generated cast (the `CAST` table; pitch is the measured median):
+
+  | Speaker | Kokoro voice | Speed | Shift | Pitch |
+  |---|---|---|---|---|
+  | Leo (7) | `af_river` + `af_aoede` | 1.1, quick | +4 semitones | ~245 Hz |
+  | Nela (3) | `af_jessica` + `af_bella` | 0.95, deliberate | +5 semitones | ~280 Hz |
+  | Mum | `af_heart`, warm | 0.92 | none | ~205 Hz |
+  | Narrator | `bm_fable`, a British storyteller | 0.9 | none | ~135 Hz |
+
+  Kokoro has no child voices, so the kids are young women's voices
+  shifted up, formants included (a smaller vocal tract), the way
+  animation casts kids.
 - Barks (037) follow the same rule: `bark.<trigger>.<speaker>.<n>.ogg`.
   Until a bark has a recording, a short chirp plays in the speaker's
   pitch (`chirp_leo`, `chirp_nela`).
@@ -166,5 +180,6 @@ cooldown, `urgent`, and `once: "night"`.
 
 ## Open questions for the team
 
-- None right now. Next to collect: the voice cast and the recordings
-  (list of line ids: `tools/check.sh` output, or the story `.tres` files).
+- None right now. Next to collect: a real voice cast and recordings to
+  replace the generated placeholders (line ids: the story and bark
+  `.tres` files).

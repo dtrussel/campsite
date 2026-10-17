@@ -5,6 +5,8 @@
 #   tools/build_audio.sh                # everything
 #   tools/build_audio.sh sfx hit wood   # just some one-shots
 #   tools/build_audio.sh music night    # just loops whose path matches
+#   tools/build_audio.sh voice          # TTS voice lines (not in "everything":
+#                                       # slow, and downloads a ~350 MB model)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VENV="$ROOT/.venv-audio"
@@ -20,5 +22,8 @@ if [[ $# -eq 0 ]]; then
 else
 	what="$1"
 	shift
+	if [[ "$what" == voice ]] && ! "$VENV/bin/python" -c "import kokoro_onnx" 2>/dev/null; then
+		"$VENV/bin/pip" install -q "kokoro-onnx>=0.4"
+	fi
 	"$VENV/bin/python" "$what.py" "$@"
 fi

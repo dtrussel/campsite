@@ -77,6 +77,7 @@ soundfile) on first run.
 | `audio/dsp.py` | Oscillators, envelopes, filters, a convolution reverb, and instruments: `pluck` (Karplus-Strong guitar), `bell`, `pad`, `knock` (wood), `owl`. `write()` normalises and encodes the result |
 | `audio/sfx.py` | One-shots in the `SOUNDS` table. Each id is written as `sfx/<id>_<n>.ogg` (variants). Ids match `Fx.burst` kinds where one exists. `chirp_leo` / `chirp_nela` are the barks' babble until recordings arrive (feature 037) |
 | `audio/music.py` | Seamless loops: `music/day.ogg`, `music/night.ogg`, and `ambience/{day,night,campfire}.ogg` |
+| `audio/voice.py` | Generated voice lines: every story line and bark, spoken with Kokoro TTS (Apache-2.0, offline) and written as `voice/<line id>.ogg`. Casting is the `CAST` table; `--audition` renders candidates with their measured pitch. Run `tools/build_audio.sh voice [id prefix or speaker]`; it installs `kokoro-onnx` and downloads the model (~350 MB, gitignored) on first use. Placeholders until real recordings replace them |
 
 - **Tone:** warm, toy-like and never harsh (the players are young kids). Imps are silly ("poof" and a squeak), not scary.
 - **Adding a sound:**
