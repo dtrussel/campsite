@@ -180,15 +180,37 @@ def face_offset(pos, normal):
     return d * front
 
 
-def grain_offset(pos, normal):
-    """Bark ridges running along the limbs and trunk."""
-    side, radial, along = _fist_axis(pos)
+def _grain(pos):
+    """Bark grain noise, stretched along the limbs (arms: x) or the trunk
+    and legs (z)."""
+    _side, _radial, along = _fist_axis(pos)
     if along > 0.5 and pos.z > 0.8:
-        # Arms: grain runs along x.
-        g = noise.noise(Vector((pos.x * 2.0, pos.y * 16.0, pos.z * 16.0)))
+        return noise.noise(Vector((pos.x * 2.0, pos.y * 16.0, pos.z * 16.0)))
+    return noise.noise(Vector((pos.x * 16.0, pos.y * 16.0, pos.z * 2.2)))
+
+
+def _crack(pos, normal):
+    """Bark fissures (0..1): long, wavering lines running along the limb
+    or trunk (evenly spaced round its axis, warped by noise and broken
+    into segments), so they read as bark plates rather than dots."""
+    _side, _radial, along = _fist_axis(pos)
+    if along > 0.5 and pos.z > 0.8:
+        ang = math.atan2(pos.z - 1.11, pos.y)
+        brk = noise.noise(Vector((pos.x * 4.0, ang * 2.0, 3.0)))
+        side_on = _smooth01((0.8 - abs(normal.x)) * 4.0)
     else:
-        g = noise.noise(Vector((pos.x * 16.0, pos.y * 16.0, pos.z * 2.2)))
-    return 0.012 * g
+        cx = math.copysign(0.24, pos.x) if pos.z < 0.6 else 0.0
+        ang = math.atan2(pos.y, pos.x - cx)
+        brk = noise.noise(Vector((ang * 2.0, pos.z * 4.0, 7.0)))
+        side_on = _smooth01((0.8 - abs(normal.z)) * 4.0)
+    warp = 1.6 * noise.noise(pos * 3.0 + Vector((5, 2, 8)))
+    line = abs(math.sin(ang * 9.0 + warp))
+    return _smooth01((0.42 - line) / 0.22) * (0.55 + 0.45 * _smooth01(brk * 2.0 + 0.5)) * side_on
+
+
+def grain_offset(pos, normal):
+    """Bark ridges running along the limbs and trunk, split by fissures."""
+    return 0.012 * _grain(pos) - 0.006 * _crack(pos, normal)
 
 
 def moss_mask(pos, normal):
@@ -224,7 +246,9 @@ def sculpt(body):
     for v in mesh.vertices:
         pos, normal = v.co.copy(), v.normal.copy()
         m = moss_mask(pos, normal)
-        d = face_offset(pos, normal) + grain_offset(pos, normal) * (1.0 - m) + 0.025 * m
+        # Moss: a raised, tufty cushion.
+        tuft = noise.noise(pos * 18.0 + Vector((2, 6, 3)))
+        d = face_offset(pos, normal) + grain_offset(pos, normal) * (1.0 - m) + m * (0.014 + 0.004 * tuft)
         v.co = pos + normal * d
     mesh.update()
     common.shade_smooth(body)
@@ -235,12 +259,12 @@ def colour_body(body):
         n = noise.noise(pos * 4.0)
         side, radial, along = _fist_axis(pos)
         arm = along > 0.5 and pos.z > 0.8
-        if arm:
-            streak = noise.noise(Vector((pos.x * 2.0, pos.y * 16.0, pos.z * 16.0)))
-        else:
-            streak = noise.noise(Vector((pos.x * 16.0, pos.y * 16.0, pos.z * 2.2)))
+        streak = _grain(pos)
         c = common.lerp(BARK, BARK_DARK, _smooth01(0.3 + streak * 1.2 - normal.z * 0.15))
         c = common.lerp(c, BARK_LIGHT, _smooth01(streak * 2.0 - 0.5) * 0.7)
+        # Dark fissures between the bark plates, worn lighter at the edges.
+        crack = _crack(pos, normal)
+        c = common.lerp(c, BARK_DARK, crack * 0.55)
         # V-grain on the chest and back.
         if not arm and 0.65 < pos.z < 1.2 and abs(normal.y) > 0.4:
             v = (pos.z + abs(pos.x) * 0.9) * 9.0
@@ -262,10 +286,13 @@ def colour_body(body):
         # Moss.
         m = moss_mask(pos, normal)
         if m > 0:
-            mc = common.lerp(MOSS, MOSS_LIGHT, _smooth01(0.5 + n + normal.z * 0.3))
-            fleck = noise.noise(pos * 28.0)
-            if fleck > 0.35:
-                mc = MOSS_LIGHT
+            mc = common.lerp(MOSS, MOSS_LIGHT, _smooth01(0.5 + n + normal.z * 0.3) * 0.8)
+            # Tufts: lighter tips, darker hollows between them.
+            tuft = noise.noise(pos * 26.0 + Vector((2, 6, 3))) * 0.5 + noise.noise(pos * 60.0) * 0.25
+            mc = common.lerp(mc, MOSS_DARK, _smooth01(-tuft * 3.0) * 0.6)
+            mc = common.lerp(mc, MOSS_LIGHT, _smooth01((tuft - 0.15) * 4.0) * 0.6)
+            # Darker, damp moss at the ragged edge where it meets the bark.
+            mc = common.lerp(mc, MOSS_DARK, _smooth01((0.6 - m) * 2.5) * 0.5)
             c = common.lerp(c, mc, m)
         # The face: dark sockets, a darker grin, soft shade under the brow.
         if normal.y < -0.3 and abs(pos.x) < 0.34 and 1.15 < pos.z < 1.56:
@@ -297,13 +324,25 @@ def surface_point(body, origin, direction):
 
 
 def thorn(base, direction, length, radius):
+    """A curved, hooked thorn: rings tapering to a sharp point, with fine
+    lengthwise striations and a darker tip."""
+    rings, segs = 14, 14
     bm = bmesh.new()
-    bmesh.ops.create_cone(bm, cap_ends=True, segments=8, radius1=radius, radius2=0.0, depth=length)
-    bmesh.ops.translate(bm, verts=bm.verts, vec=(0, 0, length / 2))
-    # A slight hook toward the tip.
-    for v in bm.verts:
-        t = v.co.z / length
-        v.co.x += 0.25 * radius * t * t
+    grid = []
+    for i in range(rings):
+        t = i / (rings - 1)
+        r = radius * (1.0 - t) ** 0.9 * (1.0 + 0.25 * max(0.0, 0.15 - t) / 0.15)
+        row = []
+        for j in range(segs):
+            a = j / segs * math.tau
+            # A slight hook toward the tip.
+            row.append(bm.verts.new((math.cos(a) * r + 0.6 * radius * t * t, math.sin(a) * r, t * length)))
+        grid.append(row)
+    for i in range(rings - 1):
+        for j in range(segs):
+            bm.faces.new((grid[i][j], grid[i][(j + 1) % segs], grid[i + 1][(j + 1) % segs], grid[i + 1][j]))
+    bm.faces.new(list(reversed(grid[0])))
+    bmesh.ops.pointmerge(bm, verts=grid[-1], merge_co=grid[-1][0].co.copy())
     obj = common.mesh_object("thorn", bm)
     obj.rotation_mode = "QUATERNION"
     obj.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(direction.normalized())
@@ -311,11 +350,16 @@ def thorn(base, direction, length, radius):
     common.select_only([obj])
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     common.shade_smooth(obj)
+    axis = direction.normalized()
 
     def colour(pos, normal):
-        t = (pos - base).length / length
-        return common.lerp(THORN, THORN_TIP, _smooth01(t * 1.6 - 0.5))
-    common.color_by(obj, colour, smooth=False)
+        t = (pos - base).dot(axis) / length
+        c = common.lerp(THORN, THORN_TIP, _smooth01(t * 1.6 - 0.5))
+        # Striations along the thorn, darker toward the root.
+        stria = noise.noise(Vector((pos.x * 60.0, pos.y * 60.0, pos.z * 60.0)) + axis * t * -40.0)
+        c = common.lerp(c, THORN_TIP, _smooth01((stria - 0.2) * 4.0) * 0.3)
+        return common.lerp(c, BARK_DARK, _smooth01((0.12 - t) / 0.12) * 0.5)
+    common.color_by(obj, colour)
     return obj
 
 
@@ -344,8 +388,10 @@ def twig(points, radii, name="twig"):
     obj = curved_tube([Vector(p) for p in points], radii, name)
 
     def colour(pos, normal):
-        return common.lerp(BARK_LIGHT, BARK_DARK, _smooth01(0.4 + noise.noise(pos * 20.0) * 0.8 - normal.z * 0.2))
-    common.color_by(obj, colour, smooth=False)
+        c = common.lerp(BARK_LIGHT, BARK_DARK, _smooth01(0.4 + noise.noise(pos * 20.0) * 0.8 - normal.z * 0.2))
+        # Fine bark grain.
+        return common.lerp(c, BARK_DARK, _smooth01((noise.noise(pos * 70.0) - 0.25) * 4.0) * 0.4)
+    common.color_by(obj, colour)
     return obj
 
 
@@ -367,11 +413,11 @@ def antlers(body):
 def leaf(length, width, colour_base, colour_tip, name="leaf"):
     """A broad leaf with a midrib, lying along +x, tip up-curled."""
     bm = bmesh.new()
-    rows, cols = 7, 4
+    rows, cols = 18, 8
     verts = []
     for i in range(rows + 1):
         t = i / rows
-        half = width * math.sin(math.pi * min(1.0, t * 1.05)) ** 0.8 * 0.5
+        half = width * max(0.0, math.sin(math.pi * min(1.0, max(0.0, t) * 1.05))) ** 0.8 * 0.5
         row = []
         for j in range(-cols, cols + 1):
             u = j / cols
@@ -392,10 +438,15 @@ def leaf(length, width, colour_base, colour_tip, name="leaf"):
     def colour(pos, normal):
         t = pos.x / length
         c = common.lerp(colour_base, colour_tip, _smooth01(t * 1.3 - 0.2))
-        if abs(pos.y) < 0.006 + 0.004 * (1 - t):
-            c = common.lerp(c, (0.9, 0.85, 0.5), 0.5)
+        # Pale midrib and side veins angled toward the tip.
+        rib = _smooth01((0.006 + 0.004 * (1 - t) - abs(pos.y)) / 0.004)
+        vein = abs(math.sin((pos.x - abs(pos.y) * 1.4) / length * 22.0))
+        c = common.lerp(c, (0.9, 0.85, 0.5), max(rib * 0.5, _smooth01((0.12 - vein) / 0.1) * 0.22))
+        # Darker toward the serrated edge.
+        half = width * max(0.0, math.sin(math.pi * min(1.0, max(0.0, t) * 1.05))) ** 0.8 * 0.5
+        c = common.lerp(c, common.lerp(colour_base, (0.1, 0.2, 0.05), 0.4), _smooth01(abs(pos.y) / max(half, 1e-4) - 0.6) * 0.5)
         return c
-    common.color_by(obj, colour, smooth=False)
+    common.color_by(obj, colour)
     return obj
 
 

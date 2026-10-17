@@ -434,6 +434,34 @@ def win(v):
 def lose(v):
     return stinger([69, 65, 62, 57], [50, 62, 65, 69], 2.8, 310)
 
+def babble(v, base, seed):
+    """A bark chirp (feature 037): 3-4 sung syllables with vowel-ish
+    formants, like a toy voice saying a short line."""
+    r = rng(seed + v)
+    count = 3 + (v % 2)
+    out = silence(0.12 * count + 0.25)
+    at = 0.0
+    for i in range(count):
+        d = r.uniform(0.07, 0.11)
+        f0 = base * r.uniform(0.92, 1.18) * (1.08 if i == count - 1 and v % 3 == 0 else 1.0)
+        f = sweep(f0, f0 * r.uniform(0.85, 1.12), d, 0.7)
+        tone = sine(f, d) + 0.6 * sine(f * 2, d) + 0.35 * sine(f * 3, d) + 0.2 * sine(f * 4, d)
+        vowel = bandpass(tone, r.choice([700.0, 1100.0, 1700.0, 2300.0]), 1.4) * 0.7 + lowpass(tone, 1200) * 0.5
+        place(out, vowel * env_adsr(d, 0.008, d * 0.5) * 0.6, at)
+        at += d + r.uniform(0.015, 0.04)
+    return reverb(out, 0.12, 0.5)
+
+
+def chirp_leo(v):
+    """Leo babbles a bark: lower and bouncy."""
+    return babble(v, 290.0, 600)
+
+
+def chirp_nela(v):
+    """Nela babbles a bark: higher and quick."""
+    return babble(v, 440.0, 640)
+
+
 
 SOUNDS = {
     "hit": (hit, 3),
@@ -474,6 +502,8 @@ SOUNDS = {
     "sunset": (sunset, 1),
     "win": (win, 1),
     "lose": (lose, 1),
+    "chirp_leo": (chirp_leo, 4),
+    "chirp_nela": (chirp_nela, 4),
 }
 
 

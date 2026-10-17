@@ -7,6 +7,10 @@ extends CharacterBody3D
 ## the world; the player assigns tasks via hotkeys (see HUD hint).
 ## Mobs can hurt companions; at 0 HP a companion is knocked out
 ## until the next dawn, then gets back up at full health.
+##
+## Feature 034: the companion is a hero too (Nela, or Leo when the
+## player plays Nela). Body, stats, speed, reach and fighting style come
+## from the party's HeroDefinition; `definition` keeps the task tuning.
 
 signal task_changed(new_task: int)
 signal health_changed(current_hp: int, max_hp: int)
@@ -14,12 +18,14 @@ signal knocked_out_changed(is_knocked_out: bool)
 
 enum Task { IDLE, FOLLOW_PLAYER, GUARD_BASE, GATHER_NEAREST, REPAIR }
 
-## Seconds between Nela's hammer taps (a bit slower than Leo's).
+## Seconds between the companion's hammer taps (slower than the player's).
 const REPAIR_TAP_SECONDS: float = 1.0
 const REPAIR_REACH: float = 1.9
 
 @export var definition: CompanionDefinition
 @export var stats: CharacterStatsDefinition
+## The companion hero; empty takes GameManager.party_companion().
+@export var hero: HeroDefinition
 @export var follow_distance: float = 2.5
 @export var guard_radius: float = 3.5
 @export var detection_radius: float = 6.0
@@ -43,11 +49,25 @@ var _attack_cooldown_remaining: float = 0.0
 var _current_attack_damage: int = 0
 var _active_resource_node: Node = null   # ResourceNode currently being gathered
 var _repair_timer: float = 0.0
-## Crafting Table upgrade (feature 019): doubles her attack reach.
-var has_slingshot: bool = false
+## Crafting Table upgrade (features 019, 034): the hero's signature
+## (Nela's Slingshot doubles her reach; Leo's Sturdy Stick adds damage).
+var has_signature: bool = false
+var move_speed: float = 4.8
+var _attack_range: float = 2.0
+var _attack_cooldown: float = 0.6
 
 const BANDAGE_HEAL: int = 25
-const SLINGSHOT_RANGE_FACTOR: float = 2.0
+
+
+func _enter_tree() -> void:
+	# Before the Visual child's _ready builds the model.
+	if hero == null:
+		hero = GameManager.party_companion()
+	if hero == null or is_in_group(HeroRoster.group_for(hero.id)):
+		return
+	add_to_group(HeroRoster.group_for(hero.id))
+	stats = hero.stats
+	HeroBody.apply(self, hero)
 
 
 func _ready() -> void:
@@ -55,6 +75,14 @@ func _ready() -> void:
 	_refresh_world_refs()
 	_update_task_label()
 	_current_attack_damage = definition.attack_damage if definition != null else 0
+	if definition != null:
+		move_speed = move_speed
+		_attack_range = definition.attack_range
+		_attack_cooldown = definition.attack_cooldown_seconds
+	if hero != null:
+		move_speed = hero.companion_move_speed
+		_attack_range = hero.companion_attack_range
+		_attack_cooldown = hero.companion_attack_cooldown
 	if stats != null:
 		_current_attack_damage = stats.base_attack_damage
 		max_hp = stats.base_max_health
@@ -76,7 +104,7 @@ func take_damage(amount: int, _source: Node = null) -> void:
 	health_changed.emit(current_hp, max_hp)
 	Fx.flash(self)
 	Fx.float_text(self, "-%d" % amount, Color(1, 0.6, 0.4))
-	AudioManager.play_sfx(&"sibling_hurt", global_position)
+	AudioManager.play_sfx(hero.hurt_sfx if hero != null else &"sibling_hurt", global_position)
 	if current_hp == 0:
 		_set_knocked_out(true)
 	elif not _visual.is_in_action():
@@ -128,21 +156,22 @@ func set_task(task: int) -> void:
 
 
 func get_attack_range() -> float:
-	if definition == null:
-		return 0.0
-	return definition.attack_range * (SLINGSHOT_RANGE_FACTOR if has_slingshot else 1.0)
+	return _attack_range
 
 
-func give_slingshot() -> void:
-	if has_slingshot:
+## The hero's signature upgrade (see HeroDefinition), once per run.
+func apply_signature() -> void:
+	if has_signature or hero == null:
 		return
-	has_slingshot = true
-	Fx.float_text(self, "SLINGSHOT!", Color(1.0, 0.85, 0.4), 2.7)
+	has_signature = true
+	_current_attack_damage += hero.signature_damage_bonus
+	_attack_range *= hero.companion_signature_range_factor
+	Fx.float_text(self, "%s!" % hero.signature_label.to_upper(), Color(1.0, 0.85, 0.4), 2.7)
 	Fx.burst(&"level_up", global_position)
 
 
-## A bandage: +25 HP, or wakes her up (with 25 HP) when knocked out.
-## False when she does not need one.
+## A bandage: +25 HP, or wakes the companion up (with 25 HP) when
+## knocked out. False when they do not need one.
 func apply_bandage() -> bool:
 	if is_knocked_out:
 		_set_knocked_out(false)
@@ -216,7 +245,7 @@ func _tick_follow_player() -> void:
 	to_player.y = 0.0
 	var distance: float = to_player.length()
 	if distance > follow_distance:
-		velocity = to_player.normalized() * definition.move_speed
+		velocity = to_player.normalized() * move_speed
 	else:
 		velocity = Vector3.ZERO
 	move_and_slide()
@@ -240,14 +269,14 @@ func _tick_guard_base() -> void:
 	to_base.y = 0.0
 	var distance: float = to_base.length()
 	if distance > guard_radius:
-		velocity = to_base.normalized() * definition.move_speed
+		velocity = to_base.normalized() * move_speed
 	else:
 		# Approach the nearest detected mob if any.
 		var detected: Node3D = _find_nearest_mob(detection_radius)
 		if detected != null:
 			var to_mob: Vector3 = detected.global_position - global_position
 			to_mob.y = 0.0
-			velocity = to_mob.normalized() * definition.move_speed
+			velocity = to_mob.normalized() * move_speed
 		else:
 			velocity = Vector3.ZERO
 	move_and_slide()
@@ -279,13 +308,13 @@ func _tick_gather_nearest() -> void:
 		move_and_slide()
 		_begin_gather_on(target)
 		return
-	velocity = to_target.normalized() * definition.move_speed
+	velocity = to_target.normalized() * move_speed
 	move_and_slide()
 
 
 ## Fixes the most damaged structure (the campfire first when it is
 ## low), fighting any imp that comes within reach. With nothing to fix,
-## or no wood left, she guards the camp instead.
+## or no wood left, the companion guards the camp instead.
 func _tick_repair(delta: float) -> void:
 	_repair_timer = maxf(0.0, _repair_timer - delta)
 	var mob: Node3D = _find_nearest_mob(get_attack_range())
@@ -296,7 +325,7 @@ func _tick_repair(delta: float) -> void:
 	var to_target: Vector3 = target.global_position - global_position
 	to_target.y = 0.0
 	if to_target.length() > REPAIR_REACH + _target_radius(target):
-		velocity = to_target.normalized() * definition.move_speed
+		velocity = to_target.normalized() * move_speed
 		move_and_slide()
 		return
 	velocity = Vector3.ZERO
@@ -357,9 +386,12 @@ func _attack_mob(mob: Node3D) -> void:
 		return
 	_visual.face_instantly(mob.global_position - global_position)
 	_visual.play_action(&"attack", 1.8)
+	_attack_cooldown_remaining = _attack_cooldown
+	if hero != null and hero.ranged:
+		PebbleShot.fire(self, mob, _current_attack_damage)
+		return
 	mob.take_damage(_current_attack_damage, self)
 	Fx.burst(&"sparkle", mob.global_position + Vector3(0, 0.7, 0))
-	_attack_cooldown_remaining = definition.attack_cooldown_seconds
 
 
 func _on_level_up(character: Node, _new_level: int) -> void:

@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_def")
-display_name = "Sibling"
+display_name = "Nela"
 base_max_health = 40
 base_attack_damage = 3
 max_health_per_level = 4

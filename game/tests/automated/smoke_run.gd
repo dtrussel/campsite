@@ -5,7 +5,10 @@ extends Node
 ## End-to-end headless smoke test for the playtest loop. Instances the
 ## real Main scene and drives it through a whole run:
 ##   gather -> craft a torch -> plant it -> survive 3 nights -> win,
-## then a second run that loses when the campfire is destroyed.
+## then a second run that loses when the campfire is destroyed, a
+## continued run, and a run playing Nela with Leo as the companion.
+## Features 035-036: the story cards and storybook, the shard drops and
+## the Moon Lantern.
 ##
 ##   godot --headless --path game res://tests/automated/smoke_run.tscn
 ##
@@ -21,6 +24,7 @@ var _failures: int = 0
 var _night1_save: Dictionary = {}
 
 const TEST_SAVE_PATH: String = "user://smoke_save.json"
+const TEST_STORY_PATH: String = "user://smoke_story.cfg"
 
 
 func _ready() -> void:
@@ -32,10 +36,16 @@ func _ready() -> void:
 	# Never touch a real player's autosave.
 	SaveManager.set_save_path(TEST_SAVE_PATH)
 	SaveManager.delete_save()
+	StoryLibrary.progress_path = TEST_STORY_PATH
+	StoryLibrary.forget_progress()
+	await _run_story_scenario()
 	await _run_win_scenario()
 	await _run_loss_scenario()
 	await _run_continue_scenario()
+	await _run_hero_scenario()
+	await _run_bark_scenario()
 	SaveManager.delete_save()
+	StoryLibrary.forget_progress()
 	_finish()
 
 
@@ -156,15 +166,166 @@ func _run_win_scenario() -> void:
 			_check(not _night1_save.is_empty() and int(_night1_save["day"]) == 1, "autosaved at dawn after night 1")
 			_check(int(_night1_save.get("inventory", {}).get("wood", 0)) == ResourceManager.get_count(&"wood"),
 				"autosave has the inventory (wood %d)" % ResourceManager.get_count(&"wood"))
+			var card: StoryCard = _main.get_node("HUD").call("story_card")
+			_check(card != null and card.lines().size() == 2 and String(card.lines()[0]["speaker"]) == "leo"
+				and String(card.lines()[0]["id"]).begins_with("dawn.c1.n1"), "dawn 1: Leo and Nela talk on the dawn card")
 		if night < GameManager.nights_to_win:
 			_check(GameManager.is_playing(), "still playing after night %d" % night)
 	_check(GameManager.run_state == GameManager.RunState.WON, "run WON after %d nights" % GameManager.nights_to_win)
+	# Feature 035: the Chapter 1 ending book comes before the stats.
+	var end_root: Control = _main.get_node("EndScreen").get("_root")
+	await get_tree().process_frame  # the book opens deferred
+	var book: StoryBook = get_tree().get_first_node_in_group("story_book") as StoryBook
+	_check(book != null and book.page_count() == 2 and not end_root.visible, "the Chapter 1 ending opens before the stats")
+	if book != null:
+		book.next()
+		_check(book.page == 1, "the ending turns its page")
+		book.next()
+		await get_tree().process_frame
+	_check(end_root.visible, "the stats show after the ending")
 	_check(int(GameManager.stats[&"kills"]) > 0, "kills recorded (%d)" % GameManager.stats[&"kills"])
 	_check(get_tree().paused, "world frozen behind end screen")
 	_check(AudioManager.mood == &"", "music stops for the win stinger")
 	_check(not SaveManager.has_save(), "a won run deletes its save")
 	var shards_seen: int = ResourceManager.get_count(&"glow_shards") + get_tree().get_nodes_in_group("pickups").size()
 	_check(shards_seen >= int(GameManager.stats[&"kills"]) / 3 - 1, "imps dropped glow shards (%d for %d kills)" % [shards_seen, GameManager.stats[&"kills"]])
+
+
+## Feature 035: the story data, the intro storybook and the chapters;
+## feature 036: shard drops and the Moon Lantern.
+func _run_story_scenario() -> void:
+	print("smoke: --- story scenario ---")
+	_check(StoryLibrary.chapter_name(1) == "The Dark Moon" and StoryLibrary.chapter_name(2) == "Into the Hollow", "chapter names")
+	GameManager.nights_to_win = 7
+	_check(GameManager.chapter() == 2, "7 nights is Chapter 2")
+	GameManager.nights_to_win = 3
+	_check(GameManager.chapter() == 1, "3 nights is Chapter 1")
+	var pages: Array = StoryLibrary.find(&"intro", 1)
+	_check(pages.size() == 4 and (pages[0] as StoryBeat).page == 1 and (pages[0] as StoryBeat).painting != null,
+		"the Chapter 1 intro has 4 painted pages, in order")
+	var dawn: StoryBeat = StoryLibrary.first(&"dawn", 1, 1)
+	_check(String(dawn.lines_for(&"leo")[0]["speaker"]) == "leo" and String(dawn.lines_for(&"nela")[0]["speaker"]) == "nela",
+		"the played hero speaks first on the dawn card")
+	var book: StoryBook = StoryBook.play(pages, &"leo")
+	await get_tree().process_frame
+	var turned: Array = [false]
+	book.finished.connect(func() -> void: turned[0] = true)
+	_check(book.page == 0, "the intro opens on page 1")
+	book.next()
+	_check(book.page == 1, "Space turns the page")
+	var esc: InputEventAction = InputEventAction.new()
+	esc.action = &"ui_cancel"
+	esc.pressed = true
+	Input.parse_input_event(esc)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(turned[0], "Esc skips the rest of the intro")
+	_check(not StoryLibrary.has_seen("intro.c1"), "no intro marked seen yet")
+	StoryLibrary.mark_seen("intro.c1")
+	_check(StoryLibrary.has_seen("intro.c1") and not StoryLibrary.has_seen("intro.c2"), "the seen intro is remembered per chapter")
+	StoryLibrary.forget_progress()
+
+	# Shards: a chance per kill with pity, per mob type (seeded).
+	var imp_def: MobDefinition = load("res://resources/mobs/shadow_imp.tres") as MobDefinition
+	var beast_def: MobDefinition = load("res://resources/mobs/bramble_beast.tres") as MobDefinition
+	GameManager.loot_misses = {}
+	GameManager.loot_rng.seed = 36
+	var hits: int = 0
+	var longest_dry: int = 0
+	var dry: int = 0
+	for i in 100:
+		if GameManager.roll_loot(imp_def):
+			hits += 1
+			dry = 0
+		else:
+			dry += 1
+			longest_dry = maxi(longest_dry, dry)
+	var beast_drops: int = 0
+	for i in 10:
+		beast_drops += 1 if GameManager.roll_loot(beast_def) else 0
+	_check(beast_drops == 10, "every beast kill drops a shard")
+	_check(hits >= 40 and hits <= 62, "100 imp kills drop %d shards (40-62)" % hits)
+	_check(longest_dry < imp_def.drop_pity, "never more than %d imp kills in a row without a shard (%d)" % [imp_def.drop_pity - 1, longest_dry])
+	GameManager.loot_misses = {}
+
+	# The Moon Lantern by the tent.
+	await _start_fresh_run()
+	var lantern: MoonLantern = MoonLantern.find(get_tree())
+	var player: Node3D = get_tree().get_first_node_in_group("player")
+	_check(lantern != null and lantern.stage == 0 and lantern.max_stage() == 3 and lantern.radius() == 0.0,
+		"the Moon Lantern stands dark by the tent (3 stages in Chapter 1)")
+	player.global_position = lantern.global_position + Vector3(1.5, 0, 0)
+	_check(not player.call("try_feed_lantern"), "nothing to hand over without shards")
+	ResourceManager.add(&"glow_shards", 2)
+	await get_tree().process_frame
+	var card: StoryCard = _main.get_node("HUD").call("story_card")
+	_check(card != null and String(card.lines()[0]["id"]) == "shard.leo", "the first shard of a run gets its story card")
+	_check(player.call("try_feed_lantern") and lantern.stage == 1 and ResourceManager.get_count(&"glow_shards") == 0,
+		"E by the lantern hands over the shards: stage 1")
+	_check(is_equal_approx(lantern.radius(), lantern.min_radius), "stage 1 lights a %.1f m ring" % lantern.radius())
+	var imp: Mob = _spawn_mob(imp_def, lantern.global_position + Vector3(2.5, 0, 0))
+	imp.set_physics_process(false)
+	await get_tree().process_frame
+	_check(float(imp.call("_torch_slow_factor")) <= lantern.slow_factor, "an imp in the ring is slowed")
+	var imp_hp: int = imp.current_hp
+	await _wait(lantern.light_interval_seconds + 0.4)
+	_check(imp.current_hp < imp_hp, "moonlight hurts the imp (%d -> %d)" % [imp_hp, imp.current_hp])
+	imp.take_damage(999, player)
+	ResourceManager.add(&"glow_shards", 10)
+	var carried: int = ResourceManager.get_count(&"glow_shards")
+	lantern.deliver(player)
+	_check(lantern.is_full() and lantern.shards == lantern.shards_for_max()
+		and ResourceManager.get_count(&"glow_shards") == carried - (lantern.shards_for_max() - 2),
+		"the lantern takes only what it still needs (%d shards)" % lantern.shards)
+	_check(is_equal_approx(lantern.radius(), lantern.max_radius), "fully lit: a %.1f m ring" % lantern.radius())
+	var gremlin_def: MobDefinition = load("res://resources/mobs/mushroom_gremlin.tres") as MobDefinition
+	var gremlin: Mob = _spawn_mob(gremlin_def, lantern.global_position + Vector3(6.0, 0, 0))
+	await _wait(2.5)
+	_check(not is_instance_valid(gremlin) or gremlin.is_fleeing and gremlin.loot_amount == 0, "a gremlin turns back at the bright ring")
+	if is_instance_valid(gremlin):
+		gremlin.take_damage(999, player)
+	var data: Dictionary = SaveManager.snapshot()
+	_check(int(data["lantern"]["shards"]) == lantern.shards, "the save holds the lantern's shards")
+	var legacy: Dictionary = data.duplicate(true)
+	legacy.erase("lantern")
+	GameManager.set("_pending_save", SaveManager.parse(SaveManager.serialize(data)))
+	await _start_fresh_run()
+	lantern = MoonLantern.find(get_tree())
+	_check(lantern.is_full(), "Continue keeps the lantern lit (stage %d)" % lantern.stage)
+	GameManager.set("_pending_save", legacy)
+	await _start_fresh_run()
+	_check(MoonLantern.find(get_tree()).stage == 0, "older saves start the lantern dark")
+	GameManager.nights_to_win = 7
+	await _start_fresh_run()
+	_check(MoonLantern.find(get_tree()).max_stage() == 6, "Chapter 2's lantern has 6 stages")
+	GameManager.nights_to_win = 3
+
+	# Feature 043: Mum's portraits, her walk home, and her seat at the title.
+	_check(StoryLibrary.speaker_portrait("mum", "worried").resource_path.ends_with("mum_worried.png")
+		and StoryLibrary.speaker_portrait("mum").resource_path.ends_with("mum.png")
+		and StoryLibrary.speaker_portrait("mum", "nope").resource_path.ends_with("mum.png"), "Mum's expressions, with a fallback")
+	var hero: Node3D = get_tree().get_first_node_in_group("player")
+	get_tree().paused = true  # as behind the end screen
+	var arrival: MumArrival = MumArrival.play(get_tree().current_scene, hero.global_position)
+	await get_tree().process_frame
+	var model: Node = arrival.visual.get_child(0) if arrival.visual.get_child_count() > 0 else null
+	_check(model != null and model.find_child("AnimationPlayer", true, false) != null, "Mum's model loads, with its clips")
+	var player_anim: AnimationPlayer = model.find_child("AnimationPlayer", true, false) as AnimationPlayer if model != null else null
+	_check(player_anim != null and player_anim.has_animation("Wave") and player_anim.has_animation("Walking_A"),
+		"Mum can walk and wave")
+	var gap: float = arrival.global_position.distance_to(arrival.target)
+	await _wait(1.2)
+	_check(arrival.global_position.distance_to(arrival.target) < gap - 0.5, "Mum walks to the kids while the world is paused")
+	var arrived: Array = [false]
+	arrival.finished.connect(func() -> void: arrived[0] = true)
+	arrival.finish()
+	_check(arrived[0] and arrival.global_position.distance_to(arrival.target) < 0.01, "skipping puts Mum by the kids")
+	get_tree().paused = false
+	var backdrop: GDScript = load("res://scripts/ui/title_backdrop.gd")
+	_check(not backdrop.call("mum_is_home"), "Mum isn't home before the true ending")
+	StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING)
+	_check(backdrop.call("mum_is_home"), "after the true ending Mum sits by the title fire")
+	StoryLibrary.forget_progress()
 
 
 ## Feature 017: repair, the new resources, recipes, traps and lanterns.
@@ -532,7 +693,8 @@ func _check_animation_layers(player: Node3D) -> void:
 	var swaying: bool = false
 	for mesh in tree_node.find_children("*", "MeshInstance3D", true, false):
 		var m: MeshInstance3D = mesh as MeshInstance3D
-		if m.mesh != null and m.get_surface_override_material(0) is ShaderMaterial:
+		var leaf: ShaderMaterial = m.get_surface_override_material(0) as ShaderMaterial if m.mesh != null else null
+		if leaf != null and leaf.shader == Stylize.FOLIAGE_SHADER:
 			swaying = true
 	_check(swaying, "trees use the swaying foliage material")
 	var ambience: WorldAmbience = get_tree().current_scene.find_child("WorldAmbience", true, false) as WorldAmbience
@@ -581,6 +743,9 @@ func _run_loss_scenario() -> void:
 	_campfire().take_damage(10000)
 	await get_tree().process_frame
 	_check(GameManager.run_state == GameManager.RunState.LOST, "run LOST when campfire destroyed")
+	var end_screen: Node = _main.get_node("EndScreen")
+	_check(String(end_screen.call("story_text")).begins_with("The dark came in") and (end_screen.get("_root") as Control).visible,
+		"the defeat says why: %s" % end_screen.call("story_text"))
 	_check(not SaveManager.has_save(), "no save after a lost run")
 
 	# Volume settings round-trip through user://settings.cfg.
@@ -624,7 +789,7 @@ func _run_continue_scenario() -> void:
 	_check(fire.has_hearth == bool(data["campfire"]["hearth"]) and fire.current_hp == int(data["campfire"]["hp"]),
 		"campfire restored (%d HP, hearth %s)" % [fire.current_hp, fire.has_hearth])
 	var player: Node = get_tree().get_first_node_in_group("player")
-	_check(ProgressionManager.get_xp(player) == int(data["player"]["xp"]) and bool(player.get("has_sturdy_stick")) == bool(data["player"]["stick"]),
+	_check(ProgressionManager.get_xp(player) == int(data["player"]["xp"]) and bool(player.get("has_signature")) == bool(data["player"]["signature"]),
 		"Leo's progress restored (level %d)" % ProgressionManager.get_level(player))
 	_check(int(GameManager.stats[&"nights_survived"]) == 1, "stats restored (1 night survived)")
 
@@ -640,12 +805,176 @@ func _run_continue_scenario() -> void:
 	GameManager.nights_to_win = 3
 
 
+## Feature 034: the hero select screen, and a run playing Nela. Each
+## hero keeps their style in either role and their signature craft.
+func _run_hero_scenario() -> void:
+	print("smoke: --- hero scenario ---")
+	var screen: Node = (load("res://scenes/ui/HeroSelect.tscn") as PackedScene).instantiate()
+	add_child(screen)
+	await get_tree().process_frame
+	_check(int(screen.get("selected")) == 0 and (screen.call("selected_hero") as HeroDefinition).id == &"leo",
+		"hero select opens on the last pick (Leo)")
+	screen.call("select", 1)
+	_check((screen.call("selected_hero") as HeroDefinition).id == &"nela", "hero select picks Nela")
+	screen.call("select", HeroRoster.all().size())
+	_check(int(screen.get("selected")) == 0, "hero select wraps around the roster")
+	screen.queue_free()
+	await get_tree().process_frame
+
+	GameManager.set_party(&"nela")
+	_check(GameManager.companion_id == &"leo", "Leo comes along when Nela is played")
+	await _start_fresh_run()
+	var player: Node3D = get_tree().get_first_node_in_group("player")
+	var companion: Node3D = get_tree().get_first_node_in_group("companions")
+	_check(player.is_in_group(HeroRoster.group_for(&"nela")) and companion.is_in_group(HeroRoster.group_for(&"leo")),
+		"the player is Nela and the companion is Leo")
+	var nela: HeroDefinition = HeroRoster.get_hero(&"nela")
+	var visual: CharacterVisual = player.get_node("Visual") as CharacterVisual
+	_check(visual.model_scene == nela.model_scene and int(player.get("max_hp")) == nela.stats.base_max_health,
+		"the player has Nela's body and health (%d HP)" % int(player.get("max_hp")))
+	_check(float(player.get("attack_range")) > 4.0 and float(companion.call("get_attack_range")) <= 2.0,
+		"Nela shoots from range; Leo fights up close")
+	var hud: Node = _main.get_node_or_null("HUD")
+	var portrait: HudWidgets.Portrait = hud.get("_hero_portrait") if hud != null else null
+	_check(portrait != null and portrait.texture == nela.portrait, "the HUD shows Nela in the hero bar")
+
+	# A pebble flies and hits an imp a few metres away.
+	var spawner: Node = get_tree().get_first_node_in_group("mob_spawner")
+	var imp: Mob = _spawn_mob(spawner.get("mob_definition"), player.global_position + Vector3(3.5, 0, 0))
+	await get_tree().process_frame
+	var imp_hp: int = imp.current_hp
+	player.call("_perform_attack", imp)
+	_check(imp.current_hp == imp_hp, "the pebble has not landed yet")
+	await _wait(PebbleShot.FLIGHT_SECONDS + 0.2)
+	_check(not is_instance_valid(imp) or imp.current_hp < imp_hp, "Nela's pebble hit the imp 3.5 m away")
+	if is_instance_valid(imp):
+		imp.take_damage(999, player)
+
+	# The signature crafts follow the hero, not the role.
+	for item in [&"wood", &"scrap", &"resin", &"fiber"]:
+		ResourceManager.add(item, 10)
+	var table: Building = _spawn_building(&"crafting_table", Vector3(5, 0, -6))
+	var reach: float = float(player.get("attack_range"))
+	_check(CraftingManager.craft(_recipe(&"slingshot"), player)
+		and is_equal_approx(float(player.get("attack_range")), reach * nela.signature_range_factor), "the slingshot goes to Nela (the player)")
+	var damage: int = int(companion.get("_current_attack_damage"))
+	_check(CraftingManager.craft(_recipe(&"sturdy_stick"), player)
+		and int(companion.get("_current_attack_damage")) == damage + 2, "the sturdy stick goes to Leo (the companion)")
+
+	# The save remembers the party; Continue plays Nela again.
+	var data: Dictionary = SaveManager.snapshot()
+	_check(String(data["party"]["hero"]) == "nela" and String(data["party"]["companion"]) == "leo", "the save holds the party")
+	var legacy: Dictionary = data.duplicate(true)
+	legacy.erase("party")
+	_check(SaveManager.party_of(legacy)["hero"] == &"leo", "older saves without a party are Leo with Nela")
+	table.queue_free()
+	GameManager.set_party(&"leo")
+	var party: Dictionary = SaveManager.party_of(SaveManager.parse(SaveManager.serialize(data)))
+	GameManager.set_party(party["hero"], party["companion"])
+	GameManager.set("_pending_save", data)
+	await _start_fresh_run()
+	player = get_tree().get_first_node_in_group("player")
+	_check(player.is_in_group(HeroRoster.group_for(&"nela")) and bool(player.get("has_signature")),
+		"continued as Nela, slingshot and all")
+	GameManager.set_party(&"leo")
+
+
+## Feature 037: the siblings' barks. The right hero speaks, keyed by who
+## is played; cooldowns hold back spam; a bark never cuts off a story
+## voice; the companion warns about a mob behind the player.
+func _run_bark_scenario() -> void:
+	print("smoke: --- bark scenario ---")
+	GameManager.set_party(&"leo")
+	await _start_fresh_run()
+	var director: BarkDirector = get_tree().get_first_node_in_group("bark_director") as BarkDirector
+	var player: Node3D = get_tree().get_first_node_in_group("player")
+	var companion: Node3D = get_tree().get_first_node_in_group("companions")
+	_check(director != null, "the run has a bark director")
+	var max_hp: int = int(companion.get("max_hp"))
+	companion.call("take_damage", max_hp - int(max_hp * 0.2))
+	var bubble: SpeechBubble = SpeechBubble.on(companion)
+	_check(bubble != null and _bark_line(bubble.text, &"low_hp", &"nela"), "Nela at low HP says so over her head")
+	_check(SpeechBubble.on(player) == null, "the player stays quiet")
+	_check(not director.bark(&"low_hp", companion), "low HP again within its cooldown: no bark")
+	_check(not director.bark(&"thief"), "a second bark right away waits for the shared cooldown")
+	director.clock += BarkDirector.GLOBAL_COOLDOWN + 1.0
+	_check(director.bark(&"thief"), "a gremlin steals: the siblings shout")
+	_check(_bark_line(SpeechBubble.on(player).text, &"thief", &"leo"), "Leo (played) calls out first")
+	await _wait(BarkDirector.REPLY_DELAY + 1.0)
+	_check(SpeechBubble.on(companion) != null and _bark_line(SpeechBubble.on(companion).text, &"thief", &"nela"),
+		"Nela replies")
+	_check(SpeechBubble.on(companion).position.y > float(companion.get("_hp_bar").position.y),
+		"the bubble sits above the health bar")
+
+	# A story line keeps speaking under a bark.
+	var story_voice: AudioStream = load("res://assets/audio/sfx/chirp_nela_1.ogg")
+	AudioManager.play_voice(story_voice)
+	ProgressionManager.level_up.emit(player, 2)
+	_check(_bark_line(SpeechBubble.on(player).text, &"level_up", &"leo"), "a level-up is cheered by that hero")
+	_check(AudioManager.play_bark(null, "leo") == 0.0, "no bark audio while a story line speaks")
+	AudioManager.stop_voice()
+	_check(AudioManager.play_bark(null, "leo") > 0.0, "the bark chirps when the story is quiet")
+
+	# Danger behind the player: the companion warns.
+	director.clock += 30.0
+	var imp_def: MobDefinition = get_tree().get_first_node_in_group("mob_spawner").get("mob_definition")
+	var facing: Vector3 = player.call("get_facing")
+	var imp: Mob = _spawn_mob(imp_def, player.global_position - facing * 3.0)
+	await get_tree().process_frame
+	_check(director.danger_behind(), "an imp 3 m behind the player counts as danger")
+	await _wait(BarkDirector.DANGER_POLL_SECONDS + 0.3)
+	_check(SpeechBubble.on(companion) != null and _bark_line(SpeechBubble.on(companion).text, &"danger_behind", &"nela"),
+		"Nela warns: behind you!")
+	director.clock += 30.0
+	companion.call("take_damage", 9999)
+	_check(_bark_line(SpeechBubble.on(player).text, &"companion_down", &"leo"), "Leo calls out when Nela is knocked out")
+	director.clock += 30.0
+	_check(not director.bark(&"danger_behind"), "a knocked-out companion gives no warnings")
+	imp.take_damage(999, player)
+
+	# Nela played: the speakers swap, and the events reach the director.
+	GameManager.set_party(&"nela")
+	await _start_fresh_run()
+	director = get_tree().get_first_node_in_group("bark_director") as BarkDirector
+	player = get_tree().get_first_node_in_group("player")
+	companion = get_tree().get_first_node_in_group("companions")
+	var gremlin_def: MobDefinition = load("res://resources/mobs/mushroom_gremlin.tres")
+	var gremlin: Mob = _spawn_mob(gremlin_def, player.global_position + Vector3(8, 0, 8))
+	await get_tree().process_frame
+	gremlin.stole.emit(gremlin, &"wood", 2)
+	_check(SpeechBubble.on(player) != null and _bark_line(SpeechBubble.on(player).text, &"thief", &"nela"),
+		"Nela played: she shouts at the thief first")
+	await _wait(BarkDirector.REPLY_DELAY + 1.0)
+	_check(SpeechBubble.on(companion) != null and _bark_line(SpeechBubble.on(companion).text, &"thief", &"leo"),
+		"and Leo replies")
+	gremlin.take_damage(999, player)
+	director.clock += 30.0
+	var beast: Mob = _spawn_mob(load("res://resources/mobs/bramble_beast.tres"), player.global_position + Vector3(10, 0, -8))
+	await get_tree().process_frame
+	_check(_bark_line(SpeechBubble.on(player).text, &"first_beast", &"nela"), "the first beast of the night gets a shout")
+	director.clock += 30.0
+	_check(not director.bark(&"first_beast"), "only once a night")
+	beast.take_damage(9999, player)
+	GameManager.set_party(&"leo")
+
+
+func _bark_line(text: String, trigger: StringName, speaker: StringName) -> bool:
+	for line in BarkLibrary.lines_for(trigger, speaker, GameManager.hero_id):
+		if String((line as Dictionary).get("text", "")) == text:
+			return true
+	return false
+
+
 func _start_fresh_run() -> void:
 	get_tree().paused = false
 	Engine.time_scale = 1.0
 	if _main != null:
-		_main.queue_free()
-		await get_tree().process_frame
+		# Wait until the old camp is really gone: resuming from a physics-
+		# frame timer, one process frame can still run before it is freed.
+		var old: Node = _main
+		old.queue_free()
+		while is_instance_valid(old):
+			await get_tree().process_frame
 		GameManager.call("_reset_autoloads")
 	_main = MAIN_SCENE.instantiate()
 	add_child(_main)

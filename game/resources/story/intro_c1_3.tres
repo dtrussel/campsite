@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="StoryBeat" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/story/story_beat.gd" id="1_beat"]
+[ext_resource type="Texture2D" path="res://assets/ui/loading_beast.webp" id="2_art"]
+
+[resource]
+script = ExtResource("1_beat")
+id = &"intro.c1.3"
+chapter = 1
+trigger = &"intro"
+night = 0
+page = 3
+painting = ExtResource("2_art")
+lines = [{
+"id": "intro.c1.3.1",
+"speaker": "mum",
+"face": "worried",
+"text": "Stay here. Keep the fire burning, no matter what."
+}, {
+"id": "intro.c1.3.2",
+"speaker": "narrator",
+"text": "Mum took her lantern and walked into the woods."
+}]

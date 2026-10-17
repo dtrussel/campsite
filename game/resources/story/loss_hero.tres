@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="StoryBeat" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/story/story_beat.gd" id="1_beat"]
+
+[resource]
+script = ExtResource("1_beat")
+id = &"loss.hero"
+chapter = 0
+trigger = &"loss_hero"
+night = 0
+page = 1
+lines = [{
+"id": "loss.hero.leo",
+"speaker": "narrator",
+"text": "Leo was too tired to stand. Nela needs you tomorrow.",
+"when": "leo"
+}, {
+"id": "loss.hero.nela",
+"speaker": "narrator",
+"text": "Nela was too tired to stand. Leo needs you tomorrow.",
+"when": "nela"
+}]

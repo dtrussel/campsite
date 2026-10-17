@@ -1,6 +1,8 @@
 """Berry bush: a low mound of leafy clumps studded with big, glossy
 cartoon berries (red with a white catch-light). Outputs berry_bush.glb
-(full) and berry_bush_picked.glb (depleted, no berries)."""
+(full) and berry_bush_picked.glb (depleted, no berries). Feature 031
+adds flower_bush.glb: the same mound dotted with yellow and white
+blossoms, a decor shrub after the October concept art."""
 
 import math
 import os
@@ -13,14 +15,76 @@ import bpy  # noqa: E402
 import bmesh  # noqa: E402
 from mathutils import Vector, noise  # noqa: E402
 
-from lib import common, paint_bake, preview  # noqa: E402
+from lib import common, detail, paint_bake, preview  # noqa: E402
 
+LEAF_SHADE = (0.05, 0.15, 0.1)
 LEAF_DARK = (0.1, 0.28, 0.18)
 LEAF = (0.22, 0.52, 0.2)
 LEAF_LIGHT = (0.55, 0.76, 0.24)
 BERRY = (0.9, 0.08, 0.22)
 BERRY_DARK = (0.5, 0.02, 0.12)
 SHINE = (1.0, 0.9, 0.9)
+BLOSSOMS = [((1.0, 0.82, 0.18), (0.95, 0.55, 0.08)), ((1.0, 0.98, 0.9), (0.98, 0.78, 0.2))]
+
+
+def leafy_clumps(rng, count, radius, seed, squash=0.75):
+    """clumps() with the same rng use, each a dense tufted leaf_clump."""
+    parts = []
+    for i in range(count):
+        a = i / count * math.tau + rng.uniform(-0.3, 0.3)
+        d = rng.uniform(0.25, 0.55) * radius
+        center = Vector((math.cos(a) * d, math.sin(a) * d, radius * rng.uniform(0.35, 0.55)))
+        if i == 0:
+            center = Vector((0, 0, radius * 0.7))
+        r = radius * rng.uniform(0.42, 0.55)
+        parts.append(detail.leaf_clump(center, r, seed * 17 + i, tufts=20, bump=0.3, squash=squash, under=10.0,
+                                       wobble=0.16, noise_freq=2.0, noise_offset=(i, seed, 0), name="clump%d" % i))
+    return parts
+
+
+def dense_leaves(rng, count, radius, seed, budget, leaf_count=450):
+    """Returns (low, high, leaves): the tufted leaf mound decimated to
+    `budget`, its dense copy (painted with colour_foliage, darker: the
+    shade between leaves) and `leaf_count` scattered leaves over it
+    (M8), which go into the low mesh as they are."""
+    parts = leafy_clumps(rng, count, radius, seed)
+    detail.cull_hidden(parts, parts, margin=0.03)
+    high = common.join(parts, "leaves_high")
+    common.shade_smooth(high)
+    zs = [v.co.z for v in high.data.vertices]
+    lo, hi = min(zs), max(zs)
+    detail.colour_foliage(high, LEAF_SHADE, LEAF, LEAF_LIGHT, seed, fleck=0.3)
+    leaves = detail.scatter_leaves(high, seed, length=0.26, width=0.2, coverage=3.2, max_count=leaf_count, tilt=0.3,
+                                   droop=0.15, min_up=-0.5, sink=0.02,
+                                   colour=detail.leaf_colour(LEAF_DARK, LEAF, LEAF_LIGHT, lo, hi, seed, lift=0.28))
+    low = high.copy()
+    low.data = high.data.copy()
+    low.name = "leaves"
+    high.users_collection[0].objects.link(low)
+    detail.decimate_tris(low, budget)
+    return low, high, leaves
+
+
+def bake_bush(low_parts, high_parts, name, size=512, **params):
+    """Joins the low and dense parts, paints the dense look onto the low
+    mesh and exports it (only the leaves are decimated; berries and
+    blossoms are the same in both)."""
+    low = common.join(low_parts, name)
+    high = common.join(high_parts, name + "_high")
+    p = dict(ao_distance=0.3, ao_strength=0.4, edge_strength=0.0, noise_scale=4.0, cavity=0.5,
+             max_ray_distance=0.1, cage_extrusion=0.05)
+    p.update(params)
+    paint_bake.paint_direct(low, high, size=size, **p)
+    common.export_glb(os.path.join(common.OUT_DIR, name + ".glb"), [low])
+    print(name, "tris:", common.triangle_count([low]))
+    preview.render([low], name)
+
+
+def _dup(obj):
+    c = obj.copy()
+    c.data = obj.data.copy()
+    obj.users_collection[0].objects.link(c)
+    return c
 
 
 def clumps(rng, count, radius, seed, squash=0.75):
@@ -67,7 +131,7 @@ def berries(rng, count, leaves):
             offset = side * math.cos(k * 2.09) * 0.09 + up * math.sin(k * 2.09) * 0.09
             bm = bmesh.new()
             bmesh.ops.create_uvsphere(bm, u_segments=8, v_segments=6, radius=0.085)
-            bmesh.ops.translate(bm, verts=bm.verts, vec=hit + normal * 0.05 + offset)
+            bmesh.ops.translate(bm, verts=bm.verts, vec=hit + normal * 0.11 + offset)
             parts.append(common.mesh_object("berry%d_%d" % (i, k), bm))
     return parts
 
@@ -97,29 +161,57 @@ def colour_berry(obj, center):
     common.color_by(obj, colour, smooth=False)
 
 
+def colour_blossom(obj, petal, heart):
+    zs = [v.co.z for v in obj.data.vertices]
+    top = max(zs)
+
+    def colour(pos, normal):
+        return heart if pos.z > top - 0.012 else petal
+    common.color_by(obj, colour, smooth=False)
+
+
 def build(picked):
     seed = 5
     common.reset(seed)
     rng = random.Random(seed)
     radius = 0.95
-    leaves = common.join(clumps(rng, 6, radius, seed), "leaves")
-    common.decimate(leaves, 1300)
-    common.shade_smooth(leaves)
-    colour_leaves(leaves, seed)
-    parts = [leaves]
+    low, high, leaves = dense_leaves(rng, 6, radius, seed, 800)
+    lows, highs = [low, leaves], [high, _dup(leaves)]
     if not picked:
-        for b in berries(rng, 8, leaves):
+        for b in berries(rng, 8, high):
             common.shade_smooth(b)
             colour_berry(b, None)
-            parts.append(b)
+            lows.append(b)
+            highs.append(_dup(b))
     name = "berry_bush_picked" if picked else "berry_bush"
-    bush = common.join(parts, name)
-    paint_bake.paint(bush, size=512, ao_distance=0.4, ao_strength=0.75, edge_strength=0.0, noise_scale=4.0)
-    common.export_glb(os.path.join(common.OUT_DIR, name + ".glb"), [bush])
-    print(name, "tris:", common.triangle_count([bush]))
-    preview.render([bush], name)
+    bake_bush(lows, highs, name)
+
+
+def build_flowering():
+    seed = 13
+    common.reset(seed)
+    rng = random.Random(seed)
+    low, high, leaves = dense_leaves(rng, 6, 0.85, seed, 600, leaf_count=380)
+    lows, highs = [low, leaves], [high, _dup(leaves)]
+    for i, b in enumerate(berries(rng, 12, high)):
+        verts = b.data.vertices
+        c = sum((v.co for v in verts), Vector()) / len(verts)
+        for v in verts:
+            d = v.co - c
+            v.co = c + Vector((d.x * 1.5, d.y * 1.5, d.z * 0.9))
+        petal, heart = BLOSSOMS[(i // 3) % 2]
+        colour_blossom(b, petal, heart)
+        highs.append(_dup(b))
+        detail.decimate_tris(b, 34)
+        lows.append(b)
+    bake_bush(lows, highs, "flower_bush")
 
 
 if __name__ == "__main__":
-    build(False)
-    build(True)
+    only = sys.argv[1:]
+    if not only or "berry_bush" in only:
+        build(False)
+    if not only or "berry_bush_picked" in only:
+        build(True)
+    if not only or "flower_bush" in only:
+        build_flowering()

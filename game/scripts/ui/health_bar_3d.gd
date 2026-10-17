@@ -3,21 +3,21 @@ extends Node3D
 
 ## HealthBar3D
 ##
-## Floating LoL-style health bar above a unit. The fill snaps to the
+## Floating health bar above a unit, in the HUD's campcraft style. The fill snaps to the
 ## new value; a pale trail drains after it so hits read clearly.
 ## Styles: "ally" (green), "hero" (green, with level badge),
 ## "enemy" (red), "structure" (gold, for the campfire and buildings).
 
 const SHADER: Shader = preload("res://shaders/health_bar.gdshader")
 const STYLES: Dictionary = {
-	"hero": [Color(0.2, 0.78, 0.3), Color(0.55, 1.0, 0.5)],
-	"ally": [Color(0.2, 0.7, 0.4), Color(0.5, 0.95, 0.65)],
-	"enemy": [Color(0.78, 0.12, 0.12), Color(1.0, 0.42, 0.35)],
-	"structure": [Color(0.85, 0.6, 0.15), Color(1.0, 0.86, 0.45)],
+	"hero": [Color(0.424, 0.753, 0.29), Color(0.7, 0.92, 0.45)],
+	"ally": [Color(0.33, 0.62, 0.24), Color(0.62, 0.86, 0.42)],
+	"enemy": [Color(0.78, 0.16, 0.12), Color(1.0, 0.45, 0.32)],
+	"structure": [Color(0.9, 0.42, 0.1), Color(1.0, 0.78, 0.36)],
 }
 
 @export var width: float = 1.2
-@export var height: float = 0.17
+@export var height: float = 0.19
 @export var style: String = "ally"
 ## Hide while at full health (buildings).
 @export var hide_when_full: bool = false
@@ -51,11 +51,11 @@ func _ready() -> void:
 		_level_label.no_depth_test = true
 		_level_label.render_priority = 11
 		_level_label.font = Fx.bold_font()
-		_level_label.outline_modulate = Color(0.05, 0.03, 0.01)
+		_level_label.outline_modulate = UiKit.COLOR_INK
 		_level_label.font_size = 40
 		_level_label.pixel_size = 0.006
 		_level_label.outline_size = 10
-		_level_label.modulate = Color(1.0, 0.9, 0.6)
+		_level_label.modulate = UiKit.COLOR_GOLD_LIGHT
 		_level_label.position = Vector3(-width * 0.5 - 0.14, 0, 0)
 		_level_label.text = "1"
 		add_child(_level_label)

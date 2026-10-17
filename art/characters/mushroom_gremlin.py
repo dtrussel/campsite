@@ -192,17 +192,56 @@ def colour_body(body):
 
 # ------------------------------------------------------------ extras
 
+def _cap_spot(ang, rho, pos):
+    """Soft, rounded-square cream spots scattered on a jittered cell grid
+    over the cap (angle, radius): 0 outside, 1 inside a spot."""
+    cu = ang / math.tau * 10.0
+    cv = rho * 3.2
+    best = 0.0
+    for iu in (math.floor(cu) - 1, math.floor(cu), math.floor(cu) + 1):
+        for iv in (math.floor(cv) - 1, math.floor(cv), math.floor(cv) + 1):
+            if not 0 < iv < 3:
+                continue
+            ku = iu % 10
+            h = (math.sin(ku * 12.9898 + iv * 78.233) * 43758.5453) % 1.0
+            if h <= 0.5:
+                continue
+            h2 = (math.sin(ku * 39.346 + iv * 11.135) * 24634.6345) % 1.0
+            cx = iu + 0.5 + (h2 - 0.5) * 0.3
+            cy = iv + 0.5 + (h - 0.75) * 0.5
+            size = 0.29 + 0.06 * h2
+            rot = (h2 - 0.5) * 0.7
+            du, dv = cu - cx, (cv - cy) * 1.2
+            du, dv = du * math.cos(rot) - dv * math.sin(rot), du * math.sin(rot) + dv * math.cos(rot)
+            # A rounded square (superellipse) with a ragged, hand-cut edge.
+            d = (abs(du) ** 7 + abs(dv) ** 7) ** (1.0 / 7.0)
+            d += 0.03 * noise.noise(pos * 26.0 + Vector((h * 9, h2 * 7, 0)))
+            best = max(best, _smooth01((size - d) / 0.025))
+    return best
+
+
 def cap():
-    """A wide conical cap with a rolled rim and pleated gills beneath."""
+    """A wide conical cap with a rolled rim and pleated gills beneath.
+    Dense, so the soft square spots, mottling and gill pleats are
+    painted at full resolution onto the game mesh."""
     bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=40, v_segments=20, radius=1.0)
+    bmesh.ops.create_uvsphere(bm, u_segments=192, v_segments=96, radius=1.0)
     for v in bm.verts:
         rho = min(1.0, math.hypot(v.co.x, v.co.y))
+        ang = math.atan2(v.co.y, v.co.x)
         wob = 1.0 + noise.noise(v.co * 2.5) * 0.05
         if v.co.z >= 0:
             z = CAP_H * (1.0 - rho ** 1.7) ** 0.75
+            # A rolled, slightly thickened rim.
+            z += 0.018 * math.exp(-((rho - 0.93) / 0.05) ** 2)
+            # Soft lumps and the raised spots.
+            z += 0.008 * noise.noise(v.co * 6.0)
+            z += 0.007 * _cap_spot(ang, rho, v.co)
         else:
             z = -0.035 + 0.16 * (1.0 - rho ** 2)
+            # Gills: radial pleats, deepest mid-way under the brim.
+            band = math.sin(math.pi * min(1.0, max(0.0, (rho - 0.25) / 0.7)))
+            z -= 0.012 * abs(math.sin(ang * 23.0)) ** 0.5 * band
         v.co = Vector((v.co.x * CAP_R * wob, v.co.y * CAP_R * wob, z))
     bmesh.ops.rotate(bm, verts=bm.verts, cent=(0, 0, 0), matrix=Matrix.Rotation(CAP_TILT, 3, "X"))
     bmesh.ops.translate(bm, verts=bm.verts, vec=(0, 0.03, CAP_BASE))
@@ -212,28 +251,32 @@ def cap():
 
     def colour(pos, normal):
         local = tilt_inv @ (pos - Vector((0, 0.03, CAP_BASE)))
+        ln = tilt_inv @ normal
         rho = math.hypot(local.x, local.y) / CAP_R
         ang = math.atan2(local.y, local.x)
-        if local.z < 0.0 + 0.16 * (1 - rho ** 2) - 0.02 and (tilt_inv @ normal).z < 0.2:
-            # Gills: radial pleats.
-            pleat = math.sin(ang * 46.0)
-            return common.lerp(GILL, GILL_DARK, _smooth01(0.3 + pleat * 0.5 + (1 - rho) * 0.4))
+        if local.z < 0.0 + 0.16 * (1 - rho ** 2) - 0.02 and ln.z < 0.2:
+            # Gills: radial pleats, darker in the folds and toward the stem.
+            pleat = abs(math.sin(ang * 23.0)) ** 0.5
+            c = common.lerp(GILL_DARK, GILL, _smooth01(pleat * 1.2 - 0.1))
+            c = common.lerp(c, GILL_DARK, _smooth01((0.55 - rho) * 2.5) * 0.6)
+            return common.lerp(c, CAP_DARK, _smooth01((rho - 0.94) / 0.05) * 0.7)
         m = noise.noise(pos * 4.0)
-        c = common.lerp(CAP, CAP_DARK, _smooth01(0.4 + m * 0.9 - (tilt_inv @ normal).z * 0.3))
-        if noise.noise(pos * 7.0 + Vector((9, 2, 4))) > 0.35:
-            c = common.lerp(c, CAP_LIGHT, 0.45)
-        # Blocky cream spots: a cell grid in (angle, height) space.
-        cu = ang / math.tau * 10.0
-        cv = rho * 3.2
-        iu, iv = math.floor(cu), math.floor(cv)
-        h = (math.sin(iu * 12.9898 + iv * 78.233) * 43758.5453) % 1.0
-        if h > 0.5 and 0 < iv < 3:
-            du, dv = cu - iu - 0.5, cv - iv - 0.5
-            size = 0.27 + 0.05 * noise.noise(pos * 20.0)
-            if max(abs(du), abs(dv) * 1.2) < size:
-                c = CAP_SPOT
+        c = common.lerp(CAP, CAP_DARK, _smooth01(0.4 + m * 0.9 - ln.z * 0.3))
+        c = common.lerp(c, CAP_LIGHT, _smooth01((noise.noise(pos * 7.0 + Vector((9, 2, 4))) - 0.25) * 4.0) * 0.45)
+        # Darker round blotches, as in the concept.
+        blot = noise.noise(pos * 9.0 + Vector((1, 5, 2)))
+        c = common.lerp(c, CAP_DARK, _smooth01((blot - 0.3) * 6.0) * 0.55)
+        # Fine speckle and streaks running down from the crown.
+        streak = noise.noise(Vector((ang * 6.0, rho * 30.0, 0.0)))
+        c = common.lerp(c, CAP_DARK, _smooth01((streak - 0.35) * 5.0) * 0.25)
+        # The rolled rim catches a lighter edge.
+        c = common.lerp(c, CAP_LIGHT, _smooth01(1.0 - abs(rho - 0.95) / 0.04) * 0.35)
+        spot = _cap_spot(ang, rho, pos)
+        if spot > 0:
+            sc = common.lerp(CAP_SPOT, (0.82, 0.74, 0.62), _smooth01(noise.noise(pos * 30.0) * 0.8 + 0.3) * 0.5)
+            c = common.lerp(c, sc, spot)
         return c
-    common.color_by(obj, colour, smooth=False)
+    common.color_by(obj, colour)
     return obj
 
 
@@ -241,7 +284,7 @@ def ear(side, body):
     """A long, flat, pointed ear sticking out sideways, drooping a little
     and curling up at the tip; the pink inner side faces forward."""
     length, width = 0.66, 0.25
-    rows, cols = 12, 6
+    rows, cols = 36, 10
     bm = bmesh.new()
     grid = []
     for i in range(rows + 1):
@@ -283,11 +326,14 @@ def ear(side, body):
         c = common.lerp(SKIN, SKIN_SHADE, _smooth01(0.3 - normal.z * 0.3))
         t = abs(pos.x - base.x) / length
         if normal.y < -0.3 and t < 0.8:
-            c = common.lerp(c, INNER_EAR, _smooth01((0.8 - t) * 3.0) * 0.8)
-        if noise.noise(pos * 14.0) > 0.42:
-            c = common.lerp(c, SPOT, 0.6)
+            inner = _smooth01((0.8 - t) * 3.0) * _smooth01((-normal.y - 0.3) * 4.0)
+            c = common.lerp(c, INNER_EAR, inner * 0.8)
+            # Fine veins fanning out along the inner ear.
+            vein = abs(math.sin((pos.z - base.z) * 90.0 / (0.3 + t)))
+            c = common.lerp(c, BLUSH, _smooth01((0.12 - vein) / 0.08) * inner * 0.35)
+        c = common.lerp(c, SPOT, _smooth01((noise.noise(pos * 14.0) - 0.42) * 8.0) * 0.6)
         return c
-    common.color_by(obj, colour, smooth=False)
+    common.color_by(obj, colour)
     return obj
 
 
@@ -395,7 +441,7 @@ def satchel(body):
     loc, normal = surface_point(body, Vector((0.1, -0.02, 0.6)), Vector((1.0, -0.35, 0.0)))
     centre = loc + normal * 0.045
     bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=14, v_segments=10, radius=0.1)
+    bmesh.ops.create_uvsphere(bm, u_segments=48, v_segments=32, radius=0.1)
     for v in bm.verts:
         v.co.y *= 0.65
         v.co.z *= 0.9 if v.co.z > 0 else 1.1
@@ -407,10 +453,15 @@ def satchel(body):
     def colour(pos, n):
         rel = pos - centre
         c = common.lerp(POUCH, POUCH_DARK, _smooth01(0.3 - n.z * 0.4 + noise.noise(pos * 12) * 0.3))
-        if abs(rel.x * 0.4 + rel.z * 0.9) < 0.006 or (rel.z > 0.03 and abs(math.sin(rel.x * 60)) < 0.12):
-            c = common.lerp(c, POUCH_DARK, 0.7)
+        # The leaf's midrib and side veins, and stitches along the flap.
+        rib = abs(rel.x * 0.4 + rel.z * 0.9)
+        c = common.lerp(c, POUCH_DARK, _smooth01((0.007 - rib) / 0.004) * 0.75)
+        vein = abs(math.sin((rel.x * 0.9 - rel.z * 0.4) * 70.0 + rib * 40.0))
+        c = common.lerp(c, POUCH_DARK, _smooth01((0.15 - vein) / 0.1) * 0.35)
+        if rel.z > 0.03:
+            c = common.lerp(c, STRAP, _smooth01((0.14 - abs(math.sin(rel.x * 60))) / 0.08) * _smooth01((0.012 - abs(rel.z - 0.045)) / 0.006))
         return c
-    common.color_by(pouch, colour, smooth=False)
+    common.color_by(pouch, colour)
     parts.append(pouch)
     # A tiny purple mushroom peeking out of the top.
     stem_base = centre + Vector((0.01, 0.0, 0.06))
@@ -418,13 +469,13 @@ def satchel(body):
     common.set_color(stem, SKIN)
     parts.append(stem)
     bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=12, v_segments=8, radius=0.04)
+    bmesh.ops.create_uvsphere(bm, u_segments=32, v_segments=20, radius=0.04)
     for v in bm.verts:
         v.co.z = max(v.co.z, -0.005) * 0.8
     bmesh.ops.translate(bm, verts=bm.verts, vec=stem_base + Vector((0.005, 0, 0.05)))
     tiny = common.mesh_object("shroom_cap", bm)
     common.shade_smooth(tiny)
-    common.color_by(tiny, lambda p, n: CAP_SPOT if noise.noise(p * 70) > 0.4 else CAP, smooth=False)
+    common.color_by(tiny, lambda p, n: common.lerp(CAP, CAP_SPOT, _smooth01((noise.noise(p * 70) - 0.35) * 8.0)))
     parts.append(tiny)
     return parts
 

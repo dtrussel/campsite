@@ -4,9 +4,12 @@ extends Control
 ##
 ## Entry scene: a live 3D dusk backdrop of the camp (TitleBackdrop)
 ## under a LoL-client-style menu - gold Cinzel logo, hextech buttons,
-## and a How-to-play panel. Two Play buttons start a fresh 3- or 7-night
-## run; Continue (shown when there is an autosave) resumes the saved
-## run at its next morning.
+## and a How-to-play panel. Two Play buttons pick a fresh run: Chapter
+## 1 "The Dark Moon" (3 nights) or Chapter 2 "Into the Hollow" (7
+## nights, feature 035), then the hero select screen (feature 034);
+## Continue (shown
+## when there is an autosave) resumes the saved run, with its party, at
+## its next morning.
 
 const BACKDROP: Script = preload("res://scripts/ui/title_backdrop.gd")
 
@@ -23,8 +26,8 @@ func _ready() -> void:
 	# Vignette so the menu reads over the 3D scene.
 	var shade: TextureRect = TextureRect.new()
 	var gradient: Gradient = Gradient.new()
-	gradient.set_color(0, Color(0, 0.02, 0.05, 0.0))
-	gradient.set_color(1, Color(0, 0.02, 0.05, 0.85))
+	gradient.set_color(0, Color(0.07, 0.035, 0.02, 0.0))
+	gradient.set_color(1, Color(0.07, 0.035, 0.02, 0.85))
 	var texture: GradientTexture2D = GradientTexture2D.new()
 	texture.gradient = gradient
 	texture.fill = GradientTexture2D.FILL_RADIAL
@@ -58,22 +61,32 @@ func _ready() -> void:
 	var play: Button = null
 	if not save.is_empty():
 		# Continue: the saved run, with its nights so far as moons.
-		play = HudWidgets.icon_button("play", "Continue", _on_continue, Color(0.5, 1.0, 0.55))
+		play = HudWidgets.icon_button("play", "Continue", _on_continue, Color(0.55, 0.9, 0.4))
 		play.custom_minimum_size = Vector2(300, 72)
 		play.add_theme_font_size_override("font_size", 30)
-		play.tooltip_text = "Night %d of %d" % [int(save["day"]) + 1, int(save["nights_to_win"])]
+		var saved_hero: HeroDefinition = HeroRoster.get_hero(SaveManager.party_of(save)["hero"])
+		play.tooltip_text = "%s - night %d of %d" % [saved_hero.display_name if saved_hero != null else "Leo",
+			int(save["day"]) + 1, int(save["nights_to_win"])]
 		buttons.add_child(play)
 	var lengths: HBoxContainer = HBoxContainer.new()
 	lengths.alignment = BoxContainer.ALIGNMENT_CENTER
 	lengths.add_theme_constant_override("separation", 12)
 	buttons.add_child(lengths)
-	for nights in [3, 7]:
-		var start: Button = HudWidgets.icon_button("moon", "%d Nights" % nights, _on_play.bind(nights),
+	for chapter in [1, 2]:
+		var nights: int = 3 if chapter == 1 else 7
+		var slot: VBoxContainer = UiKit.vbox(2)
+		lengths.add_child(slot)
+		var start: Button = HudWidgets.icon_button("moon", StoryLibrary.chapter_name(chapter), _on_play.bind(nights),
 			Color(1.0, 0.92, 0.55))
-		start.custom_minimum_size = Vector2(230, 64)
-		start.add_theme_font_size_override("font_size", 24)
-		start.tooltip_text = "Survive %d nights. The game saves every morning." % nights
-		lengths.add_child(start)
+		start.custom_minimum_size = Vector2(250, 64)
+		start.add_theme_font_size_override("font_size", 21)
+		start.tooltip_text = "Survive %d nights, then choose your hero. The game saves every morning." % nights
+		slot.add_child(start)
+		var subtitle: Label = UiKit.label("Chapter %d  -  %d nights" % [chapter, nights], 15, UiKit.COLOR_GOLD_LIGHT)
+		subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		subtitle.add_theme_constant_override("outline_size", 6)
+		subtitle.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
+		slot.add_child(subtitle)
 		if play == null:
 			play = start
 	var small: HBoxContainer = HBoxContainer.new()
@@ -104,7 +117,7 @@ func _ready() -> void:
 
 
 func _on_play(nights: int) -> void:
-	GameManager.start_run(nights)
+	GameManager.open_hero_select(nights)
 
 
 func _on_continue() -> void:

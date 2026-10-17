@@ -5,6 +5,10 @@ extends Node
 ## Top-level coordinator. Owns the run lifecycle (title -> playing ->
 ## won / lost -> restart), the win and lose rules, the per-run stats
 ## shown on the end screen, and dispatches companion-task hotkeys.
+## Also holds the party (feature 034): which hero the player plays and
+## which one is the AI companion, picked on the hero select screen.
+## The run lengths are the story's chapters (feature 035): 3 nights is
+## Chapter 1, 7 nights is Chapter 2, and each opens with its intro.
 
 signal day_number_changed(new_day: int)
 signal camp_destroyed
@@ -16,6 +20,7 @@ enum RunState { MENU, PLAYING, WON, LOST }
 
 const TITLE_SCENE: String = "res://scenes/ui/TitleScreen.tscn"
 const GAME_SCENE: String = "res://scenes/main/Main.tscn"
+const HERO_SELECT_SCENE: String = "res://scenes/ui/HeroSelect.tscn"
 
 ## Surviving this many nights wins the run.
 @export var nights_to_win: int = 3
@@ -24,10 +29,21 @@ var current_day: int = 1
 var is_camp_destroyed: bool = false
 var run_state: int = RunState.MENU
 var end_reason: String = ""
+## Which story beat the end screen shows: &"win", &"loss_fire" or
+## &"loss_hero".
+var end_trigger: StringName = &""
 ## Per-run counters for the end screen and the playtest log.
 var stats: Dictionary = {}
 ## A save waiting to be applied once the gameplay scene is ready.
 var _pending_save: Dictionary = {}
+## The party: the played hero and the companion (HeroRoster ids). Kept
+## between runs so the hero select screen opens on the last pick.
+var hero_id: StringName = &"leo"
+var companion_id: StringName = &"nela"
+## Glow Shard drops (feature 036): kills since each mob type last
+## dropped, for the pity rule. Reset every run.
+var loot_misses: Dictionary = {}
+var loot_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 
 func _ready() -> void:
@@ -77,12 +93,61 @@ func _unhandled_input(event: InputEvent) -> void:
 			TimeManager.skip_phase()
 
 
+func party_hero() -> HeroDefinition:
+	return HeroRoster.get_hero(hero_id)
+
+
+func party_companion() -> HeroDefinition:
+	return HeroRoster.get_hero(companion_id)
+
+
+## Sets the party; unknown ids fall back to Leo with his default
+## companion.
+func set_party(hero: StringName, companion: StringName = &"") -> void:
+	hero_id = hero if HeroRoster.has_hero(hero) else &"leo"
+	if companion == &"" or companion == hero_id or not HeroRoster.has_hero(companion):
+		companion = HeroRoster.default_companion(hero_id)
+	companion_id = companion
+
+
+## The story chapter of this run: 1 "The Dark Moon" (3 nights) or 2
+## "Into the Hollow" (7 nights).
+func chapter() -> int:
+	return 2 if nights_to_win >= 7 else 1
+
+
+## Hero select Go: the chapter intro the first time (StoryBook over
+## the hero select screen), then the run.
+func begin_chapter(hero: StringName, companion: StringName = &"") -> void:
+	set_party(hero, companion)
+	var key: String = "intro.c%d" % chapter()
+	var pages: Array = StoryLibrary.find(&"intro", chapter())
+	if pages.is_empty() or StoryLibrary.has_seen(key):
+		start_run()
+		return
+	var book: StoryBook = StoryBook.play(pages, hero_id)
+	book.finished.connect(func() -> void:
+		StoryLibrary.mark_seen(key)
+		PlaytestLog.write("story_intro chapter=%d pages_seen=%d of %d" % [chapter(), book.page + 1, pages.size()])
+		start_run())
+
+
+## Title screen Play: pick the run length, then the hero.
+func open_hero_select(nights: int) -> void:
+	nights_to_win = nights
+	get_tree().paused = false
+	get_tree().change_scene_to_file(HERO_SELECT_SCENE)
+
+
 ## Resets every autoload and loads the gameplay scene. `nights` picks
 ## the run length (3 or 7 from the title screen); 0 keeps the current
-## one (Again / restart). A new run replaces any autosave.
-func start_run(nights: int = 0) -> void:
+## one (Again / restart). `hero` sets the party (empty keeps it). A new
+## run replaces any autosave.
+func start_run(nights: int = 0, hero: StringName = &"", companion: StringName = &"") -> void:
 	if nights > 0:
 		nights_to_win = nights
+	if hero != &"":
+		set_party(hero, companion)
 	_pending_save = {}
 	SaveManager.delete_save()
 	get_tree().paused = false
@@ -97,6 +162,8 @@ func continue_run() -> bool:
 	if data.is_empty():
 		return false
 	nights_to_win = int(data["nights_to_win"])
+	var party: Dictionary = SaveManager.party_of(data)
+	set_party(party["hero"], party["companion"])
 	get_tree().paused = false
 	_reset_autoloads()
 	_pending_save = data
@@ -128,6 +195,15 @@ func on_game_scene_ready() -> void:
 	run_started.emit()
 
 
+## Whether this kill drops the mob's loot: its drop chance, with a
+## guaranteed drop after `drop_pity` kills in a row without one.
+func roll_loot(definition: MobDefinition) -> bool:
+	var misses: int = int(loot_misses.get(definition.id, 0))
+	var hit: bool = definition.rolls_drop(misses, loot_rng.randf())
+	loot_misses[definition.id] = 0 if hit else misses + 1
+	return hit
+
+
 func is_playing() -> bool:
 	return run_state == RunState.PLAYING
 
@@ -144,6 +220,8 @@ func _reset_autoloads() -> void:
 	current_day = 1
 	is_camp_destroyed = false
 	end_reason = ""
+	end_trigger = &""
+	loot_misses = {}
 	_reset_stats()
 
 
@@ -160,11 +238,12 @@ func _reset_stats() -> void:
 	}
 
 
-func _end_run(won: bool, reason: String) -> void:
+func _end_run(won: bool, reason: String, trigger: StringName) -> void:
 	if run_state != RunState.PLAYING:
 		return
 	run_state = RunState.WON if won else RunState.LOST
 	end_reason = reason
+	end_trigger = trigger
 	TimeManager.stop()
 	BuildManager.exit_build_mode()
 	PlaytestLog.write("run_ended won=%s reason=\"%s\" day=%d stats=%s" % [won, reason, current_day, stats])
@@ -184,7 +263,7 @@ func _on_dawn_started(day_number: int) -> void:
 	stats[&"nights_survived"] = day_number
 	PlaytestLog.write("night_survived night=%d" % day_number)
 	if day_number >= nights_to_win:
-		_end_run(true, "You survived %d nights!" % nights_to_win)
+		_end_run(true, "You survived %d nights!" % nights_to_win, &"win")
 
 
 func _on_resource_changed(_id: StringName, _new_value: int, delta: int) -> void:
@@ -228,8 +307,8 @@ func _on_camp_destroyed() -> void:
 		return
 	is_camp_destroyed = true
 	camp_destroyed.emit()
-	_end_run(false, "The campfire went out.")
+	_end_run(false, "The campfire went out.", &"loss_fire")
 
 
 func _on_player_knocked_out() -> void:
-	_end_run(false, "You were knocked out.")
+	_end_run(false, "You were knocked out.", &"loss_hero")

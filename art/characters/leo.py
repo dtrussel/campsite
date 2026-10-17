@@ -28,19 +28,20 @@ HAIR = (0.84, 0.6, 0.26)
 HAIR_DARK = (0.44, 0.27, 0.1)
 SCUFF = (0.62, 0.36, 0.26)       # grazed, dusty knees
 DIRT = (0.42, 0.32, 0.22)
-TEE = (0.46, 0.64, 0.84)
-TEE_DARK = (0.26, 0.4, 0.62)
+TEE = (0.24, 0.52, 0.96)
+TEE_DARK = (0.17, 0.34, 0.68)
 BADGE = (0.12, 0.22, 0.45)
 BADGE_TREE = (0.42, 0.72, 0.18)
-SHORTS = (0.07, 0.36, 0.5)
-SHORTS_DARK = (0.03, 0.18, 0.3)
-SHORTS_LIGHT = (0.18, 0.54, 0.7)
+SHORTS = (0.08, 0.4, 0.62)
+SHORTS_DARK = (0.03, 0.22, 0.4)
+SHORTS_LIGHT = (0.28, 0.58, 0.78)
+PATCH = (0.86, 0.68, 0.28)
 LIME = (0.62, 0.84, 0.14)
 STITCH = (0.6, 0.8, 0.84)
-SOCK = (0.6, 0.6, 0.62)
+SOCK = (0.62, 0.78, 0.96)
 BOOT = (0.14, 0.19, 0.34)
 BOOT_TOE = (0.42, 0.34, 0.26)
-SOLE = (0.6, 0.48, 0.34)
+SOLE = (0.42, 0.3, 0.2)
 LACE = (0.92, 0.46, 0.14)
 BOOT_ACCENT = (0.62, 0.8, 0.2)
 MUD = (0.3, 0.22, 0.14)
@@ -48,7 +49,7 @@ CAP = (0.1, 0.13, 0.28)
 CAP_SEAM = (0.05, 0.07, 0.16)
 CAMO = [(0.26, 0.33, 0.15), (0.14, 0.18, 0.09), (0.4, 0.37, 0.22)]
 STRAP = (0.34, 0.2, 0.1)
-BEDROLL = (0.12, 0.2, 0.42)
+BEDROLL = (0.2, 0.36, 0.72)
 STEEL = (0.74, 0.76, 0.8)
 ROPE = (0.78, 0.62, 0.38)
 GOLD = (0.92, 0.68, 0.26)
@@ -58,7 +59,7 @@ LEAF = (0.36, 0.62, 0.2)
 RED = (0.86, 0.16, 0.14)
 METAL = (0.72, 0.68, 0.6)
 
-HEAD = chibi.HeadFrame((0, -0.01, 1.565), (0.214, 0.235, 0.225))
+HEAD = chibi.HeadFrame((0, -0.01, 1.51), (0.214, 0.235, 0.225))  # low: a short chibi neck
 PROP = chibi.Proportions(legs=1.85, spine=1.3, arms=1.25)
 FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "leo_face.png")
 # From the concept art: a round, open 7-year-old face. Big bright-blue
@@ -162,7 +163,7 @@ def shirt_piece():
     parts.append(chibi.limb([(0, -0.005, 0.74), (0, -0.005, 0.64), (0, -0.005, 0.56)],
                             [(0.215, 0.185), (0.245, 0.205), (0.255, 0.212)], up=(0, -1, 0), name="skirt"))
     parts.append(chibi.hem_ring((0, -0.005, 0.565), (0.255, 0.212), 0.009, name="hem", axis="Z"))
-    shirt = chibi.fuse(parts, "Shirt", voxel=0.0065, faces=12000)
+    shirt = chibi.fuse(parts, "Shirt", voxel=0.0065, faces=30000)  # dense: the painted logo
     for s in (-1, 1):
         chibi.cut_open(shirt, (s * 0.39, 0, 0), (s, 0, 0))
     chibi.cut_open(shirt, (0, 0, 0.555), (0, 0, -1))
@@ -180,6 +181,9 @@ def shirt_piece():
     chibi.fold(shirt, (0.02, -0.18, 0.84), (0.2, 0.12, 0.14), 0.01, wavelength=0.06, across=(1, 0, 0.6), seed=4)
 
     def colour(pos, normal):
+        logo = emblem(pos, normal)
+        if logo is not None:
+            return logo
         if abs(pos.x) > 0.345:
             return TEE_DARK  # sleeve hem
         if abs(abs(pos.x) - 0.33) < 0.006 and int(pos.z * 90) % 2 == 0:
@@ -191,9 +195,10 @@ def shirt_piece():
         fold = math.sin(pos.x * 38 + pos.z * 22) * max(0.0, 0.88 - pos.z) * 2.4
         pit = math.exp(-((abs(pos.x) - 0.2) / 0.05) ** 2 - ((pos.z - 1.0) / 0.08) ** 2)
         c = common.lerp(TEE, TEE_DARK, max(0.0, min(0.55, fold * 0.5 + pit * 0.5)))
-        return common.lerp(c, (0.66, 0.8, 0.94), max(0.0, min(0.35, -fold * 0.3)))
+        return common.lerp(c, (0.58, 0.78, 1.0), max(0.0, min(0.35, -fold * 0.3)))
     common.color_by(shirt, colour)
-    common.grime(shirt, DIRT, lambda p, n: max(0.0, noise.noise(p * 9.0 + Vector((2, 7, 1))) - 0.25) * 0.8)
+    common.grime(shirt, DIRT, lambda p, n: 0.0 if emblem(p, n) else
+                 max(0.0, noise.noise(p * 9.0 + Vector((2, 7, 1))) - 0.35) * 0.5)
     return shirt
 
 
@@ -219,22 +224,22 @@ def shorts_piece():
     def colour(pos, normal):
         z = pos.z
         if z < 0.345:
-            return SHORTS_DARK  # hem
+            return SHORTS_LIGHT  # rolled cuff
         if abs(z - 0.355) < 0.005 and int(pos.x * 120) % 2 == 0:
             return STITCH  # stitched hem line
-        # Two parallel diagonal lime stripes across both legs,
-        # with a lighter blue band between them (the art's board shorts).
-        t = z - 0.3 * pos.x
-        if 0.4 < t < 0.44 or 0.465 < t < 0.49:
-            return LIME
-        if 0.44 <= t <= 0.465:
-            return SHORTS_LIGHT
-        if abs(normal.x) > 0.85 and z > 0.46:
-            return SHORTS_LIGHT  # side panel
-        # Painted folds at the crotch and behind the knees.
+        # Patches sewn over the front of his right thigh and the back of
+        # his left one (the art's ripped, mended denim).
+        for cx, cz, front in ((-0.17, 0.42, True), (0.17, 0.44, False)):
+            if (normal.y < -0.3) == front and abs(pos.x - cx) < 0.045 and abs(z - cz) < 0.035:
+                edge = abs(pos.x - cx) > 0.036 or abs(z - cz) > 0.027
+                return common.lerp(PATCH, (0.35, 0.25, 0.1), 0.4) if edge else PATCH
+        # Denim: fine vertical twill streaks; painted folds at the crotch
+        # and behind the knees.
+        twill = 0.12 * noise.noise(Vector((pos.x * 140, pos.y * 140, z * 12)))
         fold = math.exp(-(pos.x / 0.05) ** 2 - ((z - 0.45) / 0.06) ** 2) + \
             0.5 * max(0.0, math.sin(pos.x * 60 + z * 30)) * max(0.0, 0.45 - z) * 6
-        return common.lerp(SHORTS, SHORTS_DARK, min(0.6, fold * 0.6))
+        c = common.lerp(SHORTS, SHORTS_DARK, min(0.6, fold * 0.6))
+        return common.lerp(c, SHORTS_LIGHT, max(0.0, twill))
     common.color_by(shorts, colour)
     common.grime(shorts, (0.5, 0.42, 0.3), lambda p, n: max(0.0, noise.noise(p * 12.0) - 0.3) * 0.6)
     return shorts
@@ -253,25 +258,30 @@ def cargo_pockets():
     return rigid
 
 
-def badge():
-    """The camp logo on the tee: a navy ring, a pale sky disc, a green
-    hill and a dark pine (built from pieces so it reads without texels)."""
-    c = Vector((0.07, -0.212, 0.9))
-    parts = []
-
-    def piece(obj, colour):
-        common.set_color(obj, colour)
-        parts.append(obj)
-    piece(chibi.cylinder(c, 0.064, 0.008, name="badge", axis="Y", segments=24, bevel=0.003), BADGE)
-    piece(chibi.cylinder(c + Vector((0, -0.005, 0)), 0.05, 0.006, name="badge", axis="Y", segments=24),
-          (0.7, 0.84, 0.96))
-    hill = chibi.ellipsoid(c + Vector((0, -0.01, -0.035)), (0.05, 0.004, 0.022), name="badge", segs=(16, 6))
-    piece(hill, BADGE_TREE)
-    for dx, h in ((-0.015, 0.05), (0.018, 0.038)):
-        pine = chibi.cylinder(c + Vector((dx, -0.012, -0.012 + h * 0.5)), 0.018, h, name="badge", segments=3,
-                              radius2=0.0)
-        piece(pine, (0.08, 0.32, 0.18))
-    return common.join(parts, "badge")
+def emblem(pos, normal):
+    """The camp logo painted big on the front of the tee (the art): a
+    cream rim and a navy ring around a sky disc with a low sun, a green
+    hill and two dark pines. In rest-pose space, so z is squashed by the
+    spine stretch to end up round. None outside the logo."""
+    k = 1.3                      # logo scale (inner disc radius 0.07 * k)
+    u = pos.x / k
+    w = (pos.z - 0.86) * PROP.spine / k
+    d = math.hypot(u, w)
+    if d > 0.085 or normal.y > -0.2:
+        return None
+    if d > 0.077:
+        return (0.96, 0.92, 0.8)
+    if d > 0.066:
+        return BADGE
+    for dx, h in ((-0.024, 0.06), (0.006, 0.045)):
+        t = (w + 0.022) / h
+        if 0.0 <= t <= 1.0 and abs(u - dx) < 0.021 * (1.0 - t):
+            return (0.08, 0.32, 0.18)
+    if w < -0.016 + 0.01 * math.cos(u * 28.0):
+        return BADGE_TREE
+    if math.hypot(u - 0.03, w - 0.024) < 0.018:
+        return (1.0, 0.8, 0.3)
+    return (0.66, 0.86, 1.0)
 
 
 def hands_and_feet():
@@ -285,13 +295,13 @@ def hands_and_feet():
             common.grime(part, MUD, lambda p, n: max(0.0, (0.09 - p.z) / 0.08) * 0.7 +
                          max(0.0, noise.noise(p * 30.0) - 0.35) * 0.8)
             rigid.append((part, bone))
-        # Slouchy grey socks folded over the boot tops.
+        # Slouchy light-blue socks folded over the boot tops.
         sock = chibi.limb([(s * 0.17, 0.01, 0.235), (s * 0.17, 0.012, 0.2), (s * 0.17, 0.012, 0.15)],
                           [(0.056, 0.058), (0.062, 0.066), (0.07, 0.078)], up=(0, -1, 0), name="sock")
         roll = chibi.hem_ring((s * 0.17, 0.01, 0.228), (0.058, 0.06), 0.011, name="sock")
         sock = common.join([sock, roll], "sock")
-        common.color_by(sock, lambda p, n: common.lerp(SOCK, (0.36, 0.36, 0.4),
-                                                       0.5 if int(p.z * 110) % 2 == 0 else 0.0))
+        common.color_by(sock, lambda p, n: common.lerp(SOCK, (0.3, 0.42, 0.62),
+                                                       0.35 if int(p.z * 110) % 2 == 0 else 0.0))
         rigid.append((sock, "lowerleg." + bone[-1]))
     return rigid
 
@@ -353,7 +363,8 @@ def hair_and_cap():
     rng = random.Random(7)
 
     def fringe(yaw, pitch, drop, sweep, width, tier, lift=0.045, up_flick=0.0):
-        root, n = HEAD.point(yaw, pitch, -0.012)
+        yaw = max(-0.5, min(0.5, yaw))           # inside the cap's front opening
+        root, n = HEAD.point(yaw, pitch - 0.14, -0.012)
         side = Vector((-math.cos(yaw), -math.sin(yaw), 0))  # tangent toward his right
         controls = [root + F * 0.06 + U * (lift + up_flick),
                     root + F * 0.1 - U * (drop * 0.4 - up_flick * 1.5) + side * sweep * 0.55,
@@ -399,40 +410,90 @@ def hair_and_cap():
                                root - U * length + outv * 0.1 + sidev * 1.6], rng.uniform(0.05, 0.075), thickness=0.4,
               sharp=True, tier=k % 3)
 
-    # Backwards cap: snug crown, cut higher at the front.
-    cap_c = c + Vector((0, 0.018, 0.02))
-    cr = (r.x + 0.042, r.y + 0.042, r.z + 0.03)
-    dome = chibi.ellipsoid(cap_c, cr, name="cap", segs=(40, 24))
-    normal = Vector((0, 0.42 / cr[1], 1 / cr[2])).normalized()
+    # Full baseball cap worn backwards: a six-panel crown down to a band
+    # all round the head (at the hairline in front, a little lower at the
+    # back), the snapback opening arched over his forehead with the strap
+    # across it and the fringe bursting out, and the brim sticking out
+    # behind, angled a little to his left and up so it shows from the front.
+    cap_c = c + Vector((0, 0.01, 0.02))
+    cr = Vector((r.x + 0.035, r.y + 0.035, r.z + 0.03))
+    band_o = c + Vector((0, 0, 0.033))
+    slope = 0.122                             # band rises toward the front
+
+    def band_z(y):
+        return band_o.z - slope * (y - band_o.y)
+
+    def crown_point(yaw, dz, out=0.0):
+        """Point on the crown above the band in direction yaw (0 = ahead)."""
+        d = Vector((math.sin(yaw), -math.cos(yaw), 0))
+        q = cap_c
+        for _ in range(3):
+            z = band_z(q.y) + dz
+            sc = math.sqrt(max(0.0, 1.0 - ((z - cap_c.z) / cr.z) ** 2))
+            k = sc / math.sqrt((d.x / cr.x) ** 2 + (d.y / cr.y) ** 2)
+            q = Vector((cap_c.x + d.x * k, cap_c.y + d.y * k, z))
+        return q + d * out, d
+
+    opening_w, opening_h = 0.58, 0.13
+    dome = chibi.ellipsoid(cap_c, cr, name="cap", segs=(48, 28))
     bm = bmesh.new()
     bm.from_mesh(dome.data)
-    bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:],
-                           plane_co=cap_c + Vector((0, 0, 0.26 * cr[2])), plane_no=normal, clear_inner=True)
+    bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=band_o,
+                           plane_no=Vector((0, slope, 1)).normalized(), clear_inner=True)
+    # The snapback's arched opening in the front panels.
+    hole = []
+    for f in bm.faces:
+        q = f.calc_center_median()
+        rel = q - cap_c
+        yaw = math.atan2(rel.x, -rel.y)
+        if abs(yaw) < opening_w and rel.y < 0:
+            arch = opening_h * math.sqrt(max(0.0, 1.0 - (yaw / opening_w) ** 2))
+            if q.z - band_z(q.y) < 0.012 + arch and q.z - band_z(q.y) > 0.026:
+                hole.append(f)
+    bmesh.ops.delete(bm, geom=hole, context="FACES")
     bm.to_mesh(dome.data)
     bm.free()
     mod = dome.modifiers.new("Solid", "SOLIDIFY")
-    mod.thickness = 0.025
+    mod.thickness = 0.022
     common.apply_all_modifiers(dome)
     common.shade_smooth(dome)
 
     def cap_colour(pos, normal):
         rel = pos - cap_c
         a = math.atan2(rel.x, rel.y)
-        if abs(((a / (math.tau / 6)) % 1.0) - 0.5) > 0.465 and rel.z > 0.08:
+        if abs(((a / (math.tau / 6)) % 1.0) - 0.5) > 0.465 and pos.z - band_z(pos.y) > 0.03:
             return CAP_SEAM
         # Painted top light on the crown.
         return common.lerp(CAP, (0.3, 0.38, 0.62), max(0.0, normal.z - 0.6) * 0.8)
     common.color_by(dome, cap_colour, smooth=False)
     parts.append(dome)
-    button = chibi.ellipsoid(cap_c + Vector((0, 0, cr[2])), (0.03, 0.03, 0.016), name="button", segs=(12, 8))
+    button = chibi.ellipsoid(cap_c + Vector((0, 0, cr.z)), (0.03, 0.03, 0.016), name="button", segs=(12, 8))
     common.set_color(button, CAP_SEAM)
     parts.append(button)
-    # Big curved brim sticking out behind, tilted down a little.
-    brim = chibi.ellipsoid((0, 0, 0), (0.23, 0.2, 0.018), name="brim", segs=(32, 10))
+    # A darker band along the lower edge, tilted with it.
+    ring = chibi.hem_ring(band_o, (cr.x - 0.006, cr.y - 0.006), 0.013, name="cap", segs=(40, 6))
+    ring.data.transform(Matrix.Translation(band_o) @ Matrix.Rotation(-math.atan(slope), 4, "X")
+                        @ Matrix.Translation(-band_o))
+    common.set_color(ring, CAP_SEAM)
+    parts.append(ring)
+    # Snap strap across the bottom of the opening, with its peg holes.
+    pts, nrm = [], []
+    for k in range(11):
+        q, d = crown_point(-opening_w * 0.95 + 1.9 * opening_w * k / 10, 0.03, out=0.004)
+        pts.append(q)
+        nrm.append(d)
+    strap = chibi.webbing(pts, nrm, width=0.02, thick=0.007, name="snap")
+    common.color_by(strap, lambda p, n: (0.03, 0.04, 0.09) if int((p.x + 1.0) * 70) % 3 == 0 and abs(p.x) < 0.09
+                    else CAP_SEAM, smooth=False)
+    parts.append(strap)
+    # The brim behind: long, curved, a little off to his left and up.
+    yaw_b = math.pi - 0.26
+    root, d = crown_point(yaw_b, 0.006)
+    brim = chibi.ellipsoid((0, 0, 0), (0.21, 0.17, 0.016), name="brim", segs=(32, 10))
     for v in brim.data.vertices:
-        v.co.z -= (v.co.x ** 2) * 1.6  # strong LoL curve
-    brim.data.transform(Matrix.Translation(cap_c + Vector((0, cr[1] - 0.02, -0.03)))
-                        @ Matrix.Rotation(math.radians(-12), 4, "X"))
+        v.co.z -= (v.co.x ** 2) * 1.2      # curved sides
+    brim.data.transform(Matrix.Translation(root + Vector((0, 0, 0.004))) @ Matrix.Rotation(-0.26, 4, "Z")
+                        @ Matrix.Rotation(math.radians(8), 4, "X") @ Matrix.Translation((0, 0.08, 0)))
 
     def brim_colour(pos, normal):
         if normal.z < -0.3:
@@ -440,17 +501,6 @@ def hair_and_cap():
         return common.lerp(CAP, (0.3, 0.38, 0.62), max(0.0, normal.z - 0.5))
     common.color_by(brim, brim_colour, smooth=False)
     parts.append(brim)
-    # Snapback strap across the front opening, under the quiff.
-    strap_root, sn = HEAD.point(0, 0.64, 0.03)
-    strap = chibi.box((0.12, 0.018, 0.025), (0, 0, 0), bevel=0.006, name="snap")
-    strap.data.transform(Matrix.Translation(strap_root) @ sn.to_track_quat("Y", "Z").to_matrix().to_4x4())
-    common.set_color(strap, CAP_SEAM)
-    # Push the whole cap back on his head so the quiff can burst out.
-    pivot = c + Vector((0, r.y * 0.8, 0.0))
-    tilt = Matrix.Translation(pivot) @ Matrix.Rotation(math.radians(-6), 4, "X") @ Matrix.Translation(-pivot)
-    for obj in (dome, button, brim, strap):
-        obj.data.transform(tilt)
-    parts.append(strap)
     return parts
 
 
@@ -557,6 +607,13 @@ def backpack():
     common.set_color(sternum, STRAP)
     parts.append(sternum)
     parts.append(chibi.buckle((0, -0.266, 1.06), (0, -1, 0), width=0.045, height=0.035, colour=METAL))
+    # Brass compass clipped low on his right strap, as in the art.
+    cc = Vector((-0.19, -0.3, 0.9))
+    parts += chibi.compass(cc, GOLD, neck_z=None, radius=0.05, lid=True)
+    tab = chibi.tube([cc + Vector((0, 0.004, 0.06)), Vector((-0.185, -0.285, 1.0))], [0.008, 0.008], name="cord",
+                     levels=0)
+    common.set_color(tab, STRAP)
+    parts.append(tab)
     return parts
 
 
@@ -626,9 +683,6 @@ def build():
     rig = chibi.load_rig()
     soft = [skin_piece(), shirt_piece(), shorts_piece()]
     rigid = hands_and_feet()
-    rigid.append((badge(), "chest"))
-    for part in chibi.compass((0, -0.228, 0.98), GOLD, neck_z=1.22, radius=0.042, lid=True):
-        rigid.append((part, "chest"))
     rigid += cargo_pockets()
     pack_c = Vector((0, 0.37, 1.0))
     for part in backpack():

@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="StoryBeat" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/story/story_beat.gd" id="1_beat"]
+
+[resource]
+script = ExtResource("1_beat")
+id = &"dawn.c2.n2"
+chapter = 2
+trigger = &"dawn"
+night = 2
+page = 1
+lines = [{
+"id": "dawn.c2.n2.leo.1",
+"speaker": "leo",
+"text": "Why do the shadows love our fire so much?",
+"when": "leo"
+}, {
+"id": "dawn.c2.n2.leo.2",
+"speaker": "nela",
+"text": "Maybe they're cold. They all crowd near the light.",
+"when": "leo"
+}, {
+"id": "dawn.c2.n2.nela.1",
+"speaker": "nela",
+"text": "The shadows crowd the fire. Like they're cold.",
+"when": "nela"
+}, {
+"id": "dawn.c2.n2.nela.2",
+"speaker": "leo",
+"text": "Cold? They're shadows! ...Huh. Maybe.",
+"when": "nela"
+}]

@@ -4,8 +4,11 @@ extends Node3D
 ##
 ## Live 3D scene behind the title menu: the camp at dusk, the boy and
 ## his sibling sitting by the fire, shadow minions lurking at the tree
-## line, and a slow orbiting camera. Purely decorative - no gameplay
-## nodes, so nothing here reacts to input or the run state.
+## line, and a slow orbiting camera. Once the story's true ending has
+## been seen, Mum is home and sits by the fire too (feature 043). Purely decorative - no gameplay
+## nodes, so nothing here reacts to input or the run state. The hero
+## select screen (HeroStage, feature 034) reuses it with its own heroes
+## and camera.
 
 const GROUND_MATERIAL: Material = preload("res://assets/materials/painted_ground.tres")
 const CAMPFIRE_SCENE: PackedScene = preload("res://scenes/base/CampfireCore.tscn")
@@ -14,6 +17,8 @@ const ASSETS: String = "res://assets/"
 @export var orbit_speed: float = 0.05
 @export var orbit_radius: float = 12.0
 @export var orbit_height: float = 6.5
+## Seats Leo and Nela by the fire; HeroStage stands its own heroes.
+@export var seat_heroes: bool = true
 
 var _camera: Camera3D = null
 var _angle: float = 0.6
@@ -42,8 +47,14 @@ func _ready() -> void:
 		if child is HealthBar3D:
 			child.queue_free()
 
-	_character("custom/leo.glb", 0.7, "hero", Vector3(1.5, 0, 1.0), [], "Sit_Floor_Idle")
-	_character("custom/nela.glb", 0.65, "hero", Vector3(-1.4, 0, 1.2), [], "Sit_Floor_Idle")
+	if seat_heroes:
+		_character("custom/leo.glb", 0.7, "hero", Vector3(1.5, 0, 1.0), [], "Sit_Floor_Idle")
+		_character("custom/nela.glb", 0.65, "hero", Vector3(-1.4, 0, 1.2), [], "Sit_Floor_Idle")
+		if mum_is_home():
+			var mum: CharacterVisual = MumArrival.make_visual("Sit_Floor_Idle")
+			mum.position = Vector3(0.9, 0, -1.8)
+			add_child(mum)
+			mum.face_instantly(-mum.position)
 	for spot in [Vector3(-7.5, 0, -8.0), Vector3(-5.0, 0, -9.5), Vector3(8.0, 0, -7.0)]:
 		_character("custom/shadow_imp.glb", 0.62, "shadow", spot, [], "Imp_Idle")
 
@@ -53,6 +64,11 @@ func _ready() -> void:
 	add_child(_camera)
 	_camera.make_current()
 	_update_camera(0.0)
+
+
+## True once the Chapter 2 ending has been seen (and her model exists).
+static func mum_is_home() -> bool:
+	return StoryLibrary.has_seen(StoryLibrary.TRUE_ENDING) and ResourceLoader.exists(MumArrival.MODEL_PATH)
 
 
 func _process(delta: float) -> void:
@@ -100,14 +116,14 @@ func _build_environment() -> void:
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.tonemap_white = 2.2
 	env.glow_enabled = true
-	env.glow_intensity = 0.5
-	env.glow_hdr_threshold = 1.2
+	env.glow_intensity = 0.6
+	env.glow_hdr_threshold = 1.0
 	env.fog_enabled = true
 	env.fog_light_color = dusk["fog"]
 	env.fog_density = 0.018
 	env.adjustment_enabled = true
 	env.adjustment_contrast = 1.1
-	env.adjustment_saturation = 1.2
+	env.adjustment_saturation = 1.15
 	var world_env: WorldEnvironment = WorldEnvironment.new()
 	world_env.environment = env
 	add_child(world_env)
@@ -117,3 +133,8 @@ func _build_environment() -> void:
 	sun.light_energy = dusk["sun_energy"]
 	sun.shadow_enabled = true
 	add_child(sun)
+	# Feature 031: the same tilt-shift and warm grade as in a run, at dusk.
+	var post: PostFx = PostFx.new()
+	post.follow_time = false
+	post.night_amount = 0.4
+	add_child(post)

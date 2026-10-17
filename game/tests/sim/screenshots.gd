@@ -30,6 +30,25 @@ func _ready() -> void:
 		await _settle(0.3)
 		_shot("01b_loading_%d" % i)
 		loading.queue_free()
+	# Feature 034: the hero select screen, with each hero picked.
+	var select: Node = load("res://scenes/ui/HeroSelect.tscn").instantiate()
+	add_child(select)
+	await _settle(1.5)
+	_shot("01c_hero_select_leo")
+	select.call("select", 1)
+	await _settle(1.5)
+	_shot("01d_hero_select_nela")
+	select.queue_free()
+	# Feature 035: the Chapter 1 intro storybook (first and Mum's page).
+	var book: StoryBook = StoryBook.play(StoryLibrary.find(&"intro", 1), &"leo")
+	await _settle(1.5)
+	_shot("01e_intro_page_1")
+	book.next()
+	book.next()
+	await _settle(1.5)
+	_shot("01f_intro_page_3")
+	book.skip()
+	await _settle(0.5)
 
 	var main: Node = load("res://scenes/main/Main.tscn").instantiate()
 	add_child(main)
@@ -39,6 +58,24 @@ func _ready() -> void:
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	await _settle(1.0)
 	_shot("03_day_hud")
+	# Feature 037: a call and response over both kids' heads.
+	var director: BarkDirector = get_tree().get_first_node_in_group("bark_director") as BarkDirector
+	await _settle(2.5)  # past the DAY banner
+	director.clock += 60.0
+	director.bark(&"thief")
+	var companion: Node = get_tree().get_first_node_in_group("companions")
+	for i in 40:  # until Nela's reply is up (frames are slow under xvfb)
+		if SpeechBubble.on(companion) != null:
+			break
+		await _settle(0.1)
+	await _settle(0.3)
+	_shot("03c_barks")
+	# Feature 035: a dawn story card over the HUD, with the lantern hint.
+	var hud: Node = main.get_node("HUD")
+	var card: StoryCard = hud.call("show_story", StoryLibrary.first(&"dawn", 1, 1), hud.call("_lantern_hint"))
+	await _settle(1.5)
+	_shot("03b_dawn_card")
+	card.dismiss()
 
 	ResourceManager.add(&"wood", 6)
 	ResourceManager.add(&"resin", 2)
@@ -128,6 +165,16 @@ func _ready() -> void:
 	player.call("_try_attack")
 	await _settle(0.1)
 	_shot("06_night_wave")
+	# Feature 036: the Moon Lantern at stage 2 of 3, its ring and dial.
+	var lantern: MoonLantern = MoonLantern.find(get_tree())
+	lantern.restore(6)
+	var spot: Vector3 = player.global_position
+	if hud.call("story_card") != null:
+		hud.call("story_card").dismiss()
+	player.global_position = lantern.global_position + Vector3(2.2, 0, 0.8)
+	await _settle(2.0)
+	_shot("06b_moon_lantern")
+	player.global_position = spot
 	await get_tree().create_timer(3.0, true, false, true).timeout
 	_shot("07_night_later")
 	# Feature 022: the remodelled Shadow Imp up close, next to Leo.
@@ -146,6 +193,42 @@ func _ready() -> void:
 	_campfire_out()
 	await _settle(0.5)
 	_shot("09_end_screen")
+	# Feature 035: the Chapter 1 ending page.
+	var ending: StoryBook = StoryBook.play(StoryLibrary.find(&"win", 1), &"leo", 30)
+	await _settle(1.5)
+	_shot("09b_chapter_1_ending")
+	ending.skip()
+	await _settle(0.4)
+	# Feature 034: a run playing Nela, with Leo as the companion.
+	main.queue_free()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	GameManager.call("_reset_autoloads")
+	GameManager.set_party(&"nela")
+	main = load("res://scenes/main/Main.tscn").instantiate()
+	add_child(main)
+	await _settle(0.5)
+	get_tree().get_first_node_in_group("controls_overlay").close()
+	await _settle(1.5)
+	_shot("10_nela_hud")
+	# Feature 043: the true ending - Mum walks out of the woods to the kids.
+	var hero: Node3D = get_tree().get_first_node_in_group("player")
+	var arrival: MumArrival = MumArrival.play(get_tree().current_scene, hero.global_position)
+	await _settle(3.0)
+	_shot("11_mum_arrives")
+	await arrival.finished
+	await _settle(0.4)
+	_shot("11b_mum_waves")
+	# ...and after it she sits by the title fire.
+	arrival.queue_free()
+	main.queue_free()
+	StoryLibrary.progress_path = "user://screenshot_story.cfg"
+	StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING)
+	var home: Node = load("res://scenes/ui/TitleScreen.tscn").instantiate()
+	add_child(home)
+	await _settle(1.0)
+	_shot("12_title_mum_home")
+	StoryLibrary.forget_progress()
 	get_tree().quit(0)
 
 

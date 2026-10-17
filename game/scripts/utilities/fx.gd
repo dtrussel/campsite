@@ -206,7 +206,8 @@ static func _get_flash_material(color: Color) -> StandardMaterial3D:
 
 static func _collect_meshes(node: Node, out: Array[MeshInstance3D]) -> void:
 	for child in node.get_children():
-		if child is MeshInstance3D:
+		# Skip effect cards (flames): a flash would fill the whole quad.
+		if child is MeshInstance3D and child.get_meta(&"stylized", "") != "skip":
 			out.append(child)
 		_collect_meshes(child, out)
 

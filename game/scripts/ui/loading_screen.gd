@@ -20,7 +20,7 @@ const FADE_OUT: float = 0.35
 ## [art, [[tip, icon], ...]]. Short, simple words for young players.
 const SCREENS: Array = [
 	["res://assets/ui/key_art.webp", [
-		["Give Nela a job: she can gather, guard and repair.", "res://assets/icons/portrait_nela.png"],
+		["Give {companion} a job: gather, guard or repair.", "{companion_portrait}"],
 		["Hurt? Press R to eat berries and heal.", "res://assets/icons/berries.png"],
 		["Keep the campfire burning all night long!", "res://assets/icons/campfire.png"],
 	]],
@@ -130,7 +130,7 @@ func _build() -> void:
 	add_child(_root)
 
 	var backdrop: ColorRect = ColorRect.new()
-	backdrop.color = Color(0.03, 0.03, 0.06)
+	backdrop.color = Color(0.06, 0.035, 0.02)
 	UiKit.full_rect(backdrop)
 	_root.add_child(backdrop)
 
@@ -149,8 +149,8 @@ func _build() -> void:
 	# A dark band along the bottom so the text reads over the painting.
 	var shade: TextureRect = TextureRect.new()
 	var gradient: Gradient = Gradient.new()
-	gradient.set_color(0, Color(0, 0.02, 0.05, 0.0))
-	gradient.set_color(1, Color(0, 0.02, 0.05, 0.88))
+	gradient.set_color(0, Color(0.07, 0.035, 0.02, 0.0))
+	gradient.set_color(1, Color(0.07, 0.035, 0.02, 0.88))
 	var texture: GradientTexture2D = GradientTexture2D.new()
 	texture.gradient = gradient
 	texture.fill_from = Vector2(0.5, 0.0)
@@ -184,7 +184,7 @@ func _build() -> void:
 	fill.bg_color = UiKit.COLOR_GOLD
 	fill.set_corner_radius_all(4)
 	var back: StyleBoxFlat = StyleBoxFlat.new()
-	back.bg_color = Color(0.05, 0.06, 0.08, 0.85)
+	back.bg_color = Color(0.12, 0.07, 0.04, 0.85)
 	back.border_color = UiKit.COLOR_GOLD_DARK
 	back.set_border_width_all(1)
 	back.set_corner_radius_all(4)
@@ -198,16 +198,21 @@ func _build() -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 10)
 	column.add_child(row)
-	if String(tip[1]) != "" and ResourceLoader.exists(String(tip[1])):
+	var tip_icon: Texture2D = null
+	if String(tip[1]) == "{companion_portrait}":
+		tip_icon = GameManager.party_companion().portrait
+	elif String(tip[1]) != "" and ResourceLoader.exists(String(tip[1])):
+		tip_icon = load(String(tip[1])) as Texture2D
+	if tip_icon != null:
 		var icon: TextureRect = TextureRect.new()
-		icon.texture = load(String(tip[1])) as Texture2D
+		icon.texture = tip_icon
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.custom_minimum_size = Vector2(40, 40)
 		row.add_child(icon)
-	var text: Label = UiKit.label(String(tip[0]), 22, UiKit.COLOR_GOLD_LIGHT)
+	var text: Label = UiKit.label(UiKit.party_text(String(tip[0])), 22, UiKit.COLOR_GOLD_LIGHT)
 	text.add_theme_constant_override("outline_size", 6)
-	text.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.04, 1))
+	text.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
 	row.add_child(text)
 
 

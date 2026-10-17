@@ -30,10 +30,16 @@ const TINT_META: StringName = &"style_tint"
 ## wind: trees, pines and bushes (feature 024).
 const FOLIAGE_META: StringName = &"foliage"
 const FOLIAGE_SHADER: Shader = preload("res://shaders/painted_foliage.gdshader")
+## Painted props, buildings and characters (feature 031 M4): wrap-lit,
+## matte, soft rim, plus sunny tops, contact shade and texel detail.
+const PAINTED_SHADER: Shader = preload("res://shaders/painted_prop.gdshader")
+## Thin warm ink line on painted props (feature 031 M4, HD-2D target).
+const PROP_OUTLINE_COLOR: Color = Color(0.2, 0.12, 0.07)
+const PROP_OUTLINE_THICKNESS: float = 0.011
 
 ## Shared tints so the world stays colour-consistent.
 const TINT_FOLIAGE: Color = Color(0.92, 0.78, 0.48)
-const TINT_ROCK: Color = Color(0.62, 0.63, 0.7)
+const TINT_ROCK: Color = Color(0.8, 0.76, 0.7)
 
 static var _cache: Dictionary = {}  # "<instance id>|<profile>" -> Material
 
@@ -69,12 +75,13 @@ static func apply_mesh(mesh: MeshInstance3D, profile: String) -> void:
 			continue
 		var key: String = "%d|%s|%s|%s" % [base.get_instance_id(), profile, is_eye, tint.to_html()]
 		if not _cache.has(key):
-			var made: StandardMaterial3D
+			var made: Material
 			if base.resource_name.ends_with(PAINTED_SUFFIX) or base.emission_enabled:
 				made = _make_painted(base, profile)
 			else:
-				made = _make(base, profile, is_eye)
-				made.albedo_color *= tint
+				var kaykit: StandardMaterial3D = _make(base, profile, is_eye)
+				kaykit.albedo_color *= tint
+				made = kaykit
 			_cache[key] = made
 		mesh.set_surface_override_material(surface, _cache[key])
 	mesh.set_meta(&"stylized", profile)
@@ -114,30 +121,40 @@ static func _find_tint(node: Node) -> Color:
 
 
 ## Painted (baked) assets: soft wrap lighting keeps the painted shading
-## readable at night; heroes and enemies get a thin dark outline.
-static func _make_painted(base: StandardMaterial3D, profile: String) -> StandardMaterial3D:
-	var material: StandardMaterial3D = base.duplicate() as StandardMaterial3D
+## readable at night, plus the shared painted finish
+## (painted_common.gdshaderinc). Everything gets a thin ink line: warm
+## brown on props, darker on heroes, heavy purple on imps.
+static func _make_painted(base: StandardMaterial3D, profile: String) -> Material:
 	if base.emission_enabled:
-		# Glowing bits (imp eyes, wand star): keep them bright at night.
-		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		material.albedo_color = base.emission * 1.1
-		return material
-	material.diffuse_mode = BaseMaterial3D.DIFFUSE_LAMBERT_WRAP
-	material.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
-	material.metallic = 0.0
-	material.roughness = 1.0
-	material.rim_enabled = true
-	material.rim = 0.35 if profile in ["hero", "shadow"] else 0.15
-	material.rim_tint = 0.75
-	if profile in ["hero", "shadow"]:
-		var outline: ShaderMaterial = ShaderMaterial.new()
-		outline.shader = OUTLINE_SHADER
-		# Heroes: a thinner, warm dark-brown ink line (reads hand-drawn, not
-		# black-marker); the imps keep a heavier purple line.
-		outline.set_shader_parameter("outline_color",
-			Color(0.16, 0.03, 0.22) if profile == "shadow" else Color(0.16, 0.08, 0.05))
-		outline.set_shader_parameter("thickness", 0.022 if profile == "shadow" else 0.013)
-		material.next_pass = outline
+		# Glowing bits (imp eyes, wand star, lantern glass): keep them bright at night.
+		var glow: StandardMaterial3D = base.duplicate() as StandardMaterial3D
+		glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		glow.albedo_color = base.emission * 1.1
+		return glow
+	var material: ShaderMaterial = ShaderMaterial.new()
+	material.shader = PAINTED_SHADER
+	material.set_shader_parameter("albedo_texture", base.albedo_texture)
+	material.set_shader_parameter("albedo_color", base.albedo_color)
+	var character: bool = profile in ["hero", "shadow"]
+	material.set_shader_parameter("rim_amount", 0.35 if character else 0.15)
+	if character:
+		# Characters move: lighter texel noise and no ground contact shade.
+		material.set_shader_parameter("texel_amount", 0.02)
+		material.set_shader_parameter("contact_dark", 0.0)
+	var outline: ShaderMaterial = ShaderMaterial.new()
+	outline.shader = OUTLINE_SHADER
+	match profile:
+		"shadow":
+			outline.set_shader_parameter("outline_color", Color(0.16, 0.03, 0.22))
+			outline.set_shader_parameter("thickness", 0.022)
+		"hero":
+			# A thin warm dark-brown ink line (reads hand-drawn, not black-marker).
+			outline.set_shader_parameter("outline_color", Color(0.16, 0.08, 0.05))
+			outline.set_shader_parameter("thickness", 0.013)
+		_:
+			outline.set_shader_parameter("outline_color", PROP_OUTLINE_COLOR)
+			outline.set_shader_parameter("thickness", PROP_OUTLINE_THICKNESS)
+	material.next_pass = outline
 	return material
 
 

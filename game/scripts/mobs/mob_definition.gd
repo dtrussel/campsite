@@ -42,10 +42,16 @@ extends Resource
 ## Fx.burst kinds (and sounds) for rising out of the ground and dying.
 @export var spawn_burst: StringName = &"shadow_spawn"
 @export var death_burst: StringName = &"shadow_death"
-## Loot: every `drop_every_n_kills`-th kill of this mob type (counted
-## per run) leaves a `drop_item` pickup (Glow Shards for imps). 0 = never.
+## Loot (feature 036): each kill leaves a `drop_item` pickup (Glow
+## Shards) with `drop_chance`; after `drop_pity` kills of this type in a
+## row without one, the next is sure to drop (0 = no pity). Counted per
+## mob type, so beast kills never shift the imp drops.
 @export var drop_item: StringName = &""
-@export var drop_every_n_kills: int = 0
+@export_range(0.0, 1.0) var drop_chance: float = 0.0
+@export var drop_pity: int = 0
+## Shadow creatures take light damage inside the Moon Lantern's ring
+## (feature 036); everything is slowed there.
+@export var hurt_by_moonlight: bool = false
 @export var ui_color: Color = Color(0.6, 0.4, 0.7, 1)
 
 
@@ -55,6 +61,16 @@ extends Resource
 @export_file("*.tscn") var scene_path: String = ""
 
 var _scene_cache: PackedScene = null
+
+
+## Whether a kill drops loot, given the kills since the last drop and
+## a random roll in [0, 1).
+func rolls_drop(misses: int, roll: float) -> bool:
+	if drop_item == &"":
+		return false
+	if drop_pity > 0 and misses + 1 >= drop_pity:
+		return true
+	return roll < drop_chance
 
 
 func get_scene() -> PackedScene:

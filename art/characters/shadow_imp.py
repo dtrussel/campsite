@@ -104,6 +104,16 @@ def curved_tube(points, radii, name):
     return obj
 
 
+def densify(obj, levels=2):
+    """Splits every face (simple subdivision, the shape is kept) so a
+    per-vertex colour pass can paint fine stripes, veins and rings on a
+    low-res part. Only the dense bake copy sees the extra faces."""
+    sub = obj.modifiers.new("Densify", "SUBSURF")
+    sub.subdivision_type = "SIMPLE"
+    sub.levels = levels
+    common.apply_all_modifiers(obj)
+
+
 def rigid(obj, bone):
     group = obj.vertex_groups.new(name=bone)
     group.add(list(range(len(obj.data.vertices))), 1.0, "REPLACE")
@@ -208,27 +218,29 @@ def colour_body(body):
             if belly > 0:
                 c = common.lerp(c, BELLY, min(1.0, belly * 2.2) * _smooth01((-normal.y - 0.15) * 3.0))
         # Magenta stripes: bands round the arms (T-pose: along x) and legs.
+        # (Anti-aliased: a soft 0..1 band with a slightly ragged,
+        # brushed edge instead of a hard threshold.)
         if ax > 0.3 and pos.z > 0.9 and normal.z > -0.2:
-            if math.sin(ax * 48.0) > 0.72:
-                c = common.lerp(c, STRIPE, 0.8)
+            band = math.sin(ax * 48.0 + 0.25 * noise.noise(pos * 18.0)) - 0.72
+            c = common.lerp(c, STRIPE, _smooth01(band / 0.1) * 0.8 * _smooth01((normal.z + 0.2) * 4.0))
         if pos.z < 0.5 and pos.z > 0.12 and ax * normal.x * (1 if pos.x > 0 else -1) > 0.0:
-            if math.sin(pos.z * 46.0) > 0.78 and abs(normal.x) > 0.35:
-                c = common.lerp(c, STRIPE, 0.75)
+            band = math.sin(pos.z * 46.0 + 0.25 * noise.noise(pos * 18.0)) - 0.78
+            c = common.lerp(c, STRIPE, _smooth01(band / 0.09) * 0.75 * _smooth01((abs(normal.x) - 0.35) * 5.0))
         # Darker spiky chevrons down the back.
         if normal.y > 0.4 and 0.45 < pos.z < 1.25:
             v = pos.z * 9.0 + ax * 7.0
-            if (v - math.floor(v)) < 0.28 and ax < 0.1 + 0.08 * (v - math.floor(v)):
-                c = common.lerp(c, BODY_DARK, 0.8)
+            f = v - math.floor(v)
+            chevron = _smooth01((0.28 - f) / 0.05) * _smooth01((0.1 + 0.08 * f - ax) / 0.02)
+            c = common.lerp(c, BODY_DARK, chevron * 0.8)
         if _in_face(pos, normal):
             # Magenta brow markings arcing over the eyes.
             for side in (-1, 1):
                 dx, dz = pos.x - side * EYE_X, pos.z - EYE_Z
                 r = math.hypot(dx / 1.0, dz / 1.0)
-                if 0.175 < r < 0.21 and dz > 0.02 and side * dx > -0.06:
-                    c = common.lerp(c, STRIPE, 0.85)
+                brow = _smooth01((0.0205 - abs(r - 0.1925)) / 0.006) * _smooth01((dz - 0.01) / 0.02) * _smooth01((side * dx + 0.07) / 0.02)
+                c = common.lerp(c, STRIPE, brow * 0.85)
                 # A thin darker rim round the eye.
-                if 0.15 < r < 0.175:
-                    c = common.lerp(c, BODY_DARK, 0.5)
+                c = common.lerp(c, BODY_DARK, _smooth01((0.0155 - abs(r - 0.1625)) / 0.005) * 0.5)
             # The grin, with a pink tongue hint in the middle.
             if abs(pos.x) < 0.2:
                 m = _smooth01((0.014 - abs(pos.z - _mouth_z(pos.x))) / 0.007) * _smooth01((0.2 - abs(pos.x)) / 0.03)
@@ -253,13 +265,23 @@ def horns(body):
         pts = [base, base + Vector((side * 0.14, 0.03, 0.15)), base + Vector((side * 0.2, 0.09, 0.33)),
                base + Vector((side * 0.13, 0.16, 0.47)), base + Vector((side * 0.02, 0.17, 0.5))]
         horn = curved_tube(pts, [0.085, 0.07, 0.05, 0.03, 0.008], "horn")
+        densify(horn, 2)
 
-        def colour(pos, normal, base=base):
+        def ring(pos, base=base):
             t = (pos - base).length / 0.55
+            return t, _smooth01((math.sin(t * 40.0) - 0.6) / 0.3) * _smooth01((0.85 - t) / 0.2)
+        # Carved growth rings, fading out toward the smooth tip.
+        for v in horn.data.vertices:
+            _t, g = ring(v.co)
+            v.co = v.co - v.normal * 0.007 * g
+        horn.data.update()
+
+        def colour(pos, normal):
+            t, g = ring(pos)
             c = common.lerp(HORN, HORN_TIP, _smooth01(t * 1.4 - 0.4))
-            if math.sin(t * 40.0) > 0.8:
-                c = common.lerp(c, HORN_TIP, 0.4)
-            return c
+            c = common.lerp(c, HORN_TIP, g * 0.5)
+            # Fine lengthwise striations.
+            return common.lerp(c, HORN_TIP, _smooth01((noise.noise(pos * 90.0) - 0.3) * 4.0) * 0.2)
         common.color_by(horn, colour)
         parts.append(horn)
     return parts
@@ -269,7 +291,7 @@ def bat_ear(side, body):
     """A large, flat, pointed bat ear angled out and up, with a scalloped
     lower edge and a magenta inside facing forward."""
     length, width = 0.52, 0.34
-    rows, cols = 14, 6
+    rows, cols = 36, 12
     bm = bmesh.new()
     grid = []
     for i in range(rows + 1):
@@ -309,12 +331,15 @@ def bat_ear(side, body):
 
     def colour(pos, normal):
         t = (pos - base).length / length
-        inner = normal.y < -0.3 and t < 0.85
-        c = INNER_EAR if inner else common.lerp(BODY, BODY_DARK, _smooth01(0.3 - normal.z * 0.3))
-        if inner and t > 0.7:
-            c = common.lerp(c, BODY, 0.5)
-        return c
-    common.color_by(obj, colour, smooth=False)
+        outer = common.lerp(BODY, BODY_DARK, _smooth01(0.3 - normal.z * 0.3))
+        inner = _smooth01((-normal.y - 0.3) / 0.15) * _smooth01((0.85 - t) / 0.04)
+        ic = common.lerp(INNER_EAR, BODY, _smooth01((t - 0.7) / 0.05) * 0.5)
+        # Darker veins fanning from the root through the membrane.
+        rel = pos - base
+        vein = abs(math.sin(math.atan2(rel.z, abs(rel.x) + 1e-4) * 9.0))
+        ic = common.lerp(ic, MEMBRANE_DARK, _smooth01((0.1 - vein) / 0.07) * _smooth01(t * 3.0) * 0.45)
+        return common.lerp(outer, ic, inner)
+    common.color_by(obj, colour)
     return obj
 
 
@@ -360,22 +385,28 @@ def wings():
         solid = wing.modifiers.new("Solid", "SOLIDIFY")
         solid.thickness = 0.03
         common.apply_all_modifiers(wing)
+        # Even, dense quads (no slivers converging on the root), so the
+        # struts and veins paint cleanly and bake without speckles.
+        common.voxel_remesh(wing, voxel=0.008)
         common.shade_smooth(wing, auto_angle=40)
         inv = rot.inverted()
 
         def colour(pos, normal, side=side, inv=inv):
             local = inv @ (pos - Vector((side * 0.15, 0.27, 1.12)))
             lx, lz = abs(local.x), local.z
+            c = common.lerp(MEMBRANE, MEMBRANE_DARK, _smooth01(lx * 1.2 - 0.5))
+            vein = abs(math.sin(math.atan2(lz, lx) * 14.0))
+            # (Faded out near the root, where the veins converge.)
+            c = common.lerp(c, MEMBRANE_DARK, _smooth01((0.1 - vein) / 0.05) * _smooth01((math.hypot(lx, lz) - 0.16) / 0.1))
+            # A darker hem along the scalloped trailing edge.
+            c = common.lerp(c, MEMBRANE_DARK, _smooth01(math.hypot(lx, lz) * 1.9 - 0.9) * 0.4)
             for tx, tz in tips:
                 # Distance to the strut from the root to each finger tip.
                 d = abs(lx * tz - lz * tx) / math.hypot(tx, tz)
-                if d < 0.022 and lx * tx + lz * tz > 0:
-                    return BODY_DARK
-            if lx < 0.07:
-                return BODY
-            vein = abs(math.sin(math.atan2(lz, lx) * 14.0)) < 0.08
-            return MEMBRANE_DARK if vein else common.lerp(MEMBRANE, MEMBRANE_DARK, _smooth01(lx * 1.2 - 0.5))
-        common.color_by(wing, colour, smooth=False)
+                if lx * tx + lz * tz > 0:
+                    c = common.lerp(c, BODY_DARK, _smooth01((0.024 - d) / 0.006))
+            return common.lerp(c, BODY, _smooth01((0.075 - lx) / 0.01))
+        common.color_by(wing, colour)
         parts.append(wing)
     return parts
 
@@ -387,6 +418,7 @@ def tail():
                                (0.24, 0.98, 0.66), (0.2, 0.96, 0.9), (0.12, 0.88, 1.04))]
     radii = [0.075, 0.062, 0.054, 0.046, 0.04, 0.034, 0.028]
     t = curved_tube(pts, radii, "tail")
+    densify(t, 2)
     total = sum((b - a).length for a, b in zip(pts, pts[1:]))
 
     def along(pos):
@@ -403,10 +435,10 @@ def tail():
     def tail_colour(pos, normal):
         s = along(pos)
         c = common.lerp(BODY, BODY_DARK, _smooth01(0.3 - normal.z * 0.3))
-        if s > 0.15 and math.sin(s * 70.0) > 0.7:
-            c = common.lerp(c, STRIPE, 0.8)
+        if s > 0.15:
+            c = common.lerp(c, STRIPE, _smooth01((math.sin(s * 70.0) - 0.7) / 0.1) * 0.8)
         return c
-    common.color_by(t, tail_colour, smooth=False)
+    common.color_by(t, tail_colour)
     # Arrow tip, lying in the plane of the curl, pointing along the tail.
     end, prev = pts[-1], pts[-2]
     fwd = (end - prev).normalized()

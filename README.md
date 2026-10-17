@@ -50,6 +50,12 @@ Feature 021 adds the **Mushroom Gremlin**, a fast little thief. It
 grabs a few of your most plentiful resource and runs back to the forest.
 Catch it to get the loot back.
 
+Feature 031 brings the look closer to the team's concept art.
+- Golden-hour light and a miniature tilt-shift view.
+- A flowery meadow with a dirt path.
+- Cozy camp decor.
+- Warm lantern light at night.
+
 Feature 020 adds **3- or 7-night runs**. The game **autosaves every
 morning**, and **Continue** on the title screen resumes the run. See [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md)
 and [`.features/005-first-playtest-build/handoff.md`](.features/005-first-playtest-build/handoff.md).

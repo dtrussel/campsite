@@ -29,7 +29,7 @@ func _validate_key_art() -> void:
 		if not ResourceLoader.exists(String(entry[0])):
 			_fail("loading screen art missing: %s" % entry[0])
 		for tip in entry[1]:
-			if String(tip[1]) != "" and not ResourceLoader.exists(String(tip[1])):
+			if String(tip[1]) != "" and not String(tip[1]).begins_with("{") and not ResourceLoader.exists(String(tip[1])):
 				_fail("loading tip icon missing: %s" % tip[1])
 		var screen: LoadingScreen = LoadingScreen.preview(0.6, i)
 		if screen.get_child_count() == 0:
@@ -87,6 +87,8 @@ func _validate_data() -> void:
 		_check_scene(mob.scene_path, mob.resource_path)
 		if mob.drop_item != &"" and not item_ids.has(mob.drop_item):
 			_fail("%s drops unknown item '%s'" % [mob.resource_path, mob.drop_item])
+		if mob.drop_item != &"" and mob.drop_chance <= 0.0 and mob.drop_pity <= 0:
+			_fail("%s has a drop_item but can never drop it" % mob.resource_path)
 
 	var recipe_ids: Dictionary = {}
 	for res in DefinitionLoader.load_all("res://resources/recipes/"):
@@ -104,7 +106,9 @@ func _validate_data() -> void:
 		if recipe.result_icon() == null:
 			_fail("%s has no result icon (output item icon or icon_name)" % recipe.resource_path)
 
+	_validate_heroes(recipe_ids)
 	_validate_audio()
+	_validate_story()
 
 	# Every item a building or recipe needs must be obtainable somewhere:
 	# as a resource node yield/bonus or as a recipe output.
@@ -114,7 +118,7 @@ func _validate_data() -> void:
 			obtainable[(res as CraftingRecipe).output_id] = true
 	for res in DefinitionLoader.load_all("res://resources/mobs/"):
 		var drop: StringName = (res as MobDefinition).drop_item
-		if drop != &"" and (res as MobDefinition).drop_every_n_kills > 0:
+		if drop != &"" and ((res as MobDefinition).drop_chance > 0.0 or (res as MobDefinition).drop_pity > 0):
 			obtainable[drop] = true
 	var node_scenes: PackedStringArray = PackedStringArray()
 	_collect("res://scenes/resources/", node_scenes)
@@ -158,7 +162,7 @@ func _validate_audio() -> void:
 	for loop_name in ["music_day", "music_night", "ambience_day", "ambience_night", "ambience_campfire"]:
 		if library.get(loop_name) == null:
 			_fail("audio library has no %s" % loop_name)
-	for bus_name in [&"Music", &"SFX", &"UI"]:
+	for bus_name in [&"Music", &"SFX", &"UI", &"Voice"]:
 		if AudioServer.get_bus_index(bus_name) == -1:
 			_fail("audio bus '%s' missing (default_bus_layout.tres)" % bus_name)
 
@@ -206,3 +210,131 @@ func _collect(dir_path: String, out: PackedStringArray) -> void:
 
 func _fail(message: String) -> void:
 	_errors.append(message)
+
+
+## Feature 034: every hero on the select screen is complete, and its
+## signature recipe exists.
+func _validate_heroes(recipe_ids: Dictionary) -> void:
+	var hero_ids: Dictionary = {}
+	for hero in HeroRoster.all():
+		_check_id(hero.id, hero.resource_path, hero_ids)
+		if hero.model_scene == null or hero.stats == null or hero.portrait == null:
+			_fail("%s needs a model, stats and a portrait" % hero.resource_path)
+		if hero.signature_recipe != &"" and not recipe_ids.has(hero.signature_recipe):
+			_fail("%s has unknown signature recipe '%s'" % [hero.resource_path, hero.signature_recipe])
+	if HeroRoster.all().size() < 2:
+		_fail("the roster needs at least two heroes (a hero and a companion)")
+
+
+## Feature 035: every story beat is complete and readable, each
+## chapter has its intro, dawn cards and ending, every hero has lines,
+## and every voice file belongs to a line. Lines still waiting for a
+## recording are counted, not failed.
+func _validate_story() -> void:
+	var beat_ids: Dictionary = {}
+	var line_ids: Dictionary = {}
+	var hero_ids: Array[String] = []
+	for hero in HeroRoster.all():
+		hero_ids.append(String(hero.id))
+	for res in StoryLibrary.all():
+		var beat: StoryBeat = res as StoryBeat
+		if beat == null:
+			_fail("%s is not a StoryBeat" % res.resource_path)
+			continue
+		_check_id(beat.id, beat.resource_path, beat_ids)
+		if not StoryBeat.TRIGGERS.has(beat.trigger):
+			_fail("%s has unknown trigger '%s'" % [beat.resource_path, beat.trigger])
+		if not StoryLibrary.CHAPTER_NAMES.has(beat.chapter) and beat.chapter != 0:
+			_fail("%s has unknown chapter %d" % [beat.resource_path, beat.chapter])
+		if beat.trigger in [&"intro", &"win"] and beat.painting == null:
+			_fail("%s is a storybook page without a painting" % beat.resource_path)
+		for hero_id in hero_ids:
+			if beat.lines_for(StringName(hero_id)).is_empty():
+				_fail("%s has no lines when %s is played" % [beat.resource_path, hero_id])
+		for value in beat.lines:
+			var line: Dictionary = value as Dictionary
+			var line_id: String = String(line.get("id", ""))
+			var text: String = String(line.get("text", ""))
+			_check_id(StringName(line_id), "%s line" % beat.resource_path, line_ids)
+			if not StoryBeat.SPEAKERS.has(String(line.get("speaker", ""))) and not hero_ids.has(String(line.get("speaker", ""))):
+				_fail("%s line %s has unknown speaker '%s'" % [beat.resource_path, line_id, line.get("speaker", "")])
+			var face: String = String(line.get("face", ""))
+			if face != "" and (String(line.get("speaker", "")) != "mum" or not StoryLibrary.MUM_FACES.has(face)):
+				_fail("%s line %s has face '%s' (only Mum's lines, one of %s)" % [beat.resource_path, line_id, face, StoryLibrary.MUM_FACES])
+			var when: String = String(line.get("when", ""))
+			if when != "" and not hero_ids.has(when):
+				_fail("%s line %s is for unknown hero '%s'" % [beat.resource_path, line_id, when])
+			if text == "" or text.length() > 60:
+				_fail("%s line %s must be 1-60 characters (%d)" % [beat.resource_path, line_id, text.length()])
+			if text.replace("{hero}", "").replace("{companion}", "").contains("{"):
+				_fail("%s line %s has an unknown placeholder" % [beat.resource_path, line_id])
+	for chapter in StoryLibrary.CHAPTER_NAMES.keys():
+		for trigger in [&"intro", &"win"]:
+			if StoryLibrary.find(trigger, chapter).is_empty():
+				_fail("chapter %d has no %s pages" % [chapter, trigger])
+		var nights: int = 3 if chapter == 1 else 7
+		for night in range(1, nights):
+			if StoryLibrary.first(&"dawn", chapter, night) == null:
+				_fail("chapter %d has no dawn card for night %d" % [chapter, night])
+	for trigger in [&"shard", &"loss_fire", &"loss_hero"]:
+		if StoryLibrary.first(trigger, 1) == null or StoryLibrary.first(trigger, 2) == null:
+			_fail("story has no '%s' beat for every chapter" % trigger)
+	for face in StoryLibrary.MUM_FACES:
+		if StoryLibrary.speaker_portrait("mum", face) != load(StoryLibrary.MUM_PORTRAIT.replace(".png", "_%s.png" % face)):
+			_fail("Mum's '%s' portrait is missing (art/ui/story_art.py)" % face)
+	if not ResourceLoader.exists(MumArrival.MODEL_PATH):
+		_fail("Mum's model is missing: %s (art/characters/mum.py)" % MumArrival.MODEL_PATH)
+	var story_lines: int = line_ids.size()
+	_validate_barks(line_ids, hero_ids)
+	var voiced: int = 0
+	for line_id in line_ids.keys():
+		if StoryLibrary.voice(String(line_id)) != null:
+			voiced += 1
+	var dir: DirAccess = DirAccess.open(StoryLibrary.VOICE_DIR)
+	if dir != null:
+		for file_name in dir.get_files():
+			var clean: String = file_name.trim_suffix(".import").trim_suffix(".remap")
+			if clean.get_extension() in StoryLibrary.VOICE_EXTENSIONS and not line_ids.has(StringName(clean.get_basename())):
+				_fail("voice file %s matches no story line or bark id" % clean)
+	print("validate_project: story %d beats, %d lines, %d barks, %d voiced" % [beat_ids.size(), story_lines, line_ids.size() - story_lines, voiced])
+
+
+## The siblings' barks (feature 037): known triggers and roles, at least
+## two lines per hero for every trigger, lines of 1-30 characters, ids
+## unique among all story lines, and no placeholders (barks are voiced).
+## `line_ids` gets the bark ids, so voice files can match them.
+func _validate_barks(line_ids: Dictionary, hero_ids: Array[String]) -> void:
+	var barks: BarkSet = load(BarkLibrary.BARKS_PATH) as BarkSet
+	if barks == null:
+		_fail("%s is missing or not a BarkSet" % BarkLibrary.BARKS_PATH)
+		return
+	for trigger in barks.triggers.keys():
+		var tuning: Dictionary = barks.triggers[trigger] as Dictionary
+		if not BarkSet.ROLES.has(String(tuning.get("role", ""))):
+			_fail("bark trigger '%s' has unknown role '%s'" % [trigger, tuning.get("role", "")])
+		if not String(tuning.get("once", "")) in ["", "night"]:
+			_fail("bark trigger '%s' has unknown once '%s'" % [trigger, tuning.get("once", "")])
+		for hero_id in hero_ids:
+			for played in hero_ids:
+				if BarkLibrary.lines_for(StringName(trigger), StringName(hero_id), StringName(played)).size() < 2:
+					_fail("bark trigger '%s' has fewer than 2 lines for %s (%s played)" % [trigger, hero_id, played])
+	for value in barks.lines:
+		var line: Dictionary = value as Dictionary
+		var line_id: String = String(line.get("id", ""))
+		var text: String = String(line.get("text", ""))
+		_check_id(StringName(line_id), "%s bark" % BarkLibrary.BARKS_PATH, line_ids)
+		if not barks.triggers.has(StringName(String(line.get("trigger", "")))):
+			_fail("bark %s has unknown trigger '%s'" % [line_id, line.get("trigger", "")])
+		if not hero_ids.has(String(line.get("speaker", ""))):
+			_fail("bark %s has unknown speaker '%s'" % [line_id, line.get("speaker", "")])
+		var when: String = String(line.get("when", ""))
+		if when != "" and not hero_ids.has(when):
+			_fail("bark %s is for unknown hero '%s'" % [line_id, when])
+		if text == "" or text.length() > 30:
+			_fail("bark %s must be 1-30 characters (%d)" % [line_id, text.length()])
+		if text.contains("{"):
+			_fail("bark %s has a placeholder; barks are voiced, write one per hero" % line_id)
+	for trigger in [&"low_hp", &"thief", &"thief_caught", &"first_beast", &"level_up", &"sunset", &"night_start",
+			&"lantern_stage", &"companion_down", &"companion_up", &"danger_behind"]:
+		if not barks.triggers.has(trigger):
+			_fail("bark trigger '%s' is fired by BarkDirector but has no tuning" % trigger)

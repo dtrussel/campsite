@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="StoryBeat" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/story/story_beat.gd" id="1_beat"]
+
+[resource]
+script = ExtResource("1_beat")
+id = &"dawn.c2.n3"
+chapter = 2
+trigger = &"dawn"
+night = 3
+page = 1
+lines = [{
+"id": "dawn.c2.n3.leo.1",
+"speaker": "leo",
+"text": "I found Mum's boot print by the stream!",
+"when": "leo"
+}, {
+"id": "dawn.c2.n3.leo.2",
+"speaker": "nela",
+"text": "It points to the Hollow. She went that way.",
+"when": "leo"
+}, {
+"id": "dawn.c2.n3.nela.1",
+"speaker": "nela",
+"text": "Mum's boot prints. They lead into the Hollow.",
+"when": "nela"
+}, {
+"id": "dawn.c2.n3.nela.2",
+"speaker": "leo",
+"text": "Then that's where we go. Later. In daylight.",
+"when": "nela"
+}]

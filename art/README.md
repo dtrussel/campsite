@@ -19,12 +19,16 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 
 | Path | What |
 |------|------|
+| `reference/concept-2026-10/` | The team's concept art (WebP, reference only) and its index. The style guide is [`docs/design/art-direction.md`](../docs/design/art-direction.md) |
 | `lib/common.py` | Scene reset, mesh helpers, sRGB→linear colours, per-vertex/face colouring, painted grime, remesh/decimate, glTF export |
 | `lib/paint_bake.py` | **The painted look**: bakes base colour, a warm-top/cool-bottom tint, AO, edge highlights and brush noise into one texture (`<name>_painted` material) |
+| `lib/detail.py` | Feature 031 M6: **dense detail**. `bake_prop` and `bake_prop_lows` model a prop dense and bake its painted look onto the budget mesh (`paint_bake.paint_direct`). Dense helpers: `bark_log`, `plank`, `leaf_clump`, `colour_foliage`, `cull_hidden`. M8: `scatter_leaves` and `leaf_colour` put individual leaves or needles over a foliage shell |
 | `lib/preview.py` | Preview renders |
-| `nature/` | Trees (3 variants + stump), autumn pines, rocks, berry bush |
+| `lib/measure.py` | Feature 043: **measured proportion checks**. `landmarks()` and `widths()` of the posed meshes as fractions of the height, and `silhouette()` (orthographic flat-white front or side). Compare them with landmarks read off a concept sheet and iterate: a measured loop, not judging renders by eye |
+| `nature/` | Trees (3 variants + stump), autumn pines (the Resin trees) and green border pines (`pine_c/d`), rocks, berry bush and flowering shrub (`flower_bush`) |
 | `props/camp.py` | Campfire, tent, fence, watch post, torch, woodpile, crate, barrel, toadstools |
 | `props/forage.py` | Feature 017: clay pit, mushroom patch and junk pile (each with a gathered variant), snap trap (base plus a jaw that Godot animates), glow lantern, glow shard, hearth ring. Feature 019: reinforced wall, storage crate, crafting table. Decimated to the 1.4k prop budget |
+| `props/homestead.py` | Feature 031 decor after the October concept art: log and stump seats, cooking tripod, tent-glyph signpost, lantern post (emissive glass), striped market stall, stone well with a tile roof |
 | `props/haunted.py` | Feature 025: jack-o'-lantern (emissive face) and small pumpkin, camp lantern, water bucket, three dead trees, three hills and two mountains for the backdrop. Replaces the last KayKit props |
 | `characters/bramble_beast.py` | Feature 026 remodel of the Bramble Beast after `.features/026-bramble-remodel/reference/concept.png`: sculpted face, bark grain, moss mantle, log fists, antlers, leaf crown, berries, vines, thorns; lengthened forearms and wider legs on the Skeleton Minion rig; high-to-low bake |
 | `characters/beast_anims.py` | Feature 026: the beast's own hand-keyed clips (idle, walk, slam, hit, spawn, death, roar), replacing the rig's stock clips in its GLB |
@@ -34,6 +38,8 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 | `characters/shadow_imp.py` | Feature 028 remodel after `.features/028-imp-remodel/reference/concept.png`: big head with oversized glowing eyes and slit pupils, magenta brows, snout, fanged grin; pink bat ears, curled horns, spiky crest, small bat wings, S-curling arrow tail; lavender belly, magenta stripes, back chevrons, cream claws; high-to-low bake. Also holds the rig helpers the other creatures import |
 | `characters/imp_anims.py` | Feature 028: the imp's own clips (idle, run, attack, hit, spawn, death) |
 | `ui/key_art.py` | Feature 029: prepares the team's key art (`ui/source/key_art.png`) and the three monster paintings (`ui/source/loading_*.png`, feature 030) as loading-screen WebPs, and the boot splash with the gold CAMPSITE logo (Pillow) |
+| `characters/mum.py` | Feature 043: Mum after `reference/concept-2026-10/14_mum_character_sheet.webp`, on the same rig as the kids. Her proportions are solved against the sheet's turnaround in head units: about 5.8 heads tall (a stylized build, not a realistic 7.5), `Proportions(legs=3.1, spine=0.92, arms=1.4, shins=3.7)`, and a head built at kid scale and scaled by `HEAD_SCALE`. `MEASURE=1` prints her landmarks against the sheet's and renders front and side silhouettes; lime ranger jacket over a black top, tan scarf, cargo trousers, red-laced boots, olive pack with a blue bedroll, tin mug and compass; long wavy hair in a low bun. Adds a hand-keyed `Wave` clip (`rig_anims`) to the 76 stock clips |
+| `ui/story_art.py` | Feature 043: cuts Mum's six expression portraits (round, brass-ringed, 192 px) from `ui/source/mum_sheet.png` into `game/assets/ui/story/` |
 | `characters/leo.py`, `nela.py` | Leo and Nela, modelled from the concept art on the KayKit adventurer rig (all 76 clips). The concept sheets are the reference for faces, outfits and gear (feature 012); each script's docstring lists what it follows |
 | `characters/chibi.py` | Kit for the kids: fused, auto-weighted clothing; rigid gear; face decals (eyes, brows, smile); hair locks; boots, backpack parts. `QUICK=1` previews without baking |
 | `characters/head_loft.py` | **Drawn game heads** (feature 014): a loft through superellipse sections (front outline and side profile per character) with a few planar forms: a wedge nose, inset eye plates, a brow shelf, cheek, lip and chin planes. The face itself is painted. Also the sculpted ears (`ear()`). Tune with a `HeadLoft` per character |
@@ -47,8 +53,9 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
   (`scripts/utilities/stylize.gd`). The hero and shadow profiles also add an
   ink outline.
 - **Emissive** flat materials (eyes, wand star, embers) render unshaded.
-- **Triangle budgets:** imps ≤ 12k; the hero kids ≤ 40k (about 35k: body and clothes ~18–20k, head and ears ~4.5k, hair ~9–10k, each prop ~1.5k; Godot makes distance LODs on import), trees ≤ 3k, props ≤ 1.5k. The kids bake at 1024 (they are under 100 px on screen) and export WebP textures.
+- **Triangle budgets:** imps ≤ 12k; the hero kids ≤ 40k (about 35k: body and clothes ~18–20k, head and ears ~4.5k, hair ~9–10k, each prop ~1.5k; Godot makes distance LODs on import), trees ≤ 5.2k (M8: about 4k of it is scattered leaves; pines 3.6k, berry bush 4.5k), props ≤ 1.5k. The kids bake at 1024 (they are under 100 px on screen) and export WebP textures.
 - **High-to-low bake:** the kid scripts build dense meshes (voxel cloth with folds, the 100-ring head loft, per-vertex colours) and `chibi.lowpoly(mesh, tris)` decimates each one to its budget while keeping a dense copy. `paint_bake.paint(mesh, high=copy)` paints the look on the dense copy (so stripes, folds, AO and the face stay crisp), then transfers it onto the low mesh with a selected-to-active colour bake. `HIGH_POLY=1` skips the decimation, to compare.
+- **Prop detail:** model props dense and finish them with `detail.bake_prop(parts, name, budget, ray=...)`, so carved detail (bark, plank seams, tiles, stitching) lives in the texture. Check a model in the game look with `game/tools/model_gallery.tscn` (usage is in its header).
 - **Draft bakes:** `BAKE_SIZE=512 .venv-blender/bin/python art/characters/nela.py` bakes the painted look at low resolution with fewer samples (about a minute per kid at 256, a few minutes at 512–1024) and renders the previews, but never exports to `game/assets` (unless `DRAFT_EXPORT=1`, for a quick look in Godot; do not commit those). Use it to review paint between milestones; run the full 1024 bake only for a release.
 - **Sculpt review:** `SCULPT=1 QUICK=1 .venv-blender/bin/python art/characters/leo.py` renders matte clay views (front, 3/4, side, back), game-size silhouettes and clay animation frames, without baking (`preview.render_clay`, `preview.render_silhouette`).
 - **Shape kit (chibi):** `limb` (elliptical lofted sections for anatomy), `fold` (sculpted cloth folds: parallel or radiating), `hem_ring` (rolled hems), `sculpted_hand`, `sculpted_boot`, `webbing`, `buckle`, `bedroll_detail`, `hair_clump(sharp=, twist=)`.
@@ -68,8 +75,9 @@ soundfile) on first run.
 | Path | What |
 |------|------|
 | `audio/dsp.py` | Oscillators, envelopes, filters, a convolution reverb, and instruments: `pluck` (Karplus-Strong guitar), `bell`, `pad`, `knock` (wood), `owl`. `write()` normalises and encodes the result |
-| `audio/sfx.py` | One-shots in the `SOUNDS` table. Each id is written as `sfx/<id>_<n>.ogg` (variants). Ids match `Fx.burst` kinds where one exists |
+| `audio/sfx.py` | One-shots in the `SOUNDS` table. Each id is written as `sfx/<id>_<n>.ogg` (variants). Ids match `Fx.burst` kinds where one exists. `chirp_leo` / `chirp_nela` are the barks' babble until recordings arrive (feature 037) |
 | `audio/music.py` | Seamless loops: `music/day.ogg`, `music/night.ogg`, and `ambience/{day,night,campfire}.ogg` |
+| `audio/voice.py` | Generated voice lines: every story line and bark, spoken with Kokoro TTS (Apache-2.0, offline) and written as `voice/<line id>.ogg`. Casting is the `CAST` table; `--audition` renders candidates with their measured pitch. Run `tools/build_audio.sh voice [id prefix or speaker]`; it installs `kokoro-onnx` and downloads the model (~350 MB, gitignored) on first use. Placeholders until real recordings replace them |
 
 - **Tone:** warm, toy-like and never harsh (the players are young kids). Imps are silly ("poof" and a squeak), not scary.
 - **Adding a sound:**

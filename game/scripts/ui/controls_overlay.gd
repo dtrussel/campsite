@@ -32,7 +32,7 @@ func _ready() -> void:
 	divider_row.add_child(UiKit.divider(560))
 	column.add_child(divider_row)
 	column.add_child(UiKit.picture_guide(2))
-	_start_button = HudWidgets.icon_button("play", "Go!", close, Color(0.5, 1.0, 0.55), null, false)
+	_start_button = HudWidgets.icon_button("play", "Go!", close, Color(0.55, 0.9, 0.4), null, false)
 	var row: CenterContainer = CenterContainer.new()
 	row.add_child(_start_button)
 	column.add_child(row)

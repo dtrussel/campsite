@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="StoryBeat" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/story/story_beat.gd" id="1_beat"]
+
+[resource]
+script = ExtResource("1_beat")
+id = &"loss.fire"
+chapter = 0
+trigger = &"loss_fire"
+night = 0
+page = 1
+lines = [{
+"id": "loss.fire.1",
+"speaker": "narrator",
+"text": "The dark came in... but the moon will rise again."
+}]
