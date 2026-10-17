@@ -63,6 +63,12 @@ func _ready() -> void:
 	camera.look_at(Vector3(-3.2, 0.6, -2.6), Vector3.UP)
 	await _settle(0.3)
 	_shot(out, "close_tent")
+	# Close-up of the campfire flames, side-on and from the game pitch.
+	for view in [["close_fire", Vector3(0, 1.6, 3.6)], ["close_fire_top", Vector3(0, 4.0, 3.6)]]:
+		camera.global_position = view[1]
+		camera.look_at(Vector3(0, 0.8, 0), Vector3.UP)
+		await _settle(0.3)
+		_shot(out, view[0])
 	get_tree().quit()
 
 

@@ -197,7 +197,10 @@ func _collect_meshes(node: Node, out: Array[MeshInstance3D]) -> void:
 	for child in node.get_children():
 		if child is HealthBar3D:
 			continue
-		if child is MeshInstance3D and (child as MeshInstance3D).visible:
+		# Effect cards (flames, markers) are flagged "skip": an overlay
+		# would fill their whole quad as a pale box.
+		if child is MeshInstance3D and (child as MeshInstance3D).visible \
+				and child.get_meta(&"stylized", "") != "skip":
 			out.append(child)
 		if child is Node3D and not (child as Node3D).visible:
 			continue
