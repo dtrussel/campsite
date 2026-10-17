@@ -254,4 +254,18 @@ art track in parallel.
 | 030 More loading art | **Done.** Three more team paintings (imp, beast, gremlin) join the loading screen, each with matching tips; a load never repeats the previous picture. |
 | 031 Concept look pass | **Done.** Built after the team's October concept art, with a style guide (`docs/design/art-direction.md`).<br>- Golden-hour and teal-night lighting.<br>- A tilt-shift and warm-grade post pass (with a Blur switch).<br>- A flatter camera.<br>- An ochre clearing with a dirt path.<br>- Wildflower drifts, green pines and warm rocks.<br>- Cozy camp decor: seats, cooking tripod, signpost, lantern posts, market stall, stone well, and a cream A-frame tent.<br>- An HD-2D style finish: deeper warm shadows, painted surface detail, ink lines on props, a softer bokeh tilt-shift and a filmic warm grade.<br>- A model detail pass: 60 models rebuilt dense and baked (bark, planks, tiles, stitching, leaf tufts), plus fanned grass and cupped daisies. |
 | 034 Choose your hero | **Done.** A hero select screen after Play: play Leo (melee stick-fighter) or Nela (ranged slinger); the other hero is the AI companion. Signature crafts follow the hero. Later: a companion picker step once there are more heroes. |
-| Next | Open: pick the next focus with the team (ideas: weather, more Nela tasks, a boss night). |
+| 035 Story frame | **Planned.** The story of [`story.md`](../design/story.md): an intro storybook after hero select, a story card at each dawn, chapter endings (3 Nights = Chapter 1, 7 Nights = Chapter 2), and the defeat reason as a story line on the end screen. |
+| 036 Moon Lantern | **Planned.** A lantern pedestal by the tent. Glow Shards are delivered there; each stage widens a safe light ring and weakens imps inside it. Shard drops become a per-mob chance. The HUD shows lantern progress. |
+| 037 Sibling barks | **Planned.** Short speech bubbles on events (low HP, thief, beast, level up, dawn). Lines are keyed by who is played and have a cooldown. |
+| 038 The Hollow King | **Planned.** The final-night boss of Chapter 2: telegraphed attacks, summons and a boss bar. Beating it is the true ending. |
+| 039 Perk cards | **Planned.** On level-up, pick 1 of 3 cards (shared and hero-only) instead of only a flat stat bump. |
+| 040 Tool tiers | **Planned.** The signature crafts get tiers (Stick &rarr; Sturdy &rarr; Ember Stick, Slingshot &rarr; Double &rarr; Glow Sling). The upper tiers cost shards, which the lantern also needs. |
+| 041 Ranger's Journal and Camp Badges | **Planned.** A profile that persists between runs: badges for milestones, mum's journal pages, a scrapbook screen, and unlocks (Chapter 2 / 7 Nights after Chapter 1, cosmetics, starting perks). |
+| 042 Endless mode | **Planned, optional.** "How long can you last?", unlocked by the true ending, with a best-nights record. |
+
+Features 035&ndash;042 come from the mechanics brainstorm of 2026-10 (story
+and meta progression, adventure tone). Their plans are in `.features/035-*`
+to `.features/042-*`. The order is story first (035&ndash;038), then
+choices (039&ndash;040), then meta (041&ndash;042). Ideas that were not
+chosen this time: fire fuel and burn-down, night omens, last stand and
+revive, a trader, well blessings and signpost chores.

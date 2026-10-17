@@ -16,6 +16,10 @@ At night, the trees press in and shapes move at the edge of vision. The
 campfire is the heart of safety; everything is about keeping it lit and
 your family alive until dawn.
 
+The story (an adventure: mum is missing, the moon has gone dark, and the
+kids must rebuild the Moon Lantern) is planned in
+[`story.md`](story.md).
+
 ## B. Core gameplay loop
 
 ### Day
