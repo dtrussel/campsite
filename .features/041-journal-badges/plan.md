@@ -25,7 +25,7 @@ Give players a reason to play again: a persistent profile that remembers achieve
 - **Journal pages:** 10–12 short pages by mum (story layer 3–4 of `story.md`). They are found as a **day chest** that appears at the map edge (one per run, 50% chance) or awarded by certain badges.
 - **Scrapbook screen** from the title (a Journal button), with two tabs:
   - **Badges:** a grid with locked silhouettes and how to earn each one.
-  - **Journal:** pages in a painted book frame.
+  - **Journal:** pages in a painted book frame (a placeholder frame until the team's art arrives).
 - **Unlocks:**
   - Chapter 2 / 7 Nights after Chapter 1 is won;
   - cosmetic tent colours and hero outfits (a tint or material swap on the hero models);

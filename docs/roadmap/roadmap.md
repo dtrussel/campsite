@@ -257,7 +257,7 @@ art track in parallel.
 | 035 Story frame | **Planned.** The story of [`story.md`](../design/story.md): an intro storybook after hero select, a story card at each dawn, chapter endings (3 Nights = Chapter 1, 7 Nights = Chapter 2), and the defeat reason as a story line on the end screen. |
 | 036 Moon Lantern | **Planned.** A lantern pedestal by the tent. Glow Shards are delivered there; each stage widens a safe light ring and weakens imps inside it. Shard drops become a per-mob chance. The HUD shows lantern progress. |
 | 037 Sibling barks | **Planned.** Short speech bubbles on events (low HP, thief, beast, level up, dawn). Lines are keyed by who is played and have a cooldown. |
-| 038 The Hollow King | **Planned.** The final-night boss of Chapter 2: telegraphed attacks, summons and a boss bar. Beating it is the true ending. |
+| 038 The Moon-Eater | **Planned.** The final-night boss of Chapter 2: telegraphed attacks, summons and a boss bar. Beating it is the true ending. |
 | 039 Perk cards | **Planned.** On level-up, pick 1 of 3 cards (shared and hero-only) instead of only a flat stat bump. |
 | 040 Tool tiers | **Planned.** The signature crafts get tiers (Stick &rarr; Sturdy &rarr; Ember Stick, Slingshot &rarr; Double &rarr; Glow Sling). The upper tiers cost shards, which the lantern also needs. |
 | 041 Ranger's Journal and Camp Badges | **Planned.** A profile that persists between runs: badges for milestones, mum's journal pages, a scrapbook screen, and unlocks (Chapter 2 / 7 Nights after Chapter 1, cosmetics, starting perks). |

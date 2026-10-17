@@ -3,7 +3,9 @@
 > Companion to [`game-design-spec.md`](game-design-spec.md). Status:
 > **planned** (features 035&ndash;042, see
 > [`docs/roadmap/roadmap.md`](../roadmap/roadmap.md)). Nothing here is in
-> the game yet. Names marked *(working)* are open for the team.
+> the game yet. Decided with the user (2026-10): the missing adult is
+> **Mum**, the boss is the **Moon-Eater**, and the team provides concept
+> art and animations later (see the Art plan).
 
 ## Tone
 
@@ -21,7 +23,7 @@ runs. It is not a cozy story where nothing is ever wrong.
 ## Premise
 
 Leo and Nela are camping at the edge of the **Hollow Wood** with
-their **mum**, a forest ranger *(working: mum vs. Grandpa)*.
+their **mum**, a forest ranger. Concept art of her will come from the team.
 
 On the first evening the moon goes **dark**. Mum takes her ranger
 lantern, tells the kids to keep the campfire burning no matter what,
@@ -39,7 +41,7 @@ it until mum comes home.
 | 2 | Long ago a **Moon Lantern** stood by the camp and kept the Hollow Wood calm at night. Someone has to rebuild it. | Dawn cards, night 1&ndash;2 (035) |
 | 3 | Mum knew about the lantern: her **field-journal pages** are hidden around the woods. | Day chests, badges (041) |
 | 4 | The shadows are not evil. They are made of **everything the forest lost** (fallen trees, lost toys, forgotten paths) and they are cold, so they crowd toward light. | Journal pages (041) |
-| 5 | At the heart of the Hollow sits the **Hollow King** *(working)*. It is the biggest, loneliest shadow. It swallowed the moon's light, and mum's lantern with it. | Chapter 2 finale (038) |
+| 5 | At the heart of the Hollow sits the **Moon-Eater**. It is the biggest, loneliest shadow. It swallowed the moon's light, and mum's lantern with it, to keep from being cold. | Chapter 2 finale (038) |
 
 ## Run structure: chapters
 
@@ -57,9 +59,9 @@ The two run lengths become chapters of one story.
 ### Chapter 2: "Into the Hollow" (7 Nights)
 - **Intro:** the kids decide to stay and finish the Moon Lantern.
 - **Dawn cards:** journal fragments and growing danger. From night 5, the
-  Hollow King's eyes appear at the treeline.
-- **Final night:** the Hollow King comes to the camp (038).
-- **True ending:** the lantern is lit and the King shrinks into a small,
+  Moon-Eater's eyes appear at the treeline.
+- **Final night:** the Moon-Eater comes to the camp (038).
+- **True ending:** the lantern is lit, the Moon-Eater lets the moon go and shrinks into a small,
   warm shadow that curls up by the fire. The moon comes back and **mum
   walks out of the woods**. The final card shows the family by the fire.
 
@@ -78,7 +80,7 @@ for the reason:
 | **Leo** | Brave, impulsive, jokes when scared. | "Stay behind me, Nela! ...Okay, maybe next to me." |
 | **Nela** | Clever, wry, notices things. | "Those imps only come where it's dark. Light means safe." |
 | **Mum** | Only in journal pages: calm, curious, a ranger's notes. | "Day 3. The moss glows where the shards fell. I think the moon is asking for help." |
-| **Hollow King** *(working)* | No words. Sounds, eyes and one final sigh. | |
+| **Moon-Eater** | No words. Sounds, glowing eyes, a belly full of swallowed moonlight, and one final sigh. | |
 
 Lines are keyed by **who is played**. Leo played gets Nela's replies,
 and the other way round (feature 034's party). A future third hero just
@@ -93,11 +95,17 @@ adds their own lines.
 - No line longer than about 60 characters on a card. Barks stay under
   about 30.
 
+## Art plan
+
+- **For now, placeholders.** Story cards reuse the existing loading-screen
+  paintings, and new models (Moon Lantern, Moon-Eater) start as
+  code-built stand-ins in the 031 style.
+- **Later, from the team:** concept art of mum; intro and chapter-ending
+  paintings; the journal page frame; Moon-Eater concept art and
+  animations. Each feature swaps its art in when it arrives, without
+  changing code. The art is data: painting textures on `StoryBeat`, and a
+  model scene with clips on the mob definition.
+
 ## Open questions for the team
 
-- Mum (ranger) or Grandpa as the missing adult?
-- The boss name: Hollow King, Shadow Stag, Moon-Eater?
-- New paintings: intro (3&ndash;4 cards), the two chapter endings, and the
-  journal page frame. Can the team paint these, or should we reuse the
-  existing loading art at first?
 - Voiced lines, or text and sounds only?

@@ -13,7 +13,7 @@ Glow Shards become the plot. The kids rebuild the **Moon Lantern** by the tent, 
   - from a high stage on, gremlins won't enter the ring.
 - **Shards:** the drop moves from `GameManager.stats.kills % n` to a chance per mob (`drop_chance`) with a pity counter, so a beast kill no longer shifts the imp drop timing. The chapter's goal is tuned so that a careful player finishes on the last night.
 - **HUD:** a moon dial next to the day counter fills by stage. The dawn card (035) names the next stage.
-- **Story hook:** the last stage of Chapter 2 is what lets the kids face the Hollow King (038).
+- **Story hook:** the last stage of Chapter 2 is what lets the kids face the Moon-Eater (038).
 
 ## Systems touched
 - New: `scripts/base/moon_lantern.gd` and `scenes/base/MoonLantern.tscn` (a painted, baked model in the 031 style).
