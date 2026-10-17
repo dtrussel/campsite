@@ -4,8 +4,10 @@ extends Control
 ##
 ## Entry scene: a live 3D dusk backdrop of the camp (TitleBackdrop)
 ## under a LoL-client-style menu - gold Cinzel logo, hextech buttons,
-## and a How-to-play panel. Two Play buttons pick a fresh 3- or 7-night
-## run and open the hero select screen (feature 034); Continue (shown
+## and a How-to-play panel. Two Play buttons pick a fresh run: Chapter
+## 1 "The Dark Moon" (3 nights) or Chapter 2 "Into the Hollow" (7
+## nights, feature 035), then the hero select screen (feature 034);
+## Continue (shown
 ## when there is an autosave) resumes the saved run, with its party, at
 ## its next morning.
 
@@ -70,13 +72,21 @@ func _ready() -> void:
 	lengths.alignment = BoxContainer.ALIGNMENT_CENTER
 	lengths.add_theme_constant_override("separation", 12)
 	buttons.add_child(lengths)
-	for nights in [3, 7]:
-		var start: Button = HudWidgets.icon_button("moon", "%d Nights" % nights, _on_play.bind(nights),
+	for chapter in [1, 2]:
+		var nights: int = 3 if chapter == 1 else 7
+		var slot: VBoxContainer = UiKit.vbox(2)
+		lengths.add_child(slot)
+		var start: Button = HudWidgets.icon_button("moon", StoryLibrary.chapter_name(chapter), _on_play.bind(nights),
 			Color(1.0, 0.92, 0.55))
-		start.custom_minimum_size = Vector2(230, 64)
-		start.add_theme_font_size_override("font_size", 24)
+		start.custom_minimum_size = Vector2(250, 64)
+		start.add_theme_font_size_override("font_size", 21)
 		start.tooltip_text = "Survive %d nights, then choose your hero. The game saves every morning." % nights
-		lengths.add_child(start)
+		slot.add_child(start)
+		var subtitle: Label = UiKit.label("Chapter %d  -  %d nights" % [chapter, nights], 15, UiKit.COLOR_GOLD_LIGHT)
+		subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		subtitle.add_theme_constant_override("outline_size", 6)
+		subtitle.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
+		slot.add_child(subtitle)
 		if play == null:
 			play = start
 	var small: HBoxContainer = HBoxContainer.new()

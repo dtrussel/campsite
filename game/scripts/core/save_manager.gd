@@ -12,7 +12,8 @@ extends Node
 ## Saved: run length and day, inventory, campfire (HP, hearth),
 ## buildings (type, place, HP / trap snaps), the party (which hero is
 ## played, feature 034), both heroes' progress and upgrades, the
-## companion's task, run stats. Not saved: resource nodes and
+## companion's task, run stats, the Moon Lantern's shards (feature 036;
+## older saves start it at 0, same VERSION). Not saved: resource nodes and
 ## pickups (they reset), torches (they burn out at dawn anyway).
 
 signal saved(day: int)
@@ -128,6 +129,7 @@ func snapshot() -> Dictionary:
 			"yaw": building.global_rotation.y,
 			"hp": building.current_hp,
 		})
+	var lantern: MoonLantern = MoonLantern.find(tree)
 	var stats: Dictionary = {}
 	for key in GameManager.stats.keys():
 		stats[String(key)] = GameManager.stats[key]
@@ -148,6 +150,7 @@ func snapshot() -> Dictionary:
 			"task": int(sibling.get("current_task")),
 		},
 		"stats": stats,
+		"lantern": {"shards": lantern.shards if lantern != null else 0},
 	}
 
 
@@ -186,6 +189,10 @@ func apply(data: Dictionary) -> void:
 	sibling.call("set_task", int(data["sibling"].get("task", 0)))
 	for key in data["stats"].keys():
 		GameManager.stats[StringName(key)] = int(data["stats"][key])
+	var lantern: MoonLantern = MoonLantern.find(tree)
+	if lantern != null:
+		var saved: Variant = data.get("lantern", {})
+		lantern.restore(int((saved as Dictionary).get("shards", 0)) if saved is Dictionary else 0)
 
 
 func _on_dawn_started(_day: int) -> void:

@@ -7,6 +7,8 @@ extends Node
 ##   gather -> craft a torch -> plant it -> survive 3 nights -> win,
 ## then a second run that loses when the campfire is destroyed, a
 ## continued run, and a run playing Nela with Leo as the companion.
+## Features 035-036: the story cards and storybook, the shard drops and
+## the Moon Lantern.
 ##
 ##   godot --headless --path game res://tests/automated/smoke_run.tscn
 ##
@@ -22,6 +24,7 @@ var _failures: int = 0
 var _night1_save: Dictionary = {}
 
 const TEST_SAVE_PATH: String = "user://smoke_save.json"
+const TEST_STORY_PATH: String = "user://smoke_story.cfg"
 
 
 func _ready() -> void:
@@ -33,11 +36,15 @@ func _ready() -> void:
 	# Never touch a real player's autosave.
 	SaveManager.set_save_path(TEST_SAVE_PATH)
 	SaveManager.delete_save()
+	StoryLibrary.progress_path = TEST_STORY_PATH
+	StoryLibrary.forget_progress()
+	await _run_story_scenario()
 	await _run_win_scenario()
 	await _run_loss_scenario()
 	await _run_continue_scenario()
 	await _run_hero_scenario()
 	SaveManager.delete_save()
+	StoryLibrary.forget_progress()
 	_finish()
 
 
@@ -158,15 +165,139 @@ func _run_win_scenario() -> void:
 			_check(not _night1_save.is_empty() and int(_night1_save["day"]) == 1, "autosaved at dawn after night 1")
 			_check(int(_night1_save.get("inventory", {}).get("wood", 0)) == ResourceManager.get_count(&"wood"),
 				"autosave has the inventory (wood %d)" % ResourceManager.get_count(&"wood"))
+			var card: StoryCard = _main.get_node("HUD").call("story_card")
+			_check(card != null and card.lines().size() == 2 and String(card.lines()[0]["speaker"]) == "leo"
+				and String(card.lines()[0]["id"]).begins_with("dawn.c1.n1"), "dawn 1: Leo and Nela talk on the dawn card")
 		if night < GameManager.nights_to_win:
 			_check(GameManager.is_playing(), "still playing after night %d" % night)
 	_check(GameManager.run_state == GameManager.RunState.WON, "run WON after %d nights" % GameManager.nights_to_win)
+	# Feature 035: the Chapter 1 ending book comes before the stats.
+	var end_root: Control = _main.get_node("EndScreen").get("_root")
+	await get_tree().process_frame  # the book opens deferred
+	var book: StoryBook = get_tree().get_first_node_in_group("story_book") as StoryBook
+	_check(book != null and book.page_count() == 2 and not end_root.visible, "the Chapter 1 ending opens before the stats")
+	if book != null:
+		book.next()
+		_check(book.page == 1, "the ending turns its page")
+		book.next()
+		await get_tree().process_frame
+	_check(end_root.visible, "the stats show after the ending")
 	_check(int(GameManager.stats[&"kills"]) > 0, "kills recorded (%d)" % GameManager.stats[&"kills"])
 	_check(get_tree().paused, "world frozen behind end screen")
 	_check(AudioManager.mood == &"", "music stops for the win stinger")
 	_check(not SaveManager.has_save(), "a won run deletes its save")
 	var shards_seen: int = ResourceManager.get_count(&"glow_shards") + get_tree().get_nodes_in_group("pickups").size()
 	_check(shards_seen >= int(GameManager.stats[&"kills"]) / 3 - 1, "imps dropped glow shards (%d for %d kills)" % [shards_seen, GameManager.stats[&"kills"]])
+
+
+## Feature 035: the story data, the intro storybook and the chapters;
+## feature 036: shard drops and the Moon Lantern.
+func _run_story_scenario() -> void:
+	print("smoke: --- story scenario ---")
+	_check(StoryLibrary.chapter_name(1) == "The Dark Moon" and StoryLibrary.chapter_name(2) == "Into the Hollow", "chapter names")
+	GameManager.nights_to_win = 7
+	_check(GameManager.chapter() == 2, "7 nights is Chapter 2")
+	GameManager.nights_to_win = 3
+	_check(GameManager.chapter() == 1, "3 nights is Chapter 1")
+	var pages: Array = StoryLibrary.find(&"intro", 1)
+	_check(pages.size() == 4 and (pages[0] as StoryBeat).page == 1 and (pages[0] as StoryBeat).painting != null,
+		"the Chapter 1 intro has 4 painted pages, in order")
+	var dawn: StoryBeat = StoryLibrary.first(&"dawn", 1, 1)
+	_check(String(dawn.lines_for(&"leo")[0]["speaker"]) == "leo" and String(dawn.lines_for(&"nela")[0]["speaker"]) == "nela",
+		"the played hero speaks first on the dawn card")
+	var book: StoryBook = StoryBook.play(pages, &"leo")
+	await get_tree().process_frame
+	var turned: Array = [false]
+	book.finished.connect(func() -> void: turned[0] = true)
+	_check(book.page == 0, "the intro opens on page 1")
+	book.next()
+	_check(book.page == 1, "Space turns the page")
+	var esc: InputEventAction = InputEventAction.new()
+	esc.action = &"ui_cancel"
+	esc.pressed = true
+	Input.parse_input_event(esc)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(turned[0], "Esc skips the rest of the intro")
+	_check(not StoryLibrary.has_seen("intro.c1"), "no intro marked seen yet")
+	StoryLibrary.mark_seen("intro.c1")
+	_check(StoryLibrary.has_seen("intro.c1") and not StoryLibrary.has_seen("intro.c2"), "the seen intro is remembered per chapter")
+	StoryLibrary.forget_progress()
+
+	# Shards: a chance per kill with pity, per mob type (seeded).
+	var imp_def: MobDefinition = load("res://resources/mobs/shadow_imp.tres") as MobDefinition
+	var beast_def: MobDefinition = load("res://resources/mobs/bramble_beast.tres") as MobDefinition
+	GameManager.loot_misses = {}
+	GameManager.loot_rng.seed = 36
+	var hits: int = 0
+	var longest_dry: int = 0
+	var dry: int = 0
+	for i in 100:
+		if GameManager.roll_loot(imp_def):
+			hits += 1
+			dry = 0
+		else:
+			dry += 1
+			longest_dry = maxi(longest_dry, dry)
+	var beast_drops: int = 0
+	for i in 10:
+		beast_drops += 1 if GameManager.roll_loot(beast_def) else 0
+	_check(beast_drops == 10, "every beast kill drops a shard")
+	_check(hits >= 40 and hits <= 62, "100 imp kills drop %d shards (40-62)" % hits)
+	_check(longest_dry < imp_def.drop_pity, "never more than %d imp kills in a row without a shard (%d)" % [imp_def.drop_pity - 1, longest_dry])
+	GameManager.loot_misses = {}
+
+	# The Moon Lantern by the tent.
+	await _start_fresh_run()
+	var lantern: MoonLantern = MoonLantern.find(get_tree())
+	var player: Node3D = get_tree().get_first_node_in_group("player")
+	_check(lantern != null and lantern.stage == 0 and lantern.max_stage() == 3 and lantern.radius() == 0.0,
+		"the Moon Lantern stands dark by the tent (3 stages in Chapter 1)")
+	player.global_position = lantern.global_position + Vector3(1.5, 0, 0)
+	_check(not player.call("try_feed_lantern"), "nothing to hand over without shards")
+	ResourceManager.add(&"glow_shards", 2)
+	await get_tree().process_frame
+	var card: StoryCard = _main.get_node("HUD").call("story_card")
+	_check(card != null and String(card.lines()[0]["id"]) == "shard.leo", "the first shard of a run gets its story card")
+	_check(player.call("try_feed_lantern") and lantern.stage == 1 and ResourceManager.get_count(&"glow_shards") == 0,
+		"E by the lantern hands over the shards: stage 1")
+	_check(is_equal_approx(lantern.radius(), lantern.min_radius), "stage 1 lights a %.1f m ring" % lantern.radius())
+	var imp: Mob = _spawn_mob(imp_def, lantern.global_position + Vector3(2.5, 0, 0))
+	imp.set_physics_process(false)
+	await get_tree().process_frame
+	_check(float(imp.call("_torch_slow_factor")) <= lantern.slow_factor, "an imp in the ring is slowed")
+	var imp_hp: int = imp.current_hp
+	await _wait(lantern.light_interval_seconds + 0.4)
+	_check(imp.current_hp < imp_hp, "moonlight hurts the imp (%d -> %d)" % [imp_hp, imp.current_hp])
+	imp.take_damage(999, player)
+	ResourceManager.add(&"glow_shards", 10)
+	var carried: int = ResourceManager.get_count(&"glow_shards")
+	lantern.deliver(player)
+	_check(lantern.is_full() and lantern.shards == lantern.shards_for_max()
+		and ResourceManager.get_count(&"glow_shards") == carried - (lantern.shards_for_max() - 2),
+		"the lantern takes only what it still needs (%d shards)" % lantern.shards)
+	_check(is_equal_approx(lantern.radius(), lantern.max_radius), "fully lit: a %.1f m ring" % lantern.radius())
+	var gremlin_def: MobDefinition = load("res://resources/mobs/mushroom_gremlin.tres") as MobDefinition
+	var gremlin: Mob = _spawn_mob(gremlin_def, lantern.global_position + Vector3(6.0, 0, 0))
+	await _wait(2.5)
+	_check(not is_instance_valid(gremlin) or gremlin.is_fleeing and gremlin.loot_amount == 0, "a gremlin turns back at the bright ring")
+	if is_instance_valid(gremlin):
+		gremlin.take_damage(999, player)
+	var data: Dictionary = SaveManager.snapshot()
+	_check(int(data["lantern"]["shards"]) == lantern.shards, "the save holds the lantern's shards")
+	var legacy: Dictionary = data.duplicate(true)
+	legacy.erase("lantern")
+	GameManager.set("_pending_save", SaveManager.parse(SaveManager.serialize(data)))
+	await _start_fresh_run()
+	lantern = MoonLantern.find(get_tree())
+	_check(lantern.is_full(), "Continue keeps the lantern lit (stage %d)" % lantern.stage)
+	GameManager.set("_pending_save", legacy)
+	await _start_fresh_run()
+	_check(MoonLantern.find(get_tree()).stage == 0, "older saves start the lantern dark")
+	GameManager.nights_to_win = 7
+	await _start_fresh_run()
+	_check(MoonLantern.find(get_tree()).max_stage() == 6, "Chapter 2's lantern has 6 stages")
+	GameManager.nights_to_win = 3
 
 
 ## Feature 017: repair, the new resources, recipes, traps and lanterns.
@@ -584,6 +715,9 @@ func _run_loss_scenario() -> void:
 	_campfire().take_damage(10000)
 	await get_tree().process_frame
 	_check(GameManager.run_state == GameManager.RunState.LOST, "run LOST when campfire destroyed")
+	var end_screen: Node = _main.get_node("EndScreen")
+	_check(String(end_screen.call("story_text")).begins_with("The dark came in") and (end_screen.get("_root") as Control).visible,
+		"the defeat says why: %s" % end_screen.call("story_text"))
 	_check(not SaveManager.has_save(), "no save after a lost run")
 
 	# Volume settings round-trip through user://settings.cfg.

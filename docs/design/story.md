@@ -1,11 +1,13 @@
 # Story bible: "The Dark Moon"
 
 > Companion to [`game-design-spec.md`](game-design-spec.md). Status:
-> **planned** (features 035&ndash;042, see
-> [`docs/roadmap/roadmap.md`](../roadmap/roadmap.md)). Nothing here is in
-> the game yet. Decided with the user (2026-10): the missing adult is
-> **Mum**, the boss is the **Moon-Eater**, and the team provides concept
-> art and animations later (see the Art plan).
+> features 035&ndash;042, see
+> [`docs/roadmap/roadmap.md`](../roadmap/roadmap.md). **In the game:** the
+> story frame (035: intro, dawn cards, endings, defeat lines) and the
+> Moon Lantern (036). The rest is planned. Decided with the user
+> (2026-10): the missing adult is **Mum**, the boss is the **Moon-Eater**,
+> the team provides concept art and animations later (see the Art plan),
+> and the characters get **voiced lines** (see Voice).
 
 ## Tone
 
@@ -94,6 +96,31 @@ adds their own lines.
   `UiKit.party_text()`.
 - No line longer than about 60 characters on a card. Barks stay under
   about 30.
+- Content lives in `game/resources/story/*.tres` (`StoryBeat`). A line is
+  `{id, speaker, text, when}`. `speaker` is `leo`, `nela`, `mum` or
+  `narrator`; the optional `when` shows the line only when that hero is
+  played. Dawn cards have one pair of lines per played hero: the
+  played hero speaks first and the companion replies.
+- Voiced lines avoid `{hero}`/`{companion}`, because a recording can't
+  change its words. Write one `when` variant per hero instead (see
+  `loss.hero.leo` and `loss.hero.nela`).
+- `tools/check.sh` fails a line over 60 characters, an unknown speaker or
+  placeholder, a duplicate id, or a beat with no lines for one of the
+  heroes.
+
+## Voice
+
+Decided: the characters get **voiced lines**. Leo, Nela, Mum and the
+narrator speak every story line; the Moon-Eater stays wordless (sounds
+only, 038).
+
+- One recording per line, named by the line id:
+  `game/assets/audio/voice/<line id>.ogg`. See the README in that folder.
+- The game plays them on its own **Voice** bus, one line after another.
+  A card stays up until its voices have finished (at least 6 s at dawn).
+- Until the recordings arrive every line shows as text only. The
+  validator reports how many lines are voiced.
+- Barks (037) will follow the same rule when they are built.
 
 ## Art plan
 
@@ -108,4 +135,5 @@ adds their own lines.
 
 ## Open questions for the team
 
-- Voiced lines, or text and sounds only?
+- None right now. Next to collect: the voice cast and the recordings
+  (list of line ids: `tools/check.sh` output, or the story `.tres` files).

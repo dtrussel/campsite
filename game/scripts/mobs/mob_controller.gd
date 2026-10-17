@@ -143,6 +143,14 @@ func _tick_thief(delta: float) -> void:
 			_escape()
 			return
 	else:
+		var lantern: MoonLantern = MoonLantern.find(get_tree())
+		if lantern != null and lantern.wards(global_position):
+			# A bright Moon Lantern: the thief turns back at the ring.
+			is_fleeing = true
+			Fx.float_text(self, "!", UiKit.COLOR_MOON, 1.4)
+			if _visual != null:
+				_visual.set_move_clip(&"flee")
+			return
 		var stash: Node3D = _find_stash()
 		if stash == null:
 			is_fleeing = true
@@ -246,11 +254,12 @@ func is_stunned() -> bool:
 	return _stun_remaining > 0.0
 
 
-## Predictable loot for young players: every Nth kill drops a pickup.
+## Loot for young players: a chance per kill, with pity so a dry spell
+## never lasts long (feature 036, GameManager.roll_loot).
 func _maybe_drop_loot() -> void:
-	if definition == null or definition.drop_item == &"" or definition.drop_every_n_kills <= 0:
+	if definition == null or definition.drop_item == &"":
 		return
-	if int(GameManager.stats.get(&"kills", 0)) % definition.drop_every_n_kills != 0:
+	if not GameManager.roll_loot(definition):
 		return
 	var pickup: Node3D = PICKUP_SCENE.instantiate() as Node3D
 	pickup.set("item_id", definition.drop_item)
@@ -430,11 +439,16 @@ func _is_valid_character(node: Node3D) -> bool:
 	return node.get("is_knocked_out") != true
 
 
+## The strongest slow from lit torches and the Moon Lantern's ring.
 func _torch_slow_factor() -> float:
+	var factor: float = 1.0
 	for node in get_tree().get_nodes_in_group(TORCH_GROUP):
 		if node.has_method("affects") and node.affects(global_position):
-			return node.slow_factor
-	return 1.0
+			factor = minf(factor, node.slow_factor)
+	var lantern: MoonLantern = MoonLantern.find(get_tree())
+	if lantern != null and lantern.affects(global_position):
+		factor = minf(factor, lantern.slow_factor)
+	return factor
 
 
 ## The nearest standing building a siege mob should tear down (traps

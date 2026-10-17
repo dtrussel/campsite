@@ -1,7 +1,10 @@
 # Feature 035: Handoff
 
-- **Done:** the plan only (docs). No code yet.
-- **Next:** confirm the open questions with the team, then start from `plan.md`.
-- **Decided:** the missing adult is Mum. The chapter names stay unless the team wants a change.
-- **Waiting on:** concept art of mum and new intro and ending paintings from the team. Build with placeholders until then.
-- Open: does the intro play over the loading screen (cheaper) or before it (cleaner)?
+- **Done:** see `status.md`. Code: `game/scripts/story/` (`StoryBeat`, `StoryLibrary`), `game/scripts/ui/story_book.gd`, `story_card.gd`, and hooks in `game_manager.gd`, `hud.gd`, `end_screen.gd`, `title_screen.gd`, `hero_select.gd` and `audio_manager.gd`.
+- **Writing a line:** edit a `.tres` in `game/resources/story/` (rules in `docs/design/story.md`). `tools/check.sh` catches long lines, unknown speakers and missing hero variants.
+- **Waiting on the team:**
+  - concept art of mum (her portrait goes to `game/assets/ui/story/mum.png`, which is picked up automatically);
+  - new intro and ending paintings (set `painting` on each beat);
+  - the voice recordings (see `game/assets/audio/voice/README.md`).
+- **Next:** 037 barks reuse `StoryCard.speak` and the voice-by-id rule. 041 adds a title Story button that replays a seen intro (`StoryBook.play(StoryLibrary.find(&"intro", chapter))`).
+- **Not done:** a separate volume slider for the Voice bus (it follows the master volume).

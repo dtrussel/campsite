@@ -9,6 +9,8 @@ extends Node
 ##   has a matching sound for free.
 ## - music and ambience: a day and a night "mood", crossfaded when
 ##   TimeManager changes phase, with win / lose stingers at run end.
+## - voiced story lines (feature 035) on their own Voice bus: one at a
+##   time, a new line cuts the last one off.
 ## - volume settings (Music, SFX) saved to user://settings.cfg.
 ## Data lives in res://resources/audio/audio_library.tres.
 
@@ -41,6 +43,7 @@ var _music: Array[AudioStreamPlayer] = []
 var _ambience: Array[AudioStreamPlayer] = []
 var _last_variant: Dictionary = {}  # id -> index, to avoid repeats
 var _fades: Dictionary = {}  # AudioStreamPlayer -> Tween
+var _voice: AudioStreamPlayer = null
 
 
 func _ready() -> void:
@@ -64,6 +67,9 @@ func _ready() -> void:
 		p2.bus = &"UI"
 		add_child(p2)
 		_pool_2d.append(p2)
+	_voice = AudioStreamPlayer.new()
+	_voice.bus = &"Voice"
+	add_child(_voice)
 	for i in 2:
 		_music.append(_make_loop_player(&"Music"))
 		_ambience.append(_make_loop_player(&"SFX"))
@@ -104,6 +110,25 @@ func play_sfx(id: StringName, position: Variant = null) -> void:
 		p2.pitch_scale = 1.0 if library.ui_ids.has(id) and id != &"ui_click" else pitch
 		p2.bus = &"UI" if library.ui_ids.has(id) else &"SFX"
 		p2.play()
+
+
+## Plays a voiced story line and returns its length in seconds (0 for
+## no stream). Plays while the game is paused (intro, endings).
+func play_voice(stream: AudioStream) -> float:
+	_voice.stop()
+	if stream == null:
+		return 0.0
+	_voice.stream = stream
+	_voice.play()
+	return stream.get_length()
+
+
+func stop_voice() -> void:
+	_voice.stop()
+
+
+func is_voice_playing() -> bool:
+	return _voice.playing
 
 
 ## Crossfades music and ambience to a mood: &"day", &"night", or
@@ -257,7 +282,7 @@ func _take_2d() -> AudioStreamPlayer:
 ## The buses come from default_bus_layout.tres; this only fills in any
 ## that are missing, so the game never errors on an old layout.
 func _ensure_buses() -> void:
-	for bus_name in [&"Music", &"SFX", &"UI"]:
+	for bus_name in [&"Music", &"SFX", &"UI", &"Voice"]:
 		if AudioServer.get_bus_index(bus_name) == -1:
 			AudioServer.add_bus()
 			var index: int = AudioServer.bus_count - 1

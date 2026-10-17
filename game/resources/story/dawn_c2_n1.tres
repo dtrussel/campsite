@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="StoryBeat" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/story/story_beat.gd" id="1_beat"]
+
+[resource]
+script = ExtResource("1_beat")
+id = &"dawn.c2.n1"
+chapter = 2
+trigger = &"dawn"
+night = 1
+page = 1
+lines = [{
+"id": "dawn.c2.n1.leo.1",
+"speaker": "leo",
+"text": "Night one done! Six more to go.",
+"when": "leo"
+}, {
+"id": "dawn.c2.n1.leo.2",
+"speaker": "nela",
+"text": "The shadows came faster this time. Stay sharp.",
+"when": "leo"
+}, {
+"id": "dawn.c2.n1.nela.1",
+"speaker": "nela",
+"text": "One night down. Six more to go.",
+"when": "nela"
+}, {
+"id": "dawn.c2.n1.nela.2",
+"speaker": "leo",
+"text": "They came faster this time! But so did we.",
+"when": "nela"
+}]

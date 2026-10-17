@@ -23,4 +23,5 @@ knockback_scale = 0.15
 spawn_burst = &"bramble_spawn"
 death_burst = &"bramble_death"
 drop_item = &"glow_shards"
-drop_every_n_kills = 1
+drop_chance = 1.0
+drop_pity = 0

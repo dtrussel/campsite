@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="StoryBeat" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/story/story_beat.gd" id="1_beat"]
+
+[resource]
+script = ExtResource("1_beat")
+id = &"dawn.c2.n6"
+chapter = 2
+trigger = &"dawn"
+night = 6
+page = 1
+lines = [{
+"id": "dawn.c2.n6.leo.1",
+"speaker": "leo",
+"text": "Tonight it's coming. I just know it.",
+"when": "leo"
+}, {
+"id": "dawn.c2.n6.leo.2",
+"speaker": "nela",
+"text": "Then we light the lantern all the way. Together.",
+"when": "leo"
+}, {
+"id": "dawn.c2.n6.nela.1",
+"speaker": "nela",
+"text": "It's coming tonight. The biggest shadow.",
+"when": "nela"
+}, {
+"id": "dawn.c2.n6.nela.2",
+"speaker": "leo",
+"text": "Then we light the lantern. All the way. Together!",
+"when": "nela"
+}]

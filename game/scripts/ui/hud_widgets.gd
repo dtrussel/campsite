@@ -275,6 +275,45 @@ class DayClock extends Control:
 
 ## Vector pictograms for a text-light, kid-friendly UI. Drawn in code,
 ## so they scale crisply and need no image assets.
+## The Moon Lantern's light (feature 036): a dark moon that fills slice
+## by slice, one per lantern stage.
+class LanternDial extends Control:
+	var stage: int = 0
+	var max_stage: int = 3
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(40, 40)
+		mouse_filter = Control.MOUSE_FILTER_PASS
+
+	func set_stage(new_stage: int, new_max: int) -> void:
+		if new_stage == stage and new_max == max_stage:
+			return
+		stage = new_stage
+		max_stage = maxi(1, new_max)
+		tooltip_text = "Moon Lantern %d / %d" % [stage, max_stage]
+		queue_redraw()
+
+	func _draw() -> void:
+		var center: Vector2 = size * 0.5
+		var radius: float = minf(size.x, size.y) * 0.5 - 3.0
+		draw_circle(center, radius + 3.0, UiKit.COLOR_INK)
+		draw_circle(center, radius, Color(0.1, 0.12, 0.26))
+		var lit: Color = UiKit.COLOR_MOON.lightened(0.35)
+		var step: float = TAU / float(max_stage)
+		for i in range(stage):
+			var points: PackedVector2Array = PackedVector2Array([center])
+			for k in range(9):
+				var a: float = -PI / 2.0 + step * (i + k / 8.0)
+				points.append(center + Vector2(cos(a), sin(a)) * radius)
+			draw_colored_polygon(points, lit)
+		for i in range(max_stage):
+			var a: float = -PI / 2.0 + step * i
+			draw_line(center, center + Vector2(cos(a), sin(a)) * radius, UiKit.COLOR_INK, 1.5, true)
+		if stage >= max_stage:
+			draw_circle(center, radius * 0.35, Color(1.0, 0.98, 0.85))
+		draw_arc(center, radius + 1.0, 0.0, TAU, 48, UiKit.COLOR_BRASS, 2.0, true)
+
+
 class Glyph extends Control:
 	var kind: String = "star"
 	var color: Color = Color(1, 0.85, 0.35)

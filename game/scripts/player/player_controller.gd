@@ -128,7 +128,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _state == PlayerState.KNOCKED_OUT or BuildManager.is_in_build_mode():
 		return
 	if event.is_action_pressed("interact"):
-		_try_begin_gather()
+		if not try_feed_lantern():
+			_try_begin_gather()
 	elif event.is_action_pressed("attack"):
 		_try_attack()
 	elif event.is_action_pressed("place_torch"):
@@ -403,6 +404,18 @@ func _perform_attack(target: Node3D) -> void:
 			Fx.burst(&"hit", target.global_position + Vector3(0, 0.7, 0))
 			Fx.hit_stop()
 	)
+
+
+## E next to the Moon Lantern hands over the stash's Glow Shards
+## (feature 036). False when there is nothing to hand over here.
+func try_feed_lantern() -> bool:
+	var lantern: MoonLantern = MoonLantern.find(get_tree())
+	if lantern == null or not lantern.in_reach(global_position) or not lantern.can_accept():
+		return false
+	_cancel_active_gather()
+	_visual.face_instantly(lantern.global_position - global_position)
+	lantern.deliver(self)
+	return true
 
 
 func _try_begin_gather() -> void:

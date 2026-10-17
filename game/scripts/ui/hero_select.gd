@@ -289,7 +289,7 @@ func _input(event: InputEvent) -> void:
 
 func _on_start() -> void:
 	var hero: HeroDefinition = selected_hero()
-	GameManager.start_run(0, hero.id, HeroRoster.default_companion(hero.id))
+	GameManager.begin_chapter(hero.id, HeroRoster.default_companion(hero.id))
 
 
 func _on_back() -> void:

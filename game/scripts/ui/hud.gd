@@ -12,6 +12,9 @@ extends CanvasLayer
 ##   bottom centre - the played hero: portrait + level, HP and XP bars, and the
 ##                   action bar (Space attack, E gather, Q torch, R eat,
 ##                   C craft, B build) with counts and cooldowns
+##   left, under the companion - the dawn story card (feature 035), out
+##                   of the way of the camp; left of the top strip, the
+##                   Moon Lantern dial (feature 036)
 ## Everything is signal-driven except the clock, cooldown and imp count,
 ## which tick in _process. Names and portraits come from the party
 ## (GameManager.party_hero / party_companion, feature 034).
@@ -54,6 +57,9 @@ var _sibling_hp: HudWidgets.StatBar = null
 var _task_buttons: Array = []  # Button per companion task (index = task)
 var _build_row: HBoxContainer = null
 
+var _story_host: Control = null
+var _story_card: StoryCard = null
+var _lantern_dial: HudWidgets.LanternDial = null
 var _tray_labels: Dictionary = {}  # StringName -> Label
 var _tray_rows: Dictionary = {}    # StringName -> Control
 
@@ -69,6 +75,7 @@ func _ready() -> void:
 	_build_tray(root)
 	_build_hero_bar(root)
 	_build_banner(root)
+	_build_story_host(root)
 
 	ResourceManager.resource_changed.connect(_on_resource_changed)
 	ResourceManager.caps_changed.connect(_refresh_tray)
@@ -174,6 +181,12 @@ func _build_top(root: Control) -> void:
 	_imps_label = imps.get_child(1) as Label
 	_imps_label.add_theme_color_override("font_color", Color(0.36, 0.18, 0.5))
 	_imps_label.add_theme_constant_override("outline_size", 0)
+
+	# The Moon Lantern dial sits just left of the strip.
+	_lantern_dial = HudWidgets.LanternDial.new()
+	_lantern_dial.size = Vector2(44, 44)
+	_lantern_dial.position = Vector2(-52, 9)
+	top.add_child(_lantern_dial)
 
 
 func _build_sibling_frame(root: Control) -> void:
@@ -385,6 +398,39 @@ func _build_banner(root: Control) -> void:
 	_banner_plate.add_child(_banner)
 
 
+## The story card's place: down the left edge, under the companion and
+## clear of the banner, so it never covers the kids or the fire.
+func _build_story_host(root: Control) -> void:
+	_story_host = Control.new()
+	_story_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_anchor(_story_host, Control.PRESET_TOP_LEFT, Vector2(12, 176))
+	root.add_child(_story_host)
+	GameManager.run_ended.connect(func(_won: bool, _reason: String) -> void:
+		if story_card() != null:
+			story_card().dismiss())
+
+
+## Shows a story card (dawn talk, first shard), replacing any open one.
+func show_story(beat: StoryBeat, hint: String = "") -> StoryCard:
+	if beat == null:
+		return null
+	if _story_card != null and is_instance_valid(_story_card):
+		_story_card.queue_free()
+	_story_card = StoryCard.make(beat, GameManager.hero_id, hint)
+	_story_host.add_child(_story_card)
+	PlaytestLog.write("story_card id=%s" % beat.id)
+	return _story_card
+
+
+func story_card() -> StoryCard:
+	return _story_card if _story_card != null and is_instance_valid(_story_card) else null
+
+
+func _lantern_hint() -> String:
+	var lantern: MoonLantern = MoonLantern.find(get_tree())
+	return lantern.hint_text() if lantern != null else ""
+
+
 func _plate(padding_y: int, padding_x: int = -1) -> PanelContainer:
 	var plate: PanelContainer = PanelContainer.new()
 	var style: StyleBox = UiKit.panel_style(UiKit.COLOR_WOOD, UiKit.COLOR_BRASS_DARK, padding_y)
@@ -430,6 +476,9 @@ func _hook_world() -> void:
 		_companion.knocked_out_changed.connect(_on_companion_knocked_out)
 		_sibling_hp.set_values(_companion.current_hp, _companion.max_hp)
 		_refresh_sibling()
+	var lantern: MoonLantern = MoonLantern.find(get_tree())
+	if lantern != null:
+		lantern.stage_changed.connect(_on_lantern_stage)
 	if _base_core != null:
 		_base_core.damaged.connect(func(_hp: int) -> void: _refresh_campfire())
 		_base_core.repaired.connect(func(_hp: int) -> void: _refresh_campfire())
@@ -449,6 +498,10 @@ func _process(_delta: float) -> void:
 	_imps_row.visible = imps > 0
 	_imps_label.text = "x %d" % imps
 	_refresh_slots()
+	var lantern: MoonLantern = MoonLantern.find(get_tree())
+	_lantern_dial.visible = lantern != null
+	if lantern != null:
+		_lantern_dial.set_stage(lantern.stage, lantern.max_stage())
 
 
 func _refresh_slots() -> void:
@@ -561,8 +614,11 @@ func show_banner(text: String, color: Color = UiKit.COLOR_GOLD_LIGHT) -> void:
 	_banner_tween.tween_property(_banner_plate, "modulate:a", 0.0, 0.6)
 
 
-func _on_resource_changed(_id: StringName, _value: int, _delta: int) -> void:
+func _on_resource_changed(id: StringName, _value: int, delta: int) -> void:
 	_refresh_tray()
+	# The first Glow Shard of a run: what the shards are (story layer 1).
+	if id == &"glow_shards" and delta > 0 and int(GameManager.stats.get(&"shards", 0)) == 0 and GameManager.is_playing():
+		show_story(StoryLibrary.first(&"shard", GameManager.chapter()), _lantern_hint())
 
 
 func _on_build_mode_entered(definition: BuildingDefinition) -> void:
@@ -664,12 +720,23 @@ func _item_name(id: StringName) -> String:
 	return definition.display_name if definition != null else String(id)
 
 
+func _on_lantern_stage(stage: int, max_stage: int) -> void:
+	if stage >= max_stage:
+		show_banner("The Moon Lantern shines!", UiKit.COLOR_MOON.lightened(0.4))
+	elif stage > 0:
+		show_banner("The lantern glows brighter!", UiKit.COLOR_MOON.lightened(0.4))
+	AudioManager.play_sfx(&"level_up")
+
+
 func _on_night_started(day_number: int) -> void:
 	show_banner("Night %d!" % day_number, _PHASE_COLOR_NIGHT)
 
 
 func _on_dawn_started(day_number: int) -> void:
 	show_banner("Good morning!", _PHASE_COLOR_DAWN)
+	# The winning dawn ends the run; its story is the ending book.
+	if GameManager.is_playing():
+		show_story(StoryLibrary.first(&"dawn", GameManager.chapter(), day_number), _lantern_hint())
 
 
 func _on_crafted(recipe: CraftingRecipe, _crafter: Node) -> void:
