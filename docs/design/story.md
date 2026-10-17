@@ -131,8 +131,8 @@ only, 038).
 
   | Speaker | Kokoro voice | Speed | Shift | Pitch |
   |---|---|---|---|---|
-  | Leo (7) | `af_river` + `af_aoede` | 1.1, quick | +4 semitones | ~245 Hz |
-  | Nela (3) | `af_jessica` + `af_bella` | 0.95, deliberate | +5 semitones | ~280 Hz |
+  | Leo (7) | `af_river` + `af_aoede` | 1.05, quick | +1.5 semitones | ~215 Hz |
+  | Nela (3) | `af_jessica` + `af_bella` | 0.95, deliberate | +2.5 semitones | ~245 Hz |
   | Mum | `af_heart`, warm | 0.92 | none | ~205 Hz |
   | Narrator | `bm_fable`, a British storyteller | 0.9 | none | ~135 Hz |
 
@@ -140,7 +140,8 @@ only, 038).
   [ˈleːo] ("LAY-oh"); `NAMES` in `voice.py` swaps them into the
   phonemes. Kokoro has no child voices, so the kids are young women's voices
   shifted up, formants included (a smaller vocal tract), the way
-  animation casts kids.
+  animation casts kids. Only a light shift: more (+4/+5) sounded too
+  high and chipmunky.
 - Barks (037) follow the same rule: `bark.<trigger>.<speaker>.<n>.ogg`.
   Until a bark has a recording, a short chirp plays in the speaker's
   pitch (`chirp_leo`, `chirp_nela`).

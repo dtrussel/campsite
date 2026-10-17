@@ -39,8 +39,8 @@ KEY = re.compile(r'"(id|speaker|text)":\s*"((?:[^"\\]|\\.)*)"')
 # Leo (7): brave, impulsive, quick. Nela (3): the little sister, higher,
 # slower and dry. Mum: calm, warm ranger. Narrator: a bedtime storyteller.
 CAST = {
-    "leo": {"voice": {"af_river": 0.5, "af_aoede": 0.5}, "speed": 1.1, "shift": 4.0, "lang": "en-us"},
-    "nela": {"voice": {"af_jessica": 0.6, "af_bella": 0.4}, "speed": 0.95, "shift": 5.0, "lang": "en-us"},
+    "leo": {"voice": {"af_river": 0.5, "af_aoede": 0.5}, "speed": 1.05, "shift": 1.5, "lang": "en-us"},
+    "nela": {"voice": {"af_jessica": 0.6, "af_bella": 0.4}, "speed": 0.95, "shift": 2.5, "lang": "en-us"},
     "mum": {"voice": "af_heart", "speed": 0.92, "shift": 0.0, "lang": "en-us"},
     "narrator": {"voice": "bm_fable", "speed": 0.9, "shift": 0.0, "lang": "en-gb"},
 }
