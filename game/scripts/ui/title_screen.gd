@@ -4,9 +4,10 @@ extends Control
 ##
 ## Entry scene: a live 3D dusk backdrop of the camp (TitleBackdrop)
 ## under a LoL-client-style menu - gold Cinzel logo, hextech buttons,
-## and a How-to-play panel. Two Play buttons start a fresh 3- or 7-night
-## run; Continue (shown when there is an autosave) resumes the saved
-## run at its next morning.
+## and a How-to-play panel. Two Play buttons pick a fresh 3- or 7-night
+## run and open the hero select screen (feature 034); Continue (shown
+## when there is an autosave) resumes the saved run, with its party, at
+## its next morning.
 
 const BACKDROP: Script = preload("res://scripts/ui/title_backdrop.gd")
 
@@ -61,7 +62,9 @@ func _ready() -> void:
 		play = HudWidgets.icon_button("play", "Continue", _on_continue, Color(0.55, 0.9, 0.4))
 		play.custom_minimum_size = Vector2(300, 72)
 		play.add_theme_font_size_override("font_size", 30)
-		play.tooltip_text = "Night %d of %d" % [int(save["day"]) + 1, int(save["nights_to_win"])]
+		var saved_hero: HeroDefinition = HeroRoster.get_hero(SaveManager.party_of(save)["hero"])
+		play.tooltip_text = "%s - night %d of %d" % [saved_hero.display_name if saved_hero != null else "Leo",
+			int(save["day"]) + 1, int(save["nights_to_win"])]
 		buttons.add_child(play)
 	var lengths: HBoxContainer = HBoxContainer.new()
 	lengths.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -72,7 +75,7 @@ func _ready() -> void:
 			Color(1.0, 0.92, 0.55))
 		start.custom_minimum_size = Vector2(230, 64)
 		start.add_theme_font_size_override("font_size", 24)
-		start.tooltip_text = "Survive %d nights. The game saves every morning." % nights
+		start.tooltip_text = "Survive %d nights, then choose your hero. The game saves every morning." % nights
 		lengths.add_child(start)
 		if play == null:
 			play = start
@@ -104,7 +107,7 @@ func _ready() -> void:
 
 
 func _on_play(nights: int) -> void:
-	GameManager.start_run(nights)
+	GameManager.open_hero_select(nights)
 
 
 func _on_continue() -> void:

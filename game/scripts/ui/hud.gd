@@ -7,13 +7,14 @@ extends CanvasLayer
 ##   top centre    - one slim strip: nights-to-win moons, the day dial
 ##                   medallion, campfire HP; an imp tag hangs under the
 ##                   dial at night, and event banners show on a ribbon
-##   top left      - sibling portrait, HP, current task
+##   top left      - the companion: portrait, HP, current task
 ##   top right     - resource tray with icons
-##   bottom centre - the boy: portrait + level, HP and XP bars, and the
+##   bottom centre - the played hero: portrait + level, HP and XP bars, and the
 ##                   action bar (Space attack, E gather, Q torch, R eat,
 ##                   C craft, B build) with counts and cooldowns
 ## Everything is signal-driven except the clock, cooldown and imp count,
-## which tick in _process.
+## which tick in _process. Names and portraits come from the party
+## (GameManager.party_hero / party_companion, feature 034).
 
 const _BANNER_SECONDS: float = 3.5
 const _PHASE_COLOR_DAY: Color = Color(1, 0.95, 0.8)
@@ -182,9 +183,10 @@ func _build_sibling_frame(root: Control) -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	plate.add_child(row)
-	_sibling_portrait = HudWidgets.Portrait.new(_icon("portrait_nela"))
+	var companion: HeroDefinition = GameManager.party_companion()
+	_sibling_portrait = HudWidgets.Portrait.new(companion.portrait)
 	_sibling_portrait.custom_minimum_size = Vector2(52, 52)
-	row.add_child(_name_tag(_sibling_portrait, "Nela", 14))
+	row.add_child(_name_tag(_sibling_portrait, companion.display_name, 14))
 	var column: VBoxContainer = VBoxContainer.new()
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_theme_constant_override("separation", 7)
@@ -296,9 +298,11 @@ func _build_hero_bar(root: Control) -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	plate.add_child(row)
-	_hero_portrait = HudWidgets.Portrait.new(_icon("portrait_leo"))
+	var hero: HeroDefinition = GameManager.party_hero()
+	var companion: HeroDefinition = GameManager.party_companion()
+	_hero_portrait = HudWidgets.Portrait.new(hero.portrait)
 	_hero_portrait.custom_minimum_size = Vector2(74, 74)
-	row.add_child(_name_tag(_hero_portrait, "Leo", 15))
+	row.add_child(_name_tag(_hero_portrait, hero.display_name, 15))
 	var column: VBoxContainer = VBoxContainer.new()
 	column.add_theme_constant_override("separation", 5)
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -308,11 +312,12 @@ func _build_hero_bar(root: Control) -> void:
 	slots.add_theme_constant_override("separation", 6)
 	column.add_child(slots)
 	var definitions: Array = [
-		[&"attack", "axe", "SP", "Attack (Space, or click an imp)"],
+		[&"attack", "slingshot" if hero.ranged else "axe", "SP",
+			"Shoot (Space, or click an imp)" if hero.ranged else "Attack (Space, or click an imp)"],
 		[&"gather", "wood", "E", "Gather the nearest resource (E, or right-click it)"],
 		[&"torch", "torch", "Q", "Plant a torch (Q). Craft torches at the campfire."],
 		[&"eat", "berries", "R", "Eat (R): a Berry Snack gives +35 HP, else 2 berries give +15 HP"],
-		[&"bandage", "bandage", "X", "Put a bandage on Nela (X, next to her): +25 HP or wakes her up"],
+		[&"bandage", "bandage", "X", "Put a bandage on %s (X, close by): +25 HP, or wakes them up" % companion.display_name],
 		[&"craft", "campfire", "C", "Crafting (C, near the campfire or a Crafting Table)"],
 		[&"build", "fence", "B", "Build (B), then 1-7: fence, wall, watch post, snap trap, glow lantern, crate, crafting table"],
 	]

@@ -83,12 +83,10 @@ func _effect_possible(effect: StringName) -> bool:
 		&"stone_hearth":
 			var fire: BaseCore = _campfire()
 			return fire != null and not fire.has_hearth and not fire.is_destroyed
-		&"sturdy_stick":
-			var player: Node = _player()
-			return player != null and not bool(player.get("has_sturdy_stick"))
-		&"slingshot":
-			var sibling: Node = _sibling()
-			return sibling != null and not bool(sibling.get("has_slingshot"))
+		&"sturdy_stick", &"slingshot":
+			# A hero's signature, whichever role the hero plays (feature 034).
+			var owner: Node = _signature_owner(effect)
+			return owner != null and not bool(owner.get("has_signature"))
 		&"trap_refill":
 			for trap in get_tree().get_nodes_in_group(SnapTrap.GROUP):
 				if (trap as SnapTrap).needs_refill():
@@ -97,21 +95,18 @@ func _effect_possible(effect: StringName) -> bool:
 	return false
 
 
-func _player() -> Node:
-	return get_tree().get_first_node_in_group("player")
-
-
-func _sibling() -> Node:
-	return get_tree().get_first_node_in_group("companions")
+## The hero in the camp whose signature recipe is `effect`.
+func _signature_owner(effect: StringName) -> Node:
+	for hero in HeroRoster.all():
+		if hero.signature_recipe == effect:
+			return HeroRoster.node_for(get_tree(), hero.id)
+	return null
 
 
 func _apply_effect(effect: StringName) -> void:
 	match effect:
-		&"sturdy_stick":
-			_player().call("upgrade_stick")
-			return
-		&"slingshot":
-			_sibling().call("give_slingshot")
+		&"sturdy_stick", &"slingshot":
+			_signature_owner(effect).call("apply_signature")
 			return
 		&"trap_refill":
 			for trap in get_tree().get_nodes_in_group(SnapTrap.GROUP):

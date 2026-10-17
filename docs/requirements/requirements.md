@@ -184,7 +184,8 @@ The game starts with **exactly 10 initial resource types**:
 
 The first vertical slice shall include:
 
-- One playable boy character.
+- Playable heroes chosen before a run (feature 034: Leo or Nela; the
+  other one is the AI companion).
 - One small test map.
 - One campsite core.
 - Three gatherable resource node types.

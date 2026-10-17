@@ -11,8 +11,11 @@ extends CharacterBody3D
 ## Paths come from the world's navigation mesh; WASD still works as a
 ## direct override and cancels the current command.
 ##
-## The boy has health: mobs hurt him, he regenerates slowly outside of
-## night, eating berries heals, and reaching 0 HP ends the run.
+## The played hero has health: mobs hurt them, they regenerate slowly
+## outside of night, eating berries heals, and reaching 0 HP ends the run.
+##
+## Feature 034: the body, stats and fighting style come from the party's
+## HeroDefinition (Leo swings a stick; Nela shoots pebbles from range).
 
 signal health_changed(current_hp: int, max_hp: int)
 signal knocked_out
@@ -28,10 +31,8 @@ const BERRY_ITEM_ID: StringName = &"berries"
 const BERRIES_PER_MEAL: int = 2
 const SNACK_ITEM_ID: StringName = &"snack"
 const BANDAGE_ITEM_ID: StringName = &"bandage"
-## How close Leo must be to Nela to put a bandage on her.
+## How close the player must be to the companion to bandage them.
 const BANDAGE_REACH: float = 3.0
-## Crafting Table upgrade (feature 019).
-const STURDY_STICK_BONUS: int = 2
 ## Distance at which a gather command starts gathering.
 const GATHER_REACH: float = 1.5
 ## Distance at which a campfire command opens crafting.
@@ -50,6 +51,8 @@ const REPATH_SECONDS: float = 0.25
 @export var attack_range: float = 2.0
 @export var attack_cooldown_seconds: float = 0.5
 @export var stats: CharacterStatsDefinition
+## The hero played; empty takes GameManager.party_hero().
+@export var hero: HeroDefinition
 
 @export var max_hp: int = 50
 @export var regen_per_second: float = 1.5
@@ -76,9 +79,25 @@ var _regen_accumulator: float = 0.0
 var _move_goal: Vector3 = Vector3.ZERO
 var _repath_timer: float = 0.0
 var _repair_timer: float = 0.0
-var has_sturdy_stick: bool = false
+## Crafting Table upgrade (features 019, 034): the hero's signature
+## (Leo's Sturdy Stick, Nela's Slingshot), once per run.
+var has_signature: bool = false
 var _agent: NavigationAgent3D = null
 var _hp_bar: HealthBar3D = null
+
+
+func _enter_tree() -> void:
+	# Before the Visual child's _ready builds the model.
+	if hero == null:
+		hero = GameManager.party_hero()
+	if hero == null or is_in_group(HeroRoster.group_for(hero.id)):
+		return
+	add_to_group(HeroRoster.group_for(hero.id))
+	stats = hero.stats
+	move_speed = hero.move_speed
+	attack_range = hero.attack_range
+	attack_cooldown_seconds = hero.attack_cooldown
+	HeroBody.apply(self, hero)
 
 
 func _ready() -> void:
@@ -187,7 +206,7 @@ func take_damage(amount: int, _source: Node = null) -> void:
 	Fx.flash(self)
 	Fx.float_text(self, "-%d" % amount, Color(1, 0.45, 0.4))
 	Fx.shake(0.18)
-	AudioManager.play_sfx(&"player_hurt", global_position)
+	AudioManager.play_sfx(hero.hurt_sfx if hero != null else &"player_hurt", global_position)
 	if current_hp == 0:
 		_cancel_active_gather()
 		_set_command(Command.NONE, null)
@@ -373,6 +392,9 @@ func _perform_attack(target: Node3D) -> void:
 	_attack_cooldown_remaining = attack_cooldown_seconds
 	_visual.play_action(&"attack", 1.9)
 	attacked.emit(target)
+	if hero != null and hero.ranged:
+		PebbleShot.fire(self, target, attack_damage)
+		return
 	var tween: Tween = create_tween()
 	tween.tween_interval(ATTACK_WINDUP)
 	tween.tween_callback(func() -> void:
@@ -474,17 +496,19 @@ func _try_eat_berries() -> void:
 	Fx.burst(&"heal", global_position)
 
 
-## Sturdy Stick: Leo hits harder for the rest of the run.
-func upgrade_stick() -> void:
-	if has_sturdy_stick:
+## The hero's signature upgrade: Sturdy Stick (more damage) or
+## Slingshot (more reach), for the rest of the run.
+func apply_signature() -> void:
+	if has_signature or hero == null:
 		return
-	has_sturdy_stick = true
-	attack_damage += STURDY_STICK_BONUS
-	Fx.float_text(self, "STURDY STICK!", Color(1.0, 0.85, 0.4), 2.8)
+	has_signature = true
+	attack_damage += hero.signature_damage_bonus
+	attack_range *= hero.signature_range_factor
+	Fx.float_text(self, "%s!" % hero.signature_label.to_upper(), Color(1.0, 0.85, 0.4), 2.8)
 	Fx.burst(&"level_up", global_position)
 
 
-## X: put a bandage on Nela when she is close and hurt (or knocked out).
+## X: bandage the companion when they are close and hurt (or knocked out).
 func try_use_bandage() -> bool:
 	var sibling: Node3D = get_tree().get_first_node_in_group("companions") as Node3D
 	var close: bool = sibling != null and _flat_distance(sibling.global_position) <= BANDAGE_REACH

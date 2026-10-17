@@ -5,7 +5,9 @@ extends Node3D
 ## Live 3D scene behind the title menu: the camp at dusk, the boy and
 ## his sibling sitting by the fire, shadow minions lurking at the tree
 ## line, and a slow orbiting camera. Purely decorative - no gameplay
-## nodes, so nothing here reacts to input or the run state.
+## nodes, so nothing here reacts to input or the run state. The hero
+## select screen (HeroStage, feature 034) reuses it with its own heroes
+## and camera.
 
 const GROUND_MATERIAL: Material = preload("res://assets/materials/painted_ground.tres")
 const CAMPFIRE_SCENE: PackedScene = preload("res://scenes/base/CampfireCore.tscn")
@@ -14,6 +16,8 @@ const ASSETS: String = "res://assets/"
 @export var orbit_speed: float = 0.05
 @export var orbit_radius: float = 12.0
 @export var orbit_height: float = 6.5
+## Seats Leo and Nela by the fire; HeroStage stands its own heroes.
+@export var seat_heroes: bool = true
 
 var _camera: Camera3D = null
 var _angle: float = 0.6
@@ -42,8 +46,9 @@ func _ready() -> void:
 		if child is HealthBar3D:
 			child.queue_free()
 
-	_character("custom/leo.glb", 0.7, "hero", Vector3(1.5, 0, 1.0), [], "Sit_Floor_Idle")
-	_character("custom/nela.glb", 0.65, "hero", Vector3(-1.4, 0, 1.2), [], "Sit_Floor_Idle")
+	if seat_heroes:
+		_character("custom/leo.glb", 0.7, "hero", Vector3(1.5, 0, 1.0), [], "Sit_Floor_Idle")
+		_character("custom/nela.glb", 0.65, "hero", Vector3(-1.4, 0, 1.2), [], "Sit_Floor_Idle")
 	for spot in [Vector3(-7.5, 0, -8.0), Vector3(-5.0, 0, -9.5), Vector3(8.0, 0, -7.0)]:
 		_character("custom/shadow_imp.glb", 0.62, "shadow", spot, [], "Imp_Idle")
 

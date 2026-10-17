@@ -29,7 +29,7 @@ func _validate_key_art() -> void:
 		if not ResourceLoader.exists(String(entry[0])):
 			_fail("loading screen art missing: %s" % entry[0])
 		for tip in entry[1]:
-			if String(tip[1]) != "" and not ResourceLoader.exists(String(tip[1])):
+			if String(tip[1]) != "" and not String(tip[1]).begins_with("{") and not ResourceLoader.exists(String(tip[1])):
 				_fail("loading tip icon missing: %s" % tip[1])
 		var screen: LoadingScreen = LoadingScreen.preview(0.6, i)
 		if screen.get_child_count() == 0:
@@ -104,6 +104,7 @@ func _validate_data() -> void:
 		if recipe.result_icon() == null:
 			_fail("%s has no result icon (output item icon or icon_name)" % recipe.resource_path)
 
+	_validate_heroes(recipe_ids)
 	_validate_audio()
 
 	# Every item a building or recipe needs must be obtainable somewhere:
@@ -206,3 +207,17 @@ func _collect(dir_path: String, out: PackedStringArray) -> void:
 
 func _fail(message: String) -> void:
 	_errors.append(message)
+
+
+## Feature 034: every hero on the select screen is complete, and its
+## signature recipe exists.
+func _validate_heroes(recipe_ids: Dictionary) -> void:
+	var hero_ids: Dictionary = {}
+	for hero in HeroRoster.all():
+		_check_id(hero.id, hero.resource_path, hero_ids)
+		if hero.model_scene == null or hero.stats == null or hero.portrait == null:
+			_fail("%s needs a model, stats and a portrait" % hero.resource_path)
+		if hero.signature_recipe != &"" and not recipe_ids.has(hero.signature_recipe):
+			_fail("%s has unknown signature recipe '%s'" % [hero.resource_path, hero.signature_recipe])
+	if HeroRoster.all().size() < 2:
+		_fail("the roster needs at least two heroes (a hero and a companion)")

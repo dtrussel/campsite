@@ -5,7 +5,8 @@ extends Node
 ## End-to-end headless smoke test for the playtest loop. Instances the
 ## real Main scene and drives it through a whole run:
 ##   gather -> craft a torch -> plant it -> survive 3 nights -> win,
-## then a second run that loses when the campfire is destroyed.
+## then a second run that loses when the campfire is destroyed, a
+## continued run, and a run playing Nela with Leo as the companion.
 ##
 ##   godot --headless --path game res://tests/automated/smoke_run.tscn
 ##
@@ -35,6 +36,7 @@ func _ready() -> void:
 	await _run_win_scenario()
 	await _run_loss_scenario()
 	await _run_continue_scenario()
+	await _run_hero_scenario()
 	SaveManager.delete_save()
 	_finish()
 
@@ -625,7 +627,7 @@ func _run_continue_scenario() -> void:
 	_check(fire.has_hearth == bool(data["campfire"]["hearth"]) and fire.current_hp == int(data["campfire"]["hp"]),
 		"campfire restored (%d HP, hearth %s)" % [fire.current_hp, fire.has_hearth])
 	var player: Node = get_tree().get_first_node_in_group("player")
-	_check(ProgressionManager.get_xp(player) == int(data["player"]["xp"]) and bool(player.get("has_sturdy_stick")) == bool(data["player"]["stick"]),
+	_check(ProgressionManager.get_xp(player) == int(data["player"]["xp"]) and bool(player.get("has_signature")) == bool(data["player"]["signature"]),
 		"Leo's progress restored (level %d)" % ProgressionManager.get_level(player))
 	_check(int(GameManager.stats[&"nights_survived"]) == 1, "stats restored (1 night survived)")
 
@@ -641,12 +643,90 @@ func _run_continue_scenario() -> void:
 	GameManager.nights_to_win = 3
 
 
+## Feature 034: the hero select screen, and a run playing Nela. Each
+## hero keeps their style in either role and their signature craft.
+func _run_hero_scenario() -> void:
+	print("smoke: --- hero scenario ---")
+	var screen: Node = (load("res://scenes/ui/HeroSelect.tscn") as PackedScene).instantiate()
+	add_child(screen)
+	await get_tree().process_frame
+	_check(int(screen.get("selected")) == 0 and (screen.call("selected_hero") as HeroDefinition).id == &"leo",
+		"hero select opens on the last pick (Leo)")
+	screen.call("select", 1)
+	_check((screen.call("selected_hero") as HeroDefinition).id == &"nela", "hero select picks Nela")
+	screen.call("select", HeroRoster.all().size())
+	_check(int(screen.get("selected")) == 0, "hero select wraps around the roster")
+	screen.queue_free()
+	await get_tree().process_frame
+
+	GameManager.set_party(&"nela")
+	_check(GameManager.companion_id == &"leo", "Leo comes along when Nela is played")
+	await _start_fresh_run()
+	var player: Node3D = get_tree().get_first_node_in_group("player")
+	var companion: Node3D = get_tree().get_first_node_in_group("companions")
+	_check(player.is_in_group(HeroRoster.group_for(&"nela")) and companion.is_in_group(HeroRoster.group_for(&"leo")),
+		"the player is Nela and the companion is Leo")
+	var nela: HeroDefinition = HeroRoster.get_hero(&"nela")
+	var visual: CharacterVisual = player.get_node("Visual") as CharacterVisual
+	_check(visual.model_scene == nela.model_scene and int(player.get("max_hp")) == nela.stats.base_max_health,
+		"the player has Nela's body and health (%d HP)" % int(player.get("max_hp")))
+	_check(float(player.get("attack_range")) > 4.0 and float(companion.call("get_attack_range")) <= 2.0,
+		"Nela shoots from range; Leo fights up close")
+	var hud: Node = _main.get_node_or_null("HUD")
+	var portrait: HudWidgets.Portrait = hud.get("_hero_portrait") if hud != null else null
+	_check(portrait != null and portrait.texture == nela.portrait, "the HUD shows Nela in the hero bar")
+
+	# A pebble flies and hits an imp a few metres away.
+	var spawner: Node = get_tree().get_first_node_in_group("mob_spawner")
+	var imp: Mob = _spawn_mob(spawner.get("mob_definition"), player.global_position + Vector3(3.5, 0, 0))
+	await get_tree().process_frame
+	var imp_hp: int = imp.current_hp
+	player.call("_perform_attack", imp)
+	_check(imp.current_hp == imp_hp, "the pebble has not landed yet")
+	await _wait(PebbleShot.FLIGHT_SECONDS + 0.2)
+	_check(not is_instance_valid(imp) or imp.current_hp < imp_hp, "Nela's pebble hit the imp 3.5 m away")
+	if is_instance_valid(imp):
+		imp.take_damage(999, player)
+
+	# The signature crafts follow the hero, not the role.
+	for item in [&"wood", &"scrap", &"resin", &"fiber"]:
+		ResourceManager.add(item, 10)
+	var table: Building = _spawn_building(&"crafting_table", Vector3(5, 0, -6))
+	var reach: float = float(player.get("attack_range"))
+	_check(CraftingManager.craft(_recipe(&"slingshot"), player)
+		and is_equal_approx(float(player.get("attack_range")), reach * nela.signature_range_factor), "the slingshot goes to Nela (the player)")
+	var damage: int = int(companion.get("_current_attack_damage"))
+	_check(CraftingManager.craft(_recipe(&"sturdy_stick"), player)
+		and int(companion.get("_current_attack_damage")) == damage + 2, "the sturdy stick goes to Leo (the companion)")
+
+	# The save remembers the party; Continue plays Nela again.
+	var data: Dictionary = SaveManager.snapshot()
+	_check(String(data["party"]["hero"]) == "nela" and String(data["party"]["companion"]) == "leo", "the save holds the party")
+	var legacy: Dictionary = data.duplicate(true)
+	legacy.erase("party")
+	_check(SaveManager.party_of(legacy)["hero"] == &"leo", "older saves without a party are Leo with Nela")
+	table.queue_free()
+	GameManager.set_party(&"leo")
+	var party: Dictionary = SaveManager.party_of(SaveManager.parse(SaveManager.serialize(data)))
+	GameManager.set_party(party["hero"], party["companion"])
+	GameManager.set("_pending_save", data)
+	await _start_fresh_run()
+	player = get_tree().get_first_node_in_group("player")
+	_check(player.is_in_group(HeroRoster.group_for(&"nela")) and bool(player.get("has_signature")),
+		"continued as Nela, slingshot and all")
+	GameManager.set_party(&"leo")
+
+
 func _start_fresh_run() -> void:
 	get_tree().paused = false
 	Engine.time_scale = 1.0
 	if _main != null:
-		_main.queue_free()
-		await get_tree().process_frame
+		# Wait until the old camp is really gone: resuming from a physics-
+		# frame timer, one process frame can still run before it is freed.
+		var old: Node = _main
+		old.queue_free()
+		while is_instance_valid(old):
+			await get_tree().process_frame
 		GameManager.call("_reset_autoloads")
 	_main = MAIN_SCENE.instantiate()
 	add_child(_main)

@@ -10,8 +10,9 @@ extends Node
 ## deletes its save, and a new run replaces it.
 ##
 ## Saved: run length and day, inventory, campfire (HP, hearth),
-## buildings (type, place, HP / trap snaps), Leo's and Nela's progress
-## and upgrades, Nela's task, run stats. Not saved: resource nodes and
+## buildings (type, place, HP / trap snaps), the party (which hero is
+## played, feature 034), both heroes' progress and upgrades, the
+## companion's task, run stats. Not saved: resource nodes and
 ## pickups (they reset), torches (they burn out at dawn anyway).
 
 signal saved(day: int)
@@ -76,6 +77,16 @@ static func parse(text: String) -> Dictionary:
 	return data
 
 
+## The party a save was made with: {"hero", "companion"} as ids. Saves
+## from before feature 034 are Leo with Nela.
+static func party_of(data: Dictionary) -> Dictionary:
+	var party: Dictionary = data.get("party", {}) if data.get("party") is Dictionary else {}
+	return {
+		"hero": StringName(str(party.get("hero", "leo"))),
+		"companion": StringName(str(party.get("companion", "nela"))),
+	}
+
+
 ## Writes the current camp now (the dawn autosave calls this).
 func save_now() -> bool:
 	var snapshot: Dictionary = snapshot()
@@ -126,13 +137,14 @@ func snapshot() -> Dictionary:
 		"inventory": inventory,
 		"campfire": {"hp": fire.current_hp, "hearth": fire.has_hearth},
 		"buildings": buildings,
+		"party": {"hero": String(GameManager.hero_id), "companion": String(GameManager.companion_id)},
 		"player": {
 			"xp": ProgressionManager.get_xp(player),
-			"stick": bool(player.get("has_sturdy_stick")),
+			"signature": bool(player.get("has_signature")),
 		},
 		"sibling": {
 			"xp": ProgressionManager.get_xp(sibling),
-			"slingshot": bool(sibling.get("has_slingshot")),
+			"signature": bool(sibling.get("has_signature")),
 			"task": int(sibling.get("current_task")),
 		},
 		"stats": stats,
@@ -166,10 +178,11 @@ func apply(data: Dictionary) -> void:
 	var sibling: Node = tree.get_first_node_in_group("companions")
 	ProgressionManager.restore_xp(player, int(data["player"]["xp"]))
 	ProgressionManager.restore_xp(sibling, int(data["sibling"]["xp"]))
-	if bool(data["player"].get("stick", false)):
-		player.call("upgrade_stick")
-	if bool(data["sibling"].get("slingshot", false)):
-		sibling.call("give_slingshot")
+	# Saves from before feature 034 name the upgrades "stick" / "slingshot".
+	if bool(data["player"].get("signature", data["player"].get("stick", false))):
+		player.call("apply_signature")
+	if bool(data["sibling"].get("signature", data["sibling"].get("slingshot", false))):
+		sibling.call("apply_signature")
 	sibling.call("set_task", int(data["sibling"].get("task", 0)))
 	for key in data["stats"].keys():
 		GameManager.stats[StringName(key)] = int(data["stats"][key])

@@ -53,7 +53,7 @@ const CONTROLS: Array = [
 	["R", "Eat 2 berries to heal"],
 	["C", "Crafting (near the campfire)"],
 	["B, then 1 / 2", "Build: Wooden Fence / Watch Post  (R rotate, LMB place, RMB cancel)"],
-	["F / G / T / Y", "Nela: Follow / Guard camp / Gather / Idle"],
+	["F / G / T / Y", "{companion}: Follow / Guard camp / Gather / Idle"],
 	["N", "Call the night early (daytime only)"],
 	["W A S D", "Walk directly (optional)"],
 	["H  /  Esc", "Help  /  Pause"],
@@ -283,9 +283,9 @@ const PICTURE_GUIDE: Array = [
 	["mouse_right", "glyph:hammer", "Fix"],
 	["key:Q", "torch", "Torch"],
 	["key:R", "berries", "Eat"],
-	["key:X", "bandage", "Nela"],
+	["key:X", "bandage", "{companion}"],
 	["key:B", "fence", "Build"],
-	["key:F G T Y V", "portrait_nela", "Nela"],
+	["key:F G T Y V", "{companion_portrait}", "{companion}"],
 	["key:N", "glyph:moon", "Night"],
 ]
 
@@ -306,7 +306,14 @@ static func picture_guide(columns: int = 2) -> GridContainer:
 			row.add_child(HudWidgets.Glyph.new(input, UiKit.COLOR_EMBER, 42))
 		row.add_child(HudWidgets.Glyph.new("arrow", COLOR_GOLD_DARK, 28))
 		var picture: String = entry[1]
-		if picture.begins_with("glyph:"):
+		if picture == "{companion_portrait}":
+			var portrait: TextureRect = TextureRect.new()
+			portrait.texture = GameManager.party_companion().portrait
+			portrait.custom_minimum_size = Vector2(52, 52)
+			portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			row.add_child(portrait)
+		elif picture.begins_with("glyph:"):
 			row.add_child(HudWidgets.Glyph.new(picture.substr(6), Color(1.0, 0.9, 0.55), 48))
 		else:
 			var rect: TextureRect = TextureRect.new()
@@ -315,7 +322,7 @@ static func picture_guide(columns: int = 2) -> GridContainer:
 			rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			row.add_child(rect)
-		var word: Label = label(entry[2], 22)
+		var word: Label = label(party_text(entry[2]), 22)
 		word.add_theme_font_override("font", Fx.bold_font())
 		word.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		row.add_child(word)
@@ -349,8 +356,16 @@ static func controls_grid() -> GridContainer:
 		var keys: Label = label(row[0], 16, COLOR_GOLD)
 		keys.add_theme_font_override("font", Fx.bold_font())
 		grid.add_child(keys)
-		grid.add_child(label(row[1], 16))
+		grid.add_child(label(party_text(row[1]), 16))
 	return grid
+
+
+## Fills "{hero}" and "{companion}" with the party's names (feature 034).
+static func party_text(text: String) -> String:
+	if not "{" in text:
+		return text
+	return text.replace("{hero}", GameManager.party_hero().display_name).replace(
+		"{companion}", GameManager.party_companion().display_name)
 
 
 class _Divider extends Control:

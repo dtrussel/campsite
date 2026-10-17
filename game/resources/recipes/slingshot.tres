@@ -6,7 +6,7 @@
 script = ExtResource("1_def")
 id = &"slingshot"
 display_name = "Nela's Slingshot"
-description = "Nela hits imps from twice as far away. Once per run."
+description = "Nela hits imps from much farther away. Once per run."
 inputs = {
 &"wood": 2,
 &"fiber": 2,

@@ -78,6 +78,18 @@ All numbers are placeholder until balancing.
 
 ## D. Companions
 
+### Heroes and hero select (feature 034)
+
+Before a run (after picking 3 or 7 nights) the player chooses a hero on
+the "Choose your hero" screen. Today the heroes are **Leo** (a melee
+stick-fighter: tough, hits hard, short reach) and **Nela** (a slinger:
+shoots pebbles from range, less health). The hero not picked comes along
+as the AI companion and takes tasks as described below. A hero plays the
+same way in either role, and keeps their signature craft: the Sturdy
+Stick upgrades Leo, the Slingshot upgrades Nela. With more heroes, the
+screen gets a second step to pick the companion. The autosave remembers
+the party, so Continue skips the screen.
+
 Family members and pets form a small team around the boy. Each companion
 has a clear role.
 

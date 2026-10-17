@@ -102,6 +102,7 @@ class Portrait extends Control:
 	var level: int = 1
 	var ring_color: Color = UiKit.COLOR_BRASS
 	var dimmed: bool = false
+	var show_level: bool = true
 	var _font: Font = null
 
 	func _init(tex: Texture2D = null) -> void:
@@ -133,7 +134,8 @@ class Portrait extends Control:
 		draw_arc(center, radius + 1.0, 0.0, TAU, 48, UiKit.COLOR_BRASS_DARK, 3.0, true)
 		draw_arc(center, radius + 3.0, 0.0, TAU, 48, ring_color, 2.0, true)
 		draw_arc(center, radius + 3.0, PI * 1.1, PI * 1.9, 24, Color(1.0, 0.9, 0.65, 0.8), 1.0, true)
-		HudWidgets.draw_badge(self, center + Vector2(radius * 0.7, radius * 0.7), clampf(radius * 0.3, 9.0, 13.0), str(level), _font)
+		if show_level:
+			HudWidgets.draw_badge(self, center + Vector2(radius * 0.7, radius * 0.7), clampf(radius * 0.3, 9.0, 13.0), str(level), _font)
 
 
 class AbilitySlot extends Control:

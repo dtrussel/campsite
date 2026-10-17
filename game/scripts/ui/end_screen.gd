@@ -90,7 +90,7 @@ func _on_run_ended(won: bool, _reason: String) -> void:
 	_stats_row.add_child(HudWidgets.icon_count(load("res://assets/icons/torch.png"), "", str(stats.get(&"torches_placed", 0))))
 	var player: Node = get_tree().get_first_node_in_group("player")
 	if player != null:
-		_stats_row.add_child(HudWidgets.icon_count(load("res://assets/icons/portrait_leo.png"), "",
+		_stats_row.add_child(HudWidgets.icon_count(GameManager.party_hero().portrait, "",
 			"Lv %d" % ProgressionManager.get_level(player)))
 	_log_path.text = PlaytestLog.get_absolute_path()
 	_root.visible = true

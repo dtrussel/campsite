@@ -20,7 +20,7 @@ const FADE_OUT: float = 0.35
 ## [art, [[tip, icon], ...]]. Short, simple words for young players.
 const SCREENS: Array = [
 	["res://assets/ui/key_art.webp", [
-		["Give Nela a job: she can gather, guard and repair.", "res://assets/icons/portrait_nela.png"],
+		["Give {companion} a job: gather, guard or repair.", "{companion_portrait}"],
 		["Hurt? Press R to eat berries and heal.", "res://assets/icons/berries.png"],
 		["Keep the campfire burning all night long!", "res://assets/icons/campfire.png"],
 	]],
@@ -198,14 +198,19 @@ func _build() -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 10)
 	column.add_child(row)
-	if String(tip[1]) != "" and ResourceLoader.exists(String(tip[1])):
+	var tip_icon: Texture2D = null
+	if String(tip[1]) == "{companion_portrait}":
+		tip_icon = GameManager.party_companion().portrait
+	elif String(tip[1]) != "" and ResourceLoader.exists(String(tip[1])):
+		tip_icon = load(String(tip[1])) as Texture2D
+	if tip_icon != null:
 		var icon: TextureRect = TextureRect.new()
-		icon.texture = load(String(tip[1])) as Texture2D
+		icon.texture = tip_icon
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.custom_minimum_size = Vector2(40, 40)
 		row.add_child(icon)
-	var text: Label = UiKit.label(String(tip[0]), 22, UiKit.COLOR_GOLD_LIGHT)
+	var text: Label = UiKit.label(UiKit.party_text(String(tip[0])), 22, UiKit.COLOR_GOLD_LIGHT)
 	text.add_theme_constant_override("outline_size", 6)
 	text.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
 	row.add_child(text)

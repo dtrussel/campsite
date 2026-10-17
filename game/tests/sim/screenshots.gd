@@ -30,6 +30,15 @@ func _ready() -> void:
 		await _settle(0.3)
 		_shot("01b_loading_%d" % i)
 		loading.queue_free()
+	# Feature 034: the hero select screen, with each hero picked.
+	var select: Node = load("res://scenes/ui/HeroSelect.tscn").instantiate()
+	add_child(select)
+	await _settle(1.5)
+	_shot("01c_hero_select_leo")
+	select.call("select", 1)
+	await _settle(1.5)
+	_shot("01d_hero_select_nela")
+	select.queue_free()
 
 	var main: Node = load("res://scenes/main/Main.tscn").instantiate()
 	add_child(main)
@@ -146,6 +155,18 @@ func _ready() -> void:
 	_campfire_out()
 	await _settle(0.5)
 	_shot("09_end_screen")
+	# Feature 034: a run playing Nela, with Leo as the companion.
+	main.queue_free()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	GameManager.call("_reset_autoloads")
+	GameManager.set_party(&"nela")
+	main = load("res://scenes/main/Main.tscn").instantiate()
+	add_child(main)
+	await _settle(0.5)
+	get_tree().get_first_node_in_group("controls_overlay").close()
+	await _settle(1.5)
+	_shot("10_nela_hud")
 	get_tree().quit(0)
 
 
