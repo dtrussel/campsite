@@ -740,10 +740,22 @@ def _roll(length, radius, colour_fn, segments=36):
 
 def tent():
     """Cream A-frame tent: dense canvas with raised, stitched seams, a hem
-    band, a patch, rolled flaps tied with rope, guy ropes to bark pegs."""
+    band and a patch; a front gable whose door panels are rolled back and
+    tied along the doorway; a ground sheet, bedroll and pillow inside;
+    crossed bark poles carrying a ridge pole; guy ropes to bark pegs."""
     common.reset(4)
-    length, half_w, h = 2.2, 1.0, 1.55
+    length, half_w, h, base = 2.2, 1.0, 1.55, 0.01
+    door_w = 0.55  # half-width of the doorway at the ground
+    front = -length / 2
     seam_x = [k / 1.8 for k in range(-1, 2)]
+
+    def solid(bm, name):
+        obj = common.mesh_object(name, bm)
+        mod = obj.modifiers.new("Solidify", "SOLIDIFY")
+        mod.thickness = 0.04
+        common.apply_all_modifiers(obj)
+        common.shade_smooth(obj, auto_angle=40)
+        return obj
 
     def canvas_mesh(rows, cols, back, dense):
         bm = bmesh.new()
@@ -755,9 +767,10 @@ def tent():
                     x = -length / 2 + length * i / cols
                     t = j / rows
                     y = side * half_w * t
-                    z = h * (1 - t) + 0.06
+                    z = h * (1 - t) + base
                     sag = math.sin(t * math.pi) * 0.08 * (1 - abs(x) / length)
-                    p = Vector((x, y * (1 + sag * 0.5), z - sag))
+                    flare = 0.05 * _clamp((t - 0.9) / 0.1)  # the hem kicks out onto the ground
+                    p = Vector((x, y * (1 + sag * 0.5) + side * flare, z - sag))
                     if dense:
                         ds = min(abs(x - s) for s in seam_x)
                         raised = (0.008 * _clamp(1 - ds / 0.022) + 0.01 * _clamp((t - 0.9) / 0.02) +
@@ -771,15 +784,21 @@ def tent():
                     if side < 0:
                         quad.reverse()
                     bm.faces.new(quad)
-        _tri_grid(bm, (length / 2, -half_w, 0.06), (length / 2, half_w, 0.06), (length / 2, 0, h + 0.06), back)
-        obj = common.mesh_object("canvas", bm)
-        solid = obj.modifiers.new("Solidify", "SOLIDIFY")
-        solid.thickness = 0.04
-        common.apply_all_modifiers(obj)
-        common.shade_smooth(obj, auto_angle=40)
-        return obj
-    canvas = canvas_mesh(60, 110, 24, True)
-    low_canvas = canvas_mesh(6, 8, 1, False)
+        _tri_grid(bm, (length / 2, -half_w, base), (length / 2, half_w, base), (length / 2, 0, h + base), back)
+        return solid(bm, "canvas")
+
+    def door_mesh(n):
+        """The two front panels either side of a triangular doorway."""
+        bm = bmesh.new()
+        apex = (front, 0, h + base)
+        for side in (-1, 1):
+            a, b = (front, side * half_w, base), (front, side * door_w, base)
+            _tri_grid(bm, *((b, a, apex) if side > 0 else (a, b, apex)), n)
+        return solid(bm, "door")
+
+    canvas, low_canvas = canvas_mesh(60, 110, 24, True), canvas_mesh(6, 8, 1, False)
+    door, low_door = door_mesh(24), door_mesh(1)
+    inside_centre = Vector((0, 0, h * 0.3))
 
     def canvas_colour(pos, normal):
         ds = min(abs(pos.x - s) for s in seam_x)
@@ -788,21 +807,27 @@ def tent():
         stain = noise.noise(Vector((pos.x * 1.5, pos.y * 1.5, pos.z * 3.0)))
         c = common.lerp(CANVAS, (0.98, 0.93, 0.8), _clamp(stain))
         c = common.lerp(c, CANVAS_SHADE, _clamp(-stain - 0.2) * 0.5)
-        if ds < 0.02 and pos.x < length / 2 - 0.01:
+        if normal.dot(pos - inside_centre) < 0:
+            # The inside of the canvas: warm, shaded cloth seen through the door.
+            return tuple(k * 0.5 for k in common.lerp(c, CANVAS_SHADE, 0.6))
+        if ds < 0.02 and abs(pos.x) < length / 2 - 0.01:
             c = common.lerp(c, CANVAS_SHADE, 0.6)
-        elif ds < 0.045 and int(pos.z * 30) % 2 == 0:
+        elif ds < 0.045 and abs(pos.x) < length / 2 - 0.01 and int(pos.z * 30) % 2 == 0:
             c = common.lerp(c, (0.55, 0.42, 0.3), 0.55)  # running stitches
-        if side > 0 and 0.25 < pos.x < 0.62 and 0.36 < t < 0.6:
+        if side > 0 and 0.25 < pos.x < 0.62 and 0.36 < t < 0.6 and abs(pos.x) < length / 2 - 0.01:
             c = common.lerp(c, (0.84, 0.66, 0.46), 0.6)  # a sewn-on patch
             if min(pos.x - 0.25, 0.62 - pos.x) < 0.025 or min(t - 0.36, 0.6 - t) < 0.02:
                 if int((pos.x + pos.z) * 32) % 2 == 0:
                     c = common.lerp(c, (0.45, 0.32, 0.22), 0.6)
+        if pos.x < front + 0.05 and abs(abs(pos.y) - door_w * (1 - (pos.z - base) / h)) < 0.03:
+            c = common.lerp(c, CANVAS_SHADE, 0.6)  # hemmed door edge
         if pos.z < 0.32:
             c = common.lerp(c, CANVAS_SHADE, 0.55 + 0.25 * _clamp((0.2 - pos.z) / 0.15))
             if pos.z < 0.18:
                 c = common.lerp(c, EARTH, _clamp((0.18 - pos.z) / 0.12) * 0.4)
         return c
     common.color_by(canvas, canvas_colour, smooth=True)
+    common.color_by(door, canvas_colour, smooth=True)
     parts = []
 
     def flap_colour(pos, normal):
@@ -813,19 +838,24 @@ def tent():
             c = common.lerp(c, (0.6, 0.48, 0.34), 0.6)
         return common.lerp(c, CANVAS_SHADE, _clamp(noise.noise(pos * 6.0)) * 0.4)
     # Thin parts get hand-made low twins (collapse decimation tears them).
-    dense, lows = [canvas], [low_canvas]
+    dense, lows = [canvas, door], [low_canvas, low_door]
     for side in (-1, 1):
-        roll = _roll(1.3, 0.09, flap_colour)
-        ties = [rope_loop(0.1, 0.014, location=(x, 0, 0), rotation=(0, math.radians(90), 0)) for x in (-0.35, 0.35)]
+        # The door panel rolled back and tied along the doorway edge.
+        top = Vector((front - 0.06, side * 0.08, h - 0.08))
+        foot = Vector((front - 0.06, side * door_w * 0.96, 0.12))
+        run = foot - top
+        rot = Vector((1, 0, 0)).rotation_difference(run.normalized()).to_euler()
+        loc = tuple(top.lerp(foot, 0.5))
+        roll = _roll(run.length, 0.065, flap_colour)
+        ties = [rope_loop(0.075, 0.013, location=(x, 0, 0), rotation=(0, math.radians(90), 0))
+                for x in (-run.length * 0.25, run.length * 0.25)]
         roll = common.join([roll] + ties, "flap")
-        rot = (math.atan2(h, half_w) * side, math.radians(90), 0)
-        loc = (-length / 2 - 0.05, side * half_w * 0.48, h * 0.52)
         place(roll, loc, rot)
         dense.append(roll)
-        lows.append(low_log(1.3, 0.095, location=loc, rotation=rot, segments=8))
-    inner = block((0.02, half_w * 1.6, h * 0.8), location=(-length / 2 + 0.25, 0, h * 0.4), bevel=0.0)
-    common.set_color(inner, (0.24, 0.16, 0.12))
-    parts.append(inner)
+        lows.append(low_log(run.length, 0.07, location=loc, rotation=rot, segments=8))
+    sheet = block((length - 0.16, half_w * 1.7, 0.012), location=(0, 0, 0.006), bevel=0.004)
+    common.set_color(sheet, (0.42, 0.36, 0.24))
+    parts.append(sheet)
 
     def blanket(pos, normal):
         check = (int((pos.x + 1) * 9) + int((math.atan2(pos.z, pos.y) + 4) * 2.5)) % 2
@@ -850,22 +880,44 @@ def tent():
                         common.lerp((0.62, 0.36, 0.48), (0.72, 0.46, 0.56), _clamp(n.z)), smooth=True)
         pillow.location = (-length / 2 + 0.6, -0.38, 0.12)
         (dense if step < 0.05 else lows).append(pillow)
-    for x in (-length / 2 - 0.08, length / 2 + 0.08):
+    # Crossed poles on each gable, meeting just above the ridge, carry a
+    # ridge pole; a guy rope runs from the back crossing out to a peg (none
+    # at the front, where it would cross the doorway).
+    pole_r, lean = 0.05, math.radians(30)
+    cross_z = h + base + 0.03
+    foot_y = cross_z * math.tan(lean)
+    pole_len = cross_z / math.cos(lean) + 0.32
+    for x in (front - 0.05, length / 2 + 0.05):
         for side in (-1, 1):
-            loc, tilt, seed = (x, side * half_w * 0.82, 0), (side * math.radians(27), 0), int(x * 10) + side
-            dense.append(bark_stake(h + 0.6, 0.04, location=loc, tilt=tilt, seed=seed + 20, segments=24))
-            lows.append(low_stake(h + 0.6, 0.042, location=loc, tilt=tilt))
+            loc, tilt, seed = (x, side * foot_y, 0), (side * lean, 0), int(x * 10) + side
+            dense.append(bark_stake(pole_len, pole_r, location=loc, tilt=tilt, seed=seed + 20, segments=24))
+            lows.append(low_stake(pole_len, pole_r + 0.002, location=loc, tilt=tilt))
+        if x < 0:
+            continue
+        peg = (x + 0.75, 0, 0)
+        dense.append(bark_stake(0.28, 0.035, location=peg, seed=57, segments=20))
+        lows.append(low_stake(0.28, 0.037, location=peg))
+        a = Vector((x, 0, cross_z + 0.02))
+        b = Vector((peg[0], 0, 0.26))
+        mid = a.lerp(b, 0.5) - Vector((0, 0, 0.05))
+        dense.append(rope_tube([a, mid, b], 0.011, seg=8))
+        lows.append(rope_tube([a, mid, b], 0.012, strands=0, seg=4, spacing=0.08))
+    ridge_z = h + base + 0.08  # resting on the canvas ridge, in the crossings
+    ridge_len = length + 0.34
+    ridge_loc, ridge_tilt = (-ridge_len / 2, 0, ridge_z), (0, math.pi / 2)
+    dense.append(bark_stake(ridge_len, 0.042, location=ridge_loc, tilt=ridge_tilt, seed=61, segments=24, point=0.6))
+    lows.append(low_stake(ridge_len, 0.044, location=ridge_loc, tilt=ridge_tilt, point=0.6))
     for sx in (-1, 1):
         for sy in (-1, 1):
             loc = (sx * length * 0.42, sy * (half_w + 0.35), 0)
             dense.append(bark_stake(0.28, 0.035, location=loc, seed=sx * 3 + sy + 40, segments=20))
             lows.append(low_stake(0.28, 0.037, location=loc))
-            a = Vector((sx * length * 0.42, sy * half_w * 0.86, 0.22))
+            a = Vector((sx * length * 0.42, sy * half_w * 0.86, h * 0.14 + base + 0.01))
             b = Vector((sx * length * 0.42, sy * (half_w + 0.33), 0.3))
             mid = a.lerp(b, 0.5) - Vector((0, 0, 0.025))
             dense.append(rope_tube([a, mid, b], 0.011, seg=8))
             lows.append(rope_tube([a, mid, b], 0.012, strands=0, seg=4, spacing=0.08))
-    detail.bake_prop_lows(parts, "tent", budget=1500, lows=lows, dense_only=dense, size=1024, ray=0.05,
+    detail.bake_prop_lows(parts, "tent", budget=1700, lows=lows, dense_only=dense, size=1024, ray=0.05,
                           edge_strength=0.25)
 
 

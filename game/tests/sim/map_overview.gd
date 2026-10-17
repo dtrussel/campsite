@@ -58,6 +58,11 @@ func _ready() -> void:
 		camera.look_at(spot[1], Vector3.UP)
 		await _settle(0.3)
 		_shot(out, spot[0])
+	# Close-up of the tent from the fire, for prop checks.
+	camera.global_position = Vector3(-0.6, 3.4, 2.4)
+	camera.look_at(Vector3(-3.2, 0.6, -2.6), Vector3.UP)
+	await _settle(0.3)
+	_shot(out, "close_tent")
 	get_tree().quit()
 
 

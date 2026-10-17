@@ -155,3 +155,21 @@ The user picked foliage, the campfire and hearth, the lanterns and the shadow im
 - **Aura:** a glowing violet smoke aura as in concept 08 (`scripts/mobs/shadow_aura.gd`, the `Aura` node in `ShadowImp.tscn`). Additive violet puffs rise off the imp and trail behind it in world space, with a few bright motes. It stops emitting on `defeated`.
 - **Model:** unchanged; the feature 028 design is kept.
 - **Checks:** night screenshots; `tools/check.sh` passes.
+
+**Tent cleanup (follow-up).**
+
+Five glitches in `tent()` (`art/props/camp.py`) are fixed:
+
+| Glitch | Fix |
+|---|---|
+| The rolled door flaps stood upright like two pillars (a wrong Euler rotation). | They are oriented from the doorway-edge vector and lie along the triangular doorway. |
+| A rectangular black slab poked out through the roof slopes. | The slab is removed. The inside canvas faces are painted a dark, warm shade, and a ground sheet is added, so the bedroll and pillow show through the door. |
+| The front was an empty hole. | A front gable now has two door panels either side of the doorway. |
+| The crossed poles floated beside the gables and had no ridge pole. | The poles are thicker and cross just above the ridge. A bark ridge pole rests in the crossings, and a back guy rope runs to a peg. |
+| The hem floated 6 cm above the ground. | The hem now sits on the ground and flares out slightly. |
+
+Other changes:
+- **Budget:** raised from 1.5k to 1.7k (the bake came out at 1652). The footprint, the blocker and the night light are unchanged.
+- **Icon:** re-rendered.
+- **Overview tool:** `tests/sim/map_overview` now also renders a `close_tent` view.
+- **Checks:** `tools/check.sh` passes.
