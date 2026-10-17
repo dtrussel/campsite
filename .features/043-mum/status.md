@@ -22,4 +22,15 @@
     - Her hidden leg skin poked through the trousers when she sat; the legs are removed.
     - The exporter reported "Mesh Mum is not valid". The meshes are now repaired before export.
   - **Tooling:** `HEAD_ONLY=1` previews just the face and hair in about 20 s. `EXTRA_CLIPS=a,b` adds clip previews.
+- **Third pass: body proportions, measured (by request).**
+  - **Research first.** The method that works for an agent building a character from code is a closed, measured loop: render from the reference's view, compare in numbers (landmarks in head units, silhouette overlays), edit, repeat. Adult female drawing proportions are about 7–7.5 heads tall with shoulders and hips around 2 heads wide, but the sheet is a stylized build of about **5.8 heads**, so the sheet is the target, not anatomy.
+  - **Measured.** The sheet's front turnaround gives landmarks as fractions of height: head 0.173, chin 0.827, shoulders 0.755, belt 0.54, crotch 0.474, knees 0.27, shoulder width 0.255, hip width 0.216, thigh 0.10.
+  - **The previous model** measured head 0.136 (7.3 heads), shoulders 0.20 and hips 0.17 wide, thighs 0.076, and a long torso. She was too tall, thin and small-headed: a realistic adult, not the sheet's sturdy stylized one.
+  - **Now:**
+    - every landmark is within about 0.02 of the sheet;
+    - the head is bigger (`HEAD_SCALE` 0.9) and the torso shorter (spine 0.92);
+    - shoulders, chest, hips and thighs are wider, the waist is narrower, and the legs taper in a slight A stance;
+    - the shins are longer than the thighs (the new `Proportions(shins=)`), so the knees sit where the sheet has them;
+    - the hair falls closer to the shoulders, the scarf wraps high up the neck as drawn, and the pack is bigger and lower.
+  - **Tools:** `art/lib/measure.py`, and `MEASURE=1` on `mum.py` prints the table and renders front and side silhouettes.
 - **Checks.** `tools/check.sh` passes: validate OK and smoke PASSED. The smoke test covers the portraits with their fallback, the model and its Wave and walk clips, the walk while paused, the skip, and the title seat.

@@ -54,14 +54,24 @@ class Proportions:
     FOOT_TOP, HIP_TOP, NECK = 0.15, 0.52, 1.22
     ARM_IN, ARM_OUT = 0.21, 0.79
 
-    def __init__(self, legs=1.0, spine=1.0, arms=1.0):
-        self.legs, self.spine, self.arms = legs, spine, arms
+    KNEE = 0.292
+
+    def __init__(self, legs=1.0, spine=1.0, arms=1.0, shins=None):
+        """`shins` (optional): a separate stretch below the knee, for longer
+        shins than thighs (Mum, feature 043); the hips stay where `legs`
+        puts them."""
+        self.legs, self.spine, self.arms, self.shins = legs, spine, arms, shins
 
     def z(self, z):
         if z <= self.FOOT_TOP:
             return z
         hip = self.FOOT_TOP + (self.HIP_TOP - self.FOOT_TOP) * self.legs
         if z <= self.HIP_TOP:
+            if self.shins is not None:
+                knee = self.FOOT_TOP + (self.KNEE - self.FOOT_TOP) * self.shins
+                if z <= self.KNEE:
+                    return self.FOOT_TOP + (z - self.FOOT_TOP) * self.shins
+                return knee + (z - self.KNEE) * (hip - knee) / (self.HIP_TOP - self.KNEE)
             return self.FOOT_TOP + (z - self.FOOT_TOP) * self.legs
         neck = hip + (self.NECK - self.HIP_TOP) * self.spine
         if z <= self.NECK:

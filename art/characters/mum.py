@@ -61,12 +61,17 @@ CARABINER = (0.84, 0.2, 0.14)
 BADGE = (0.3, 0.3, 0.32)
 BADGE_MARK = (0.86, 0.84, 0.78)
 
-PROP = chibi.Proportions(legs=3.1, spine=1.3, arms=1.5)
+# Solved against the sheet's front turnaround (feature 043, third pass;
+# art/lib/measure.py): in fractions of her height, head 0.17 (about 5.8
+# heads tall, a stylised build - not a realistic 7.5), chin 0.83,
+# shoulders 0.75, belt 0.55, crotch 0.47, knees 0.27; shoulders 0.25 and
+# hips 0.21 wide, each thigh 0.1.
+PROP = chibi.Proportions(legs=3.1, spine=0.92, arms=1.4, shins=3.7)
 # The head is built at the kids' scale around HEAD (so the face kit's
 # numbers fit), then scaled about its centre and set down onto the neck.
 HEAD = chibi.HeadFrame((0, -0.01, 1.515), (0.215, 0.235, 0.25))
-HEAD_SCALE = 0.74
-HEAD_DROP = 0.05
+HEAD_SCALE = 0.9
+HEAD_DROP = -0.06
 FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "mum_face.png")
 # From the sheet: a grown-up's face - the eyes higher and smaller than
 # the kids', bright blue with a dark lash line, soft gold brows, a small
@@ -144,25 +149,25 @@ def jacket_piece():
     sleeves to the elbow with the top's black sleeves to the wrist, a hem
     over the hips."""
     parts = [
-        chibi.ellipsoid((0, 0, 1.0), (0.215, 0.16, 0.17), name="chest"),
-        chibi.ellipsoid((0, -0.035, 0.97), (0.17, 0.1, 0.09), name="bust"),
-        chibi.ellipsoid((0, 0, 0.8), (0.165, 0.13, 0.17), name="waist"),
-        chibi.ellipsoid((0, 0, 0.63), (0.2, 0.15, 0.12), name="hipline"),
+        chibi.ellipsoid((0, 0, 1.0), (0.235, 0.205, 0.17), name="chest"),
+        chibi.ellipsoid((0, -0.06, 0.96), (0.19, 0.14, 0.09), name="bust"),
+        chibi.ellipsoid((0, 0, 0.8), (0.185, 0.145, 0.17), name="waist"),
+        chibi.ellipsoid((0, 0, 0.63), (0.25, 0.18, 0.12), name="hipline"),
     ]
     for s in (-1, 1):
         # One sleeve along the whole arm: jacket to the elbow, top beyond.
         parts.append(chibi.limb([(s * 0.12, 0, 1.11), (s * 0.3, 0, 1.108), (s * 0.48, 0, 1.107),
                                  (s * 0.64, 0, 1.107), (s * 0.76, 0, 1.107)],
-                                [(0.085, 0.085), (0.078, 0.078), (0.072, 0.07), (0.056, 0.054), (0.046, 0.044)],
+                                [(0.098, 0.098), (0.09, 0.09), (0.082, 0.08), (0.062, 0.06), (0.05, 0.048)],
                                 up=(0, 0, 1), name="sleeve"))
-        parts.append(chibi.ellipsoid((s * 0.19, 0.0, 1.12), (0.08, 0.09, 0.07), name="deltoid", segs=(16, 12)))
+        parts.append(chibi.ellipsoid((s * 0.23, 0.0, 1.12), (0.09, 0.1, 0.075), name="deltoid", segs=(16, 12)))
         # The rolled-up jacket cuff just above the elbow.
-        parts.append(chibi.hem_ring((s * 0.53, 0, 1.107), (0.074, 0.072), 0.022, name="roll", axis="X"))
+        parts.append(chibi.hem_ring((s * 0.53, 0, 1.107), (0.084, 0.082), 0.024, name="roll", axis="X"))
         parts.append(chibi.hem_ring((s * 0.755, 0, 1.107), (0.047, 0.045), 0.008, name="cuff", axis="X"))
     # Jacket skirt to the hips, with a hem.
     parts.append(chibi.limb([(0, 0, 0.66), (0, 0, 0.58), (0, 0, 0.51)],
-                            [(0.21, 0.155), (0.222, 0.162), (0.228, 0.166)], up=(0, -1, 0), name="skirt"))
-    parts.append(chibi.hem_ring((0, 0, 0.51), (0.228, 0.166), 0.01, name="hem", axis="Z"))
+                            [(0.255, 0.185), (0.265, 0.19), (0.272, 0.196)], up=(0, -1, 0), name="skirt"))
+    parts.append(chibi.hem_ring((0, 0, 0.51), (0.272, 0.196), 0.01, name="hem", axis="Z"))
     jacket = chibi.fuse(parts, "Jacket", voxel=0.0065, faces=26000)
     for s in (-1, 1):
         chibi.cut_open(jacket, (s * 0.772, 0, 0), (s, 0, 0))
@@ -206,13 +211,14 @@ def jacket_piece():
 
 def trousers_piece():
     """Charcoal cargo trousers, straight legs down into the boots."""
-    parts = [chibi.ellipsoid((0, 0, 0.55), (0.19, 0.135, 0.11), name="hips")]
+    parts = [chibi.ellipsoid((0, 0, 0.55), (0.235, 0.165, 0.11), name="hips")]
     for s in (-1, 1):
-        parts.append(chibi.limb([(s * 0.1, 0, 0.56), (s * 0.125, -0.005, 0.42), (s * 0.13, 0.0, 0.32),
-                                 (s * 0.13, 0.008, 0.24), (s * 0.13, 0.012, 0.13)],
-                                [(0.1, 0.1), (0.1, 0.1), (0.09, 0.092), (0.08, 0.084), (0.076, 0.08)],
+        # Tapering from the hip to the boot, in a slight A stance.
+        parts.append(chibi.limb([(s * 0.12, 0, 0.56), (s * 0.145, -0.005, 0.42), (s * 0.155, 0.0, 0.3),
+                                 (s * 0.155, 0.008, 0.22), (s * 0.155, 0.012, 0.13)],
+                                [(0.122, 0.122), (0.112, 0.114), (0.094, 0.098), (0.084, 0.088), (0.082, 0.086)],
                                 up=(0, -1, 0), name="leg"))
-    parts.append(chibi.ellipsoid((0, 0.0, 0.47), (0.11, 0.11, 0.08), name="crotch"))
+    parts.append(chibi.ellipsoid((0, 0.0, 0.47), (0.13, 0.13, 0.08), name="crotch"))
     trousers = chibi.fuse(parts, "Trousers", voxel=0.0095)
     chibi.cut_open(trousers, (0, 0, 0.14), (0, 0, -1))
     for s in (-1, 1):
@@ -223,7 +229,7 @@ def trousers_piece():
     chibi.fold(trousers, (0, -0.1, 0.48), (0.14, 0.18, 0.08), 0.008, radial_axis=(0, 1, 0), count=4, seed=75)
 
     def colour(pos, normal):
-        seam = abs(abs(pos.x) - 0.13) > 0.088 and abs(normal.x) > 0.8
+        seam = abs(abs(pos.x) - 0.15) > 0.105 and abs(normal.x) > 0.8
         fold = max(0.0, math.sin(pos.z * 60 + pos.x * 8)) * max(0.0, 0.38 - pos.z) * 3
         c = common.lerp(TROUSERS, TROUSERS_DARK, min(0.5, fold * 0.5))
         return common.lerp(c, TROUSERS_DARK, 0.4) if seam else c
@@ -239,33 +245,33 @@ def pockets_and_belt():
     parts = []
     for s, bone in ((1, "upperleg.l"), (-1, "upperleg.r")):
         # Short in rest space: the leg stretch (x3.1) makes it a tall pocket.
-        pocket = chibi.box((0.032, 0.12, 0.055), (s * 0.21, -0.005, 0.4), bevel=0.01, name="cargo")
+        pocket = chibi.box((0.032, 0.12, 0.055), (s * 0.262, -0.005, 0.4), bevel=0.01, name="cargo")
         common.color_by(pocket, lambda p, n: TROUSERS_DARK if p.z > 0.416 else TROUSERS, smooth=False)
         parts.append((pocket, bone))
-        snap = chibi.cylinder((s * 0.228, -0.005, 0.418), 0.009, 0.006, name="snap", axis="X", segments=8)
+        snap = chibi.cylinder((s * 0.28, -0.005, 0.418), 0.009, 0.006, name="snap", axis="X", segments=8)
         common.set_color(snap, BRASS)
         parts.append((snap, bone))
     for s in (-1, 1):
-        flap = chibi.box((0.1, 0.02, 0.05), (s * 0.11, -0.165, 1.02), bevel=0.01, name="chestpocket")
+        flap = chibi.box((0.11, 0.02, 0.05), (s * 0.12, -0.195, 1.02), bevel=0.01, name="chestpocket")
         common.color_by(flap, lambda p, n: JACKET_DARK if p.z > 1.03 else JACKET, smooth=False)
         parts.append((flap, "chest"))
-        button = chibi.cylinder((s * 0.11, -0.178, 1.035), 0.008, 0.006, name="button", axis="Y", segments=8)
+        button = chibi.cylinder((s * 0.12, -0.208, 1.035), 0.008, 0.006, name="button", axis="Y", segments=8)
         common.set_color(button, BRASS)
         parts.append((button, "chest"))
-    belt = chibi.torus((0, 0, 0.64), 0.205, 0.016, name="belt", segs=(40, 6))
+    belt = chibi.torus((0, 0, 0.62), 0.252, 0.017, name="belt", segs=(40, 6))
     for v in belt.data.vertices:
         v.co.y *= 0.8
     common.color_by(belt, lambda p, n: common.lerp(LEATHER, (0.1, 0.05, 0.02), 0.25 if int(p.x * 40) % 2 else 0.0),
                     smooth=False)
     parts.append((belt, "hips"))
-    parts.append((chibi.buckle((0, -0.172, 0.64), (0, -1, 0), width=0.06, height=0.045, colour=BRASS), "hips"))
+    parts.append((chibi.buckle((0, -0.21, 0.62), (0, -1, 0), width=0.06, height=0.045, colour=BRASS), "hips"))
     collar = chibi.torus((0, 0, 1.2), 0.07, 0.014, name="collar")
     common.set_color(collar, TOP)
     parts.append((collar, "chest"))
     # The jacket's turned-down collar, open at the front under the scarf.
-    lapel = chibi.torus((0, 0.015, 1.165), 0.12, 0.026, name="lapel", segs=(32, 8))
+    lapel = chibi.torus((0, 0.015, 1.165), 0.135, 0.028, name="lapel", segs=(32, 8))
     for v in lapel.data.vertices:
-        front = max(0.0, -v.co.y / 0.12)
+        front = max(0.0, -v.co.y / 0.135)
         v.co.z -= 0.05 * front ** 2
     common.color_by(lapel, lambda p, n: JACKET_DARK if n.z < -0.2 else JACKET)
     parts.append((lapel, "chest"))
@@ -276,10 +282,13 @@ def scarf_piece():
     """The tan scarf: a soft lumpy wrap round the neck with a short tail
     tucked down the front (the sheet)."""
     puffs = []
-    for k in range(12):
-        a = k / 12 * math.tau
-        puffs.append(chibi.ellipsoid((math.cos(a) * 0.098, math.sin(a) * 0.088, 1.2 + 0.015 * math.sin(a * 2)),
-                                     (0.066, 0.06, 0.054), name="wrap", segs=(12, 8)))
+    # Wrapped twice, high up the neck to the jaw (on the sheet it hides
+    # the neck completely).
+    for ring_z, rx, ry, size in ((1.2, 0.1, 0.09, 1.0), (1.27, 0.085, 0.078, 0.9), (1.33, 0.075, 0.07, 0.75)):
+        for k in range(12):
+            a = k / 12 * math.tau + ring_z * 3.0
+            puffs.append(chibi.ellipsoid((math.cos(a) * rx, math.sin(a) * ry, ring_z + 0.012 * math.sin(a * 2)),
+                                         (0.066 * size, 0.06 * size, 0.05 * size), name="wrap", segs=(12, 8)))
     # A loose loop drooping at the front, and two tails hanging down.
     for k in range(6):
         t = k / 5
@@ -299,12 +308,12 @@ def hands_and_feet():
     for h, bone in chibi.hands(SKIN, sculpted=True, crease=SKIN_SHADE, size=0.86):
         rigid.append((h, bone))
     for s, bone in ((1, "foot.l"), (-1, "foot.r")):
-        for part in chibi.sculpted_boot(s, BOOT, SOLE, BOOT_TOE, LACE, scale=1.08, height=0.75,
+        for part in chibi.sculpted_boot(s, BOOT, SOLE, BOOT_TOE, LACE, scale=1.22, height=0.78,
                                         collar=(0.32, 0.2, 0.1)):
             common.grime(part, MUD, lambda p, n: max(0.0, (0.1 - p.z) / 0.08) * 0.7 +
                          max(0.0, noise.noise(p * 26.0) - 0.3) * 0.8)
             for v in part.data.vertices:
-                v.co.x -= s * 0.04          # her feet sit under narrower hips than the kids'
+                v.co.x -= s * 0.015         # under her trouser legs (x 0.155)
             rigid.append((part, bone))
     return rigid
 
@@ -452,21 +461,21 @@ def hair():
             pitch = rng.uniform(0.0, 0.35)
             root, n = HEAD.point(yaw, pitch, 0.04)
             back = Vector((0, 1, 0)) * (0.02 + k * 0.012)
-            length = rng.uniform(0.42, 0.6)
-            flare = 0.05 + 0.02 * (k % 3)
+            length = rng.uniform(0.3, 0.42)
+            flare = 0.02 + 0.012 * (k % 3)
             wavy(parts, root, n, [root + out * flare - U * length * 0.3 + back,
-                                  root + out * (flare + 0.04) - U * length * 0.65 + back * 1.5,
-                                  root + out * (flare + 0.02) - U * length + back * 2.0],
+                                  root + out * (flare + 0.02) - U * length * 0.65 + back * 1.5,
+                                  root + out * flare - U * length + back * 2.0],
                  rng.uniform(0.045, 0.06), 0.035, F, thickness=0.42, steps=12, sharp=True,
                  twist=side * rng.uniform(0.2, 0.6), tier=k % 2)
         # Face-framing locks: from the temples, round the cheek, curling
         # out at the jaw and on over the collarbone.
-        for k, (yaw, pitch, length, width) in enumerate(((0.78, 0.45, 0.38, 0.042), (0.9, 0.35, 0.46, 0.046),
-                                                         (1.0, 0.25, 0.5, 0.04))):
+        for k, (yaw, pitch, length, width) in enumerate(((0.78, 0.45, 0.36, 0.042), (0.9, 0.35, 0.44, 0.046),
+                                                         (1.0, 0.25, 0.48, 0.04))):
             root, n = HEAD.point(side * yaw, pitch, 0.03)
             wavy(parts, root, n, [root + out * 0.015 - U * length * 0.3 + F * 0.03,
                                   root + out * 0.035 - U * length * 0.62 + F * 0.03,
-                                  root + out * 0.1 - U * length + F * 0.0], width, 0.03, F,
+                                  root + out * 0.04 - U * length - F * 0.04], width, 0.03, F,
                  thickness=0.4, steps=12, sharp=True, twist=side * 0.5, tier=1)
     # Under the bun, the back hair falls loose to the shoulder blades.
     for k in range(9):
@@ -547,8 +556,8 @@ def backpack():
     parts = []
     canvas = lambda p, n: common.lerp(PACK, PACK_DARK, max(0.0, -n.z) * 0.5 +
                                       max(0.0, noise.noise(p * 14.0) - 0.2) * 0.5)
-    bag = chibi.fuse([chibi.box((0.42, 0.22, 0.42), (0, 0.33, 0.93), bevel=0.09, name="pack", segments=4),
-                      chibi.ellipsoid((0, 0.37, 0.84), (0.2, 0.11, 0.14), name="sag")], "pack", voxel=0.008,
+    bag = chibi.fuse([chibi.box((0.44, 0.24, 0.52), (0, 0.35, 0.86), bevel=0.09, name="pack", segments=4),
+                      chibi.ellipsoid((0, 0.39, 0.74), (0.21, 0.12, 0.15), name="sag")], "pack", voxel=0.008,
                      faces=5000)
     chibi.fold(bag, (0, 0.43, 0.93), (0.24, 0.18, 0.26), 0.006, wavelength=0.07, across=(-0.3, 0, 1), twist=1.0,
                seed=91)
@@ -560,28 +569,28 @@ def backpack():
         v.co.z -= 0.08 * front ** 2
     common.color_by(flap, lambda p, n: LEATHER if p.y > 0.44 or abs(p.x) > 0.2 else common.lerp(canvas(p, n), PACK_DARK, 0.3))
     parts.append(flap)
-    pocket = chibi.box((0.26, 0.08, 0.2), (0, 0.46, 0.86), bevel=0.03, name="pocket", segments=3)
-    common.color_by(pocket, lambda p, n: LEATHER if p.z > 0.93 else canvas(p, n))
+    pocket = chibi.box((0.28, 0.08, 0.22), (0, 0.49, 0.8), bevel=0.03, name="pocket", segments=3)
+    common.color_by(pocket, lambda p, n: LEATHER if p.z > 0.88 else canvas(p, n))
     parts.append(pocket)
     for sx in (-0.1, 0.1):
-        path = [Vector((sx, 0.37, 1.15)), Vector((sx, 0.44, 1.1)), Vector((sx, 0.5, 0.98)), Vector((sx, 0.51, 0.84)),
-                Vector((sx, 0.5, 0.76))]
+        path = [Vector((sx, 0.39, 1.15)), Vector((sx, 0.47, 1.1)), Vector((sx, 0.53, 0.98)), Vector((sx, 0.54, 0.84)),
+                Vector((sx, 0.53, 0.72))]
         st = chibi.webbing(path, [(0, 0, 1), (0, 0.6, 0.8), (0, 1, 0.1), (0, 1, 0), (0, 1, 0)], width=0.02,
                            thick=0.007, name="packstrap")
         common.set_color(st, LEATHER)
         parts.append(st)
-        parts.append(chibi.buckle((sx, 0.515, 0.95), (0, 1, 0), width=0.045, height=0.036, colour=BRASS))
-    roll_c = (0.0, 0.33, 1.22)
+        parts.append(chibi.buckle((sx, 0.545, 0.95), (0, 1, 0), width=0.045, height=0.036, colour=BRASS))
+    roll_c = (0.0, 0.35, 1.17)
     parts.append(chibi.bedroll(roll_c, 0.5, 0.075, BEDROLL, LEATHER))
     parts += chibi.bedroll_detail(roll_c, 0.5, 0.075, BEDROLL, LEATHER, metal=BRASS)
     parts += tin_mug((0.26, 0.36, 0.86))
-    parts += chibi.straps(LEATHER, top_y=0.2, front_y=-0.19, xs=(-0.13, 0.13), shoulder_z=1.21, bottom_z=0.74,
+    parts += chibi.straps(LEATHER, top_y=0.22, front_y=-0.225, xs=(-0.15, 0.15), shoulder_z=1.21, bottom_z=0.74,
                           width=0.03, thick=0.01, metal=BRASS)
-    chest = chibi.webbing([(-0.15, -0.2, 0.97), (0, -0.215, 0.97), (0.15, -0.2, 0.97)], [(0, -1, 0)] * 3,
+    chest = chibi.webbing([(-0.17, -0.23, 0.97), (0, -0.245, 0.97), (0.17, -0.23, 0.97)], [(0, -1, 0)] * 3,
                           width=0.012, thick=0.006, name="sternum")
     common.set_color(chest, LEATHER)
     parts.append(chest)
-    parts.append(chibi.buckle((0, -0.222, 0.97), (0, -1, 0), width=0.04, height=0.032, colour=BRASS))
+    parts.append(chibi.buckle((0, -0.252, 0.97), (0, -1, 0), width=0.04, height=0.032, colour=BRASS))
     return parts
 
 
@@ -600,12 +609,53 @@ def wave_clip(rig):
     return rig_anims.action(rig, "Wave", keys, cyclic=True)
 
 
+def measure_against_sheet(rig, body, head, hair_obj):
+    """MEASURE=1: pose her standing with the arms down (as on the sheet's
+    turnaround), print her landmarks as fractions of her height and
+    render front and side silhouettes (art/lib/measure.py)."""
+    from lib import measure
+    rest = rig_anims.arms(down=80, elbow_l=6, elbow_r=6) + rig_anims.legs(wide=2) + rig_anims.torso(
+        spine=0, chest=0, head=0)
+    rig_anims.action(rig, "Measure", [(0, rest), (1, rest)])
+    rig.data.pose_position = "POSE"
+    bpy.context.scene.frame_set(0)
+    bpy.context.view_layer.update()
+
+    def bone_z(name):
+        return (rig.matrix_world @ rig.pose.bones[name].head).z
+    knee = bone_z("lowerleg.l")
+    hip = bone_z("upperleg.l")
+    shoulder = bone_z("upperarm.l")
+    heights = {"shoulders": shoulder + 0.06, "belt": PROP.z(0.62), "crotch": PROP.z(0.47), "knees": knee}
+    marks = measure.landmarks([body, hair_obj], head, heights)
+    top = marks["height_m"]
+    # Shoulder width with the arms hanging (as drawn); the others in the
+    # rest pose, so the hands at her sides don't count.
+    marks.update(measure.widths([body], {"w_shoulders": (shoulder - 0.04, None)}, top))
+    rig.data.pose_position = "REST"
+    bpy.context.view_layer.update()
+    marks.update(measure.widths([body], {"w_chest": (PROP.z(0.9), None), "w_hips": (PROP.z(0.53), None),
+                                         "w_thigh": (PROP.z(0.4), 1)}, top))
+    rig.data.pose_position = "POSE"
+    bpy.context.view_layer.update()
+    sheet = {"head": 0.173, "chin": 0.827, "shoulders": 0.755, "belt": 0.54, "crotch": 0.474, "knees": 0.27,
+             "w_shoulders": 0.255, "w_chest": 0.216, "w_hips": 0.216, "w_thigh": 0.1}
+    print("measure: %-12s %7s %7s %7s" % ("landmark", "model", "sheet", "diff"))
+    for key, value in marks.items():
+        ref = sheet.get(key)
+        print("measure: %-12s %7.3f %7s %7s" % (key, value, "%.3f" % ref if ref else "-",
+                                                 "%+.3f" % (value - ref) if ref else ""))
+    out = os.environ.get("ART_PREVIEW_DIR", os.path.join(common.ROOT, "build", "art_previews"))
+    for view in ("front", "side"):
+        measure.silhouette([body, head, hair_obj], os.path.join(out, "mum_sil_%s.png" % view), view)
+
+
 def build():
     rig = chibi.load_rig()
     soft = [skin_piece(), jacket_piece(), trousers_piece()]
     rigid = hands_and_feet() + pockets_and_belt()
     # Brass compass on her left shoulder strap (the sheet's detail).
-    for part in chibi.compass((0.15, -0.205, 0.86), GOLD, neck_z=None, radius=0.035):
+    for part in chibi.compass((0.17, -0.235, 0.86), GOLD, neck_z=None, radius=0.035):
         rigid.append((part, "chest"))
     for part in backpack():
         rigid.append((part, "chest"))
@@ -633,6 +683,9 @@ def build():
     rig.animation_data.action = idle
 
     meshes = [body, head, hair_obj]
+    if os.environ.get("MEASURE"):
+        measure_against_sheet(rig, body, head, hair_obj)
+        return
     highs = {}
     if not os.environ.get("HIGH_POLY"):
         chibi.report(meshes)
