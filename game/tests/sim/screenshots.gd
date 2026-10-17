@@ -208,6 +208,7 @@ func _ready() -> void:
 	await _settle(0.4)
 	_shot("11b_mum_waves")
 	# ...and after it she sits by the title fire.
+	arrival.queue_free()
 	main.queue_free()
 	StoryLibrary.progress_path = "user://screenshot_story.cfg"
 	StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING)

@@ -7,6 +7,5 @@
   - 038 (the Moon-Eater) puts its fight between the last night and `MumArrival`;
   - 041's journal pages can use Mum's expressions;
   - voice lines for Mum's two lines (`intro.c1.3.1`, `win.c2.2.2`).
-- **Open:**
-  - The face is Nela's painted-face kit tuned older. A dedicated adult face pass (eye shape, smile) would bring it closer to the sheet.
-  - The hair is thinner than the sheet's big waves.
+- **Iterate on the face or hair:** `HEAD_ONLY=1 ART_PREVIEW_DIR=/tmp/x .venv-blender/bin/python art/characters/mum.py` (about 20 s).
+- **Open:** her eyes are still a little big for a grown-up next to the kids. That's a matter of taste: `FACE.eye_w`, `eye_h` and `iris_r`.

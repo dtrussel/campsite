@@ -36,14 +36,14 @@ BLUSH = (0.98, 0.52, 0.46)
 HAIR_LIGHT = (1.0, 0.9, 0.6)
 HAIR = (0.92, 0.72, 0.36)
 HAIR_DARK = (0.58, 0.38, 0.16)
-JACKET = (0.74, 0.8, 0.24)
-JACKET_DARK = (0.46, 0.52, 0.12)
+JACKET = (0.78, 0.82, 0.2)
+JACKET_DARK = (0.5, 0.56, 0.12)
 TOP = (0.13, 0.13, 0.15)
 TOP_LIGHT = (0.26, 0.26, 0.29)
-SCARF = (0.66, 0.55, 0.42)
-SCARF_DARK = (0.42, 0.33, 0.24)
-TROUSERS = (0.24, 0.23, 0.25)
-TROUSERS_DARK = (0.13, 0.12, 0.14)
+SCARF = (0.78, 0.67, 0.52)
+SCARF_DARK = (0.56, 0.45, 0.33)
+TROUSERS = (0.27, 0.23, 0.21)
+TROUSERS_DARK = (0.15, 0.12, 0.11)
 BOOT = (0.52, 0.34, 0.2)
 BOOT_TOE = (0.62, 0.44, 0.28)
 SOLE = (0.2, 0.14, 0.1)
@@ -73,16 +73,16 @@ FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "mum_face.png")
 # straight nose, freckles over the nose and cheeks, and a warm closed-
 # mouth smile with a hint of teeth.
 FACE = face_paint.FaceLayout(
-    size=0.32, eye_x=0.082, eye_z=-0.035, eye_w=0.046, eye_h=0.03, eye_tilt=0.02, lid=0.12, iris_r=0.025,
-    look=(0.002, 0.003), iris=(0.36, 0.62, 0.95), iris_dark=(0.05, 0.16, 0.42), lash=(0.16, 0.08, 0.05),
+    size=0.32, eye_x=0.084, eye_z=-0.04, eye_w=0.05, eye_h=0.036, eye_tilt=0.05, lid=0.1, iris_r=0.03,
+    look=(0.009, 0.004), iris=(0.36, 0.62, 0.95), iris_dark=(0.05, 0.16, 0.42), lash=(0.16, 0.08, 0.05),
     lash_width=0.01, wing=0.008, lower_lash=0.3, eyeshadow_alpha=0.08, socket=(0.82, 0.55, 0.48),
     socket_alpha=0.28, lid_fold=0.5, nose_shadow=0.16, nostril_alpha=0.25,
-    brows=((0.03, 0.045, 0.01, 0.012), (0.03, 0.045, 0.01, 0.012)),
-    brow_len=0.058, brow_colour=(0.68, 0.46, 0.22), brow_alpha=0.85, nose_z=-0.104, nose_w=0.014,
-    mouth_z=-0.148, mouth_w=0.05, smile=5.5, smirk=0.0, open_mouth=0.006, lip_upper=0.003, lip_lower=0.006,
+    brows=((0.036, 0.06, 0.014, 0.013), (0.036, 0.06, 0.014, 0.013)),
+    brow_len=0.062, brow_colour=(0.58, 0.36, 0.15), brow_alpha=0.95, nose_z=-0.1, nose_w=0.015,
+    mouth_z=-0.146, mouth_w=0.062, smile=9.0, smirk=0.0, open_mouth=0.011, lip_upper=0.003, lip_lower=0.008,
     lip_colour=(0.86, 0.46, 0.44), lip_dark=(0.5, 0.18, 0.18), tongue=(0.84, 0.38, 0.4), chin_z=-0.228,
-    skin_shadow=(0.8, 0.48, 0.4), light_colour=(1.0, 0.9, 0.8), blush=(0.98, 0.46, 0.42), blush_alpha=0.38,
-    blush_pos=(0.11, -0.105), contour=0.14, plane_light=1.0, face_half_w=0.19, catch2=0.8, flush_alpha=0.1,
+    skin_shadow=(0.8, 0.48, 0.4), light_colour=(1.0, 0.9, 0.8), blush=(0.98, 0.44, 0.4), blush_alpha=0.58,
+    blush_pos=(0.118, -0.1), contour=0.12, plane_light=1.0, face_half_w=0.2, catch2=0.8, flush_alpha=0.2,
     highlight=(1.0, 0.93, 0.87), freckle_colour=(0.7, 0.42, 0.3),
     freckles=[(sx * x, z) for sx in (-1, 1) for x, z in ((0.03, -0.085), (0.06, -0.095), (0.085, -0.1),
                                                           (0.105, -0.09), (0.095, -0.115), (0.125, -0.105),
@@ -97,7 +97,7 @@ _NELA_SECTIONS = ((0.235, 0.02, -0.02, 0.02, 2.0, 2.0), (0.222, 0.11, -0.11, 0.1
                   (-0.155, 0.16, -0.228, 0.13, 2.4, 2.2), (-0.185, 0.112, -0.215, 0.095, 2.35, 2.15),
                   (-0.205, 0.066, -0.2, 0.06, 2.2, 2.1), (-0.22, 0.03, -0.165, 0.03, 2.1, 2.0))
 LOFT = head_loft.HeadLoft(
-    sections=tuple((z * (1.06 if z > 0 else 1.1), w * (0.88 if z > -0.1 else 0.84), f * 0.96, b * 0.94, sf, sb)
+    sections=tuple((z * (1.05 if z > 0 else 1.06), w * (0.9 if z > -0.12 else 0.88), f * 0.97, b * 0.94, sf, sb)
                    for z, w, f, b, sf, sb in _NELA_SECTIONS),
     nose_top=-0.06, nose_tip_z=-0.098, nose_base_z=-0.11, nose_h=0.018, nose_bridge_h=0.003,
     nose_w=(0.004, 0.009), nose_side=0.011, alae=0.003, cheek=0.006, cheek_pos=(0.105, -0.1),
@@ -111,7 +111,8 @@ F, R, U = Vector((0, -1, 0)), Vector((-1, 0, 0)), Vector((0, 0, 1))  # forward, 
 
 def skin_piece():
     """Only the neck shows (the top's sleeves and the trousers cover the
-    rest); slim adult arms and legs inside help the auto-weights."""
+    rest); slim adult arms inside help the auto-weights. No legs: they
+    poked through the trousers when she sits or kneels."""
     parts = [chibi.limb([(0, 0.0, 1.08), (0, 0.004, 1.25), (0, 0.006, 1.38)],
                         [(0.07, 0.066), (0.062, 0.06), (0.06, 0.058)], up=(0, -1, 0), name="neck")]
     for s in (-1, 1):
@@ -119,9 +120,6 @@ def skin_piece():
         rr = ((0.06, 0.062), (0.056, 0.056), (0.05, 0.05), (0.048, 0.046), (0.044, 0.04), (0.038, 0.034),
               (0.036, 0.032))
         parts.append(chibi.limb([(s * x, 0, 1.107) for x in xs], rr, up=(0, 0, 1), name="arm"))
-        zs = (0.5, 0.42, 0.34, 0.27, 0.21, 0.16)
-        rr = ((0.075, 0.075), (0.068, 0.068), (0.06, 0.062), (0.052, 0.056), (0.046, 0.05), (0.044, 0.048))
-        parts.append(chibi.limb([(s * 0.12, 0.0, z) for z in zs], rr, up=(0, -1, 0), name="leg"))
     body = chibi.fuse(parts, "Skin", voxel=0.008, faces=6000)
     common.color_by(body, lambda p, n: common.lerp(SKIN, SKIN_SHADE, max(0.0, -n.z * 0.5)))
     return body
@@ -159,7 +157,7 @@ def jacket_piece():
                                 up=(0, 0, 1), name="sleeve"))
         parts.append(chibi.ellipsoid((s * 0.19, 0.0, 1.12), (0.08, 0.09, 0.07), name="deltoid", segs=(16, 12)))
         # The rolled-up jacket cuff just above the elbow.
-        parts.append(chibi.hem_ring((s * 0.47, 0, 1.107), (0.08, 0.078), 0.02, name="roll", axis="X"))
+        parts.append(chibi.hem_ring((s * 0.53, 0, 1.107), (0.074, 0.072), 0.022, name="roll", axis="X"))
         parts.append(chibi.hem_ring((s * 0.755, 0, 1.107), (0.047, 0.045), 0.008, name="cuff", axis="X"))
     # Jacket skirt to the hips, with a hem.
     parts.append(chibi.limb([(0, 0, 0.66), (0, 0, 0.58), (0, 0, 0.51)],
@@ -182,18 +180,18 @@ def jacket_piece():
         if mark is not None:
             return mark
         ax = abs(pos.x)
-        if ax > 0.495:
+        if ax > 0.555:
             # The top's black sleeve, with soft folds.
             return common.lerp(TOP, TOP_LIGHT, max(0.0, math.sin(ax * 70) * 0.35))
-        if ax > 0.44:
+        if ax > 0.505:
             return common.lerp(JACKET, JACKET_DARK, 0.35)      # the rolled cuff
         # The open front: a strip of the black top down the middle, with
         # the jacket's zip edges either side.
-        if pos.y < -0.05 and pos.z > 0.6:
-            if ax < 0.04:
-                return TOP
-            if ax < 0.05:
-                return JACKET_DARK
+        if pos.y < -0.05 and pos.z > 0.53:
+            if ax < 0.068:
+                return common.lerp(TOP, TOP_LIGHT, max(0.0, math.sin(pos.z * 90) * 0.25))
+            if ax < 0.08:
+                return JACKET_DARK                         # the zip edges
         if pos.z < 0.525:
             return JACKET_DARK                                 # hem band
         fold = math.sin(pos.x * 30 - pos.z * 22) * max(0.0, 0.95 - pos.z) * 1.6
@@ -211,12 +209,12 @@ def trousers_piece():
     parts = [chibi.ellipsoid((0, 0, 0.55), (0.19, 0.135, 0.11), name="hips")]
     for s in (-1, 1):
         parts.append(chibi.limb([(s * 0.1, 0, 0.56), (s * 0.125, -0.005, 0.42), (s * 0.13, 0.0, 0.32),
-                                 (s * 0.13, 0.008, 0.24), (s * 0.13, 0.012, 0.19)],
-                                [(0.1, 0.1), (0.1, 0.1), (0.09, 0.092), (0.08, 0.084), (0.08, 0.084)],
+                                 (s * 0.13, 0.008, 0.24), (s * 0.13, 0.012, 0.13)],
+                                [(0.1, 0.1), (0.1, 0.1), (0.09, 0.092), (0.08, 0.084), (0.076, 0.08)],
                                 up=(0, -1, 0), name="leg"))
     parts.append(chibi.ellipsoid((0, 0.0, 0.47), (0.11, 0.11, 0.08), name="crotch"))
     trousers = chibi.fuse(parts, "Trousers", voxel=0.0095)
-    chibi.cut_open(trousers, (0, 0, 0.2), (0, 0, -1))
+    chibi.cut_open(trousers, (0, 0, 0.14), (0, 0, -1))
     for s in (-1, 1):
         chibi.fold(trousers, (s * 0.13, -0.02, 0.33), (0.12, 0.14, 0.04), 0.009, wavelength=0.05,
                    across=(0, 0, 1), twist=0.8 * s, seed=71 + s)
@@ -240,9 +238,13 @@ def pockets_and_belt():
     flaps, the leather belt and buckle, and the black collar of the top."""
     parts = []
     for s, bone in ((1, "upperleg.l"), (-1, "upperleg.r")):
-        pocket = chibi.box((0.03, 0.12, 0.1), (s * 0.215, -0.005, 0.36), bevel=0.012, name="cargo")
-        common.color_by(pocket, lambda p, n: TROUSERS_DARK if p.z > 0.395 else TROUSERS, smooth=False)
+        # Short in rest space: the leg stretch (x3.1) makes it a tall pocket.
+        pocket = chibi.box((0.032, 0.12, 0.055), (s * 0.21, -0.005, 0.4), bevel=0.01, name="cargo")
+        common.color_by(pocket, lambda p, n: TROUSERS_DARK if p.z > 0.416 else TROUSERS, smooth=False)
         parts.append((pocket, bone))
+        snap = chibi.cylinder((s * 0.228, -0.005, 0.418), 0.009, 0.006, name="snap", axis="X", segments=8)
+        common.set_color(snap, BRASS)
+        parts.append((snap, bone))
     for s in (-1, 1):
         flap = chibi.box((0.1, 0.02, 0.05), (s * 0.11, -0.165, 1.02), bevel=0.01, name="chestpocket")
         common.color_by(flap, lambda p, n: JACKET_DARK if p.z > 1.03 else JACKET, smooth=False)
@@ -260,6 +262,13 @@ def pockets_and_belt():
     collar = chibi.torus((0, 0, 1.2), 0.07, 0.014, name="collar")
     common.set_color(collar, TOP)
     parts.append((collar, "chest"))
+    # The jacket's turned-down collar, open at the front under the scarf.
+    lapel = chibi.torus((0, 0.015, 1.165), 0.12, 0.026, name="lapel", segs=(32, 8))
+    for v in lapel.data.vertices:
+        front = max(0.0, -v.co.y / 0.12)
+        v.co.z -= 0.05 * front ** 2
+    common.color_by(lapel, lambda p, n: JACKET_DARK if n.z < -0.2 else JACKET)
+    parts.append((lapel, "chest"))
     return parts
 
 
@@ -267,16 +276,21 @@ def scarf_piece():
     """The tan scarf: a soft lumpy wrap round the neck with a short tail
     tucked down the front (the sheet)."""
     puffs = []
-    for k in range(10):
-        a = k / 10 * math.tau
-        puffs.append(chibi.ellipsoid((math.cos(a) * 0.085, math.sin(a) * 0.075, 1.205 + 0.012 * math.sin(a * 2)),
-                                     (0.055, 0.05, 0.045), name="wrap", segs=(12, 8)))
-    puffs.append(chibi.ellipsoid((0.02, -0.1, 1.14), (0.06, 0.035, 0.07), name="knot", segs=(12, 10)))
-    puffs.append(chibi.ellipsoid((0.04, -0.11, 1.06), (0.045, 0.025, 0.06), name="tail", segs=(10, 8)))
-    scarf = chibi.fuse(puffs, "scarf", voxel=0.008, smooth=2, faces=2400)
+    for k in range(12):
+        a = k / 12 * math.tau
+        puffs.append(chibi.ellipsoid((math.cos(a) * 0.098, math.sin(a) * 0.088, 1.2 + 0.015 * math.sin(a * 2)),
+                                     (0.066, 0.06, 0.054), name="wrap", segs=(12, 8)))
+    # A loose loop drooping at the front, and two tails hanging down.
+    for k in range(6):
+        t = k / 5
+        puffs.append(chibi.ellipsoid((0.06 - 0.12 * t, -0.11 - 0.02 * math.sin(t * math.pi), 1.15 - 0.06 * math.sin(t * math.pi)),
+                                     (0.05, 0.04, 0.045), name="loop", segs=(12, 8)))
+    puffs.append(chibi.ellipsoid((0.04, -0.12, 1.07), (0.055, 0.03, 0.08), name="tail", segs=(12, 10)))
+    puffs.append(chibi.ellipsoid((-0.02, -0.115, 1.03), (0.045, 0.026, 0.09), name="tail", segs=(12, 10)))
+    scarf = chibi.fuse(puffs, "scarf", voxel=0.008, smooth=2, faces=3200)
     chibi.fold(scarf, (0, 0, 1.2), (0.16, 0.16, 0.06), 0.008, radial_axis=(0, 0, 1), count=12, seed=81)
-    common.color_by(scarf, lambda p, n: common.lerp(SCARF, SCARF_DARK, max(0.0, -n.z) * 0.6 +
-                                                    max(0.0, noise.noise(p * 30.0)) * 0.3))
+    common.color_by(scarf, lambda p, n: common.lerp(SCARF, SCARF_DARK, max(0.0, -n.z) * 0.5 +
+                                                    max(0.0, noise.noise(p * 12.0)) * 0.2))
     return scarf
 
 
@@ -285,7 +299,7 @@ def hands_and_feet():
     for h, bone in chibi.hands(SKIN, sculpted=True, crease=SKIN_SHADE, size=0.86):
         rigid.append((h, bone))
     for s, bone in ((1, "foot.l"), (-1, "foot.r")):
-        for part in chibi.sculpted_boot(s, BOOT, SOLE, BOOT_TOE, LACE, scale=0.98, height=0.85,
+        for part in chibi.sculpted_boot(s, BOOT, SOLE, BOOT_TOE, LACE, scale=1.08, height=0.75,
                                         collar=(0.32, 0.2, 0.1)):
             common.grime(part, MUD, lambda p, n: max(0.0, (0.1 - p.z) / 0.08) * 0.7 +
                          max(0.0, noise.noise(p * 26.0) - 0.3) * 0.8)
@@ -319,124 +333,163 @@ def wavy(parts, root, up, controls, width, wave, side, thickness=0.42, steps=9, 
 
 
 def hair_cap():
+    """A full, rounded hair mass over the crown and down the back and
+    sides of the head (the sheet's hair has a lot of volume), open for
+    the face."""
     c, r = HEAD.c, HEAD.r
-    shell_r = (r.x + 0.035, r.y + 0.035, r.z + 0.03)
-    shell = chibi.ellipsoid(c + Vector((0, 0.012, 0.012)), shell_r, name="hairshell", segs=(40, 26))
+    shell_r = (r.x + 0.05, r.y + 0.045, r.z + 0.04)
+    shell = chibi.ellipsoid(c + Vector((0, 0.02, 0.015)), shell_r, name="hairshell", segs=(44, 30))
     bm = bmesh.new()
     bm.from_mesh(shell.data)
     kill = []
     for v in bm.verts:
         d = v.co - c
         d = Vector((d.x / shell_r[0], d.y / shell_r[1], d.z / shell_r[2]))
-        if not (d.z > 0.5 or (d.y > -0.3 and d.z > -0.25) or (d.y > 0.3 and d.z > -0.6)):
+        if not (d.z > 0.5 or (d.y > -0.35 and d.z > -0.3) or (d.y > 0.25 and d.z > -0.75)):
             kill.append(v)
     bmesh.ops.delete(bm, geom=kill, context="VERTS")
     bm.to_mesh(shell.data)
     bm.free()
     mod = shell.modifiers.new("Solid", "SOLIDIFY")
-    mod.thickness = 0.022
+    mod.thickness = 0.03
     common.apply_all_modifiers(shell)
     common.shade_smooth(shell)
-    common.color_by(shell, chibi.hair_colour(HAIR_LIGHT, HAIR, HAIR_DARK, c, scale=5.0, strands=34))
+    common.color_by(shell, chibi.hair_colour(HAIR_LIGHT, HAIR, HAIR_DARK, c, scale=5.0, strands=40))
     return shell
 
 
 def bun_base():
     """A loose bun low on the back of her head (the sheet's turnaround)."""
-    p, n = HEAD.point(math.pi, -0.3, 0.03)
+    p, n = HEAD.point(math.pi, -0.25, 0.05)
     return p + Vector((0.0, 0.03, 0.0))
 
 
 def low_bun():
+    """The messy bun: a lumpy twist with loops, and wisps springing out."""
     parts = []
     base = bun_base()
     rng = random.Random(17)
     puffs = [chibi.ellipsoid(base + Vector(o), rad, name="bun", segs=(16, 10))
-             for o, rad in (((0, 0.04, 0.0), (0.095, 0.08, 0.085)), ((0.05, 0.06, 0.03), (0.06, 0.055, 0.055)),
-                            ((-0.05, 0.05, -0.02), (0.06, 0.055, 0.055)), ((0.0, 0.09, 0.02), (0.055, 0.05, 0.05)))]
-    bun = chibi.fuse(puffs, "bun", voxel=0.01, smooth=2, faces=1600)
-    common.color_by(bun, chibi.hair_colour(HAIR_LIGHT, HAIR, HAIR_DARK, base, scale=12.0, strands=18))
+             for o, rad in (((0, 0.04, 0.0), (0.11, 0.09, 0.095)), ((0.06, 0.07, 0.035), (0.07, 0.06, 0.06)),
+                            ((-0.06, 0.06, -0.025), (0.07, 0.06, 0.06)), ((0.0, 0.1, 0.03), (0.06, 0.055, 0.055)),
+                            ((0.03, 0.05, -0.07), (0.055, 0.05, 0.05)))]
+    bun = chibi.fuse(puffs, "bun", voxel=0.01, smooth=2, faces=2000)
+    common.color_by(bun, chibi.hair_colour(HAIR_LIGHT, HAIR, HAIR_DARK, base, scale=12.0, strands=22))
     parts.append(bun)
-    for k in range(9):
-        a = k / 9 * math.tau + rng.uniform(-0.3, 0.3)
-        out = Vector((math.cos(a), 0.3, math.sin(a))).normalized()
-        root = base + Vector((0, 0.06, 0)) + out * 0.05
+    # Loops of hair wrapped round the bun.
+    for k in range(0):
+        a = k / 5 * math.tau + 0.4
+        root = base + Vector((math.cos(a) * 0.08, 0.06, math.sin(a) * 0.08))
+        side = Vector((-math.sin(a), 0, math.cos(a)))
+        wavy(parts, root, Vector((0, 1, 0)), [root + side * 0.06 + Vector((0, 0.04, 0)),
+                                              root + side * 0.11 - Vector((math.cos(a), 0, math.sin(a))) * 0.03,
+                                              root + side * 0.13 - Vector((math.cos(a), 0, math.sin(a))) * 0.08],
+             0.035, 0.005, Vector((0, 1, 0)), thickness=0.45, steps=7, tier=0)
+    for k in range(6):
+        a = k / 6 * math.tau + rng.uniform(-0.3, 0.3)
+        out = Vector((math.cos(a), 0.35, math.sin(a))).normalized()
+        root = base + Vector((0, 0.07, 0)) + out * 0.06
         side = out.cross(F).normalized()
-        L = rng.uniform(0.08, 0.15)
+        L = rng.uniform(0.06, 0.11)
         wavy(parts, root, side, [root + out * L * 0.5, root + out * L * 0.9 - U * 0.03,
-                                 root + out * L - U * 0.08 + side * 0.03],
-             rng.uniform(0.012, 0.02), 0.012, side, thickness=0.3, steps=7, sharp=True, tier=2)
+                                 root + out * L - U * 0.09 + side * 0.03],
+             rng.uniform(0.012, 0.02), 0.014, side, thickness=0.3, steps=7, sharp=True, tier=2)
     return parts
 
 
 def hair():
-    """Long wavy hair as on the sheet: swept back from a side parting into
-    a loose low bun, long locks framing her face and falling over her
-    shoulders to the chest, loose locks at the nape and flyaways."""
+    """Long wavy golden hair as on the sheet: swept back from a side
+    parting over a full crown into a loose low bun; soft side-swept
+    bangs; lots of wavy locks falling round the sides and back to the
+    shoulders, the front ones framing her cheeks and curling out at the
+    jaw; flyaways all round."""
     parts = [hair_cap()]
     rng = random.Random(5)
     base = bun_base()
 
     def pulled(yaw, pitch, width, tier, lift=0.01):
+        """A lock from the hairline lying along the skull back to the bun."""
         root, n = HEAD.point(yaw, pitch, lift)
         mids = []
         for t in (0.35, 0.7):
-            q, qn = HEAD.point(yaw * (1 - t) + math.copysign(math.pi, yaw) * t, pitch * (1 - t) - 0.05 * t,
-                               lift + 0.012 + 0.012 * t)
+            q, qn = HEAD.point(yaw * (1 - t) + math.copysign(math.pi, yaw) * t, pitch * (1 - t) - 0.2 * t,
+                               lift + 0.025 + 0.02 * math.sin(t * math.pi))
             mids.append(q)
         side = (mids[0] - root).cross(n).normalized()
-        wavy(parts, root, n, mids + [base + (root - base).normalized() * 0.05], width, 0.01, side,
-             thickness=(0.42, 0.36, 0.3)[tier], steps=9, sharp=tier > 0, twist=rng.uniform(-0.3, 0.3), tier=tier,
+        wavy(parts, root, n, mids + [base + (root - base).normalized() * 0.06], width, 0.008, side,
+             thickness=(0.4, 0.34, 0.3)[tier], steps=10, sharp=tier > 0, twist=rng.uniform(-0.3, 0.3), tier=tier,
              ring=10 if tier == 0 else 8)
 
-    for k in range(12):
-        yaw = -math.pi + (k + 0.5) / 12 * math.tau
-        if abs(yaw) < 0.9:
+    for k in range(16):
+        yaw = -math.pi + (k + 0.5) / 16 * math.tau
+        if abs(yaw) < 0.95:
             continue
-        pulled(yaw, 0.3 + 0.12 * (k % 3), 0.1, 0, lift=0.012)
-    for k in range(28):
-        yaw = rng.choice((-1, 1)) * rng.uniform(0.9, 2.9)
-        pulled(yaw, rng.uniform(0.25, 0.8), rng.uniform(0.04, 0.06), 1, lift=0.024)
-    # A soft side-swept fringe from a parting on her left.
-    for yaw, drop, fan, width in ((0.42, 0.09, -0.12, 0.034), (0.25, 0.07, -0.14, 0.03), (0.08, 0.06, -0.16, 0.028),
-                                  (-0.1, 0.07, -0.12, 0.026), (-0.3, 0.1, -0.06, 0.026), (-0.5, 0.13, -0.02, 0.024)):
-        root, n = HEAD.point(yaw + 0.1, 0.82, 0.006)
-        side = Vector((-math.cos(yaw), -math.sin(yaw), 0))
-        wavy(parts, root, F, [root + F * 0.05 + U * 0.02, root + F * 0.065 - U * drop * 0.5 - side * fan * 0.5,
-                              root + F * 0.05 - U * drop - side * fan * 1.3], width, 0.01, side,
-             thickness=0.3, sharp=True, twist=rng.uniform(-0.3, 0.3), tier=2)
-    # Long face-framing locks from the temples, falling past the jaw
-    # over the shoulders to the chest (they reach below the neck, so the
-    # body stretch lengthens them with her torso).
+        pulled(yaw, 0.3 + 0.12 * (k % 3), 0.075, 0, lift=0.03)
+    for k in range(26):
+        yaw = rng.choice((-1, 1)) * rng.uniform(1.1, 2.9)
+        pulled(yaw, rng.uniform(0.2, 0.6), rng.uniform(0.035, 0.05), 1, lift=0.035)
+
+    # Side-swept bangs: from a parting over her left eye, sweeping across
+    # the forehead to her right and down past the temple.
+    # Each lock is draped over the head surface: parting -> forehead -> temple.
+    for k, (yaw0, yaw1, pitch1, width) in enumerate(((0.36, -0.2, 0.55, 0.05), (0.32, -0.45, 0.48, 0.05),
+                                                     (0.28, -0.7, 0.4, 0.046), (0.24, -0.95, 0.3, 0.042),
+                                                     (0.2, -1.15, 0.18, 0.038), (0.42, 0.75, 0.42, 0.04),
+                                                     (0.46, 0.95, 0.3, 0.036))):
+        root, n = HEAD.point(yaw0, 0.98, 0.035)
+        mid, _ = HEAD.point((yaw0 + yaw1) * 0.5, (0.98 + pitch1) * 0.5 + 0.08, 0.06)
+        end, _ = HEAD.point(yaw1, pitch1, 0.045)
+        side = (end - root).cross(n).normalized()
+        wavy(parts, root, n, [root.lerp(mid, 0.5) + n * 0.02, mid, end], width, 0.008, side,
+             thickness=0.34, steps=10, sharp=True, twist=rng.uniform(-0.2, 0.2), tier=1)
+
+    # The long wavy fall round the sides and back, layered: under-layer
+    # behind the ears, then the side curtains, then face-framing locks.
     for side in (-1, 1):
         out = Vector((side, 0, 0))
-        for k, (yaw, length, width, fwd) in enumerate(((0.85, 0.5, 0.045, -0.06), (1.0, 0.6, 0.05, -0.01),
-                                                       (1.2, 0.55, 0.04, 0.04), (1.45, 0.5, 0.045, 0.08))):
-            root, n = HEAD.point(side * yaw, 0.3 - 0.07 * k, 0.012)
-            wavy(parts, root, n, [root + out * 0.05 - U * length * 0.3 + F * 0.01,
-                                  root + out * 0.12 - U * length * 0.65 - F * fwd,
-                                  root + out * 0.16 - U * length - F * fwd * 1.6], width * 1.3, 0.04, F,
-                 thickness=0.4, steps=11, sharp=True, twist=side * 0.4, tier=1)
-    # Loose locks at the nape under the bun.
-    for k, yaw in enumerate((2.55, 2.8, 3.05, 3.3, 3.55, 3.8)):
-        root, n = HEAD.point(yaw, -0.2, 0.012)
+        for k in range(9):
+            yaw = side * (1.15 + k * 0.16)
+            pitch = rng.uniform(0.0, 0.35)
+            root, n = HEAD.point(yaw, pitch, 0.04)
+            back = Vector((0, 1, 0)) * (0.02 + k * 0.012)
+            length = rng.uniform(0.42, 0.6)
+            flare = 0.05 + 0.02 * (k % 3)
+            wavy(parts, root, n, [root + out * flare - U * length * 0.3 + back,
+                                  root + out * (flare + 0.04) - U * length * 0.65 + back * 1.5,
+                                  root + out * (flare + 0.02) - U * length + back * 2.0],
+                 rng.uniform(0.045, 0.06), 0.035, F, thickness=0.42, steps=12, sharp=True,
+                 twist=side * rng.uniform(0.2, 0.6), tier=k % 2)
+        # Face-framing locks: from the temples, round the cheek, curling
+        # out at the jaw and on over the collarbone.
+        for k, (yaw, pitch, length, width) in enumerate(((0.78, 0.45, 0.38, 0.042), (0.9, 0.35, 0.46, 0.046),
+                                                         (1.0, 0.25, 0.5, 0.04))):
+            root, n = HEAD.point(side * yaw, pitch, 0.03)
+            wavy(parts, root, n, [root + out * 0.015 - U * length * 0.3 + F * 0.03,
+                                  root + out * 0.035 - U * length * 0.62 + F * 0.03,
+                                  root + out * 0.1 - U * length + F * 0.0], width, 0.03, F,
+                 thickness=0.4, steps=12, sharp=True, twist=side * 0.5, tier=1)
+    # Under the bun, the back hair falls loose to the shoulder blades.
+    for k in range(9):
+        yaw = math.pi + (k - 4) * 0.2
+        root, n = HEAD.point(yaw, -0.35, 0.04)
         flat = Vector((n.x, n.y, 0)).normalized()
-        length = rng.uniform(0.12, 0.2)
-        wavy(parts, root, n, [root - U * length * 0.4 + flat * 0.02, root - U * length * 0.85 + flat * 0.04,
-                              root - U * length + flat * 0.06], rng.uniform(0.03, 0.045), 0.015,
-             Vector((1, 0, 0)) * rng.choice((-1, 1)), thickness=0.36, sharp=True, tier=1)
-    for k in range(18):
+        length = rng.uniform(0.3, 0.45)
+        wavy(parts, root, n, [root - U * length * 0.35 + flat * 0.05, root - U * length * 0.7 + flat * 0.06,
+                              root - U * length + flat * 0.04], rng.uniform(0.05, 0.065), 0.03,
+             Vector((1, 0, 0)) * rng.choice((-1, 1)), thickness=0.42, steps=11, sharp=True, tier=k % 2)
+    # Flyaways: thin strands curling off the mass (the soft messy outline).
+    for k in range(12):
         yaw = rng.uniform(-3.0, 3.0)
         if abs(yaw) < 0.8:
             yaw += 0.8 * math.copysign(1, yaw)
-        root, n = HEAD.point(yaw, rng.uniform(0.15, 0.9), 0.026)
+        root, n = HEAD.point(yaw, rng.uniform(0.1, 0.8), 0.05)
         side = Vector((math.cos(yaw), math.sin(yaw), 0)) * rng.choice((-1, 1))
         curl = (side * 0.7 - U * rng.uniform(0.4, 0.8)).normalized()
-        length = rng.uniform(0.08, 0.13)
+        length = rng.uniform(0.08, 0.14)
         wavy(parts, root, n, [root + n * length * 0.25 + curl * length * 0.45,
                               root + n * length * 0.3 + curl * length * 0.9 + side * 0.015,
                               root + n * length * 0.1 + curl * length * 1.1 + side * 0.04],
-             rng.uniform(0.01, 0.015), 0.018, side, thickness=0.3, steps=9, sharp=True, tier=2)
+             rng.uniform(0.01, 0.016), 0.02, side, thickness=0.3, steps=9, sharp=True, tier=2)
     parts += low_bun()
     return parts
 
@@ -558,6 +611,15 @@ def build():
         rigid.append((part, "chest"))
     rigid.append((scarf_piece(), "chest"))
     head, hair_obj = head_piece()
+    if os.environ.get("HEAD_ONLY"):
+        # Face and hair iteration (~20 s): no body, no bake.
+        from lib import preview
+        chibi.quick_material(head, overlay=(FACE_PNG, "FaceUV"))
+        chibi.quick_material(hair_obj)
+        preview.render([head, hair_obj], "mum_head", elevation=6, azimuth=10, size=512)
+        preview.render([head, hair_obj], "mum_head34", elevation=10, azimuth=40, size=512)
+        preview.render([head, hair_obj], "mum_head_back", elevation=15, azimuth=160, size=384)
+        return
     PROP.stretch_rig(rig)
     body = chibi.finish(rig, soft, rigid, "Mum", prop=PROP)
     PROP.stretch_mesh(head)
@@ -585,7 +647,8 @@ def build():
         for mesh in meshes:
             chibi.quick_material(mesh, overlay=(FACE_PNG, "FaceUV") if mesh is head else None)
         print("mum tris:", common.triangle_count(meshes))
-        render_previews(rig, meshes, head, "mum", ("Walking_A", 8), ("Wave", 6), ("Cheer", 12))
+        render_previews(rig, meshes, head, "mum", ("Walking_A", 8), ("Wave", 6), ("Cheer", 12),
+                        *[(clip, 10) for clip in os.environ.get("EXTRA_CLIPS", "").split(",") if clip])
         return
     params = dict(size=1024, ao_distance=0.18, ao_strength=0.6, edge_strength=0.3, edge_radius=0.012,
                   noise_scale=6.0, stroke_strength=0.08, light=(1.12, 1.04, 0.95), shadow=(0.45, 0.38, 0.58),
@@ -598,6 +661,11 @@ def build():
             if mesh is head else dict(cavity=0.3)
         paint_bake.paint(mesh, source="attribute", high=highs.get(mesh), **dict(params, **extra))
     rig.data.pose_position = "POSE"
+    for mesh in meshes:
+        # The fused body had invalid faces ("Mesh Mum is not valid" from
+        # the exporter), which came out in Godot as a stray black strip.
+        if mesh.data.validate(clean_customdata=False):
+            print("mum: repaired mesh data on", mesh.name)
     common.export_glb(os.path.join(common.OUT_DIR, "mum.glb"), [rig] + meshes, animations=True, image_format="WEBP")
     print("mum tris:", common.triangle_count(meshes))
     render_previews(rig, meshes, head, "mum", ("Walking_A", 8), ("Wave", 6), ("Cheer", 12))
