@@ -1,5 +1,5 @@
 # Feature 037: Handoff
 
-- **Done:** the plan only (docs). No code yet.
-- **Next:** confirm the open questions with the team, then start from `plan.md`.
-- Open: does the companion also bark to tell the player about danger off-screen ("Behind you!"), which would also help gameplay?
+- **Done:** the refined plan (`plan.md`) and the decisions. No code yet.
+- **Next:** build from `plan.md`: the bark data and validator first, then the bubble, the director and its triggers, then the smoke checks and a screenshot.
+- Open questions are answered (see `decisions.md`).
