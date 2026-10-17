@@ -75,7 +75,7 @@ soundfile) on first run.
 | Path | What |
 |------|------|
 | `audio/dsp.py` | Oscillators, envelopes, filters, a convolution reverb, and instruments: `pluck` (Karplus-Strong guitar), `bell`, `pad`, `knock` (wood), `owl`. `write()` normalises and encodes the result |
-| `audio/sfx.py` | One-shots in the `SOUNDS` table. Each id is written as `sfx/<id>_<n>.ogg` (variants). Ids match `Fx.burst` kinds where one exists |
+| `audio/sfx.py` | One-shots in the `SOUNDS` table. Each id is written as `sfx/<id>_<n>.ogg` (variants). Ids match `Fx.burst` kinds where one exists. `chirp_leo` / `chirp_nela` are the barks' babble until recordings arrive (feature 037) |
 | `audio/music.py` | Seamless loops: `music/day.ogg`, `music/night.ogg`, and `ambience/{day,night,campfire}.ogg` |
 
 - **Tone:** warm, toy-like and never harsh (the players are young kids). Imps are silly ("poof" and a squeak), not scary.

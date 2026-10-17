@@ -1,6 +1,6 @@
 # Feature 037: Sibling barks (plan)
 
-Status: **planned, ready to build** (refined 2026-10-17). Rough size: **S–M**.
+Status: **done** (built 2026-10-17). Rough size: **S–M**. As built, two changes from this plan are in `decisions.md`: the bubble is drawn on screen, and nightfall replaces dawn.
 
 ## Goal
 Let Leo and Nela talk while you play: short speech bubbles on game events,
@@ -39,7 +39,7 @@ dawn cards. The companion also calls out danger the player can't see.
 | `first_beast` | `MobSpawner.mob_spawned` (a beast, once per night) | call and response |
 | `level_up` | `ProgressionManager.level_up(character)` | that hero |
 | `sunset` | `TimeManager.sunset_warning` | call and response |
-| `dawn` | `TimeManager.dawn_started`, only when no dawn story card plays | the played hero |
+| `night_start` (was `dawn`) | `TimeManager.night_started` | call and response |
 | `lantern_stage` | `MoonLantern.stage_changed` | call and response |
 | `companion_down` / `companion_up` | `knocked_out_changed` | played hero / companion |
 | `danger_behind` | polled every 0.5 s at night: a hostile mob within about 5 m of the player and off-screen or behind them | the companion; urgent, 12 s cooldown, not while knocked out |

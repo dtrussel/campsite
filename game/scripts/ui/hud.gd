@@ -65,6 +65,7 @@ var _tray_rows: Dictionary = {}    # StringName -> Control
 
 
 func _ready() -> void:
+	add_to_group("hud")
 	var root: Control = Control.new()
 	root.theme = UiKit.theme()
 	UiKit.full_rect(root)

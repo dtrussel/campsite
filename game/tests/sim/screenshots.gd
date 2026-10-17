@@ -58,6 +58,18 @@ func _ready() -> void:
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	await _settle(1.0)
 	_shot("03_day_hud")
+	# Feature 037: a call and response over both kids' heads.
+	var director: BarkDirector = get_tree().get_first_node_in_group("bark_director") as BarkDirector
+	await _settle(2.5)  # past the DAY banner
+	director.clock += 60.0
+	director.bark(&"thief")
+	var companion: Node = get_tree().get_first_node_in_group("companions")
+	for i in 40:  # until Nela's reply is up (frames are slow under xvfb)
+		if SpeechBubble.on(companion) != null:
+			break
+		await _settle(0.1)
+	await _settle(0.3)
+	_shot("03c_barks")
 	# Feature 035: a dawn story card over the HUD, with the lantern hint.
 	var hud: Node = main.get_node("HUD")
 	var card: StoryCard = hud.call("show_story", StoryLibrary.first(&"dawn", 1, 1), hud.call("_lantern_hint"))

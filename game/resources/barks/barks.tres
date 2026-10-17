@@ -1,0 +1,305 @@
+[gd_resource type="Resource" script_class="BarkSet" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/story/bark_set.gd" id="1_set"]
+
+[resource]
+script = ExtResource("1_set")
+triggers = {
+&"low_hp": {
+"cooldown": 25.0,
+"once": "",
+"role": "subject",
+"urgent": true
+},
+&"thief": {
+"cooldown": 20.0,
+"once": "",
+"role": "call_response",
+"urgent": false
+},
+&"thief_caught": {
+"cooldown": 15.0,
+"once": "",
+"role": "hero",
+"urgent": false
+},
+&"first_beast": {
+"cooldown": 0.0,
+"once": "night",
+"role": "call_response",
+"urgent": false
+},
+&"level_up": {
+"cooldown": 4.0,
+"once": "",
+"role": "subject",
+"urgent": true
+},
+&"sunset": {
+"cooldown": 0.0,
+"once": "night",
+"role": "call_response",
+"urgent": false
+},
+&"night_start": {
+"cooldown": 0.0,
+"once": "night",
+"role": "call_response",
+"urgent": false
+},
+&"lantern_stage": {
+"cooldown": 10.0,
+"once": "",
+"role": "call_response",
+"urgent": false
+},
+&"companion_down": {
+"cooldown": 10.0,
+"once": "",
+"role": "hero",
+"urgent": true
+},
+&"companion_up": {
+"cooldown": 10.0,
+"once": "",
+"role": "companion",
+"urgent": false
+},
+&"danger_behind": {
+"cooldown": 12.0,
+"once": "",
+"role": "companion",
+"urgent": true
+}
+}
+lines = [{
+"id": "bark.low_hp.leo.1",
+"speaker": "leo",
+"text": "Ow! I need a breather!",
+"trigger": "low_hp"
+}, {
+"id": "bark.low_hp.leo.2",
+"speaker": "leo",
+"text": "That one stung!",
+"trigger": "low_hp"
+}, {
+"id": "bark.low_hp.leo.3",
+"speaker": "leo",
+"text": "Not looking good...",
+"trigger": "low_hp"
+}, {
+"id": "bark.low_hp.nela.1",
+"speaker": "nela",
+"text": "Ouch! I need a second!",
+"trigger": "low_hp"
+}, {
+"id": "bark.low_hp.nela.2",
+"speaker": "nela",
+"text": "I'm hurt, cover me!",
+"trigger": "low_hp"
+}, {
+"id": "bark.low_hp.nela.3",
+"speaker": "nela",
+"text": "That really hurt!",
+"trigger": "low_hp"
+}, {
+"id": "bark.thief.leo.1",
+"speaker": "leo",
+"text": "Hey! That's our stuff!",
+"trigger": "thief"
+}, {
+"id": "bark.thief.leo.2",
+"speaker": "leo",
+"text": "A gremlin! Grab it!",
+"trigger": "thief"
+}, {
+"id": "bark.thief.nela.1",
+"speaker": "nela",
+"text": "After that sneaky thing!",
+"trigger": "thief"
+}, {
+"id": "bark.thief.nela.2",
+"speaker": "nela",
+"text": "It's got our supplies!",
+"trigger": "thief"
+}, {
+"id": "bark.thief_caught.leo.1",
+"speaker": "leo",
+"text": "Got it back!",
+"trigger": "thief_caught"
+}, {
+"id": "bark.thief_caught.leo.2",
+"speaker": "leo",
+"text": "Ha! Drop that!",
+"trigger": "thief_caught"
+}, {
+"id": "bark.thief_caught.nela.1",
+"speaker": "nela",
+"text": "Nice try, mushroom!",
+"trigger": "thief_caught"
+}, {
+"id": "bark.thief_caught.nela.2",
+"speaker": "nela",
+"text": "That's ours, thank you!",
+"trigger": "thief_caught"
+}, {
+"id": "bark.first_beast.leo.1",
+"speaker": "leo",
+"text": "Whoa, that's a big one!",
+"trigger": "first_beast"
+}, {
+"id": "bark.first_beast.leo.2",
+"speaker": "leo",
+"text": "The trees are walking!",
+"trigger": "first_beast"
+}, {
+"id": "bark.first_beast.nela.1",
+"speaker": "nela",
+"text": "Bramble Beast! Watch out!",
+"trigger": "first_beast"
+}, {
+"id": "bark.first_beast.nela.2",
+"speaker": "nela",
+"text": "Keep it off the tent!",
+"trigger": "first_beast"
+}, {
+"id": "bark.level_up.leo.1",
+"speaker": "leo",
+"text": "I'm getting stronger!",
+"trigger": "level_up"
+}, {
+"id": "bark.level_up.leo.2",
+"speaker": "leo",
+"text": "Ranger skills, up!",
+"trigger": "level_up"
+}, {
+"id": "bark.level_up.nela.1",
+"speaker": "nela",
+"text": "I'm getting better at this!",
+"trigger": "level_up"
+}, {
+"id": "bark.level_up.nela.2",
+"speaker": "nela",
+"text": "Ooh, I learned something!",
+"trigger": "level_up"
+}, {
+"id": "bark.sunset.leo.1",
+"speaker": "leo",
+"text": "Sun's going down!",
+"trigger": "sunset"
+}, {
+"id": "bark.sunset.leo.2",
+"speaker": "leo",
+"text": "Back to the fire!",
+"trigger": "sunset"
+}, {
+"id": "bark.sunset.nela.1",
+"speaker": "nela",
+"text": "Back to the fire!",
+"trigger": "sunset"
+}, {
+"id": "bark.sunset.nela.2",
+"speaker": "nela",
+"text": "Light the torches!",
+"trigger": "sunset"
+}, {
+"id": "bark.night_start.leo.1",
+"speaker": "leo",
+"text": "Here they come!",
+"trigger": "night_start"
+}, {
+"id": "bark.night_start.leo.2",
+"speaker": "leo",
+"text": "Stick ready. Let's go!",
+"trigger": "night_start"
+}, {
+"id": "bark.night_start.nela.1",
+"speaker": "nela",
+"text": "Stay close to the light!",
+"trigger": "night_start"
+}, {
+"id": "bark.night_start.nela.2",
+"speaker": "nela",
+"text": "Slingshot's loaded!",
+"trigger": "night_start"
+}, {
+"id": "bark.lantern_stage.leo.1",
+"speaker": "leo",
+"text": "The lantern's brighter!",
+"trigger": "lantern_stage"
+}, {
+"id": "bark.lantern_stage.leo.2",
+"speaker": "leo",
+"text": "Look, it's glowing!",
+"trigger": "lantern_stage"
+}, {
+"id": "bark.lantern_stage.nela.1",
+"speaker": "nela",
+"text": "Mum's lantern is waking up!",
+"trigger": "lantern_stage"
+}, {
+"id": "bark.lantern_stage.nela.2",
+"speaker": "nela",
+"text": "The light is growing!",
+"trigger": "lantern_stage"
+}, {
+"id": "bark.companion_down.leo.1",
+"speaker": "leo",
+"text": "Hang on, I'm coming!",
+"trigger": "companion_down"
+}, {
+"id": "bark.companion_down.leo.2",
+"speaker": "leo",
+"text": "No! Get up!",
+"trigger": "companion_down"
+}, {
+"id": "bark.companion_down.nela.1",
+"speaker": "nela",
+"text": "Hang on, I'm coming!",
+"trigger": "companion_down"
+}, {
+"id": "bark.companion_down.nela.2",
+"speaker": "nela",
+"text": "Oh no! Rest, I've got this!",
+"trigger": "companion_down"
+}, {
+"id": "bark.companion_up.leo.1",
+"speaker": "leo",
+"text": "I'm okay! Back in it!",
+"trigger": "companion_up"
+}, {
+"id": "bark.companion_up.leo.2",
+"speaker": "leo",
+"text": "Phew. I'm good!",
+"trigger": "companion_up"
+}, {
+"id": "bark.companion_up.nela.1",
+"speaker": "nela",
+"text": "I'm back! Let's go!",
+"trigger": "companion_up"
+}, {
+"id": "bark.companion_up.nela.2",
+"speaker": "nela",
+"text": "Feeling better now!",
+"trigger": "companion_up"
+}, {
+"id": "bark.danger_behind.leo.1",
+"speaker": "leo",
+"text": "Behind you!",
+"trigger": "danger_behind"
+}, {
+"id": "bark.danger_behind.leo.2",
+"speaker": "leo",
+"text": "Watch your back!",
+"trigger": "danger_behind"
+}, {
+"id": "bark.danger_behind.nela.1",
+"speaker": "nela",
+"text": "Behind you!",
+"trigger": "danger_behind"
+}, {
+"id": "bark.danger_behind.nela.2",
+"speaker": "nela",
+"text": "Look out, behind!",
+"trigger": "danger_behind"
+}]

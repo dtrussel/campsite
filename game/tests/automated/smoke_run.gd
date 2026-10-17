@@ -43,6 +43,7 @@ func _ready() -> void:
 	await _run_loss_scenario()
 	await _run_continue_scenario()
 	await _run_hero_scenario()
+	await _run_bark_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	_finish()
@@ -876,6 +877,92 @@ func _run_hero_scenario() -> void:
 	_check(player.is_in_group(HeroRoster.group_for(&"nela")) and bool(player.get("has_signature")),
 		"continued as Nela, slingshot and all")
 	GameManager.set_party(&"leo")
+
+
+## Feature 037: the siblings' barks. The right hero speaks, keyed by who
+## is played; cooldowns hold back spam; a bark never cuts off a story
+## voice; the companion warns about a mob behind the player.
+func _run_bark_scenario() -> void:
+	print("smoke: --- bark scenario ---")
+	GameManager.set_party(&"leo")
+	await _start_fresh_run()
+	var director: BarkDirector = get_tree().get_first_node_in_group("bark_director") as BarkDirector
+	var player: Node3D = get_tree().get_first_node_in_group("player")
+	var companion: Node3D = get_tree().get_first_node_in_group("companions")
+	_check(director != null, "the run has a bark director")
+	var max_hp: int = int(companion.get("max_hp"))
+	companion.call("take_damage", max_hp - int(max_hp * 0.2))
+	var bubble: SpeechBubble = SpeechBubble.on(companion)
+	_check(bubble != null and _bark_line(bubble.text, &"low_hp", &"nela"), "Nela at low HP says so over her head")
+	_check(SpeechBubble.on(player) == null, "the player stays quiet")
+	_check(not director.bark(&"low_hp", companion), "low HP again within its cooldown: no bark")
+	_check(not director.bark(&"thief"), "a second bark right away waits for the shared cooldown")
+	director.clock += BarkDirector.GLOBAL_COOLDOWN + 1.0
+	_check(director.bark(&"thief"), "a gremlin steals: the siblings shout")
+	_check(_bark_line(SpeechBubble.on(player).text, &"thief", &"leo"), "Leo (played) calls out first")
+	await _wait(BarkDirector.REPLY_DELAY + 1.0)
+	_check(SpeechBubble.on(companion) != null and _bark_line(SpeechBubble.on(companion).text, &"thief", &"nela"),
+		"Nela replies")
+	_check(SpeechBubble.on(companion).position.y > float(companion.get("_hp_bar").position.y),
+		"the bubble sits above the health bar")
+
+	# A story line keeps speaking under a bark.
+	var story_voice: AudioStream = load("res://assets/audio/sfx/chirp_nela_1.ogg")
+	AudioManager.play_voice(story_voice)
+	ProgressionManager.level_up.emit(player, 2)
+	_check(_bark_line(SpeechBubble.on(player).text, &"level_up", &"leo"), "a level-up is cheered by that hero")
+	_check(AudioManager.play_bark(null, "leo") == 0.0, "no bark audio while a story line speaks")
+	AudioManager.stop_voice()
+	_check(AudioManager.play_bark(null, "leo") > 0.0, "the bark chirps when the story is quiet")
+
+	# Danger behind the player: the companion warns.
+	director.clock += 30.0
+	var imp_def: MobDefinition = get_tree().get_first_node_in_group("mob_spawner").get("mob_definition")
+	var facing: Vector3 = player.call("get_facing")
+	var imp: Mob = _spawn_mob(imp_def, player.global_position - facing * 3.0)
+	await get_tree().process_frame
+	_check(director.danger_behind(), "an imp 3 m behind the player counts as danger")
+	await _wait(BarkDirector.DANGER_POLL_SECONDS + 0.3)
+	_check(SpeechBubble.on(companion) != null and _bark_line(SpeechBubble.on(companion).text, &"danger_behind", &"nela"),
+		"Nela warns: behind you!")
+	director.clock += 30.0
+	companion.call("take_damage", 9999)
+	_check(_bark_line(SpeechBubble.on(player).text, &"companion_down", &"leo"), "Leo calls out when Nela is knocked out")
+	director.clock += 30.0
+	_check(not director.bark(&"danger_behind"), "a knocked-out companion gives no warnings")
+	imp.take_damage(999, player)
+
+	# Nela played: the speakers swap, and the events reach the director.
+	GameManager.set_party(&"nela")
+	await _start_fresh_run()
+	director = get_tree().get_first_node_in_group("bark_director") as BarkDirector
+	player = get_tree().get_first_node_in_group("player")
+	companion = get_tree().get_first_node_in_group("companions")
+	var gremlin_def: MobDefinition = load("res://resources/mobs/mushroom_gremlin.tres")
+	var gremlin: Mob = _spawn_mob(gremlin_def, player.global_position + Vector3(8, 0, 8))
+	await get_tree().process_frame
+	gremlin.stole.emit(gremlin, &"wood", 2)
+	_check(SpeechBubble.on(player) != null and _bark_line(SpeechBubble.on(player).text, &"thief", &"nela"),
+		"Nela played: she shouts at the thief first")
+	await _wait(BarkDirector.REPLY_DELAY + 1.0)
+	_check(SpeechBubble.on(companion) != null and _bark_line(SpeechBubble.on(companion).text, &"thief", &"leo"),
+		"and Leo replies")
+	gremlin.take_damage(999, player)
+	director.clock += 30.0
+	var beast: Mob = _spawn_mob(load("res://resources/mobs/bramble_beast.tres"), player.global_position + Vector3(10, 0, -8))
+	await get_tree().process_frame
+	_check(_bark_line(SpeechBubble.on(player).text, &"first_beast", &"nela"), "the first beast of the night gets a shout")
+	director.clock += 30.0
+	_check(not director.bark(&"first_beast"), "only once a night")
+	beast.take_damage(9999, player)
+	GameManager.set_party(&"leo")
+
+
+func _bark_line(text: String, trigger: StringName, speaker: StringName) -> bool:
+	for line in BarkLibrary.lines_for(trigger, speaker, GameManager.hero_id):
+		if String((line as Dictionary).get("text", "")) == text:
+			return true
+	return false
 
 
 func _start_fresh_run() -> void:

@@ -51,6 +51,11 @@ func _ready() -> void:
 	show_page(0)
 
 
+## False once the book has finished (it may still be fading out).
+func is_open() -> bool:
+	return not _done
+
+
 func page_count() -> int:
 	return _beats.size()
 

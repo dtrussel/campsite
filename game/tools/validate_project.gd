@@ -284,6 +284,8 @@ func _validate_story() -> void:
 			_fail("Mum's '%s' portrait is missing (art/ui/story_art.py)" % face)
 	if not ResourceLoader.exists(MumArrival.MODEL_PATH):
 		_fail("Mum's model is missing: %s (art/characters/mum.py)" % MumArrival.MODEL_PATH)
+	var story_lines: int = line_ids.size()
+	_validate_barks(line_ids, hero_ids)
 	var voiced: int = 0
 	for line_id in line_ids.keys():
 		if StoryLibrary.voice(String(line_id)) != null:
@@ -293,5 +295,46 @@ func _validate_story() -> void:
 		for file_name in dir.get_files():
 			var clean: String = file_name.trim_suffix(".import").trim_suffix(".remap")
 			if clean.get_extension() in StoryLibrary.VOICE_EXTENSIONS and not line_ids.has(StringName(clean.get_basename())):
-				_fail("voice file %s matches no story line id" % clean)
-	print("validate_project: story %d beats, %d lines, %d voiced" % [beat_ids.size(), line_ids.size(), voiced])
+				_fail("voice file %s matches no story line or bark id" % clean)
+	print("validate_project: story %d beats, %d lines, %d barks, %d voiced" % [beat_ids.size(), story_lines, line_ids.size() - story_lines, voiced])
+
+
+## The siblings' barks (feature 037): known triggers and roles, at least
+## two lines per hero for every trigger, lines of 1-30 characters, ids
+## unique among all story lines, and no placeholders (barks are voiced).
+## `line_ids` gets the bark ids, so voice files can match them.
+func _validate_barks(line_ids: Dictionary, hero_ids: Array[String]) -> void:
+	var barks: BarkSet = load(BarkLibrary.BARKS_PATH) as BarkSet
+	if barks == null:
+		_fail("%s is missing or not a BarkSet" % BarkLibrary.BARKS_PATH)
+		return
+	for trigger in barks.triggers.keys():
+		var tuning: Dictionary = barks.triggers[trigger] as Dictionary
+		if not BarkSet.ROLES.has(String(tuning.get("role", ""))):
+			_fail("bark trigger '%s' has unknown role '%s'" % [trigger, tuning.get("role", "")])
+		if not String(tuning.get("once", "")) in ["", "night"]:
+			_fail("bark trigger '%s' has unknown once '%s'" % [trigger, tuning.get("once", "")])
+		for hero_id in hero_ids:
+			for played in hero_ids:
+				if BarkLibrary.lines_for(StringName(trigger), StringName(hero_id), StringName(played)).size() < 2:
+					_fail("bark trigger '%s' has fewer than 2 lines for %s (%s played)" % [trigger, hero_id, played])
+	for value in barks.lines:
+		var line: Dictionary = value as Dictionary
+		var line_id: String = String(line.get("id", ""))
+		var text: String = String(line.get("text", ""))
+		_check_id(StringName(line_id), "%s bark" % BarkLibrary.BARKS_PATH, line_ids)
+		if not barks.triggers.has(StringName(String(line.get("trigger", "")))):
+			_fail("bark %s has unknown trigger '%s'" % [line_id, line.get("trigger", "")])
+		if not hero_ids.has(String(line.get("speaker", ""))):
+			_fail("bark %s has unknown speaker '%s'" % [line_id, line.get("speaker", "")])
+		var when: String = String(line.get("when", ""))
+		if when != "" and not hero_ids.has(when):
+			_fail("bark %s is for unknown hero '%s'" % [line_id, when])
+		if text == "" or text.length() > 30:
+			_fail("bark %s must be 1-30 characters (%d)" % [line_id, text.length()])
+		if text.contains("{"):
+			_fail("bark %s has a placeholder; barks are voiced, write one per hero" % line_id)
+	for trigger in [&"low_hp", &"thief", &"thief_caught", &"first_beast", &"level_up", &"sunset", &"night_start",
+			&"lantern_stage", &"companion_down", &"companion_up", &"danger_behind"]:
+		if not barks.triggers.has(trigger):
+			_fail("bark trigger '%s' is fired by BarkDirector but has no tuning" % trigger)

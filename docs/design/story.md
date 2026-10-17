@@ -125,7 +125,28 @@ only, 038).
   A card stays up until its voices have finished (at least 6 s at dawn).
 - Until the recordings arrive every line shows as text only. The
   validator reports how many lines are voiced.
-- Barks (037) will follow the same rule when they are built.
+- Barks (037) follow the same rule: `bark.<trigger>.<speaker>.<n>.ogg`.
+  Until a bark has a recording, a short chirp plays in the speaker's
+  pitch (`chirp_leo`, `chirp_nela`).
+
+## Barks (037)
+
+Short lines over a sibling's head while you play, in
+`game/resources/barks/barks.tres` (`BarkSet`). A line is
+`{id, trigger, speaker, text, when}` and the set tunes each trigger:
+who speaks (`hero`, `companion`, `subject` or `call_response`), its
+cooldown, `urgent`, and `once: "night"`.
+
+- Triggers: `low_hp`, `thief`, `thief_caught`, `first_beast`, `level_up`,
+  `sunset`, `night_start`, `lantern_stage`, `companion_down`,
+  `companion_up` and `danger_behind` (the companion's "Behind you!").
+  Dawn has no bark, because every dawn already has its story card.
+- At least two lines per hero for every trigger, at most 30 characters,
+  and no placeholders (write one line per hero). `tools/check.sh` fails
+  anything else.
+- No chatter: 6 s between barks, a cooldown per trigger, and nothing
+  while a story card or book is open. Hurt, knocked out, danger and
+  level-up are urgent and skip the 6 s gap.
 
 ## Art plan
 

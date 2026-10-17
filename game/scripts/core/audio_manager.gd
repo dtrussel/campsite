@@ -11,6 +11,9 @@ extends Node
 ##   TimeManager changes phase, with win / lose stingers at run end.
 ## - voiced story lines (feature 035) on their own Voice bus: one at a
 ##   time, a new line cuts the last one off.
+## - sibling barks (feature 037) on the Voice bus too, on their own
+##   player: a recording when there is one, else a per-speaker chirp.
+##   A bark never cuts off a story line.
 ## - volume settings (Music, SFX) saved to user://settings.cfg.
 ## Data lives in res://resources/audio/audio_library.tres.
 
@@ -44,6 +47,7 @@ var _ambience: Array[AudioStreamPlayer] = []
 var _last_variant: Dictionary = {}  # id -> index, to avoid repeats
 var _fades: Dictionary = {}  # AudioStreamPlayer -> Tween
 var _voice: AudioStreamPlayer = null
+var _bark: AudioStreamPlayer = null
 
 
 func _ready() -> void:
@@ -70,6 +74,9 @@ func _ready() -> void:
 	_voice = AudioStreamPlayer.new()
 	_voice.bus = &"Voice"
 	add_child(_voice)
+	_bark = AudioStreamPlayer.new()
+	_bark.bus = &"Voice"
+	add_child(_bark)
 	for i in 2:
 		_music.append(_make_loop_player(&"Music"))
 		_ambience.append(_make_loop_player(&"SFX"))
@@ -120,6 +127,27 @@ func play_voice(stream: AudioStream) -> float:
 		return 0.0
 	_voice.stream = stream
 	_voice.play()
+	return stream.get_length()
+
+
+## Plays a bark: its recording, or else `chirp_<speaker>`. Stays quiet
+## while a story line is speaking. Returns the seconds it plays.
+func play_bark(stream: AudioStream, speaker: String) -> float:
+	if _voice.playing:
+		return 0.0
+	var volume: float = 0.0
+	if stream == null:
+		var chirp: StringName = StringName("chirp_" + speaker)
+		var streams: Array[AudioStream] = library.streams_for(chirp) if library != null and library.has_sound(chirp) else []
+		if streams.is_empty():
+			return 0.0
+		stream = streams[_pick_variant(chirp, streams.size())]
+		volume = library.volume_db(chirp)
+	_bark.stop()
+	_bark.stream = stream
+	_bark.volume_db = volume
+	_bark.pitch_scale = 1.0
+	_bark.play()
 	return stream.get_length()
 
 
