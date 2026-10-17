@@ -2,9 +2,11 @@ extends CanvasLayer
 
 ## HUD
 ##
-## LoL-inspired in-game HUD, built in code from HudWidgets:
-##   top centre    - day clock, phase + timer, nights survived, campfire HP,
-##                   imp counter at night, event banners
+## In-game HUD in the campcraft style (feature 033), built in code
+## from HudWidgets:
+##   top centre    - one slim strip: nights-to-win moons, the day dial
+##                   medallion, campfire HP; an imp tag hangs under the
+##                   dial at night, and event banners show on a ribbon
 ##   top left      - sibling portrait, HP, current task
 ##   top right     - resource tray with icons
 ##   bottom centre - the boy: portrait + level, HP and XP bars, and the
@@ -19,6 +21,9 @@ const _PHASE_COLOR_SUNSET: Color = Color(1, 0.6, 0.45)
 const _PHASE_COLOR_NIGHT: Color = Color(0.75, 0.65, 1.0)
 const _PHASE_COLOR_DAWN: Color = Color(1, 0.88, 0.65)
 
+const _TOP_WIDTH: float = 330.0
+const _DIAL_SIZE: float = 58.0
+
 var _vignette: TextureRect = null
 const _TRAY_ITEMS: Array[StringName] = [&"wood", &"stone", &"berries", &"fiber", &"leaves", &"resin", &"clay",
 	&"mushrooms", &"scrap", &"glow_shards", &"torch", &"snack"]
@@ -30,10 +35,11 @@ var _base_core: Node = null
 
 var _clock: HudWidgets.DayClock = null
 var _moons: Array = []  # HudWidgets.Glyph per night to survive
-var _imps_row: Control = null
+var _imps_row: Control = null  # canvas tag under the dial
 var _campfire_bar: HudWidgets.StatBar = null
 var _imps_label: Label = null
 var _banner: Label = null
+var _banner_plate: PanelContainer = null
 var _banner_tween: Tween = null
 var _build_label: Label = null
 
@@ -86,71 +92,105 @@ func _ready() -> void:
 # --- Layout ------------------------------------------------------------------
 
 func _build_top(root: Control) -> void:
-	var holder: VBoxContainer = VBoxContainer.new()
-	holder.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	holder.position = Vector2(-190, 10)
-	holder.custom_minimum_size = Vector2(380, 0)
-	holder.alignment = BoxContainer.ALIGNMENT_BEGIN
-	holder.add_theme_constant_override("separation", 6)
-	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(holder)
+	# One slim strip: moons to win | day dial medallion | campfire health.
+	# The dial overhangs the strip; the imp tag hangs under it at night.
+	var top: Control = Control.new()
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top.custom_minimum_size = Vector2(_TOP_WIDTH, 96)
+	_anchor(top, Control.PRESET_CENTER_TOP, Vector2(0, 6))
+	root.add_child(top)
 
-	var plate: PanelContainer = _plate(12)
-	holder.add_child(plate)
-	var stack: VBoxContainer = VBoxContainer.new()
-	stack.add_theme_constant_override("separation", 6)
-	plate.add_child(stack)
+	var plate: PanelContainer = _plate(6, 14)
+	plate.position = Vector2(0, 9)
+	plate.custom_minimum_size = Vector2(_TOP_WIDTH, 44)
+	plate.size = plate.custom_minimum_size
+	top.add_child(plate)
 	var row: HBoxContainer = HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 12)
-	stack.add_child(row)
-	_clock = HudWidgets.DayClock.new()
-	_clock.custom_minimum_size = Vector2(56, 56)
-	row.add_child(_clock)
+	row.add_theme_constant_override("separation", 0)
+	plate.add_child(row)
+
 	# One moon per night to survive; they light up as nights are won.
-	var moon_size: float = 46.0 if GameManager.nights_to_win <= 4 else 30.0
+	var moons: HBoxContainer = HBoxContainer.new()
+	moons.alignment = BoxContainer.ALIGNMENT_CENTER
+	moons.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	moons.add_theme_constant_override("separation", 3 if GameManager.nights_to_win <= 4 else 1)
+	moons.tooltip_text = "Nights to survive"
+	moons.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.add_child(moons)
+	var moon_size: float = 24.0 if GameManager.nights_to_win <= 4 else 15.0
 	for i in range(GameManager.nights_to_win):
-		var moon: HudWidgets.Glyph = HudWidgets.Glyph.new("moon_empty", Color(1.0, 0.92, 0.55), moon_size)
-		row.add_child(moon)
+		var moon: HudWidgets.Glyph = HudWidgets.Glyph.new("moon_empty", Color(1.0, 0.92, 0.6), moon_size)
+		moon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		moons.add_child(moon)
 		_moons.append(moon)
 
+	var gap: Control = Control.new()
+	gap.custom_minimum_size = Vector2(_DIAL_SIZE + 8.0, 0)
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(gap)
+
 	var fire_row: HBoxContainer = HBoxContainer.new()
-	fire_row.add_theme_constant_override("separation", 6)
+	fire_row.add_theme_constant_override("separation", 4)
 	fire_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	fire_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	stack.add_child(fire_row)
-	fire_row.add_child(HudWidgets.Glyph.new("fire", Color(1.0, 0.55, 0.15), 30))
-	_campfire_bar = HudWidgets.StatBar.new(Color(0.88, 0.55, 0.12), Color(1.0, 0.82, 0.4))
-	_campfire_bar.custom_minimum_size = Vector2(300, 22)
+	fire_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fire_row.tooltip_text = "Campfire"
+	fire_row.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.add_child(fire_row)
+	var fire: HudWidgets.Glyph = HudWidgets.Glyph.new("fire", UiKit.COLOR_EMBER, 22)
+	fire.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	fire_row.add_child(fire)
+	_campfire_bar = HudWidgets.StatBar.new(Color(0.9, 0.42, 0.1), Color(1.0, 0.78, 0.36))
+	_campfire_bar.custom_minimum_size = Vector2(96, 12)
 	_campfire_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_campfire_bar.tick_every = 25.0
 	_campfire_bar.show_text = false
 	fire_row.add_child(_campfire_bar)
 
-	_imps_row = HudWidgets.icon_count(_icon("portrait_imp"), "", "0", 44)
-	_imps_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_clock = HudWidgets.DayClock.new()
+	_clock.custom_minimum_size = Vector2(_DIAL_SIZE, _DIAL_SIZE)
+	_clock.size = _clock.custom_minimum_size
+	_clock.position = Vector2((_TOP_WIDTH - _DIAL_SIZE) * 0.5, 0)
+	top.add_child(_clock)
+
+	# Imp tag: a small canvas label hanging under the dial.
+	var hang: CenterContainer = CenterContainer.new()
+	hang.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hang.position = Vector2(0, _DIAL_SIZE - 4.0)
+	hang.size = Vector2(_TOP_WIDTH, 34)
+	top.add_child(hang)
+	var tag: PanelContainer = PanelContainer.new()
+	var tag_style: StyleBox = UiKit.art_style("canvas", 2)
+	tag_style.content_margin_left = 8
+	tag_style.content_margin_right = 10
+	tag.add_theme_stylebox_override("panel", tag_style)
+	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hang.add_child(tag)
+	_imps_row = tag
 	_imps_row.visible = false
-	_imps_label = _imps_row.get_child(1) as Label
-	_imps_label.add_theme_color_override("font_color", Color(0.9, 0.7, 1.0))
-	stack.add_child(_imps_row)
+	var imps: HBoxContainer = HudWidgets.icon_count(_icon("portrait_imp"), "", "0", 26)
+	imps.add_theme_constant_override("separation", 4)
+	tag.add_child(imps)
+	_imps_label = imps.get_child(1) as Label
+	_imps_label.add_theme_color_override("font_color", Color(0.36, 0.18, 0.5))
+	_imps_label.add_theme_constant_override("outline_size", 0)
 
 
 func _build_sibling_frame(root: Control) -> void:
-	var plate: PanelContainer = _plate(10)
-	plate.position = Vector2(14, 12)
+	var plate: PanelContainer = _plate(8, 10)
+	_anchor(plate, Control.PRESET_TOP_LEFT, Vector2(10, 8))
 	root.add_child(plate)
 	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 8)
 	plate.add_child(row)
 	_sibling_portrait = HudWidgets.Portrait.new(_icon("portrait_nela"))
-	_sibling_portrait.custom_minimum_size = Vector2(62, 62)
-	row.add_child(_name_tag(_sibling_portrait, "Nela", 16))
+	_sibling_portrait.custom_minimum_size = Vector2(52, 52)
+	row.add_child(_name_tag(_sibling_portrait, "Nela", 14))
 	var column: VBoxContainer = VBoxContainer.new()
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_theme_constant_override("separation", 6)
+	column.add_theme_constant_override("separation", 7)
 	row.add_child(column)
-	_sibling_hp = HudWidgets.StatBar.new(Color(0.2, 0.7, 0.4), Color(0.5, 0.95, 0.65))
-	_sibling_hp.custom_minimum_size = Vector2(200, 14)
+	_sibling_hp = HudWidgets.StatBar.new(Color(0.33, 0.62, 0.24), Color(0.62, 0.86, 0.42))
+	_sibling_hp.custom_minimum_size = Vector2(0, 10)
 	_sibling_hp.show_text = false
 	column.add_child(_sibling_hp)
 	# Task picker: idle, follow, guard, gather, repair (Companion.Task order).
@@ -160,51 +200,71 @@ func _build_sibling_frame(root: Control) -> void:
 	var specs: Array = [["zzz", "Y"], ["footsteps", "F"], ["shield", "G"], ["basket", "T"], ["hammer", "V"]]
 	for i in range(specs.size()):
 		var button: Button = Button.new()
-		button.custom_minimum_size = Vector2(46, 46)
+		button.custom_minimum_size = Vector2(36, 36)
 		button.focus_mode = Control.FOCUS_NONE
 		button.toggle_mode = true
 		button.tooltip_text = specs[i][1]
-		var glyph: HudWidgets.Glyph = HudWidgets.Glyph.new(specs[i][0], Color(0.95, 0.9, 0.75), 34)
-		glyph.position = Vector2(6, 6)
-		glyph.size = Vector2(34, 34)
+		_style_task_button(button)
+		var glyph: HudWidgets.Glyph = HudWidgets.Glyph.new(specs[i][0], Color(0.98, 0.92, 0.76), 24)
+		glyph.position = Vector2(6, 7)
+		glyph.size = Vector2(24, 24)
 		button.add_child(glyph)
-		var key: Label = UiKit.label(specs[i][1], 11, UiKit.COLOR_GOLD)
-		key.position = Vector2(3, 0)
+		var key: Label = UiKit.label(specs[i][1], 10, UiKit.COLOR_INK)
+		key.add_theme_font_override("font", Fx.bold_font())
+		var tab: StyleBoxFlat = UiKit.flat_style(UiKit.COLOR_CANVAS, UiKit.COLOR_INK, 1, 3)
+		tab.content_margin_left = 3
+		tab.content_margin_right = 3
+		key.add_theme_stylebox_override("normal", tab)
+		key.position = Vector2(-3, -5)
 		button.add_child(key)
 		button.pressed.connect(_on_task_button.bind(i))
 		tasks.add_child(button)
 		_task_buttons.append(button)
 
 
+## Task buttons: brass-framed slots; the active task glows ember.
+func _style_task_button(button: Button) -> void:
+	var normal: StyleBox = UiKit.art_style("slot", 0)
+	var hover: StyleBox = UiKit.art_style("slot", 0)
+	hover.modulate_color = Color(1.25, 1.12, 0.95)
+	var active: StyleBoxFlat = UiKit.flat_style(Color(0.5, 0.3, 0.12, 0.95), UiKit.COLOR_EMBER, 2, 7)
+	active.shadow_color = Color(1.0, 0.6, 0.15, 0.5)
+	active.shadow_size = 4
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", active)
+	button.add_theme_stylebox_override("hover_pressed", active)
+
+
 func _build_tray(root: Control) -> void:
-	var plate: PanelContainer = _plate(10)
-	plate.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	plate.position = Vector2(-236, 12)
-	plate.custom_minimum_size = Vector2(222, 0)
+	var plate: PanelContainer = _plate(8, 12)
+	_anchor(plate, Control.PRESET_TOP_RIGHT, Vector2(-10, 8))
 	root.add_child(plate)
 	var grid: GridContainer = GridContainer.new()
-	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 14)
-	grid.add_theme_constant_override("v_separation", 2)
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 0)
 	plate.add_child(grid)
 	for id in _TRAY_ITEMS:
 		var definition: ResourceDefinition = ResourceManager.get_definition(id)
 		if definition == null:
 			continue
 		var row: HBoxContainer = HBoxContainer.new()
-		row.add_theme_constant_override("separation", 4)
+		row.add_theme_constant_override("separation", 3)
 		row.tooltip_text = "%s - %s" % [definition.display_name, definition.description]
 		row.mouse_filter = Control.MOUSE_FILTER_PASS
 		var icon: TextureRect = TextureRect.new()
 		icon.texture = definition.icon
-		icon.custom_minimum_size = Vector2(30, 30)
+		icon.custom_minimum_size = Vector2(26, 26)
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(icon)
-		var count: Label = UiKit.label("0", 18)
+		var count: Label = UiKit.label("0", 16)
 		count.add_theme_font_override("font", Fx.bold_font())
-		count.custom_minimum_size = Vector2(56, 0)
+		count.add_theme_constant_override("outline_size", 4)
+		count.custom_minimum_size = Vector2(30, 0)
+		count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		row.add_child(count)
 		grid.add_child(row)
 		_tray_labels[id] = count
@@ -214,7 +274,7 @@ func _build_tray(root: Control) -> void:
 ## Portrait with the character's name underneath (the only word kids need).
 func _name_tag(portrait: Control, character_name: String, font_size: int) -> Control:
 	var column: VBoxContainer = VBoxContainer.new()
-	column.add_theme_constant_override("separation", 0)
+	column.add_theme_constant_override("separation", -5)
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_child(portrait)
 	var label: Label = Label.new()
@@ -222,32 +282,30 @@ func _name_tag(portrait: Control, character_name: String, font_size: int) -> Con
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_override("font", Fx.bold_font())
 	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.7))
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	label.add_theme_color_override("font_color", UiKit.COLOR_GOLD_LIGHT)
+	label.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
 	label.add_theme_constant_override("outline_size", 5)
 	column.add_child(label)
 	return column
 
 
 func _build_hero_bar(root: Control) -> void:
-	var plate: PanelContainer = _plate(10)
-	plate.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	plate.position = Vector2(-300, -128)
-	plate.custom_minimum_size = Vector2(600, 0)
+	var plate: PanelContainer = _plate(8, 12)
+	_anchor(plate, Control.PRESET_CENTER_BOTTOM, Vector2(0, -6))
 	root.add_child(plate)
 	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 14)
+	row.add_theme_constant_override("separation", 10)
 	plate.add_child(row)
 	_hero_portrait = HudWidgets.Portrait.new(_icon("portrait_leo"))
-	_hero_portrait.custom_minimum_size = Vector2(96, 96)
-	row.add_child(_name_tag(_hero_portrait, "Leo", 18))
+	_hero_portrait.custom_minimum_size = Vector2(74, 74)
+	row.add_child(_name_tag(_hero_portrait, "Leo", 15))
 	var column: VBoxContainer = VBoxContainer.new()
-	column.add_theme_constant_override("separation", 6)
+	column.add_theme_constant_override("separation", 5)
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_child(column)
 
 	var slots: HBoxContainer = HBoxContainer.new()
-	slots.add_theme_constant_override("separation", 8)
+	slots.add_theme_constant_override("separation", 6)
 	column.add_child(slots)
 	var definitions: Array = [
 		[&"attack", "axe", "SP", "Attack (Space, or click an imp)"],
@@ -265,57 +323,86 @@ func _build_hero_bar(root: Control) -> void:
 		_slots[entry[0]] = slot
 
 	_hero_hp = HudWidgets.StatBar.new()
-	_hero_hp.custom_minimum_size = Vector2(390, 22)
+	_hero_hp.custom_minimum_size = Vector2(0, 17)
 	column.add_child(_hero_hp)
-	_hero_xp = HudWidgets.StatBar.new(Color(0.45, 0.35, 0.85), Color(0.7, 0.6, 1.0))
-	_hero_xp.custom_minimum_size = Vector2(390, 10)
+	_hero_xp = HudWidgets.StatBar.new(Color(0.55, 0.42, 0.86), Color(0.78, 0.68, 1.0))
+	_hero_xp.custom_minimum_size = Vector2(0, 7)
 	_hero_xp.tick_every = 0.0
 	_hero_xp.show_text = false
+	_hero_xp.tooltip_text = "Experience"
 	column.add_child(_hero_xp)
 
 	# Build hint: what you are placing and what it costs, as icons.
-	var build_plate: PanelContainer = _plate(8)
-	build_plate.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	build_plate.position = Vector2(-150, -196)
+	var build_plate: PanelContainer = _plate(6, 10)
+	_anchor(build_plate, Control.PRESET_CENTER_BOTTOM, Vector2(0, -132))
 	build_plate.visible = false
 	root.add_child(build_plate)
 	_build_row = HBoxContainer.new()
-	_build_row.add_theme_constant_override("separation", 10)
+	_build_row.add_theme_constant_override("separation", 8)
 	build_plate.add_child(_build_row)
 	_build_label = Label.new()  # kept for the validity colour hook
 	build_plate.set_meta(&"is_build_plate", true)
 	_build_label.set_meta(&"plate", build_plate)
 
-	# Help and pause as icon buttons (bottom right).
+	# Help and pause as small icon buttons (bottom right).
 	var corner: HBoxContainer = HBoxContainer.new()
-	corner.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	corner.position = Vector2(-150, -74)
-	corner.add_theme_constant_override("separation", 8)
+	corner.add_theme_constant_override("separation", 6)
+	_anchor(corner, Control.PRESET_BOTTOM_RIGHT, Vector2(-10, -10))
 	root.add_child(corner)
-	corner.add_child(HudWidgets.icon_button("help", "", _on_help_pressed, UiKit.COLOR_GOLD, null, false))
-	corner.add_child(HudWidgets.icon_button("pause", "", _on_pause_pressed, UiKit.COLOR_GOLD, null, false))
+	corner.add_child(HudWidgets.icon_button("help", "", _on_help_pressed, UiKit.COLOR_GOLD_LIGHT, null, false, 44))
+	corner.add_child(HudWidgets.icon_button("pause", "", _on_pause_pressed, UiKit.COLOR_GOLD_LIGHT, null, false, 44))
 
 
+## Event banner: a canvas ribbon under the top strip, clear of the fire.
 func _build_banner(root: Control) -> void:
-	_banner = UiKit.title("", 44, UiKit.COLOR_GOLD_LIGHT)
-	_banner.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_banner.offset_top = 150
-	_banner.offset_left = 120
-	_banner.offset_right = -120
+	_banner_plate = PanelContainer.new()
+	var ribbon: StyleBox = UiKit.art_style("ribbon", 0)
+	if ribbon is StyleBoxTexture:
+		var texture_style: StyleBoxTexture = ribbon as StyleBoxTexture
+		texture_style.texture_margin_left = 46
+		texture_style.texture_margin_right = 46
+		texture_style.texture_margin_top = 0
+		texture_style.texture_margin_bottom = 0
+	ribbon.content_margin_left = 58
+	ribbon.content_margin_right = 58
+	ribbon.content_margin_top = 11
+	ribbon.content_margin_bottom = 9
+	_banner_plate.add_theme_stylebox_override("panel", ribbon)
+	_banner_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_banner_plate.custom_minimum_size = Vector2(260, 60)
+	_anchor(_banner_plate, Control.PRESET_CENTER_TOP, Vector2(0, 104))
+	_banner_plate.modulate.a = 0.0
+	root.add_child(_banner_plate)
+	_banner = UiKit.title("", 30, UiKit.COLOR_GOLD_LIGHT)
 	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_banner.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_banner.modulate.a = 0.0
-	root.add_child(_banner)
+	_banner.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_banner.add_theme_constant_override("outline_size", 9)
+	_banner_plate.add_child(_banner)
 
 
-func _plate(padding: int) -> PanelContainer:
+func _plate(padding_y: int, padding_x: int = -1) -> PanelContainer:
 	var plate: PanelContainer = PanelContainer.new()
-	var style: StyleBoxFlat = UiKit.panel_style(Color(0.02, 0.05, 0.08, 0.82))
-	style.set_content_margin_all(padding)
-	style.shadow_size = 6
+	var style: StyleBox = UiKit.panel_style(UiKit.COLOR_WOOD, UiKit.COLOR_BRASS_DARK, padding_y)
+	style.content_margin_left = padding_x if padding_x >= 0 else padding_y
+	style.content_margin_right = style.content_margin_left
 	plate.add_theme_stylebox_override("panel", style)
 	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return plate
+
+
+## Pins `control` to a screen corner or edge centre by `offset`, growing
+## away from the edge so it sizes itself to its content.
+func _anchor(control: Control, preset: Control.LayoutPreset, offset: Vector2) -> void:
+	control.set_anchors_preset(preset)
+	var right: bool = preset in [Control.PRESET_TOP_RIGHT, Control.PRESET_BOTTOM_RIGHT]
+	var bottom: bool = preset in [Control.PRESET_BOTTOM_LEFT, Control.PRESET_BOTTOM_RIGHT, Control.PRESET_CENTER_BOTTOM]
+	var centre: bool = preset in [Control.PRESET_CENTER_TOP, Control.PRESET_CENTER_BOTTOM]
+	control.grow_horizontal = Control.GROW_DIRECTION_BOTH if centre else (Control.GROW_DIRECTION_BEGIN if right else Control.GROW_DIRECTION_END)
+	control.grow_vertical = Control.GROW_DIRECTION_BEGIN if bottom else Control.GROW_DIRECTION_END
+	control.offset_left = offset.x
+	control.offset_right = offset.x
+	control.offset_top = offset.y
+	control.offset_bottom = offset.y
 
 
 func _icon(name: String) -> Texture2D:
@@ -399,7 +486,7 @@ func _refresh_tray() -> void:
 		label.text = str(count)
 		# A full stash glows gold: time to build a Storage Crate.
 		var full: bool = cap > 0 and count >= cap
-		label.add_theme_color_override("font_color", Color(1.0, 0.78, 0.25) if full else UiKit.COLOR_TEXT)
+		label.add_theme_color_override("font_color", UiKit.COLOR_EMBER if full else UiKit.COLOR_TEXT)
 		var row: Control = _tray_rows[id] as Control
 		row.modulate = Color(1, 1, 1, 1.0 if count > 0 else 0.38)
 		var definition: ResourceDefinition = ResourceManager.get_definition(id)
@@ -462,12 +549,11 @@ func show_banner(text: String, color: Color = UiKit.COLOR_GOLD_LIGHT) -> void:
 	_banner.add_theme_color_override("font_color", color)
 	if _banner_tween != null:
 		_banner_tween.kill()
-	_banner.modulate.a = 0.0
-	_banner.scale = Vector2.ONE
+	_banner_plate.modulate.a = 0.0
 	_banner_tween = create_tween()
-	_banner_tween.tween_property(_banner, "modulate:a", 1.0, 0.25)
+	_banner_tween.tween_property(_banner_plate, "modulate:a", 1.0, 0.25)
 	_banner_tween.tween_interval(_BANNER_SECONDS)
-	_banner_tween.tween_property(_banner, "modulate:a", 0.0, 0.6)
+	_banner_tween.tween_property(_banner_plate, "modulate:a", 0.0, 0.6)
 
 
 func _on_resource_changed(_id: StringName, _value: int, _delta: int) -> void:

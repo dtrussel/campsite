@@ -47,7 +47,7 @@ func _ready() -> void:
 	var buttons: HBoxContainer = HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	buttons.add_theme_constant_override("separation", 12)
-	var again: Button = HudWidgets.icon_button("restart", "Again", GameManager.start_run, Color(0.5, 1.0, 0.55))
+	var again: Button = HudWidgets.icon_button("restart", "Again", GameManager.start_run, Color(0.55, 0.9, 0.4))
 	buttons.add_child(again)
 	buttons.add_child(HudWidgets.icon_button("home", "", GameManager.go_to_title))
 	buttons.add_child(HudWidgets.icon_button("close", "", get_tree().quit, Color(1.0, 0.45, 0.4)))

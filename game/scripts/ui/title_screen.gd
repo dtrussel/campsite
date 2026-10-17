@@ -23,8 +23,8 @@ func _ready() -> void:
 	# Vignette so the menu reads over the 3D scene.
 	var shade: TextureRect = TextureRect.new()
 	var gradient: Gradient = Gradient.new()
-	gradient.set_color(0, Color(0, 0.02, 0.05, 0.0))
-	gradient.set_color(1, Color(0, 0.02, 0.05, 0.85))
+	gradient.set_color(0, Color(0.07, 0.035, 0.02, 0.0))
+	gradient.set_color(1, Color(0.07, 0.035, 0.02, 0.85))
 	var texture: GradientTexture2D = GradientTexture2D.new()
 	texture.gradient = gradient
 	texture.fill = GradientTexture2D.FILL_RADIAL
@@ -58,7 +58,7 @@ func _ready() -> void:
 	var play: Button = null
 	if not save.is_empty():
 		# Continue: the saved run, with its nights so far as moons.
-		play = HudWidgets.icon_button("play", "Continue", _on_continue, Color(0.5, 1.0, 0.55))
+		play = HudWidgets.icon_button("play", "Continue", _on_continue, Color(0.55, 0.9, 0.4))
 		play.custom_minimum_size = Vector2(300, 72)
 		play.add_theme_font_size_override("font_size", 30)
 		play.tooltip_text = "Night %d of %d" % [int(save["day"]) + 1, int(save["nights_to_win"])]

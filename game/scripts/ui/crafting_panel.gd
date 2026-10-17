@@ -26,23 +26,23 @@ func _ready() -> void:
 	UiKit.full_rect(_root)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_root)
-	var panel: PanelContainer = UiKit.panel(16)
+	var panel: PanelContainer = UiKit.panel(14)
 	panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	panel.position = Vector2(-460, -140)
-	panel.custom_minimum_size = Vector2(400, 0)
+	panel.position = Vector2(-410, -150)
+	panel.custom_minimum_size = Vector2(360, 0)
 	_root.add_child(panel)
 	var column: VBoxContainer = UiKit.vbox(8)
 	panel.add_child(column)
 	var header: HBoxContainer = HBoxContainer.new()
 	header.add_theme_constant_override("separation", 10)
-	_header_icon = _icon_rect(Fx.icon("campfire"), 56)
+	_header_icon = _icon_rect(Fx.icon("campfire"), 48)
 	header.add_child(_header_icon)
 	var spacer: Control = Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(spacer)
-	header.add_child(HudWidgets.icon_button("close", "", close, Color(1.0, 0.45, 0.4), null, false))
+	header.add_child(HudWidgets.icon_button("close", "", close, Color(1.0, 0.45, 0.4), null, false, 44))
 	column.add_child(header)
-	column.add_child(UiKit.divider(360))
+	column.add_child(UiKit.divider(320))
 	for recipe in CraftingManager.get_recipes():
 		# [inputs x n] -> [result]   [make!]  (one compact row per recipe)
 		var row: HBoxContainer = HBoxContainer.new()
@@ -57,7 +57,7 @@ func _ready() -> void:
 		var spacer_row: Control = Control.new()
 		spacer_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(spacer_row)
-		var button: Button = HudWidgets.icon_button("check", "", _on_craft.bind(recipe), Color(0.5, 1.0, 0.55), null, false)
+		var button: Button = HudWidgets.icon_button("check", "", _on_craft.bind(recipe), Color(0.55, 0.9, 0.4), null, false, 44)
 		button.tooltip_text = recipe.display_name
 		row.add_child(button)
 		column.add_child(row)

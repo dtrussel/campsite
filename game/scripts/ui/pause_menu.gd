@@ -28,7 +28,7 @@ func _ready() -> void:
 	title.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	column.add_child(title)
 	column.add_child(UiKit.divider(280))
-	column.add_child(HudWidgets.icon_button("play", "Play", _resume, Color(0.5, 1.0, 0.55), null, false))
+	column.add_child(HudWidgets.icon_button("play", "Play", _resume, Color(0.55, 0.9, 0.4), null, false))
 	column.add_child(HudWidgets.icon_button("help", "Help", _show_controls, UiKit.COLOR_GOLD, null, false))
 	column.add_child(HudWidgets.icon_button("restart", "Again", _restart, UiKit.COLOR_GOLD, null, false))
 	column.add_child(HudWidgets.icon_button("home", "Home", _quit_to_title, UiKit.COLOR_GOLD, null, false))

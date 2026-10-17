@@ -82,6 +82,26 @@ Footpaths lead to each grove, and the old road runs south.
 
 The plan lives in `WorldLayout`. The rules and the map are in [`.features/032-world-layout/plan.md`](../../.features/032-world-layout/plan.md).
 
+## UI: "campcraft" (feature 033)
+
+The HUD and menus are built from the same camp materials as the world, not a
+cold overlay.
+
+- **Plates.** Dark walnut with plank grain, a brass rim (`#c9974a`), an ink
+  inner line and brass rivets in the corners. Shadows are warm brown.
+- **Accents.** Cream canvas (`#efe2c4`) for key tabs, level badges, tooltips,
+  the imp tag and the event ribbon. Ember orange for fire and highlights,
+  moon-blue for night.
+- **Bars.** Rounded, in a warm dark trough with a brass rim: HP leaf-green
+  (`#6cc04a`), campfire ember, XP lavender. World health bars match.
+- **Type.** Cinzel for titles, Nunito Sans for body. Text is cream with a dark
+  brown (`#28180e`) outline, never pure black or grey-white.
+- **Footprint.** The HUD stays in the corners and edges, out of the play band.
+  The top centre is one slim strip (moons, day dial, campfire), and banners
+  appear on a ribbon just below it.
+- **Artwork.** `art/ui/hud_kit.py` generates the 9-slice pieces into
+  `game/assets/ui/hud/`; `UiKit` and `HudWidgets` use them.
+
 ## Out of scope for now
 
 The river, waterfall and bridge (10), the ruins (11) and the village houses (12)
