@@ -36,10 +36,11 @@ KEY = re.compile(r'"(id|speaker|text)":\s*"((?:[^"\\]|\\.)*)"')
 
 # Who speaks how. `voice` is a Kokoro voice, or a blend {voice: weight}.
 # `shift` is in semitones (formants move with it: a smaller vocal tract).
+# Leo blends a young male and a female voice: a boy, not a woman.
 # Leo (7): brave, impulsive, quick. Nela (3): the little sister, higher,
 # slower and dry. Mum: calm, warm ranger. Narrator: a bedtime storyteller.
 CAST = {
-    "leo": {"voice": {"af_river": 0.5, "af_aoede": 0.5}, "speed": 1.05, "shift": 1.5, "lang": "en-us"},
+    "leo": {"voice": {"am_liam": 0.5, "af_aoede": 0.5}, "speed": 1.05, "shift": 4.0, "lang": "en-us"},
     "nela": {"voice": {"af_jessica": 0.6, "af_bella": 0.4}, "speed": 0.95, "shift": 2.5, "lang": "en-us"},
     "mum": {"voice": "af_heart", "speed": 0.92, "shift": 0.0, "lang": "en-us"},
     "narrator": {"voice": "bm_fable", "speed": 0.9, "shift": 0.0, "lang": "en-gb"},
@@ -54,7 +55,7 @@ NAME_WORDS = re.compile(r"\b(Nela|Leo)\b")
 NAMES = {"nˈɛlə": "nˈeːla", "lˈiːoʊ": "lˈeːo", "lˈiːəʊ": "lˈeːo"}
 
 AUDITION = {
-    "leo": ["af_river", "af_aoede", "af_sky", {"af_river": 0.5, "af_aoede": 0.5}],
+    "leo": [{"am_liam": 0.5, "af_aoede": 0.5}, {"am_puck": 0.6, "af_river": 0.4}, {"am_echo": 0.5, "af_sky": 0.5}],
     "nela": ["af_bella", "af_jessica", "af_heart", {"af_jessica": 0.6, "af_bella": 0.4}],
     "mum": ["af_heart", "bf_emma", "af_sarah"],
     "narrator": ["bm_fable", "bm_george", "am_michael"],
