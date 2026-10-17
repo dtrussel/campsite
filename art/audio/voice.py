@@ -11,6 +11,7 @@ art/audio/.voice-cache/ (gitignored) from the kokoro-onnx GitHub release.
 
     tools/build_audio.sh voice                 # every line
     tools/build_audio.sh voice bark.thief nela # ids starting with, or a speaker
+    tools/build_audio.sh voice --names         # just the lines with a name
     tools/build_audio.sh voice --audition      # cast candidates, to the cache
 """
 import glob
@@ -46,6 +47,11 @@ CAST = {
 
 # Spoken text where the card's spelling trips the TTS up (card text stays).
 SAY = {}
+
+# The kids' names are said the German way: Nela [ˈneːla], Leo [ˈleːo].
+# Keys are the English phonemes Kokoro's tokenizer gives (en-us, en-gb).
+NAME_WORDS = re.compile(r"\b(Nela|Leo)\b")
+NAMES = {"nˈɛlə": "nˈeːla", "lˈiːoʊ": "lˈeːo", "lˈiːəʊ": "lˈeːo"}
 
 AUDITION = {
     "leo": ["af_river", "af_aoede", "af_sky", {"af_river": 0.5, "af_aoede": 0.5}],
@@ -136,8 +142,21 @@ def finish(x, rate, shift, path):
     return len(out) / out_rate, mean_f0(out, out_rate)
 
 
+def phonemes(tts, text, lang):
+    """Kokoro's phonemes for `text`, with the names swapped for NAMES."""
+    said = tts.tokenizer.phonemize(text, lang)
+    for english, german in NAMES.items():
+        said = re.sub(r"(?<!\w)%s" % re.escape(english), german, said)
+    return said
+
+
 def speak(tts, cast, text, path):
-    samples, rate = tts.create(text, voice=style(tts, cast["voice"]), speed=cast["speed"], lang=cast["lang"])
+    style_ = style(tts, cast["voice"])
+    if NAME_WORDS.search(text):
+        samples, rate = tts.create(phonemes(tts, text, cast["lang"]), voice=style_, speed=cast["speed"],
+                                   lang=cast["lang"], is_phonemes=True)
+    else:
+        samples, rate = tts.create(text, voice=style_, speed=cast["speed"], lang=cast["lang"])
     return finish(np.asarray(samples, dtype=np.float64), rate, cast["shift"], path)
 
 
@@ -159,8 +178,12 @@ def main(args):
         audition(tts)
         return
     os.makedirs(OUT_DIR, exist_ok=True)
+    names_only = "--names" in args
+    args = [a for a in args if a != "--names"]
     stats = {}
     for line_id, speaker, text in lines():
+        if names_only and not NAME_WORDS.search(text):
+            continue
         if args and speaker not in args and not any(line_id.startswith(a) for a in args):
             continue
         if speaker not in CAST:

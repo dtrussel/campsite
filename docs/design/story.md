@@ -136,7 +136,9 @@ only, 038).
   | Mum | `af_heart`, warm | 0.92 | none | ~205 Hz |
   | Narrator | `bm_fable`, a British storyteller | 0.9 | none | ~135 Hz |
 
-  Kokoro has no child voices, so the kids are young women's voices
+  The names are said the German way: Nela [ˈneːla] ("NAY-lah"), Leo
+  [ˈleːo] ("LAY-oh"); `NAMES` in `voice.py` swaps them into the
+  phonemes. Kokoro has no child voices, so the kids are young women's voices
   shifted up, formants included (a smaller vocal tract), the way
   animation casts kids.
 - Barks (037) follow the same rule: `bark.<trigger>.<speaker>.<n>.ogg`.

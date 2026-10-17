@@ -21,7 +21,8 @@ After changing a line's text, regenerate it:
 ## Real recordings
 
 Drop a recording in with the same name and it replaces the generated
-one; don't regenerate that id afterwards. `.ogg` is preferred; `.wav`
+one; don't regenerate that id afterwards. Say the names the German way:
+Nela [ˈneːla] ("NAY-lah"), Leo [ˈleːo] ("LAY-oh"). `.ogg` is preferred; `.wav`
 and `.mp3` work too. No code changes are needed: a line with a file
 plays its voice, a line without one is shown as text only (a bark
 without one chirps instead). `tools/check.sh` prints how many lines are
