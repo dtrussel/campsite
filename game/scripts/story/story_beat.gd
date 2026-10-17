@@ -10,6 +10,8 @@ extends Resource
 ## - `speaker`: a hero id (leo, nela), "mum" or "narrator".
 ## - `when` (optional): only shown when that hero is played, so the
 ##   played hero speaks first and the companion replies.
+## - `face` (optional, Mum only): her expression portrait, one of
+##   StoryLibrary.MUM_FACES.
 ## - The voice recording is found by the line id (StoryLibrary.voice),
 ##   so the team's voice files drop in without code changes.
 

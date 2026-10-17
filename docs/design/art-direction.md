@@ -61,6 +61,16 @@ ground textures, lighting palettes (`world_lighting.gd`) and prop scripts.
 | Sky / ambient | — | `#252c3b`, `#080a0d` |
 | Accents | Awning red `#c8402e`, daisy white, lupine purple `#8a62c8`, water teal `#3fb2c8` | Lantern amber `#ffb455`, moon `#e8ecf4` |
 
+## Mum (feature 043)
+
+Mum follows the team's character sheet
+(`art/reference/concept-2026-10/14_mum_character_sheet.webp`): a grown-up
+on the kids' rig, much longer in the legs, body and arms with a smaller
+head, in the same painted, ink-lined look. The palette is a lime jacket
+`#bdcc3d`, a black top, a tan scarf `#a88c6b`, charcoal trousers, brown
+boots with red laces, an olive pack and a blue bedroll. Her storybook
+portraits are cut from the sheet's expressions. The beagle isn't adopted.
+
 ## Mobs
 
 The mob sheets in the concept set (06–08) are **not** adopted. The Shadow Imp,

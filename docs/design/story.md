@@ -25,7 +25,11 @@ runs. It is not a cozy story where nothing is ever wrong.
 ## Premise
 
 Leo and Nela are camping at the edge of the **Hollow Wood** with
-their **mum**, a forest ranger. Concept art of her will come from the team.
+their **mum**, a forest ranger. Her look is the team's character sheet
+(`art/reference/concept-2026-10/14_mum_character_sheet.webp`): long wavy
+blond hair in a loose low bun, a lime ranger jacket over a black top, a tan
+scarf, cargo trousers, red-laced boots and an olive pack. The beagle on the
+sheet is concept flavour only, not part of the story.
 
 On the first evening the moon goes **dark**. Mum takes her ranger
 lantern, tells the kids to keep the campfire burning no matter what,
@@ -81,7 +85,7 @@ for the reason:
 |---|---|---|
 | **Leo** | Brave, impulsive, jokes when scared. | "Stay behind me, Nela! ...Okay, maybe next to me." |
 | **Nela** | Clever, wry, notices things. | "Those imps only come where it's dark. Light means safe." |
-| **Mum** | Only in journal pages: calm, curious, a ranger's notes. | "Day 3. The moss glows where the shards fell. I think the moon is asking for help." |
+| **Mum** | In the intro and the true ending, and in her journal pages (041): calm, curious, warm, a ranger's notes. Her storybook portraits are the sheet's six expressions. | "Day 3. The moss glows where the shards fell. I think the moon is asking for help." |
 | **Moon-Eater** | No words. Sounds, glowing eyes, a belly full of swallowed moonlight, and one final sigh. | |
 
 Lines are keyed by **who is played**. Leo played gets Nela's replies,
@@ -97,7 +101,8 @@ adds their own lines.
 - No line longer than about 60 characters on a card. Barks stay under
   about 30.
 - Content lives in `game/resources/story/*.tres` (`StoryBeat`). A line is
-  `{id, speaker, text, when}`. `speaker` is `leo`, `nela`, `mum` or
+  `{id, speaker, text, when, face}` (`face`: one of Mum's expressions,
+  `smile`, `curious`, `laugh`, `surprised`, `worried` or `proud`). `speaker` is `leo`, `nela`, `mum` or
   `narrator`; the optional `when` shows the line only when that hero is
   played. Dawn cards have one pair of lines per played hero: the
   played hero speaks first and the companion replies.
@@ -127,7 +132,12 @@ only, 038).
 - **For now, placeholders.** Story cards reuse the existing loading-screen
   paintings, and new models (Moon Lantern, Moon-Eater) start as
   code-built stand-ins in the 031 style.
-- **Later, from the team:** concept art of mum; intro and chapter-ending
+- **Received:** Mum's character sheet (feature 043). Her six expressions
+  are her storybook portraits (`assets/ui/story/mum_<face>.png`, picked
+  per line with `face`), and she is a 3D model on the kids' rig
+  (`art/characters/mum.py`): she walks home in the true ending and sits
+  by the title fire afterwards.
+- **Later, from the team:** intro and chapter-ending
   paintings; the journal page frame; Moon-Eater concept art and
   animations. Each feature swaps its art in when it arrives, without
   changing code. The art is data: painting textures on `StoryBeat`, and a

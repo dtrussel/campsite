@@ -35,7 +35,7 @@ static func line_row(line: Dictionary, text_size: int, portrait_size: float, cen
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var portrait: Texture2D = StoryLibrary.speaker_portrait(speaker)
+	var portrait: Texture2D = StoryLibrary.speaker_portrait(speaker, String(line.get("face", "")))
 	if portrait != null:
 		var face: TextureRect = TextureRect.new()
 		face.texture = portrait

@@ -14,10 +14,13 @@ extends RefCounted
 const BEATS_DIR: String = "res://resources/story/"
 const VOICE_DIR: String = "res://assets/audio/voice/"
 const VOICE_EXTENSIONS: Array[String] = ["ogg", "wav", "mp3"]
-## Mum's portrait arrives with the team's concept art; until then her
-## lines show her name only.
+## Mum's portraits, cut from the team's character sheet (feature 043,
+## art/ui/story_art.py): mum.png, and mum_<face>.png per expression.
 const MUM_PORTRAIT: String = "res://assets/ui/story/mum.png"
+const MUM_FACES: Array[String] = ["smile", "curious", "laugh", "surprised", "worried", "proud"]
 const CHAPTER_NAMES: Dictionary = {1: "The Dark Moon", 2: "Into the Hollow"}
+## Seen once Chapter 2's ending has played: Mum is home (feature 043).
+const TRUE_ENDING: String = "ending.c2"
 
 ## Tests point this somewhere else so a player's progress is untouched.
 static var progress_path: String = "user://story.cfg"
@@ -66,9 +69,13 @@ static func speaker_name(speaker: String) -> String:
 	return hero.display_name if hero != null else speaker.capitalize()
 
 
-static func speaker_portrait(speaker: String) -> Texture2D:
+## `face` picks one of Mum's expressions (a line's "face" key).
+static func speaker_portrait(speaker: String, face: String = "") -> Texture2D:
 	if speaker == "mum":
-		return load(MUM_PORTRAIT) as Texture2D if ResourceLoader.exists(MUM_PORTRAIT) else null
+		var path: String = MUM_PORTRAIT.replace(".png", "_%s.png" % face) if face != "" else MUM_PORTRAIT
+		if not ResourceLoader.exists(path):
+			path = MUM_PORTRAIT
+		return load(path) as Texture2D if ResourceLoader.exists(path) else null
 	var hero: HeroDefinition = HeroRoster.get_hero(StringName(speaker))
 	return hero.portrait if hero != null else null
 

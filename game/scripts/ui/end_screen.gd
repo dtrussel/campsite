@@ -7,6 +7,7 @@ extends CanvasLayer
 ## Summarises the run and points testers at the playtest log.
 ## Feature 035: a win opens the chapter's ending storybook first and
 ## shows the stats after; a defeat says why, as a voiced story line.
+## Feature 043: in Chapter 2, Mum walks into the camp before the book.
 
 var _root: Control = null
 var _title: Label = null
@@ -73,8 +74,16 @@ func _on_run_ended(won: bool, _reason: String) -> void:
 	if pages.is_empty():
 		_root.visible = true
 		return
+	# The true ending (feature 043): Mum walks out of the woods first.
+	var player: Node3D = get_tree().get_first_node_in_group("player") as Node3D
+	if GameManager.chapter() == 2 and player != null and ResourceLoader.exists(MumArrival.MODEL_PATH):
+		var arrival: MumArrival = MumArrival.play(get_tree().current_scene, player.global_position)
+		await arrival.finished
 	var book: StoryBook = StoryBook.play(pages, GameManager.hero_id, layer + 1)
-	book.finished.connect(func() -> void: _root.visible = true)
+	book.finished.connect(func() -> void:
+		_root.visible = true
+		if GameManager.chapter() == 2:
+			StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING))
 
 
 ## The line under the title on a defeat: why the run ended ("The dark

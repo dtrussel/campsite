@@ -4,7 +4,8 @@ extends Node3D
 ##
 ## Live 3D scene behind the title menu: the camp at dusk, the boy and
 ## his sibling sitting by the fire, shadow minions lurking at the tree
-## line, and a slow orbiting camera. Purely decorative - no gameplay
+## line, and a slow orbiting camera. Once the story's true ending has
+## been seen, Mum is home and sits by the fire too (feature 043). Purely decorative - no gameplay
 ## nodes, so nothing here reacts to input or the run state. The hero
 ## select screen (HeroStage, feature 034) reuses it with its own heroes
 ## and camera.
@@ -49,6 +50,11 @@ func _ready() -> void:
 	if seat_heroes:
 		_character("custom/leo.glb", 0.7, "hero", Vector3(1.5, 0, 1.0), [], "Sit_Floor_Idle")
 		_character("custom/nela.glb", 0.65, "hero", Vector3(-1.4, 0, 1.2), [], "Sit_Floor_Idle")
+		if mum_is_home():
+			var mum: CharacterVisual = MumArrival.make_visual("Sit_Floor_Idle")
+			mum.position = Vector3(0.9, 0, -1.8)
+			add_child(mum)
+			mum.face_instantly(-mum.position)
 	for spot in [Vector3(-7.5, 0, -8.0), Vector3(-5.0, 0, -9.5), Vector3(8.0, 0, -7.0)]:
 		_character("custom/shadow_imp.glb", 0.62, "shadow", spot, [], "Imp_Idle")
 
@@ -58,6 +64,11 @@ func _ready() -> void:
 	add_child(_camera)
 	_camera.make_current()
 	_update_camera(0.0)
+
+
+## True once the Chapter 2 ending has been seen (and her model exists).
+static func mum_is_home() -> bool:
+	return StoryLibrary.has_seen(StoryLibrary.TRUE_ENDING) and ResourceLoader.exists(MumArrival.MODEL_PATH)
 
 
 func _process(delta: float) -> void:

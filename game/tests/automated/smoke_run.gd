@@ -299,6 +299,33 @@ func _run_story_scenario() -> void:
 	_check(MoonLantern.find(get_tree()).max_stage() == 6, "Chapter 2's lantern has 6 stages")
 	GameManager.nights_to_win = 3
 
+	# Feature 043: Mum's portraits, her walk home, and her seat at the title.
+	_check(StoryLibrary.speaker_portrait("mum", "worried").resource_path.ends_with("mum_worried.png")
+		and StoryLibrary.speaker_portrait("mum").resource_path.ends_with("mum.png")
+		and StoryLibrary.speaker_portrait("mum", "nope").resource_path.ends_with("mum.png"), "Mum's expressions, with a fallback")
+	var hero: Node3D = get_tree().get_first_node_in_group("player")
+	get_tree().paused = true  # as behind the end screen
+	var arrival: MumArrival = MumArrival.play(get_tree().current_scene, hero.global_position)
+	await get_tree().process_frame
+	var model: Node = arrival.visual.get_child(0) if arrival.visual.get_child_count() > 0 else null
+	_check(model != null and model.find_child("AnimationPlayer", true, false) != null, "Mum's model loads, with its clips")
+	var player_anim: AnimationPlayer = model.find_child("AnimationPlayer", true, false) as AnimationPlayer if model != null else null
+	_check(player_anim != null and player_anim.has_animation("Wave") and player_anim.has_animation("Walking_A"),
+		"Mum can walk and wave")
+	var gap: float = arrival.global_position.distance_to(arrival.target)
+	await _wait(1.2)
+	_check(arrival.global_position.distance_to(arrival.target) < gap - 0.5, "Mum walks to the kids while the world is paused")
+	var arrived: Array = [false]
+	arrival.finished.connect(func() -> void: arrived[0] = true)
+	arrival.finish()
+	_check(arrived[0] and arrival.global_position.distance_to(arrival.target) < 0.01, "skipping puts Mum by the kids")
+	get_tree().paused = false
+	var backdrop: GDScript = load("res://scripts/ui/title_backdrop.gd")
+	_check(not backdrop.call("mum_is_home"), "Mum isn't home before the true ending")
+	StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING)
+	_check(backdrop.call("mum_is_home"), "after the true ending Mum sits by the title fire")
+	StoryLibrary.forget_progress()
+
 
 ## Feature 017: repair, the new resources, recipes, traps and lanterns.
 func _check_feature_017(player: Node3D, companion: Node3D, fence: Building) -> void:

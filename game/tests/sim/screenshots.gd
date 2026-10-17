@@ -199,6 +199,23 @@ func _ready() -> void:
 	get_tree().get_first_node_in_group("controls_overlay").close()
 	await _settle(1.5)
 	_shot("10_nela_hud")
+	# Feature 043: the true ending - Mum walks out of the woods to the kids.
+	var hero: Node3D = get_tree().get_first_node_in_group("player")
+	var arrival: MumArrival = MumArrival.play(get_tree().current_scene, hero.global_position)
+	await _settle(3.0)
+	_shot("11_mum_arrives")
+	await arrival.finished
+	await _settle(0.4)
+	_shot("11b_mum_waves")
+	# ...and after it she sits by the title fire.
+	main.queue_free()
+	StoryLibrary.progress_path = "user://screenshot_story.cfg"
+	StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING)
+	var home: Node = load("res://scenes/ui/TitleScreen.tscn").instantiate()
+	add_child(home)
+	await _settle(1.0)
+	_shot("12_title_mum_home")
+	StoryLibrary.forget_progress()
 	get_tree().quit(0)
 
 

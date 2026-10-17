@@ -17,7 +17,7 @@ extends Node
 const CUSTOM: String = "res://assets/custom/"
 const POST_SHADER: Shader = preload("res://shaders/post_tiltshift.gdshader")
 const CHARACTERS: Dictionary = {
-	"leo": "hero", "nela": "hero",
+	"leo": "hero", "nela": "hero", "mum": "hero",
 	"shadow_imp": "shadow", "bramble_beast": "shadow", "mushroom_gremlin": "shadow",
 }
 const TINT_ROCK: Array[String] = ["rock_"]

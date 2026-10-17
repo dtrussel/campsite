@@ -18,5 +18,6 @@ lines = [{
 }, {
 "id": "win.c2.2.2",
 "speaker": "mum",
+"face": "laugh",
 "text": "My brave ones. You kept the fire burning."
 }]

@@ -258,6 +258,9 @@ func _validate_story() -> void:
 			_check_id(StringName(line_id), "%s line" % beat.resource_path, line_ids)
 			if not StoryBeat.SPEAKERS.has(String(line.get("speaker", ""))) and not hero_ids.has(String(line.get("speaker", ""))):
 				_fail("%s line %s has unknown speaker '%s'" % [beat.resource_path, line_id, line.get("speaker", "")])
+			var face: String = String(line.get("face", ""))
+			if face != "" and (String(line.get("speaker", "")) != "mum" or not StoryLibrary.MUM_FACES.has(face)):
+				_fail("%s line %s has face '%s' (only Mum's lines, one of %s)" % [beat.resource_path, line_id, face, StoryLibrary.MUM_FACES])
 			var when: String = String(line.get("when", ""))
 			if when != "" and not hero_ids.has(when):
 				_fail("%s line %s is for unknown hero '%s'" % [beat.resource_path, line_id, when])
@@ -276,6 +279,11 @@ func _validate_story() -> void:
 	for trigger in [&"shard", &"loss_fire", &"loss_hero"]:
 		if StoryLibrary.first(trigger, 1) == null or StoryLibrary.first(trigger, 2) == null:
 			_fail("story has no '%s' beat for every chapter" % trigger)
+	for face in StoryLibrary.MUM_FACES:
+		if StoryLibrary.speaker_portrait("mum", face) != load(StoryLibrary.MUM_PORTRAIT.replace(".png", "_%s.png" % face)):
+			_fail("Mum's '%s' portrait is missing (art/ui/story_art.py)" % face)
+	if not ResourceLoader.exists(MumArrival.MODEL_PATH):
+		_fail("Mum's model is missing: %s (art/characters/mum.py)" % MumArrival.MODEL_PATH)
 	var voiced: int = 0
 	for line_id in line_ids.keys():
 		if StoryLibrary.voice(String(line_id)) != null:
