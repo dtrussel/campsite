@@ -17,7 +17,8 @@
   - the hero builds it with the hammer out (2 blows landed in 3 s of work);
   - the ghost's clip rises;
   - after completion the ghost and site are gone, the hammer is away and HP is full;
-  - the companion still builds on Repair.
+  - the companion still builds on Repair, with the mallet out and her lantern put away (and back afterwards);
+  - Continue restores a half-built watch post as a blueprint (progress, HP, place, ghost, site, build line), and the hero finishes it.
 - **Screenshots:**
   - `04b1_blueprint_fresh`
   - `04b2_blueprint_building` (40%)

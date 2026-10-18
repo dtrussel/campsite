@@ -42,12 +42,70 @@ func _ready() -> void:
 	await _run_win_scenario()
 	await _run_loss_scenario()
 	await _run_continue_scenario()
+	await _run_blueprint_save_scenario()
 	await _run_hero_scenario()
 	await _run_bark_scenario()
 	await _run_boss_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	_finish()
+
+
+## Feature 045: a half-built blueprint survives Continue as a blueprint,
+## dressed again (ghost, site, build line at its progress), and the hero
+## then finishes it.
+func _run_blueprint_save_scenario() -> void:
+	print("smoke: --- blueprint save scenario ---")
+	await _start_fresh_run()
+	var player: Node3D = get_tree().get_first_node_in_group("player")
+	var def: BuildingDefinition = BuildManager.get_definition(&"watch_post")
+	var where: Vector3 = player.global_position + Vector3(3.5, 0, 2.0)
+	var post: Building = BuildManager.place_blueprint(def, Transform3D(Basis(Vector3.UP, 0.6), where))
+	player.set_physics_process(false)  # leave it half built
+	post.add_build_progress(def.build_seconds * 0.5)
+	await get_tree().process_frame
+	var hp_before: int = post.current_hp
+	var clip_before: float = float((post.get("_ghost_material") as ShaderMaterial).get_shader_parameter("clip_y"))
+	var data: Dictionary = SaveManager.snapshot()
+	GameManager.set("_pending_save", SaveManager.parse(SaveManager.serialize(data)))
+	await _start_fresh_run()
+	await get_tree().process_frame
+	var loaded: Building = null
+	for node in get_tree().get_nodes_in_group(Building.BLUEPRINT_GROUP):
+		if node is Building and (node as Building).definition.id == &"watch_post":
+			loaded = node as Building
+	_check(loaded != null and is_equal_approx(loaded.build_progress, 0.5) and loaded.current_hp == hp_before
+		and loaded.global_position.distance_to(where) < 0.01 and absf(loaded.global_rotation.y - 0.6) < 0.01,
+		"Continue keeps a half-built watch post as a blueprint (50%%, %d HP, same spot)" % hp_before)
+	if loaded == null:
+		return
+	var ghost_material: ShaderMaterial = loaded.get("_ghost_material") as ShaderMaterial
+	var clip_after: float = float(ghost_material.get_shader_parameter("clip_y")) if ghost_material != null else -1000.0
+	_check(loaded.get_node_or_null("Ghost") != null and loaded.get_node_or_null("Site") != null
+		and absf(clip_after - clip_before) < 0.02 and not loaded.is_physics_processing(),
+		"it comes back as a ghost on its site, the build line where it was (%.2f m), not shooting yet" % clip_after)
+	player = get_tree().get_first_node_in_group("player")
+	var t: float = 0.0
+	while loaded.is_blueprint() and t < 12.0:
+		await _wait(0.1)
+		t += 0.1
+	_check(loaded.is_built() and loaded.is_physics_processing(), "the hero finishes the loaded blueprint (%.1fs) and it works" % t)
+
+
+## Closes any story card or story book that is up.
+func _close_story() -> void:
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	var card: StoryCard = hud.call("story_card") as StoryCard if hud != null else null
+	if card != null:
+		card.dismiss()  # fades, then frees itself
+	for book in get_tree().get_nodes_in_group("story_book"):
+		if (book as StoryBook).is_open():
+			(book as StoryBook).skip()
+	var t: float = 0.0
+	while is_instance_valid(card) and t < 3.0:
+		await _wait(0.1)
+		t += 0.1
+	await get_tree().process_frame
 
 
 func _run_win_scenario() -> void:
@@ -653,12 +711,30 @@ func _check_construction(player: Node3D, companion: Node3D) -> void:
 	player.set_physics_process(false)
 	var fence: Building = BuildManager.place_blueprint(BuildManager.get_definition(&"wooden_fence"), Transform3D(Basis(), companion.global_position + Vector3(0, 0, 2.5)))
 	companion.call("set_task", 4)
+	var helper: CharacterVisual = companion.get_node("Visual") as CharacterVisual
+	var gear: Array[Node3D] = []
+	for part in helper.tool_hidden_parts:
+		var node: Node3D = helper.model.find_child(part, true, false) as Node3D
+		if node != null:
+			gear.append(node)
+	var helper_hammer: bool = false
+	var gear_away: bool = not gear.is_empty()
 	t = 0.0
 	while is_instance_valid(fence) and fence.is_blueprint() and t < 12.0:
 		await _wait(0.1)
 		t += 0.1
+		if helper.tool_shown() == &"hammer":
+			helper_hammer = true
+			for node in gear:
+				gear_away = gear_away and not node.visible
 	_check(is_instance_valid(fence) and fence.is_built(), "on Repair the companion builds blueprints too (%.1fs)" % t)
+	_check(helper_hammer and gear_away, "the companion builds with the mallet, %s put away" % ", ".join(helper.tool_hidden_parts))
 	companion.call("set_task", 0)
+	await _wait(0.3)
+	var gear_back: bool = helper.tool_shown() == &""
+	for node in gear:
+		gear_back = gear_back and node.visible
+	_check(gear_back, "after building the mallet goes and the companion's own gear comes back")
 	player.set_physics_process(true)
 	crate.queue_free()
 	if is_instance_valid(fence):
@@ -1080,13 +1156,19 @@ func _run_bark_scenario() -> void:
 	var gremlin_def: MobDefinition = load("res://resources/mobs/mushroom_gremlin.tres")
 	var gremlin: Mob = _spawn_mob(gremlin_def, player.global_position + Vector3(8, 0, 8))
 	await get_tree().process_frame
+	# Keep the scene quiet and the gremlin put: a story card (the first
+	# gremlin's beat) holds barks back, and a gremlin left to roam can be
+	# caught or escape (and be freed) before the reply.
+	await _close_story()
+	gremlin.stun(30.0)
 	gremlin.stole.emit(gremlin, &"wood", 2)
 	_check(SpeechBubble.on(player) != null and _bark_line(SpeechBubble.on(player).text, &"thief", &"nela"),
 		"Nela played: she shouts at the thief first")
 	await _wait(BarkDirector.REPLY_DELAY + 1.0)
 	_check(SpeechBubble.on(companion) != null and _bark_line(SpeechBubble.on(companion).text, &"thief", &"leo"),
 		"and Leo replies")
-	gremlin.take_damage(999, player)
+	if is_instance_valid(gremlin):
+		gremlin.take_damage(999, player)
 	director.clock += 30.0
 	var beast: Mob = _spawn_mob(load("res://resources/mobs/bramble_beast.tres"), player.global_position + Vector3(10, 0, -8))
 	await get_tree().process_frame
