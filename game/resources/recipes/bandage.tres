@@ -8,8 +8,8 @@ id = &"bandage"
 display_name = "Bandage"
 description = "Press X next to Nela: +25 HP, or wakes her up if she is knocked out."
 inputs = {
-&"fiber": 2,
-&"leaves": 1
+&"berries": 2,
+&"wood": 1
 }
 output_id = &"bandage"
 output_amount = 1

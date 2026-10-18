@@ -10,8 +10,7 @@ display_name = "Wooden Fence"
 description = "A cheap wooden barrier. Slows or blocks small mobs."
 scene_path = "res://scenes/buildings/WoodenFence.tscn"
 cost = {
-&"wood": 2,
-&"fiber": 1
+&"wood": 3
 }
 max_hp = 50
 footprint_size = Vector3(1.6, 1.2, 0.3)

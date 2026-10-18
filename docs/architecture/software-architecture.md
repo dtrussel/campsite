@@ -211,7 +211,7 @@ extends Resource
 @export var id: StringName
 @export var display_name: String
 @export var scene: PackedScene
-@export var cost: Dictionary  # { "wood": 2, "fiber": 1 } keyed by ResourceDefinition.id
+@export var cost: Dictionary  # { "wood": 4, "stone": 2 } keyed by ResourceDefinition.id
 @export var max_hp: int = 50
 ```
 

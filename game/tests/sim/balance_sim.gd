@@ -35,7 +35,7 @@ func _ready() -> void:
 	for night in range(1, nights + 1):
 		while TimeManager.current_phase != TimeManager.Phase.NIGHT:
 			TimeManager.skip_phase()
-		# A real day (120 s at 1.5 HP/s) regenerates the boy fully.
+		# A real day (200 s at 1.2 HP/s) regenerates the boy fully.
 		player.heal(player.max_hp)
 		var t: float = 0.0
 		while TimeManager.current_phase == TimeManager.Phase.NIGHT and GameManager.is_playing():

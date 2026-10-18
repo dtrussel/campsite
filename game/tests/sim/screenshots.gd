@@ -77,12 +77,9 @@ func _ready() -> void:
 	_shot("03b_dawn_card")
 	card.dismiss()
 
-	ResourceManager.add(&"wood", 6)
-	ResourceManager.add(&"resin", 2)
-	ResourceManager.add(&"leaves", 2)
-	ResourceManager.add(&"fiber", 3)
+	ResourceManager.add(&"wood", 9)
 	# Feature 017 items, so the tray, recipes and build chips light up.
-	for item in [&"clay", &"stone", &"berries", &"mushrooms", &"scrap", &"glow_shards"]:
+	for item in [&"clay", &"stone", &"berries", &"scrap", &"glow_shards"]:
 		ResourceManager.add(item, 5)
 	var fire: Node = get_tree().get_first_node_in_group("base_core")
 	fire.take_damage(30)
@@ -102,7 +99,7 @@ func _ready() -> void:
 	var placed: Array = []
 	BuildManager.building_placed.connect(func(b: Node) -> void: placed.append(b))
 	BuildManager.call("_try_confirm")
-	print("build: placed=", placed.size(), " fiber_left=", ResourceManager.get_count(&"fiber"))
+	print("build: placed=", placed.size(), " wood_left=", ResourceManager.get_count(&"wood"))
 	BuildManager.exit_build_mode()
 
 	# Feature 017: the Stone Hearth, a snap trap and a glow lantern by the fire,

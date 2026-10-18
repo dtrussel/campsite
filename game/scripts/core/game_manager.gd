@@ -118,13 +118,19 @@ func chapter() -> int:
 	return 2 if nights_to_win >= 7 else 1
 
 
-## Hero select Go: the chapter intro the first time (StoryBook over
-## the hero select screen), then the run.
+## The intro pages a new game opens with. Every new game plays them
+## (Esc skips); Continue and Restart never do.
+func intro_pages() -> Array:
+	return StoryLibrary.find(&"intro", chapter())
+
+
+## Hero select Go: the chapter intro (StoryBook over the hero select
+## screen), then the run.
 func begin_chapter(hero: StringName, companion: StringName = &"") -> void:
 	set_party(hero, companion)
 	var key: String = "intro.c%d" % chapter()
-	var pages: Array = StoryLibrary.find(&"intro", chapter())
-	if pages.is_empty() or StoryLibrary.has_seen(key):
+	var pages: Array = intro_pages()
+	if pages.is_empty():
 		start_run()
 		return
 	var book: StoryBook = StoryBook.play(pages, hero_id)

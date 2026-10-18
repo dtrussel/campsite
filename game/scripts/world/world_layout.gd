@@ -10,7 +10,7 @@ extends RefCounted
 ## each with the resource it supplies, its own ground, its own landmark
 ## and its own stretch of forest wall:
 ##
-##   NW  Pine Grove     resin pines, needle litter, ferns, an old giant pine
+##   NW  Pine Grove     pines, needle litter, ferns, an old giant pine
 ##   NE  Stony Pond     a pond with reeds, rocks and clay banks
 ##   SW  Woodlot        broadleaf trees, cut stumps, a woodpile
 ##   SE  Berry Hollow   berry bushes, flowers, a great oak with a fairy ring

@@ -40,22 +40,22 @@ const CAMPFIRE_REACH: float = 2.6
 ## Distance (plus the target's radius) at which a repair command hammers.
 const REPAIR_REACH: float = 1.4
 ## Seconds into the swing when damage lands (the "wind-up").
-const ATTACK_WINDUP: float = 0.18
+const ATTACK_WINDUP: float = 0.22
 const REPATH_SECONDS: float = 0.25
 
-@export var move_speed: float = 5.0
+@export var move_speed: float = 4.0
 @export var acceleration: float = 30.0
 @export var friction: float = 30.0
 
 @export var attack_damage: int = 4
 @export var attack_range: float = 2.0
-@export var attack_cooldown_seconds: float = 0.5
+@export var attack_cooldown_seconds: float = 0.65
 @export var stats: CharacterStatsDefinition
 ## The hero played; empty takes GameManager.party_hero().
 @export var hero: HeroDefinition
 
 @export var max_hp: int = 50
-@export var regen_per_second: float = 1.5
+@export var regen_per_second: float = 1.2
 @export var hurt_invulnerability_seconds: float = 0.6
 @export var heal_per_meal: int = 15
 @export var heal_per_snack: int = 35
@@ -391,7 +391,7 @@ func _is_attackable(target: Node3D) -> bool:
 
 func _perform_attack(target: Node3D) -> void:
 	_attack_cooldown_remaining = attack_cooldown_seconds
-	_visual.play_action(&"attack", 1.9)
+	_visual.play_action(&"attack", 1.5)
 	attacked.emit(target)
 	if hero != null and hero.ranged:
 		PebbleShot.fire(self, target, attack_damage)
@@ -473,7 +473,7 @@ func _try_attack() -> void:
 	if target == null:
 		# Swing anyway so the key feels responsive.
 		_attack_cooldown_remaining = attack_cooldown_seconds
-		_visual.play_action(&"attack", 1.9)
+		_visual.play_action(&"attack", 1.5)
 		return
 	_visual.face_instantly(target.global_position - global_position)
 	command_attack(target)

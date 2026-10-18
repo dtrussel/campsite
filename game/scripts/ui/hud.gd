@@ -35,8 +35,7 @@ const _BANNER_Y_BOSS: float = 170.0
 const _BOSS_COLOR: Color = Color(0.5, 0.36, 0.86)
 
 var _vignette: TextureRect = null
-const _TRAY_ITEMS: Array[StringName] = [&"wood", &"stone", &"berries", &"fiber", &"leaves", &"resin", &"clay",
-	&"mushrooms", &"scrap", &"glow_shards", &"torch", &"snack"]
+const _TRAY_ITEMS: Array[StringName] = [&"wood", &"stone", &"berries", &"clay", &"scrap", &"glow_shards", &"torch", &"snack"]
 const _ICON_DIR: String = "res://assets/icons/"
 
 var _player: Node = null
@@ -268,7 +267,7 @@ func _build_tray(root: Control) -> void:
 	_anchor(plate, Control.PRESET_TOP_RIGHT, Vector2(-10, 8))
 	root.add_child(plate)
 	var grid: GridContainer = GridContainer.new()
-	grid.columns = 3
+	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 0)
 	plate.add_child(grid)

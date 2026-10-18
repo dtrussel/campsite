@@ -10,9 +10,8 @@ display_name = "Watch Post"
 description = "A lookout with a slingshot: pelts Shadow Imps within 5 m."
 scene_path = "res://scenes/buildings/WatchPost.tscn"
 cost = {
-&"wood": 4,
-&"stone": 2,
-&"fiber": 1
+&"wood": 5,
+&"stone": 2
 }
 max_hp = 80
 footprint_size = Vector3(1.6, 3.0, 1.6)

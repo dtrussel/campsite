@@ -55,7 +55,7 @@ func _run_win_scenario() -> void:
 	await _start_fresh_run()
 	_check(GameManager.is_playing(), "run is PLAYING after scene load")
 	_check(TimeManager.is_running, "clock is running")
-	_check(ResourceManager.get_definitions().size() >= 11, "items loaded (%d)" % ResourceManager.get_definitions().size())
+	_check(ResourceManager.get_definitions().size() == 9, "items loaded: 6 raw + 3 crafted (%d)" % ResourceManager.get_definitions().size())
 	_check(BuildManager.get_known_definitions().size() == 7, "7 buildings loaded")
 	_check(CraftingManager.get_recipes().size() >= 1, "recipes loaded")
 
@@ -71,20 +71,16 @@ func _run_win_scenario() -> void:
 		AudioManager.play_sfx(StringName(id), player.global_position)
 	AudioManager.play_sfx(&"no_such_sound")  # unknown ids are ignored
 
-	# Gather from a tree: wood plus the leaves bonus.
+	# Gather from a tree: wood (playtest 1 cut the leaves bonus).
 	var tree_node: ResourceNode = _find_resource_node(&"wood")
 	_check(tree_node != null, "found a tree")
 	_check(tree_node.begin_gather(player), "gather started")
 	await _wait(tree_node.gather_time_seconds + 0.3)
 	_check(ResourceManager.get_count(&"wood") >= 2, "gathered wood")
-	_check(ResourceManager.get_count(&"leaves") >= 1, "tree bonus gave leaves")
+	_check(ResourceManager.get_definition(&"leaves") == null and ResourceManager.get_definition(&"fiber") == null,
+		"playtest 1: leaves, fiber, resin and mushrooms are gone")
 	_check(ProgressionManager.get_xp(player) > 0, "gather awarded XP")
 
-	# Pine gives resin, bush gives fiber: every torch/fence input is reachable.
-	var pine: ResourceNode = _find_resource_node(&"resin")
-	_check(pine != null and pine.begin_gather(player), "gather from pine")
-	await _wait(pine.gather_time_seconds + 0.3)
-	_check(ResourceManager.get_count(&"resin") >= 1, "gathered resin")
 
 	# Craft and plant a torch.
 	var torch_recipe: CraftingRecipe = _recipe(&"torch")
@@ -224,6 +220,7 @@ func _run_story_scenario() -> void:
 	_check(not StoryLibrary.has_seen("intro.c1"), "no intro marked seen yet")
 	StoryLibrary.mark_seen("intro.c1")
 	_check(StoryLibrary.has_seen("intro.c1") and not StoryLibrary.has_seen("intro.c2"), "the seen intro is remembered per chapter")
+	_check(GameManager.intro_pages().size() == 4, "a seen intro still opens the next new game")
 	StoryLibrary.forget_progress()
 
 	# Shards: a chance per kill with pity, per mob type (seeded).
@@ -332,7 +329,7 @@ func _run_story_scenario() -> void:
 ## Feature 017: repair, the new resources, recipes, traps and lanterns.
 func _check_feature_017(player: Node3D, companion: Node3D, fence: Building) -> void:
 	# New resource nodes all gather.
-	for item in [&"clay", &"mushrooms", &"scrap"]:
+	for item in [&"clay", &"scrap"]:
 		var node: ResourceNode = _find_resource_node(item)
 		_check(node != null and node.begin_gather(player), "gather started on %s" % item)
 		if node != null:
@@ -373,6 +370,7 @@ func _check_feature_017(player: Node3D, companion: Node3D, fence: Building) -> v
 	var feed: CraftingRecipe = _recipe(&"feed_fire")
 	_check(feed != null and not CraftingManager.can_craft(feed), "feed the fire disabled at full HP")
 	fire.take_damage(25)
+	ResourceManager.add(&"wood", 1)
 	var fire_hp: int = fire.current_hp
 	_check(CraftingManager.craft(feed, player) and fire.current_hp == fire_hp + fire.repair_per_tap, "fed the fire (+%d)" % fire.repair_per_tap)
 
@@ -389,8 +387,7 @@ func _check_feature_017(player: Node3D, companion: Node3D, fence: Building) -> v
 	_check(not CraftingManager.can_craft(hearth), "hearth only once per run")
 
 	# Berry Snack: crafted, then eaten first with R.
-	ResourceManager.add(&"berries", 2)
-	ResourceManager.add(&"mushrooms", 1)
+	ResourceManager.add(&"berries", 3)
 	_check(CraftingManager.craft(_recipe(&"berry_snack"), player) and ResourceManager.get_count(&"snack") == 1, "cooked a berry snack")
 	player.set("_invulnerable_remaining", 0.0)
 	player.take_damage(40)
@@ -471,7 +468,7 @@ func _check_feature_019(player: Node3D, companion: Node3D) -> void:
 	wall.queue_free()
 
 	# Crafting Table recipes are locked until a table stands in the camp.
-	for item in [&"wood", &"scrap", &"resin", &"fiber", &"leaves"]:
+	for item in [&"wood", &"scrap", &"berries"]:
 		ResourceManager.add(item, 10)
 	var stick: CraftingRecipe = _recipe(&"sturdy_stick")
 	_check(stick.station == CraftingRecipe.STATION_TABLE and not CraftingManager.can_craft(stick), "table recipes locked without a table")
@@ -517,7 +514,7 @@ func _check_mushroom_gremlin(player: Node3D) -> void:
 	_check(first >= 0 and first < wave.size() / 2, "night 2: the gremlin sneaks in early")
 
 	# It steals the most plentiful resource from the campfire stash...
-	for item in [&"wood", &"stone", &"berries", &"fiber", &"leaves", &"resin", &"clay", &"mushrooms", &"scrap", &"glow_shards"]:
+	for item in [&"wood", &"stone", &"berries", &"clay", &"scrap", &"glow_shards"]:
 		ResourceManager.spend(item, ResourceManager.get_count(item))
 	ResourceManager.add(&"stone", 10)
 	ResourceManager.add(&"wood", 3)
@@ -774,7 +771,7 @@ func _run_continue_scenario() -> void:
 	# Damaged or foreign saves are refused.
 	_check(SaveManager.parse("{not json").is_empty(), "a corrupt save is ignored")
 	var old_version: Dictionary = data.duplicate(true)
-	var text: String = SaveManager.serialize(old_version).replace('"version": 1', '"version": 99')
+	var text: String = SaveManager.serialize(old_version).replace('"version": %d' % SaveManager.VERSION, '"version": 99')
 	_check(SaveManager.parse(text).is_empty(), "a save from another version is ignored")
 	_check(SaveManager.parse(SaveManager.serialize(data)).hash() == SaveManager.parse(SaveManager.serialize(data)).hash()
 		and not SaveManager.parse(SaveManager.serialize(data)).is_empty(), "save round-trips through JSON")
@@ -852,7 +849,7 @@ func _run_hero_scenario() -> void:
 		imp.take_damage(999, player)
 
 	# The signature crafts follow the hero, not the role.
-	for item in [&"wood", &"scrap", &"resin", &"fiber"]:
+	for item in [&"wood", &"scrap"]:
 		ResourceManager.add(item, 10)
 	var table: Building = _spawn_building(&"crafting_table", Vector3(5, 0, -6))
 	var reach: float = float(player.get("attack_range"))

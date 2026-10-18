@@ -163,30 +163,22 @@ not behaviorally implemented yet.
 
 ## F. Resource system
 
-All 10 resources are present in data and UI from day one. Initial uses are
-guidelines; final recipes will live in `.tres` data files.
+*Playtest 1 (feature 044) cut the list from 10 raw resources to 6.*
+Testers found 10 too many to keep track of. Fiber, Leaves, Resin and
+Mushrooms are gone, and their recipes use the remaining six instead.
+Pine trees give wood, and mushroom patches are now only scenery.
 
-| Name        | Rarity   | Stack | Initial uses                                                  |
-|-------------|----------|-------|---------------------------------------------------------------|
-| Wood        | Common   | 99    | Fences, watch posts, torches, traps, most early buildings.    |
-| Stone       | Common   | 99    | Reinforced walls, watch post tops, heavy traps.               |
-| Berries     | Common   | 50    | Food, basic healing snack, simple recipes.                    |
-| Fiber       | Common   | 99    | Ropes, traps, bows, bandages.                                 |
-| Mushrooms   | Uncommon | 50    | Potions, risky food, magical-adjacent recipes.                |
-| Clay        | Uncommon | 50    | Reinforced walls, ovens, brick variants.                      |
-| Leaves      | Common   | 99    | Camouflage, bedding, simple roofs, ground cover crafts.       |
-| Resin       | Uncommon | 50    | Glue, fire upgrades, longer-burning torches.                  |
-| Scrap       | Rare     | 30    | Improvised tools, weapon upgrades, complex devices.           |
-| Glow Shards | Rare     | 20    | Magical upgrades, night defenses, vision items.               |
+| Name        | Rarity   | Cap | Source | Uses |
+|-------------|----------|-----|--------|------|
+| Wood        | Common   | 20  | Trees and pines | Every building, torches, Feed the Fire, repairs, table crafts |
+| Stone       | Common   | 20  | Rocks | Watch Post, Crate, Table, Reinforced Wall, Stone Hearth |
+| Berries     | Common   | 20  | Berry bushes | Eat (R), Berry Snack, Bandage |
+| Clay        | Uncommon | 20  | Clay pits in the NE and SW corners | Reinforced Wall, Stone Hearth |
+| Scrap       | Rare     | 20  | Junk piles near the E and S spawn lanes | Trap, Lantern, Table, Sturdy Stick, Slingshot, Trap Refill |
+| Glow Shards | Rare     | 10  | Imps (40% chance per kill, with pity) and every bramble beast | Glow Lantern, the Moon Lantern |
 
-*Feature 017 status:* every resource now has a source and a use.
-
-| Resource | Source | Uses |
-|----------|--------|------|
-| Clay | Clay pits in the NE and SW corners | Stone Hearth |
-| Mushrooms | Mushroom patches in the NW and SE corners | Berry Snack |
-| Scrap | Junk piles near the E and S spawn lanes | Snap Trap, Glow Lantern |
-| Glow Shards | Every third imp kill drops one as a pickup | Glow Lantern |
+Each Storage Crate adds another cap's worth. The crafted items (Torch,
+Berry Snack and Bandage) have no cap.
 
 ### Display
 
@@ -215,12 +207,12 @@ These are stored as `ResourceDefinition` `.tres` files; see the architecture doc
 | Building       | Purpose                                                      |
 |----------------|--------------------------------------------------------------|
 | Campfire Core  | Central base object; mobs target it; provides light radius.  |
-| Wooden Fence   | Cheap barrier; blocks or slows mobs.                         |
-| Watch Post     | Elevated post; companions can guard from here.               |
+| Wooden Fence   | Cheap barrier; blocks or slows mobs. 3 Wood.                 |
+| Watch Post     | Elevated post; companions can guard from here. 5 Wood + 2 Stone. |
 | Storage Crate  | *(019)* +20 stash cap per resource (caps start at 20). 4 Wood + 2 Stone. |
 | Crafting Table | *(019)* A second crafting station with the Sturdy Stick, Slingshot, Bandage and Trap Refill. 4 Wood + 2 Stone + 1 Scrap. |
 | Reinforced Wall | *(019)* 150 HP, three times a fence. 3 Stone + 2 Clay + 1 Wood. |
-| Snap Trap      | *(017)* Snaps the first imp on it: 10 damage, held 2.5 s; 3 snaps. 2 Wood + 1 Fiber + 1 Scrap. |
+| Snap Trap      | *(017)* Snaps the first imp on it: 10 damage, held 2.5 s; 3 snaps. 3 Wood + 1 Scrap. |
 | Glow Lantern   | *(017)* A torch that never burns out: slows and zaps imps within 5 m. 2 Glow Shards + 1 Scrap + 2 Wood. |
 
 ### Prototype subset
@@ -257,29 +249,23 @@ These are stored as `ResourceDefinition` `.tres` files; see the architecture doc
 
 ## H. Crafting system
 
-### Initial recipe examples
+### Recipes
 
-| Item         | Recipe                                |
-|--------------|---------------------------------------|
-| Wooden Fence | 2 Wood + 1 Fiber                      |
-| Watch Post   | 4 Wood + 2 Stone + 1 Fiber            |
-| Torch        | 1 Wood + 1 Resin + 1 Leaves           |
-| Berry Snack  | 2 Berries + 1 Leaves                  |
-| Simple Trap  | 2 Wood + 2 Fiber + 1 Scrap            |
+*Since playtest 1 (feature 044):*
 
-These numbers are placeholder; final values live in `CraftingRecipe`
-resources.
+| Recipe | Station | Inputs | Result |
+|--------|---------|--------|--------|
+| Feed the Fire | Campfire | 1 Wood | +20 campfire HP (only while it is damaged) |
+| Torch | Campfire | 2 Wood | A torch (plant with Q) |
+| Berry Snack | Campfire | 3 Berries | A snack (R: +35 HP) |
+| Stone Hearth | Campfire | 5 Clay + 4 Stone | Campfire +75 max HP, fully healed; once per run |
+| Bandage | Table | 2 Berries + 1 Wood | X next to the companion: +25 HP, or a revive |
+| Sturdy Stick | Table | 4 Wood + 2 Scrap | Leo +2 attack; once per run |
+| Slingshot | Table | 3 Wood + 2 Scrap | Nela's range; once per run |
+| Trap Refill | Table | 1 Wood + 1 Scrap | Restores a Snap Trap |
 
-*Implemented at the campfire (feature 017):*
-
-| Recipe | Inputs | Result |
-|--------|--------|--------|
-| Feed the Fire | 1 Wood | +20 campfire HP (only while it is damaged) |
-| Torch | 1 Wood + 1 Resin + 1 Leaves | A torch (plant with Q) |
-| Berry Snack | 2 Berries + 1 Mushroom | A snack (R: +35 HP); mushrooms replace leaves to give mushrooms a use |
-| Stone Hearth | 5 Clay + 4 Stone | Campfire +75 max HP, fully healed; once per run |
-
-The Simple Trap became the Snap Trap building (build menu 3).
+These numbers live in the `CraftingRecipe` resources
+(`game/resources/recipes/`).
 
 ### Prototype subset
 
@@ -346,6 +332,24 @@ Implement **Shadow Imp** only.
   night.
 - When all mobs in the wave are defeated *or* a wave timer expires, the
   wave ends and `night_ended` is signaled.
+
+### Pacing
+
+*Playtest 1 (feature 044) slowed the game down.* Testers found the
+movement, fights and day/night cycle too fast.
+
+| | Before | Since 044 |
+|---|---|---|
+| Day / sunset / night / dawn | 120 / 10 / 75 / 5 s | 200 / 12 / 120 / 6 s |
+| Hero and companion speed | 5.0 and 4.8–4.9 m/s | 4.0 and 3.9 m/s |
+| Imp / bramble / gremlin / Moon-Eater speed | 2.4 / 1.5 / 3.1 / 0.9 | 1.9 / 1.2 / 2.5 / 0.75 |
+| Attack cooldowns | Leo 0.5, Nela 0.6, mobs 1.0–3.0 s | ×1.25 (Leo 0.65, Nela 0.75) |
+| Spawn interval | 4.0 s | 5.5 s |
+| Hero regen | 1.5 HP/s | 1.2 HP/s |
+
+HP and damage did not change, so a fight takes the same number of hits
+but more time. The durations live in `TimeManager`, the speeds in the
+hero and mob `.tres` files.
 
 ## J. XP and leveling
 

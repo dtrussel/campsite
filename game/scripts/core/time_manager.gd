@@ -14,10 +14,10 @@ signal phase_changed(new_phase: int)
 
 enum Phase { DAY, SUNSET, NIGHT, DAWN }
 
-@export var day_seconds: float = 120.0
-@export var sunset_seconds: float = 10.0
-@export var night_seconds: float = 75.0
-@export var dawn_seconds: float = 5.0
+@export var day_seconds: float = 200.0
+@export var sunset_seconds: float = 12.0
+@export var night_seconds: float = 120.0
+@export var dawn_seconds: float = 6.0
 
 var current_phase: int = Phase.DAY
 var remaining_seconds: float = 0.0

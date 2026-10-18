@@ -366,7 +366,7 @@ func _try_attack(target: Node) -> void:
 	if _attack_cooldown_remaining > 0.0:
 		return
 	if _visual != null:
-		_visual.play_action(&"attack", 1.6)
+		_visual.play_action(&"attack", 1.3)
 	if definition.attack_hit_delay > 0.0:
 		# Telegraphed (feature 026): the blow lands at the clip's impact.
 		get_tree().create_timer(definition.attack_hit_delay, false).timeout.connect(_land_attack.bind(target))

@@ -10,8 +10,7 @@ display_name = "Snap Trap"
 description = "Snaps the first Shadow Imp that steps on it: 10 damage and holds it still. 3 snaps, then it breaks."
 scene_path = "res://scenes/buildings/SnapTrap.tscn"
 cost = {
-&"wood": 2,
-&"fiber": 1,
+&"wood": 3,
 &"scrap": 1
 }
 max_hp = 3

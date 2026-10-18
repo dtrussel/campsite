@@ -10,7 +10,7 @@ extends Resource
 @export var id: StringName = &""
 @export var display_name: String = ""
 @export var description: String = ""
-@export var cost: Dictionary = {}        # { &"wood": 2, &"fiber": 1 }
+@export var cost: Dictionary = {}        # { &"wood": 4, &"stone": 2 }
 @export var max_hp: int = 50
 @export var footprint_size: Vector3 = Vector3(1.0, 1.0, 1.0)
 @export var ui_color: Color = Color.WHITE

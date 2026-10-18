@@ -15,11 +15,13 @@ extends Node
 ## companion's task, run stats, the Moon Lantern's shards (feature 036;
 ## older saves start it at 0, same VERSION). Not saved: resource nodes and
 ## pickups (they reset), torches (they burn out at dawn anyway).
+## VERSION 2 (playtest 1, feature 044): four resources were cut and
+## buildings carry their construction progress, so v1 saves are ignored.
 
 signal saved(day: int)
 
 const SAVE_PATH: String = "user://save.json"
-const VERSION: int = 1
+const VERSION: int = 2
 
 var _save_path: String = SAVE_PATH
 

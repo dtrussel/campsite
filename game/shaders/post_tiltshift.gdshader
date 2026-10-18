@@ -6,17 +6,18 @@ shader_type canvas_item;
 // bokeh (the "miniature diorama" of the concept art and the HD-2D style
 // target), then a warm filmic grade: S-curve, brown-lifted blacks,
 // amber split tone, warm haze in the blurred zones and a warm vignette.
-// Cooler at night. GL Compatibility has no built-in DOF, so the blur is
+// Cooler at night. The defaults are PostFx's Soft level (044).
+// GL Compatibility has no built-in DOF, so the blur is
 // a golden-angle disc over the screen texture's mips.
 
 uniform sampler2D screen_tex : hint_screen_texture, filter_linear_mipmap, repeat_disable;
 
 uniform float blur_enabled : hint_range(0.0, 1.0) = 1.0;
 uniform float focus_center : hint_range(0.0, 1.0) = 0.53;  // screen y of the crisp band
-uniform float focus_band : hint_range(0.0, 0.5) = 0.12;    // half height kept sharp
-uniform float falloff : hint_range(0.01, 1.0) = 0.32;      // distance to full blur
-uniform float bottom_boost = 1.2;                          // the foreground blurs more
-uniform float max_radius = 7.0;                            // disc radius at full blur, px at 1080p
+uniform float focus_band : hint_range(0.0, 0.5) = 0.2;     // half height kept sharp
+uniform float falloff : hint_range(0.01, 1.0) = 0.45;      // distance to full blur
+uniform float bottom_boost = 1.0;                          // the foreground blurs more
+uniform float max_radius = 3.5;                            // disc radius at full blur, px at 1080p
 uniform float max_lod = 2.0;                               // mip level at full blur
 uniform float sharpen : hint_range(0.0, 1.0) = 0.22;        // unsharp mask in the band
 
@@ -32,7 +33,7 @@ uniform vec3 night_highlight : source_color = vec3(1.0, 0.74, 0.46);
 uniform vec3 day_lift : source_color = vec3(0.045, 0.022, 0.01);
 uniform vec3 night_lift : source_color = vec3(0.02, 0.03, 0.07);
 uniform vec3 haze_color : source_color = vec3(1.0, 0.76, 0.5);
-uniform float haze : hint_range(0.0, 1.0) = 0.04;
+uniform float haze : hint_range(0.0, 1.0) = 0.02;
 uniform float exposure = 0.8;
 uniform float contrast = 1.22;                             // around a low pivot: deep shadows
 uniform float pivot = 0.4;

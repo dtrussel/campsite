@@ -29,12 +29,12 @@ extends Resource
 
 @export_group("Combat")
 @export var stats: CharacterStatsDefinition
-@export var move_speed: float = 5.0
-@export var companion_move_speed: float = 4.8
+@export var move_speed: float = 4.0
+@export var companion_move_speed: float = 3.9
 @export var attack_range: float = 2.0
 @export var companion_attack_range: float = 2.0
-@export var attack_cooldown: float = 0.5
-@export var companion_attack_cooldown: float = 0.6
+@export var attack_cooldown: float = 0.65
+@export var companion_attack_cooldown: float = 0.75
 ## Ranged heroes fire a pebble (PebbleShot); the hit lands on impact.
 @export var ranged: bool = false
 

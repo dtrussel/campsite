@@ -76,7 +76,7 @@ func _ready() -> void:
 	_update_task_label()
 	_current_attack_damage = definition.attack_damage if definition != null else 0
 	if definition != null:
-		move_speed = move_speed
+		move_speed = definition.move_speed
 		_attack_range = definition.attack_range
 		_attack_cooldown = definition.attack_cooldown_seconds
 	if hero != null:
@@ -385,7 +385,7 @@ func _attack_mob(mob: Node3D) -> void:
 	if not mob.has_method("take_damage"):
 		return
 	_visual.face_instantly(mob.global_position - global_position)
-	_visual.play_action(&"attack", 1.8)
+	_visual.play_action(&"attack", 1.45)
 	_attack_cooldown_remaining = _attack_cooldown
 	if hero != null and hero.ranged:
 		PebbleShot.fire(self, mob, _current_attack_damage)
