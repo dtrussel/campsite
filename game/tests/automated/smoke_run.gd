@@ -141,6 +141,7 @@ func _run_win_scenario() -> void:
 	player.stop_commands()
 
 	await _check_auto_attack(player)
+	await _check_companion_unstuck(companion)
 
 	# Watch Post pelts a nearby imp on its own.
 	var post_def: BuildingDefinition = BuildManager.get_definition(&"watch_post")
@@ -601,6 +602,44 @@ func _check_auto_attack(player: Node3D) -> void:
 	_check(int(player.get("_state")) == 2 and player.get("_active_node") == bush, "then the hero goes back to the bush (%.1fs)" % t)
 	player.call("_cancel_active_gather")
 	player.set("auto_attack", false)
+
+
+## Feature 044: told to guard from behind a long wall, the companion
+## walks round it on the nav mesh instead of pressing into it.
+func _check_companion_unstuck(companion: Node3D) -> void:
+	var nav: NavigationRegion3D = get_tree().current_scene.find_child("Navigation", true, false) as NavigationRegion3D
+	var fire: Node3D = _campfire()
+	var wall: StaticBody3D = StaticBody3D.new()
+	wall.collision_layer = 4
+	var shape: CollisionShape3D = CollisionShape3D.new()
+	var box: BoxShape3D = BoxShape3D.new()
+	box.size = Vector3(7.0, 2.0, 0.5)
+	shape.shape = box
+	shape.position.y = 1.0
+	wall.add_child(shape)
+	get_tree().current_scene.add_child(wall)
+	wall.global_position = fire.global_position + Vector3(0, 0, -6.5)
+	nav.call("_request_bake")  # rebake the nav mesh round it
+	await nav.baked
+	companion.call("set_task", 0)
+	companion.global_position = fire.global_position + Vector3(0.3, 0, -9.0)
+	await _wait(0.2)
+	companion.call("set_task", 2)
+	var t: float = 0.0
+	var radius: float = float(companion.get("guard_radius"))
+	while _flat(companion.global_position).distance_to(_flat(fire.global_position)) > radius + 0.3 and t < 12.0:
+		await _wait(0.25)
+		t += 0.25
+	_check(t < 12.0, "guarding from behind a wall, the companion walks round it (%.1fs, %d hops)" % [t, int(companion.get("unstuck_count"))])
+	companion.call("set_task", 0)
+	wall.queue_free()
+	await get_tree().process_frame
+	nav.call("_request_bake")  # and without it
+	await nav.baked
+
+
+func _flat(point: Vector3) -> Vector2:
+	return Vector2(point.x, point.z)
 
 
 func _spawn_mob(definition: MobDefinition, position: Vector3) -> Mob:

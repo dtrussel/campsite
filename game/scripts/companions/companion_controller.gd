@@ -11,6 +11,10 @@ extends CharacterBody3D
 ## Feature 034: the companion is a hero too (Nela, or Leo when the
 ## player plays Nela). Body, stats, speed, reach and fighting style come
 ## from the party's HeroDefinition; `definition` keeps the task tuning.
+##
+## Playtest 1 (feature 044): every task walks along the navigation mesh
+## (NavSteer) instead of a straight line, and a watchdog re-paths,
+## sidesteps or finally hops her free when she is pressed against a prop.
 
 signal task_changed(new_task: int)
 signal health_changed(current_hp: int, max_hp: int)
@@ -57,6 +61,20 @@ var _attack_range: float = 2.0
 var _attack_cooldown: float = 0.6
 
 const BANDAGE_HEAL: int = 25
+## Re-path when the walk goal moves this far.
+const NAV_RETARGET_DISTANCE: float = 0.5
+## Moving slower than this share of move_speed counts as stuck.
+const STUCK_PROGRESS_RATIO: float = 0.25
+const STUCK_REPATH_SECONDS: float = 1.0
+const STUCK_SNAP_SECONDS: float = 3.0
+
+var _agent: NavigationAgent3D = null
+var _nav_goal: Vector3 = Vector3.INF
+var _stuck_seconds: float = 0.0
+var _detour_point: Vector3 = Vector3.ZERO
+var _detour_remaining: float = 0.0
+## How often the watchdog had to hop the companion free (for tests).
+var unstuck_count: int = 0
 
 
 func _enter_tree() -> void:
@@ -72,6 +90,7 @@ func _enter_tree() -> void:
 
 func _ready() -> void:
 	add_to_group("companions")
+	_agent = NavSteer.make_agent(self)
 	_refresh_world_refs()
 	_update_task_label()
 	_current_attack_damage = definition.attack_damage if definition != null else 0
@@ -232,54 +251,37 @@ func _physics_process(delta: float) -> void:
 
 
 func _tick_idle() -> void:
-	velocity = Vector3.ZERO
-	move_and_slide()
+	_stop()
 
 
 func _tick_follow_player() -> void:
-	if _player == null:
-		velocity = Vector3.ZERO
-		move_and_slide()
+	if _player == null or _flat_distance(_player.global_position) <= follow_distance:
+		_stop()
 		return
-	var to_player: Vector3 = _player.global_position - global_position
-	to_player.y = 0.0
-	var distance: float = to_player.length()
-	if distance > follow_distance:
-		velocity = to_player.normalized() * move_speed
-	else:
-		velocity = Vector3.ZERO
-	move_and_slide()
+	_walk_to(_player.global_position)
 
 
 func _tick_guard_base() -> void:
 	if _base_core == null:
-		velocity = Vector3.ZERO
-		move_and_slide()
+		_stop()
 		return
 	# First priority: kill nearby mobs.
 	var mob: Node3D = _find_nearest_mob(get_attack_range())
 	if mob != null:
-		velocity = Vector3.ZERO
-		move_and_slide()
+		_stop()
 		if _attack_cooldown_remaining <= 0.0:
 			_attack_mob(mob)
 		return
 	# Second: move into guard radius if outside.
-	var to_base: Vector3 = _base_core.global_position - global_position
-	to_base.y = 0.0
-	var distance: float = to_base.length()
-	if distance > guard_radius:
-		velocity = to_base.normalized() * move_speed
+	if _flat_distance(_base_core.global_position) > guard_radius:
+		_walk_to(_base_core.global_position)
+		return
+	# Approach the nearest detected mob if any.
+	var detected: Node3D = _find_nearest_mob(detection_radius)
+	if detected != null:
+		_walk_to(detected.global_position)
 	else:
-		# Approach the nearest detected mob if any.
-		var detected: Node3D = _find_nearest_mob(detection_radius)
-		if detected != null:
-			var to_mob: Vector3 = detected.global_position - global_position
-			to_mob.y = 0.0
-			velocity = to_mob.normalized() * move_speed
-		else:
-			velocity = Vector3.ZERO
-	move_and_slide()
+		_stop()
 
 
 func _tick_gather_nearest() -> void:
@@ -289,27 +291,19 @@ func _tick_gather_nearest() -> void:
 	# for the next nearest.
 	if _active_resource_node != null and is_instance_valid(_active_resource_node):
 		# Stand still while gathering.
-		velocity = Vector3.ZERO
-		move_and_slide()
+		_stop()
 		return
 
 	var target: Node3D = _find_nearest_resource_node()
 	if target == null:
-		velocity = Vector3.ZERO
-		move_and_slide()
+		_stop()
 		return
-
-	var to_target: Vector3 = target.global_position - global_position
-	to_target.y = 0.0
-	var distance: float = to_target.length()
 	# Begin gathering when adjacent.
-	if distance < 1.8:
-		velocity = Vector3.ZERO
-		move_and_slide()
+	if _flat_distance(target.global_position) < 1.8:
+		_stop()
 		_begin_gather_on(target)
 		return
-	velocity = to_target.normalized() * move_speed
-	move_and_slide()
+	_walk_to(target.global_position)
 
 
 ## Fixes the most damaged structure (the campfire first when it is
@@ -322,19 +316,78 @@ func _tick_repair(delta: float) -> void:
 	if mob != null or target == null or not ResourceManager.has(Repair.WOOD_ID, Repair.WOOD_PER_TAP):
 		_tick_guard_base()
 		return
-	var to_target: Vector3 = target.global_position - global_position
-	to_target.y = 0.0
-	if to_target.length() > REPAIR_REACH + _target_radius(target):
-		velocity = to_target.normalized() * move_speed
-		move_and_slide()
+	if _flat_distance(target.global_position) > REPAIR_REACH + _target_radius(target):
+		_walk_to(target.global_position)
 		return
-	velocity = Vector3.ZERO
-	move_and_slide()
-	_visual.face(to_target, delta)
+	_stop()
+	_visual.face(target.global_position - global_position, delta)
 	if _repair_timer <= 0.0:
 		_repair_timer = REPAIR_TAP_SECONDS
 		if Repair.tap(target, self):
 			_visual.play_action(&"gather", 1.6)
+
+
+# --- Walking (feature 044: nav paths and a stuck watchdog) -------------
+
+## Walks along the nav path toward `goal`. If the companion barely moves
+## for STUCK_REPATH_SECONDS it re-paths and sidesteps; after
+## STUCK_SNAP_SECONDS it hops to open ground a little toward the goal.
+func _walk_to(goal: Vector3) -> void:
+	var delta: float = get_physics_process_delta_time()
+	goal.y = global_position.y
+	if goal.distance_to(_nav_goal) > NAV_RETARGET_DISTANCE or _agent.is_navigation_finished():
+		_nav_goal = goal
+		_agent.target_position = goal
+	if _detour_remaining > 0.0:
+		_detour_remaining -= delta
+		if _flat_distance(_detour_point) < 0.3:
+			_detour_remaining = 0.0
+		velocity = _flat_direction(_detour_point) * move_speed
+	else:
+		velocity = NavSteer.velocity(_agent, self, goal, move_speed)
+	var before: Vector3 = global_position
+	move_and_slide()
+	_check_stuck(goal, before, delta)
+
+
+func _stop() -> void:
+	velocity = Vector3.ZERO
+	move_and_slide()
+	_stuck_seconds = 0.0
+	_detour_remaining = 0.0
+
+
+func _check_stuck(goal: Vector3, before: Vector3, delta: float) -> void:
+	var wanted: float = move_speed * delta
+	var moved: float = Vector2(global_position.x - before.x, global_position.z - before.z).length()
+	if wanted <= 0.0 or moved >= wanted * STUCK_PROGRESS_RATIO:
+		_stuck_seconds = maxf(0.0, _stuck_seconds - delta * 2.0)
+		return
+	_stuck_seconds += delta
+	if _stuck_seconds >= STUCK_SNAP_SECONDS:
+		var ahead: Vector3 = global_position + _flat_direction(goal) * 1.2
+		global_position = NavSteer.closest_point(_agent, ahead)
+		Fx.burst(&"step_dust", global_position)
+		_stuck_seconds = 0.0
+		_detour_remaining = 0.0
+		_agent.target_position = goal
+		unstuck_count += 1
+	elif _stuck_seconds >= STUCK_REPATH_SECONDS and _detour_remaining <= 0.0:
+		# Re-path, and sidestep off whatever we are pressed against.
+		_agent.target_position = goal
+		var side: Vector3 = _flat_direction(goal).cross(Vector3.UP) * (1.0 if randf() < 0.5 else -1.0)
+		_detour_point = NavSteer.closest_point(_agent, global_position + side * 1.2)
+		_detour_remaining = 0.8
+
+
+func _flat_direction(point: Vector3) -> Vector3:
+	var to: Vector3 = point - global_position
+	to.y = 0.0
+	return to.normalized() if to.length() > 0.001 else Vector3.FORWARD
+
+
+func _flat_distance(point: Vector3) -> float:
+	return Vector2(point.x - global_position.x, point.z - global_position.z).length()
 
 
 func _target_radius(node: Node3D) -> float:

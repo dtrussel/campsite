@@ -121,14 +121,7 @@ func _ready() -> void:
 		max_hp = stats.base_max_health
 	current_hp = max_hp
 	auto_attack = GameSettings.auto_attack()
-	_agent = NavigationAgent3D.new()
-	_agent.radius = 0.35
-	_agent.path_desired_distance = 0.4
-	_agent.target_desired_distance = 0.3
-	_agent.path_max_distance = 2.0
-	# The baked surface sits a voxel or two above the ground plane.
-	_agent.path_height_offset = 0.5
-	add_child(_agent)
+	_agent = NavSteer.make_agent(self)
 	ProgressionManager.register_character(self, stats)
 	if not ProgressionManager.level_up.is_connected(_on_level_up):
 		ProgressionManager.level_up.connect(_on_level_up)
@@ -362,18 +355,7 @@ func _tick_command(delta: float) -> Vector3:
 
 ## Velocity toward `goal`, following the nav path when one exists.
 func _path_velocity(goal: Vector3) -> Vector3:
-	var next: Vector3 = goal
-	if _agent != null and NavigationServer3D.map_get_iteration_id(_agent.get_navigation_map()) > 0:
-		if not _agent.is_navigation_finished():
-			next = _agent.get_next_path_position()
-	var to_next: Vector3 = next - global_position
-	to_next.y = 0.0
-	if to_next.length() < 0.05:
-		to_next = goal - global_position
-		to_next.y = 0.0
-	if to_next.length() < 0.01:
-		return Vector3.ZERO
-	return to_next.normalized() * move_speed
+	return NavSteer.velocity(_agent, self, goal, move_speed)
 
 
 func _keyboard_direction() -> Vector2:
