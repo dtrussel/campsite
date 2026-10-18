@@ -140,6 +140,8 @@ func _run_win_scenario() -> void:
 	_check(int(GameManager.stats[&"kills"]) > kills_before_cmd, "attack command chased and auto-attacked an imp to death (%.1fs)" % t)
 	player.stop_commands()
 
+	await _check_auto_attack(player)
+
 	# Watch Post pelts a nearby imp on its own.
 	var post_def: BuildingDefinition = BuildManager.get_definition(&"watch_post")
 	var post: Building = post_def.get_scene().instantiate() as Building
@@ -561,6 +563,44 @@ func _check_mushroom_gremlin(player: Node3D) -> void:
 		t += 0.25
 	_check(not is_instance_valid(runner) and int(GameManager.stats.get(&"stolen_lost", 0)) == lost_before + 4
 		and ResourceManager.get_count(&"stone") == 6, "escaped gremlin got away with 4 stone (%.1fs)" % t)
+
+
+## Feature 044: an idle or gathering hero fights a mob that comes close,
+## then goes back to the gather; switched off, the hero leaves it be.
+func _check_auto_attack(player: Node3D) -> void:
+	var imp_def: MobDefinition = load("res://resources/mobs/shadow_imp.tres") as MobDefinition
+	_check(GameSettings.auto_attack(), "auto-attack is on by default")
+	var imp: Mob = _spawn_mob(imp_def, player.global_position + Vector3(2.0, 0, 0))
+	imp.set_physics_process(false)
+	await _wait(1.0)
+	_check(imp.current_hp == imp_def.max_hp, "auto-attack off: the hero leaves the imp be")
+	player.set("auto_attack", true)
+	var t: float = 0.0
+	while is_instance_valid(imp) and imp.current_hp == imp_def.max_hp and t < 3.0:
+		await _wait(0.1)
+		t += 0.1
+	_check(not is_instance_valid(imp) or imp.current_hp < imp_def.max_hp, "an idle hero auto-attacks an imp 2 m away (%.1fs)" % t)
+	if is_instance_valid(imp):
+		imp.take_damage(999, player)
+	await _wait(0.3)
+
+	var bush: ResourceNode = _find_resource_node(&"berries")
+	player.global_position = bush.global_position + Vector3(1.2, 0, 0)
+	await _wait(0.1)
+	player.call("_begin_gather_on", bush)
+	_check(int(player.get("_state")) == 2, "gathering a bush")
+	imp = _spawn_mob(imp_def, player.global_position + Vector3(0, 0, 2.0))
+	imp.set_physics_process(false)
+	await _wait(0.5)
+	_check(int(player.get("command")) == 2 and player.get("command_target") == imp, "a close imp interrupts the gather")
+	imp.take_damage(999, player)
+	t = 0.0
+	while int(player.get("_state")) != 2 and t < 4.0:
+		await _wait(0.1)
+		t += 0.1
+	_check(int(player.get("_state")) == 2 and player.get("_active_node") == bush, "then the hero goes back to the bush (%.1fs)" % t)
+	player.call("_cancel_active_gather")
+	player.set("auto_attack", false)
 
 
 func _spawn_mob(definition: MobDefinition, position: Vector3) -> Mob:
@@ -1161,6 +1201,10 @@ func _start_fresh_run() -> void:
 	_check(get_tree().paused, "game paused while overlay open")
 	overlay.close()
 	_check(not get_tree().paused, "game unpaused after closing overlay")
+	# Scenarios stage mobs next to the hero; only _check_auto_attack
+	# lets the hero fight them on its own.
+	for player in get_tree().get_nodes_in_group("player"):
+		player.set("auto_attack", false)
 	Engine.time_scale = SPEED
 
 

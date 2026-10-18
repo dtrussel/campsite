@@ -37,6 +37,7 @@ func _ready() -> void:
 	column.add_child(_volume_row("Music", AudioManager.music_volume, AudioManager.set_music_volume))
 	column.add_child(_volume_row("Sounds", AudioManager.sfx_volume, AudioManager.set_sfx_volume))
 	column.add_child(_choice_row("Blur", PostFx.BLUR_NAMES, PostFx.blur_level(), PostFx.set_blur_level))
+	column.add_child(_toggle_row("Auto-fight", GameSettings.auto_attack(), GameSettings.set_auto_attack))
 	_root.visible = false
 
 

@@ -16,6 +16,11 @@ extends CharacterBody3D
 ##
 ## Feature 034: the body, stats and fighting style come from the party's
 ## HeroDefinition (Leo swings a stick; Nela shoots pebbles from range).
+##
+## Playtest 1 (feature 044): auto-attack. An idle or gathering hero
+## picks the nearest mob within `auto_attack_radius()` and fights it,
+## chains to the next one, then goes back to the interrupted gather.
+## Any player command wins; the pause menu can switch it off.
 
 signal health_changed(current_hp: int, max_hp: int)
 signal knocked_out
@@ -42,6 +47,8 @@ const REPAIR_REACH: float = 1.4
 ## Seconds into the swing when damage lands (the "wind-up").
 const ATTACK_WINDUP: float = 0.22
 const REPATH_SECONDS: float = 0.25
+## How often an idle hero looks for a mob to auto-attack.
+const AUTO_ATTACK_SCAN_SECONDS: float = 0.2
 
 @export var move_speed: float = 4.0
 @export var acceleration: float = 30.0
@@ -62,6 +69,8 @@ const REPATH_SECONDS: float = 0.25
 ## Half-size of the playable square around the campfire; keeps the boy
 ## inside the area the camera and mob spawns are designed around.
 @export var play_area_half_extent: float = 19.0
+## Fight nearby mobs on its own (GameSettings, pause menu).
+@export var auto_attack: bool = true
 
 @onready var _interactor: Node = $GatherInteractor
 @onready var _visual: CharacterVisual = $Visual
@@ -79,6 +88,9 @@ var _regen_accumulator: float = 0.0
 var _move_goal: Vector3 = Vector3.ZERO
 var _repath_timer: float = 0.0
 var _repair_timer: float = 0.0
+var _auto_scan_timer: float = 0.0
+## The gather auto-attack interrupted, resumed once no mob is near.
+var _resume_node: ResourceNode = null
 ## Crafting Table upgrade (features 019, 034): the hero's signature
 ## (Leo's Sturdy Stick, Nela's Slingshot), once per run.
 var has_signature: bool = false
@@ -108,6 +120,7 @@ func _ready() -> void:
 		attack_damage = stats.base_attack_damage
 		max_hp = stats.base_max_health
 	current_hp = max_hp
+	auto_attack = GameSettings.auto_attack()
 	_agent = NavigationAgent3D.new()
 	_agent.radius = 0.35
 	_agent.path_desired_distance = 0.4
@@ -146,6 +159,7 @@ func command_move(point: Vector3) -> void:
 	if not _can_command():
 		return
 	_cancel_active_gather()
+	_resume_node = null
 	_set_command(Command.MOVE, null)
 	_move_goal = Vector3(point.x, global_position.y, point.z)
 	_agent.target_position = _move_goal
@@ -155,6 +169,7 @@ func command_attack(target: Node3D) -> void:
 	if not _can_command() or target == null:
 		return
 	_cancel_active_gather()
+	_resume_node = null
 	_set_command(Command.ATTACK, target)
 	_repath_timer = 0.0
 
@@ -163,6 +178,7 @@ func command_gather(node: ResourceNode) -> void:
 	if not _can_command() or node == null or not node.is_gatherable:
 		return
 	_cancel_active_gather()
+	_resume_node = null
 	_set_command(Command.GATHER, node)
 	_agent.target_position = node.global_position
 
@@ -185,7 +201,13 @@ func command_repair(target: Node3D) -> void:
 
 
 func stop_commands() -> void:
+	_resume_node = null
 	_set_command(Command.NONE, null)
+
+
+## How close a mob must be for auto-attack to go for it.
+func auto_attack_radius() -> float:
+	return maxf(attack_range * 1.3, 3.5)
 
 
 func get_facing() -> Vector3:
@@ -236,6 +258,10 @@ func _physics_process(delta: float) -> void:
 	_tick_regen(delta)
 	if _state == PlayerState.KNOCKED_OUT:
 		return
+	_auto_scan_timer -= delta
+	if _auto_scan_timer <= 0.0:
+		_auto_scan_timer = AUTO_ATTACK_SCAN_SECONDS
+		_tick_auto_attack()
 
 	var desired: Vector3 = Vector3.ZERO
 	var input_dir: Vector2 = _keyboard_direction()
@@ -244,6 +270,8 @@ func _physics_process(delta: float) -> void:
 		if command != Command.NONE:
 			_set_command(Command.NONE, null)
 		_cancel_active_gather()
+		_resume_node = null
+		_auto_scan_timer = 1.0  # walking by hand: leave the mobs to the player
 		desired = Vector3(input_dir.x, 0.0, input_dir.y).normalized() * move_speed
 	elif _state == PlayerState.GATHERING:
 		desired = Vector3.ZERO
@@ -559,9 +587,30 @@ func _on_level_up(character: Node, _new_level: int) -> void:
 		Fx.burst(&"level_up", global_position)
 
 
-func _find_nearest_mob_in_range() -> Node3D:
+## Auto-attack (feature 044): only when the player gave no command (or
+## the hero is gathering), never in build mode or while walking by hand.
+func _tick_auto_attack() -> void:
+	if not auto_attack or not _can_command() or _keyboard_direction().length() > 0.0:
+		return
+	if command != Command.NONE:
+		return
+	var target: Node3D = _find_nearest_mob_in_range(auto_attack_radius())
+	if target != null:
+		var interrupted: ResourceNode = _active_node if _state == PlayerState.GATHERING else _resume_node
+		command_attack(target)
+		_resume_node = interrupted
+	elif _resume_node != null:
+		var node: ResourceNode = _resume_node
+		_resume_node = null
+		if is_instance_valid(node) and node.is_gatherable:
+			command_gather(node)
+
+
+func _find_nearest_mob_in_range(radius: float = -1.0) -> Node3D:
 	var best: Node3D = null
-	var best_d_sq: float = attack_range * attack_range * 1.44
+	if radius < 0.0:
+		radius = attack_range * 1.2
+	var best_d_sq: float = radius * radius
 	for node in get_tree().get_nodes_in_group("mobs"):
 		var n3d: Node3D = node as Node3D
 		if n3d == null or not is_instance_valid(n3d):
