@@ -12,26 +12,31 @@ page = 1
 lines = [{
 "id": "dawn.c2.n6.leo.1",
 "speaker": "leo",
+"face": "worried",
 "text": "Tonight it's coming. I just know it.",
 "when": "leo"
 }, {
 "id": "dawn.c2.n6.leo.2",
 "speaker": "nela",
+"face": "proud",
 "text": "Then we light the lantern all the way. Together.",
 "when": "leo"
 }, {
 "id": "dawn.c2.n6.nela.1",
 "speaker": "nela",
+"face": "worried",
 "text": "It's coming tonight. The biggest shadow.",
 "when": "nela"
 }, {
 "id": "dawn.c2.n6.nela.2",
 "speaker": "leo",
+"face": "proud",
 "text": "Then we light the lantern. All the way. Together!",
 "when": "nela"
 }, {
 "id": "dawn.c2.n6.note",
 "speaker": "note",
+"sketch": "res://assets/ui/story/note_7.png",
 "face": "proud",
 "text": "Light the lantern all the way. The big one is just lonely."
 }]

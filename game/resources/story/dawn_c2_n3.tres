@@ -12,6 +12,7 @@ page = 1
 lines = [{
 "id": "dawn.c2.n3.leo.1",
 "speaker": "leo",
+"face": "surprised",
 "text": "I found Mum's boot prints by the pond!",
 "when": "leo"
 }, {
@@ -23,16 +24,19 @@ lines = [{
 }, {
 "id": "dawn.c2.n3.nela.1",
 "speaker": "nela",
+"face": "curious",
 "text": "Mum's boot prints, by the pond. They go into the Hollow.",
 "when": "nela"
 }, {
 "id": "dawn.c2.n3.nela.2",
 "speaker": "leo",
+"face": "worried",
 "text": "Then that's where we go. Later. In daylight.",
 "when": "nela"
 }, {
 "id": "dawn.c2.n3.note",
 "speaker": "note",
+"sketch": "res://assets/ui/story/note_4.png",
 "face": "surprised",
 "text": "Gremlins carry shiny things into the Hollow. Like gifts."
 }]

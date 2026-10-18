@@ -264,11 +264,20 @@ barks only for the first beast of a run).
   showed Mum's lantern lit, so the script retouches it cold
   (`cold_lantern`; the original is kept as `c2_1_lit.webp`). The camping
   and Moon Lantern paintings double as loading screens.
-- **Received (047): Nela's faces** (surprised, worried, laugh). Like Mum's,
-  they are cut into round portraits (`assets/ui/story/nela_<face>.png`) and
-  picked with `face` on her lines. A kid's line may carry a `face` once that
-  portrait exists; until then the hero portrait shows. **Still wanted:**
-  Leo's six faces, Nela's smile, curious and proud, and Mum's notebook art.
+- **The kids' faces (047):** six each, like Mum's, cut into round
+  portraits (`assets/ui/story/<hero>_<face>.png`) and picked with `face` on
+  their lines. Nela's surprised, worried and laugh were painted as heads;
+  the rest are cut from the kids' faces in the storybook paintings
+  (`story_art.py` `KID_FACES`), so they stay in the same style. A painted
+  head can replace any of them later.
+- **Mum's notebook (047):** a blank journal page and a sketch for each of
+  her seven notes, shown beside the note on the dawn card (`sketch` on the
+  line). They are made by `art/ui/notebook_art.py` from crops of the team's
+  paintings and sheets, turned into pencil and watercolour on cream paper.
+  The 041 journal can use the same page and sketches.
+- **Lifted pages:** where the text band covered a face (the dark moon, the
+  shadows, the lantern by the tent) or the found lantern, `story_art.py`
+  raises the painting a little over a soft, blurred extension of itself.
 - **Received (047): the Moon Lantern and the little golem.** Both are 3D
   models after their sheets (`16_moon_lantern_sheet.webp`,
   `18_little_golem_sheet.webp`): the lantern by the tent (shards stack up

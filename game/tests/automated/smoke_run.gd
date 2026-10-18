@@ -335,6 +335,8 @@ func _run_story_scenario() -> void:
 	_check(StoryLibrary.speaker_name("note") == "Mum's note"
 		and StoryLibrary.speaker_portrait("note", String(note.get("face", ""))).resource_path.ends_with("mum_curious.png"),
 		"the note shows as Mum's, with her face")
+	_check(dawn_card != null and dawn_card.find_child("Sketch", true, false) is TextureRect,
+		"and her sketch from the notebook")
 	if dawn_card != null:
 		dawn_card.dismiss()
 	var beast_intro: MobDefinition = load("res://resources/mobs/bramble_beast.tres") as MobDefinition
@@ -395,8 +397,9 @@ func _run_story_scenario() -> void:
 				painted = painted and (beat as StoryBeat).painting.resource_path.begins_with("res://assets/ui/story/story_")
 	_check(painted, "every storybook page has its own painting")
 	_check(StoryLibrary.speaker_portrait("nela", "worried").resource_path.ends_with("nela_worried.png")
-		and StoryLibrary.speaker_portrait("leo", "worried") == HeroRoster.get_hero(&"leo").portrait,
-		"Nela's painted faces; Leo keeps his portrait until his arrive")
+		and StoryLibrary.speaker_portrait("leo", "proud").resource_path.ends_with("leo_proud.png")
+		and StoryLibrary.speaker_portrait("leo", "nope") == HeroRoster.get_hero(&"leo").portrait,
+		"the kids' painted faces, with a fallback to their portraits")
 	var lantern_model: Node3D = MoonLantern.find(get_tree()).get_node_or_null("Visual") as Node3D
 	_check(lantern_model != null and lantern_model.find_child("moon_lantern*", true, false) is MeshInstance3D,
 		"the Moon Lantern is the team's model")

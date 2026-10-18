@@ -278,6 +278,8 @@ func _validate_story() -> void:
 				_fail("%s line %s has face '%s' (Mum's are %s)" % [beat.resource_path, line_id, face, StoryLibrary.MUM_FACES])
 			elif face != "" and hero_ids.has(speaker) and not ResourceLoader.exists(StoryLibrary.hero_face_path(speaker, face)):
 				_fail("%s line %s has face '%s', but %s has no such portrait" % [beat.resource_path, line_id, face, speaker])
+			elif String(line.get("sketch", "")) != "" and (speaker != "note" or not ResourceLoader.exists(String(line["sketch"]))):
+				_fail("%s line %s has sketch '%s' (Mum's notes only, and the file must exist)" % [beat.resource_path, line_id, line["sketch"]])
 			elif face != "" and speaker == "narrator":
 				_fail("%s line %s: the narrator has no face" % [beat.resource_path, line_id])
 			var when: String = String(line.get("when", ""))

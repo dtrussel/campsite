@@ -12,6 +12,7 @@ page = 1
 lines = [{
 "id": "dawn.c2.n4.leo.1",
 "speaker": "leo",
+"face": "smile",
 "text": "Every shard we bring makes the lantern brighter!",
 "when": "leo"
 }, {
@@ -23,16 +24,19 @@ lines = [{
 }, {
 "id": "dawn.c2.n4.nela.1",
 "speaker": "nela",
+"face": "smile",
 "text": "Every shard makes the lantern a bit brighter.",
 "when": "nela"
 }, {
 "id": "dawn.c2.n4.nela.2",
 "speaker": "leo",
+"face": "proud",
 "text": "Mum's going to be so proud of us!",
 "when": "nela"
 }, {
 "id": "dawn.c2.n4.note",
 "speaker": "note",
+"sketch": "res://assets/ui/story/note_5.png",
 "face": "smile",
 "text": "Near the old lantern, the woods breathe easier."
 }]

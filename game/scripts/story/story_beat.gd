@@ -11,6 +11,8 @@ extends Resource
 ##   page of Mum's notebook the kids found, read in her voice; feature 046).
 ## - `when` (optional): only shown when that hero is played, so the
 ##   played hero speaks first and the companion replies.
+## - `sketch` (optional, Mum's notes): a res:// path to her notebook sketch
+##   (assets/ui/story/note_<n>.png, art/ui/notebook_art.py), shown beside it.
 ## - `face` (optional): an expression portrait. For Mum and her notes one
 ##   of StoryLibrary.MUM_FACES; for a kid, one the team has painted
 ##   (assets/ui/story/<hero>_<face>.png, feature 047).

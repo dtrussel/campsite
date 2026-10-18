@@ -12,6 +12,7 @@ page = 1
 lines = [{
 "id": "dawn.c2.n5.leo.1",
 "speaker": "leo",
+"face": "worried",
 "text": "Nela... did you see big eyes in the trees?",
 "when": "leo"
 }, {
@@ -29,11 +30,13 @@ lines = [{
 }, {
 "id": "dawn.c2.n5.nela.2",
 "speaker": "leo",
+"face": "worried",
 "text": "I saw them. I'm not scared. ...A little scared.",
 "when": "nela"
 }, {
 "id": "dawn.c2.n5.note",
 "speaker": "note",
+"sketch": "res://assets/ui/story/note_6.png",
 "face": "worried",
 "text": "Something big in the Hollow eats light to keep warm."
 }]

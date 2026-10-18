@@ -68,6 +68,18 @@ static func line_row(line: Dictionary, text_size: int, portrait_size: float, cen
 	words.add_theme_constant_override("outline_size", 6)
 	words.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
 	column.add_child(words)
+	# Mum's note comes with her little sketch from the notebook (feature 047).
+	var sketch_path: String = String(line.get("sketch", ""))
+	if sketch_path != "" and ResourceLoader.exists(sketch_path):
+		var sketch: TextureRect = TextureRect.new()
+		sketch.texture = load(sketch_path) as Texture2D
+		sketch.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		sketch.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		sketch.custom_minimum_size = Vector2(portrait_size * 1.9, portrait_size * 1.9)
+		sketch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		sketch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		sketch.name = "Sketch"
+		row.add_child(sketch)
 	return row
 
 

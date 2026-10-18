@@ -18,3 +18,10 @@
   - It keeps the climb-out tween and the walk to the fire.
   - It is scaled by `1 / model_scale`, so it stays its real size (about 0.75 m) under the Moon-Eater's visual scale.
 - **Loading screens use only paintings that give nothing away:** the camping evening and the Moon Lantern.
+- **Missing faces and the notebook are made from the team's own art.**
+  - Leo's faces and three of Nela's are cut from the paintings, where the kids already appear in the style.
+  - The notebook sketches are crops of the paintings and sheets, turned into pencil and watercolour by a script.
+  - This keeps everything on model without inventing a new style. Painted versions replace them file by file.
+- **A lifted page shows the whole painting, a little smaller and higher.**
+  - The painting can't move up without losing its top, and the moon sits there.
+  - Under and beside it is the same painting, blurred and darkened towards the bottom, behind a soft seam; the text band hides most of it.

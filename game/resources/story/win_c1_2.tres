@@ -14,9 +14,11 @@ painting = ExtResource("2_art")
 lines = [{
 "id": "win.c1.2.1",
 "speaker": "leo",
+"face": "worried",
 "text": "She went deeper. Into the Hollow."
 }, {
 "id": "win.c1.2.2",
 "speaker": "nela",
+"face": "proud",
 "text": "We'll keep her lantern safe. And we'll find her."
 }]

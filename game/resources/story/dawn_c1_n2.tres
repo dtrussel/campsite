@@ -12,6 +12,7 @@ page = 1
 lines = [{
 "id": "dawn.c1.n2.leo.1",
 "speaker": "leo",
+"face": "surprised",
 "text": "A page from Mum's notebook! It was under the lantern.",
 "when": "leo"
 }, {
@@ -23,16 +24,19 @@ lines = [{
 }, {
 "id": "dawn.c1.n2.nela.1",
 "speaker": "nela",
+"face": "surprised",
 "text": "Leo! A page from Mum's notebook. Under the lantern.",
 "when": "nela"
 }, {
 "id": "dawn.c1.n2.nela.2",
 "speaker": "leo",
+"face": "smile",
 "text": "Shards are moonlight... Let's feed them to the lantern!",
 "when": "nela"
 }, {
 "id": "dawn.c1.n2.note",
 "speaker": "note",
+"sketch": "res://assets/ui/story/note_1.png",
 "face": "curious",
 "text": "The rangers' old Moon Lantern kept the Hollow calm once."
 }]

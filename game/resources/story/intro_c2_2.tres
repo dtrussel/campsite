@@ -14,6 +14,7 @@ painting = ExtResource("2_art")
 lines = [{
 "id": "intro.c2.2.1",
 "speaker": "nela",
+"face": "curious",
 "text": "The Moon Lantern needs more light. Lots more."
 }, {
 "id": "intro.c2.2.2",
