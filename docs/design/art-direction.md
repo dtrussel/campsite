@@ -61,6 +61,15 @@ ground textures, lighting palettes (`world_lighting.gd`) and prop scripts.
 | Sky / ambient | — | `#252c3b`, `#080a0d` |
 | Accents | Awning red `#c8402e`, daisy white, lupine purple `#8a62c8`, water teal `#3fb2c8` | Lantern amber `#ffb455`, moon `#e8ecf4` |
 
+## Construction (feature 045)
+
+An unfinished building must never read as a finished one.
+
+- **Blueprint ghost:** pale cyan-blue (about `#61adff`), see-through, unshaded, with a bright fresnel edge, thin stripes drifting upward and a slow pulse (`shaders/blueprint_ghost.gdshader`). It is the only cool, glowing thing in the warm camp, so it stands out by day and at sunset.
+- **Rising solid:** the real painted building is cut off at the build line (`shaders/painted_prop_build.gdshader`), so it grows from the ground up inside the ghost. A thin warm glow marks the line, and fresh timber just under it is paler.
+- **Site:** four wooden stakes with a twine line, a faint dirt patch, and a small crossed pile of planks (stones, clay, scrap or shards to match the cost). Simple boxes styled as props; they sink away when the building is done.
+- **Mallet:** a kid-sized barrel mallet (`art/props/camp.py` `hammer`, about 500 tris) held in the right hand while building or repairing.
+
 ## Mum (feature 043)
 
 Mum follows the team's character sheet

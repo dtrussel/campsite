@@ -621,15 +621,31 @@ func _check_construction(player: Node3D, companion: Node3D) -> void:
 	await get_tree().process_frame
 	_check(crate.is_blueprint() and not crate.is_in_group(ResourceManager.STORAGE_GROUP) and ResourceManager.get_cap(&"wood") == cap_before,
 		"a fresh blueprint does nothing yet")
-	_check(crate.get_node("Visual").position.y < -0.3 and crate.current_hp < crate_def.max_hp, "it starts sunk into the ground, with less HP")
+	var ghost: Node3D = crate.get_node_or_null("Ghost") as Node3D
+	var ghost_material: ShaderMaterial = crate.get("_ghost_material") as ShaderMaterial
+	_check(ghost != null and ghost_material != null and crate.get_node_or_null("Site") != null and crate.current_hp < crate_def.max_hp,
+		"it shows as a blue ghost on a staked-out site, with less HP")
+	var clip_start: float = float(ghost_material.get_shader_parameter("clip_y")) if ghost_material != null else 0.0
+	var visual: CharacterVisual = player.get_node("Visual") as CharacterVisual
+	var beat: BuildBeat = player.get("_build_beat") as BuildBeat
+	var hits_before: int = beat.hits
 	var t: float = 0.0
 	var hammered: bool = false
+	var hammer_out: bool = false
+	var clip_rose: bool = false
 	while crate.is_blueprint() and t < 15.0:
 		await _wait(0.1)
 		t += 0.1
 		hammered = hammered or int(player.get("command")) == 6
+		hammer_out = hammer_out or visual.tool_shown() == &"hammer"
+		if ghost_material != null and crate.is_blueprint():
+			clip_rose = clip_rose or float(ghost_material.get_shader_parameter("clip_y")) > clip_start + 0.2
 	_check(hammered and crate.is_built(), "the idle hero walks over and builds it (%.1fs for %.0fs of work)" % [t, crate_def.build_seconds])
-	_check(is_equal_approx(crate.get_node("Visual").position.y, 0.0) and crate.current_hp == crate_def.max_hp, "built: full height, full HP")
+	_check(hammer_out and beat.hits > hits_before and clip_rose,
+		"with a hammer in hand (%d blows landed), the solid part rising inside the ghost" % (beat.hits - hits_before))
+	await _wait(0.6)
+	_check(crate.get_node_or_null("Ghost") == null and crate.get_node_or_null("Site") == null and visual.tool_shown() == &""
+		and crate.current_hp == crate_def.max_hp, "built: ghost and site gone, hammer away, full HP")
 	_check(ResourceManager.get_cap(&"wood") > cap_before and ProgressionManager.get_xp(player) >= xp_before + BuildManager.BUILD_XP_REWARD,
 		"then it works, and the build XP comes on completion")
 	# The companion's Repair task builds too.

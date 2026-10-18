@@ -222,6 +222,7 @@ const BURSTS: Dictionary = {
 	&"wood": [14, 0.7, Color(0.72, 0.48, 0.25), Color(0.5, 0.32, 0.16, 0), 3.5, -9.0, 0.14, false, 60.0],
 	&"stone": [14, 0.7, Color(0.8, 0.8, 0.85), Color(0.5, 0.5, 0.55, 0), 3.5, -9.0, 0.13, false, 60.0],
 	&"berries": [12, 0.8, Color(0.95, 0.25, 0.35), Color(0.6, 0.1, 0.2, 0), 2.8, -7.0, 0.13, false, 60.0],
+	&"build_done": [26, 0.9, Color(1, 0.92, 0.55), Color(1, 0.75, 0.3, 0), 3.2, -1.5, 0.15, true, 180.0],
 	&"heal": [18, 1.0, Color(0.55, 1.0, 0.55), Color(0.3, 1.0, 0.6, 0), 1.0, 2.5, 0.16, true, 40.0],
 	&"level_up": [48, 1.4, Color(1.0, 0.9, 0.45), Color(1.0, 0.7, 0.2, 0), 1.6, 3.5, 0.2, true, 25.0],
 	&"shadow_death": [26, 1.0, Color(0.55, 0.2, 0.8, 0.9), Color(0.1, 0.0, 0.2, 0), 1.8, 1.5, 0.6, false, 70.0],
@@ -247,7 +248,7 @@ const BURSTS: Dictionary = {
 }
 
 ## Bursts that are purely visual (footsteps): no AudioLibrary sound.
-const SILENT_BURSTS: Array[StringName] = [&"step_dust", &"step_thud"]
+const SILENT_BURSTS: Array[StringName] = [&"step_dust", &"step_thud", &"build_done"]
 
 static var _soft_texture: Texture2D = null
 static var _burst_materials: Dictionary = {}  # additive(bool) -> material

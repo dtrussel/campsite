@@ -112,15 +112,63 @@ func _ready() -> void:
 	BuildManager.call("_try_confirm")
 	print("build: placed=", placed.size(), " wood_left=", ResourceManager.get_count(&"wood"))
 	BuildManager.exit_build_mode()
+	get_viewport().warp_mouse(Vector2(200, 640))  # no hover highlight on the site
 	# Feature 044: the hero walks over and hammers the blueprint up.
 	if not placed.is_empty():
 		var site: Building = placed[0] as Building
+		await _settle(0.2)
+		_shot("04b1_blueprint_fresh")
 		for i in 200:
-			if site.build_progress >= 0.5:
+			if site.build_progress >= 0.4:
 				break
 			await _settle(0.05)
 		_shot("04b2_blueprint_building")
 		site.complete_construction(player)
+		# The finish tweens need a few frames, and xvfb renders only a few a second.
+		for i in 60:
+			if site.get_node_or_null("Site") == null and site.get_node_or_null("Ghost") == null:
+				break
+			await _settle(0.1)
+		_shot("04b4_blueprint_done")
+		# Feature 045: zoomed in on the hero mid-blow on a watch post.
+		var cam_rig: Node = get_tree().get_first_node_in_group("camera_rig")
+		cam_rig.set("_zoom_target", cam_rig.get("min_zoom"))
+		var post: Building = BuildManager.place_blueprint(BuildManager.get_definition(&"watch_post"),
+			Transform3D(Basis(), player.global_position + Vector3(2.2, 0, 0.6)))
+		var beat: BuildBeat = player.get("_build_beat") as BuildBeat
+		for i in 200:
+			if post.build_progress >= 0.45:
+				break
+			await _settle(0.05)
+		var hits: int = beat.hits
+		for i in 300:
+			if post.build_progress < 0.4:
+				hits = beat.hits
+			elif beat.hits > hits or post.build_progress > 0.8:
+				break
+			await _settle(0.02)
+		_shot("04b3_build_close")
+		post.complete_construction(player)
+		post.queue_free()
+		# Side on, so the hammer reads.
+		player.global_position = Vector3(1.0, 0, 6.0)
+		var side: Building = BuildManager.place_blueprint(BuildManager.get_definition(&"reinforced_wall"),
+			Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(2.6, 0, 6.0)))
+		for i in 200:
+			if side.build_progress >= 0.1:
+				break
+			await _settle(0.05)
+		var side_hits: int = beat.hits
+		for i in 100:
+			if beat.hits > side_hits:
+				break
+			await _settle(0.02)
+		_shot("04b5_hammer")
+		side.complete_construction(player)
+		side.queue_free()
+		cam_rig.set("_zoom_target", 1.0)
+		await _settle(0.6)
+		get_viewport().warp_mouse(Vector2(820, 470))
 
 	# Feature 017: the Stone Hearth, a snap trap and a glow lantern by the fire,
 	# and a glow shard pickup lying in the grass.

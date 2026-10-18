@@ -46,8 +46,6 @@ const GATHER_REACH: float = 1.5
 const CAMPFIRE_REACH: float = 2.6
 ## Distance (plus the target's radius) at which a repair command hammers.
 const REPAIR_REACH: float = 1.4
-## Seconds between hammer swings while building (each one throws chips).
-const BUILD_SWING_SECONDS: float = 0.6
 ## How close to a blueprint's footprint edge the hero hammers from.
 const BUILD_REACH: float = 0.75
 ## Seconds into the swing when damage lands (the "wind-up").
@@ -94,7 +92,9 @@ var _regen_accumulator: float = 0.0
 var _move_goal: Vector3 = Vector3.ZERO
 var _repath_timer: float = 0.0
 var _repair_timer: float = 0.0
-var _build_swing_timer: float = 0.0
+## The hammering rhythm on BUILD and REPAIR (feature 045).
+var _build_beat: BuildBeat = BuildBeat.new()
+var _tool_busy: bool = false
 var _auto_scan_timer: float = 0.0
 ## The gather auto-attack interrupted, resumed once no mob is near.
 var _resume_node: ResourceNode = null
@@ -207,7 +207,6 @@ func command_build(target: Building) -> void:
 	_cancel_active_gather()
 	_resume_node = null
 	_set_command(Command.BUILD, target)
-	_build_swing_timer = 0.0
 	_agent.target_position = target.global_position
 
 
@@ -268,7 +267,9 @@ func _physics_process(delta: float) -> void:
 	_invulnerable_remaining = max(0.0, _invulnerable_remaining - delta)
 	_tick_regen(delta)
 	if _state == PlayerState.KNOCKED_OUT:
+		_build_beat.stop(_visual)
 		return
+	_tool_busy = false
 	_auto_scan_timer -= delta
 	if _auto_scan_timer <= 0.0:
 		_auto_scan_timer = AUTO_ATTACK_SCAN_SECONDS
@@ -292,6 +293,8 @@ func _physics_process(delta: float) -> void:
 				_visual.play_action(_active_node.gather_animation, 1.5)
 	else:
 		desired = _tick_command(delta)
+	if not _tool_busy:
+		_build_beat.stop(_visual)
 
 	var rate: float = acceleration if desired.length() > 0.0 else friction
 	velocity.x = move_toward(velocity.x, desired.x, rate * delta)
@@ -358,11 +361,12 @@ func _tick_command(delta: float) -> Vector3:
 				return Vector3.ZERO
 			if _flat_distance(command_target.global_position) <= REPAIR_REACH + _node_radius(command_target):
 				_visual.face(command_target.global_position - global_position, delta)
+				_tool_busy = true
 				_repair_timer -= delta
 				if _repair_timer <= 0.0:
 					_repair_timer = Repair.TAP_SECONDS
 					if Repair.tap(command_target, self):
-						_visual.play_action(&"chop", 1.8)
+						_build_beat.swing(_visual)
 					else:
 						Fx.icon_popup(self, Fx.icon("wood"), "", Color.WHITE, true)
 						_set_command(Command.NONE, null)
@@ -374,14 +378,12 @@ func _tick_command(delta: float) -> Vector3:
 				_set_command(Command.NONE, null)
 				return Vector3.ZERO
 			if site.distance_to_footprint(global_position) <= BUILD_REACH:
-				_build_swing_timer -= delta
-				if _build_swing_timer <= 0.0:
-					_build_swing_timer = BUILD_SWING_SECONDS
+				_tool_busy = true
+				if _build_beat.tick(delta, _visual, site):
 					_visual.face_instantly(site.global_position - global_position)
-					_visual.play_action(&"chop", 1.4)
-					Fx.burst(&"wood", site.global_position + Vector3(0, 0.5, 0))
 				if site.add_build_progress(delta, self):
 					_set_command(Command.NONE, null)
+					_build_beat.stop(_visual)
 					_visual.play_action(&"cheer", 1.2)
 				return Vector3.ZERO
 			return _path_velocity(site.global_position)

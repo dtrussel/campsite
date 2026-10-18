@@ -231,16 +231,26 @@ These are stored as `ResourceDefinition` `.tres` files; see the architecture doc
 - Right-click or Esc cancels build mode.
 
 *Construction (playtest 1, feature 044):*
-- A placed building is a **blueprint**. It stands sunk into a pale,
-  marked-out site with a blue progress bar, and it does nothing yet: no
-  light, aura, trap, crate cap or table recipes.
+- A placed building is a **blueprint**: a see-through blue ghost of the
+  finished shape on a staked-out site (corner stakes, a rope line and a
+  small pile of what it costs), with a blue progress bar. It does
+  nothing yet: no light, aura, trap, crate cap or table recipes.
 - Its HP starts at 20% and grows as it is built.
 - An idle hero walks to the oldest blueprint and hammers it up. Each
   building has its own `build_seconds` (2–4 s). Right-clicking a
   blueprint sends the hero to it.
+- Builders take out a wooden mallet (Leo's stick and Nela's lantern are
+  put away) and work in a beat of two overhead blows, then fetching a
+  plank or fiddling a peg in (feature 045). Each blow throws wood chips,
+  squashes the building a little and flashes the ghost. Repairs use the
+  mallet too.
+- As the work goes on, the solid building rises inside the ghost from
+  the bottom up (a glowing build line marks the edge) and the material
+  pile shrinks.
 - The companion's Repair task builds blueprints before it repairs.
-- When the building is finished it rises to full height and puffs dust,
-  and the builder gets the build XP.
+- When the building is finished the ghost fades, the site sinks away,
+  the building bounces with dust and a gold sparkle, and the builder
+  gets the build XP.
 - Clicking an unstarted blueprint in build mode takes it back with a full
   refund.
 

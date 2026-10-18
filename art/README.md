@@ -26,7 +26,7 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 | `lib/preview.py` | Preview renders |
 | `lib/measure.py` | Feature 043: **measured proportion checks**. `landmarks()` and `widths()` of the posed meshes as fractions of the height, and `silhouette()` (orthographic flat-white front or side). Compare them with landmarks read off a concept sheet and iterate: a measured loop, not judging renders by eye |
 | `nature/` | Trees (3 variants + stump), autumn pines (the Resin trees) and green border pines (`pine_c/d`), rocks, berry bush and flowering shrub (`flower_bush`) |
-| `props/camp.py` | Campfire, tent, fence, watch post, torch, woodpile, crate, barrel, toadstools |
+| `props/camp.py` | Campfire, tent, fence, watch post, torch, woodpile, crate, barrel, toadstools. Feature 045: the builders' mallet (`hammer`: grip at the origin, handle up, head along X; `CharacterVisual` holds it on `handslot.r`) |
 | `props/forage.py` | Feature 017: clay pit, mushroom patch and junk pile (each with a gathered variant), snap trap (base plus a jaw that Godot animates), glow lantern, glow shard, hearth ring. Feature 019: reinforced wall, storage crate, crafting table. Decimated to the 1.4k prop budget |
 | `props/homestead.py` | Feature 031 decor after the October concept art: log and stump seats, cooking tripod, tent-glyph signpost, lantern post (emissive glass), striped market stall, stone well with a tile roof |
 | `props/haunted.py` | Feature 025: jack-o'-lantern (emissive face) and small pumpkin, camp lantern, water bucket, three dead trees, three hills and two mountains for the backdrop. Replaces the last KayKit props |

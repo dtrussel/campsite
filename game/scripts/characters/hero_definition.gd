@@ -26,6 +26,8 @@ extends Resource
 @export var step_distance: float = 1.1
 @export var capsule_height: float = 1.2
 @export var hurt_sfx: StringName = &"player_hurt"
+## Model parts put away while a hand tool (the build hammer) is out.
+@export var tool_hidden_parts: PackedStringArray = PackedStringArray()
 
 @export_group("Combat")
 @export var stats: CharacterStatsDefinition

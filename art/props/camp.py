@@ -1258,9 +1258,44 @@ def toadstools():
     detail.bake_prop(parts, "toadstools", budget=900, size=512, ray=0.02, edge_strength=0.2)
 
 
+def hammer():
+    """Feature 045: a kid-sized wooden mallet the heroes hold while they
+    build. The grip sits at the origin with the handle up local Z (glTF +Y);
+    the barrel head runs along X with iron bands at both faces."""
+    common.reset(11)
+    handle = revolve([(0.0, -0.07), (0.019, -0.07), (0.021, -0.055), (0.018, 0.02), (0.016, 0.2), (0.019, 0.27),
+                      (0.0, 0.27)], 24, shape=lambda a, z, r: r * (1 + 0.04 * math.sin(a * 3 + z * 20)), name="handle")
+    common.color_by(handle, wood_colour(3, base=WOOD_LIGHT, light=END_GRAIN, along=2, knots=False), smooth=True)
+    parts = [handle]
+    parts.append(rope_tube(helix(0.022, -0.045, 0.06, 6.5), 0.007, strands=0, base=(0.72, 0.28, 0.2), seg=8))
+    head_z, half = 0.31, 0.085
+
+    def barrel(a, z, r):
+        return r * (1 + 0.02 * math.cos(a * 9))
+    head = revolve([(0.0, -half), (0.05, -half), (0.056, -half + 0.012), (0.06, 0.0), (0.056, half - 0.012),
+                    (0.05, half), (0.0, half)], 40, shape=barrel, name="head")
+    common.color_by(head, wood_colour(8, along=2), smooth=True)
+    head.rotation_euler = (0, math.radians(90), 0)
+    head.location = (0, 0, head_z)
+    parts.append(head)
+    for end in (-1, 1):
+        band = revolve([(0.058, -0.012), (0.061, -0.01), (0.061, 0.01), (0.058, 0.012)], 40, name="band")
+        common.color_by(band, lambda p, n: common.lerp(IRON, (0.55, 0.56, 0.62), _clamp(0.5 + noise.noise(p * 40.0))),
+                        smooth=True)
+        band.rotation_euler = (0, math.radians(90), 0)
+        band.location = (end * (half - 0.022), 0, head_z)
+        parts.append(band)
+        for k in range(4):
+            a = k * math.pi / 2 + math.pi / 4
+            n = Vector((0, math.cos(a), math.sin(a)))
+            parts.append(nail(Vector((end * (half - 0.022), 0, head_z)) + n * 0.062, n, radius=0.008))
+    detail.bake_prop(parts, "hammer", budget=500, size=256, ray=0.01, edge_strength=0.3, preview_elevation=20)
+
+
 PROPS = {
     "campfire": campfire, "tent": tent, "fence": fence, "watch_post": watch_post, "torch": torch,
     "woodpile": woodpile, "crate": crate, "barrel": barrel, "toadstools": toadstools,
+    "hammer": hammer,
 }
 
 if __name__ == "__main__":

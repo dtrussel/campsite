@@ -53,6 +53,9 @@ var _attack_cooldown_remaining: float = 0.0
 var _current_attack_damage: int = 0
 var _active_resource_node: Node = null   # ResourceNode currently being gathered
 var _repair_timer: float = 0.0
+## The hammering rhythm while building or repairing (feature 045).
+var _build_beat: BuildBeat = BuildBeat.new()
+var _tool_busy: bool = false
 ## Crafting Table upgrade (features 019, 034): the hero's signature
 ## (Nela's Slingshot doubles her reach; Leo's Sturdy Stick adds damage).
 var has_signature: bool = false
@@ -223,7 +226,9 @@ func _physics_process(delta: float) -> void:
 	_invulnerable_remaining = max(0.0, _invulnerable_remaining - delta)
 	_tick_regen(delta)
 	if is_knocked_out:
+		_build_beat.stop(_visual)
 		return
+	_tool_busy = false
 
 	if _player == null or _base_core == null:
 		_refresh_world_refs()
@@ -239,6 +244,8 @@ func _physics_process(delta: float) -> void:
 			_tick_gather_nearest()
 		Task.REPAIR:
 			_tick_repair(delta)
+	if not _tool_busy:
+		_build_beat.stop(_visual)
 
 	var planar_speed: float = Vector2(velocity.x, velocity.z).length()
 	_visual.set_locomotion(planar_speed)
@@ -319,10 +326,11 @@ func _tick_repair(delta: float) -> void:
 			_walk_to(site.global_position)
 			return
 		_stop()
-		_visual.face(site.global_position - global_position, delta)
-		if not _visual.is_in_action():
-			_visual.play_action(&"gather", 1.3)
-		site.add_build_progress(delta, self)
+		_tool_busy = true
+		if _build_beat.tick(delta, _visual, site):
+			_visual.face_instantly(site.global_position - global_position)
+		if site.add_build_progress(delta, self):
+			_build_beat.stop(_visual)
 		return
 	var target: Node3D = Repair.most_damaged(get_tree())
 	if mob != null or target == null or not ResourceManager.has(Repair.WOOD_ID, Repair.WOOD_PER_TAP):
@@ -332,11 +340,12 @@ func _tick_repair(delta: float) -> void:
 		_walk_to(target.global_position)
 		return
 	_stop()
+	_tool_busy = true
 	_visual.face(target.global_position - global_position, delta)
 	if _repair_timer <= 0.0:
 		_repair_timer = REPAIR_TAP_SECONDS
 		if Repair.tap(target, self):
-			_visual.play_action(&"gather", 1.6)
+			_build_beat.swing(_visual)
 
 
 # --- Walking (feature 044: nav paths and a stuck watchdog) -------------
