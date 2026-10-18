@@ -264,8 +264,12 @@ func _ready() -> void:
 	var done: Array = [false]
 	boss.defeated.connect(func(_b: Node) -> void: done[0] = true)
 	boss.take_damage(99999, hero)
-	await _settle(2.5)
-	_shot("13d_boss_lets_moon_go")
+	while get_tree().get_first_node_in_group(MoonEaterVisual.PILE_GROUP) == null:  # slow frames under xvfb
+		await _settle(0.1)
+	await _settle(0.5)
+	_shot("13d_boss_falls_apart")
+	await _settle(0.9)
+	_shot("13d2_boss_lets_moon_go")
 	while not done[0]:  # the shrink and the walk to the fire (slow frames under xvfb)
 		await _settle(0.2)
 	_shot("13e_boss_warm_shadow")

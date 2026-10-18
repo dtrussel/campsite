@@ -1084,6 +1084,7 @@ func _run_boss_scenario() -> void:
 	# Calmed: it lets the moon go, shrinks by the fire, and dawn comes.
 	var imp: Mob = _spawn_mob(imp_def, Vector3(10, 0, 10))
 	await get_tree().process_frame
+	var fell_at: Vector3 = boss.global_position
 	boss.take_damage(99999, player)
 	_check(boss.phase == BossController.Phase.CALMED and not boss.is_in_group("mobs"), "at 0 HP it is calmed, not killed")
 	_check(not is_instance_valid(imp) or imp.current_hp <= 0, "every other shadow fades with it")
@@ -1095,7 +1096,10 @@ func _run_boss_scenario() -> void:
 		"the moon comes back at dawn: the run is won (%.1fs)" % t)
 	_check(int(GameManager.stats.get(&"boss_calmed", 0)) == 1, "the calm is counted")
 	_check(is_instance_valid(boss) and boss.global_position.distance_to(_campfire().global_position) < 3.0,
-		"a small warm shadow curls up by the fire")
+		"a small warm golem curls up by the fire")
+	var pile: Node3D = get_tree().get_first_node_in_group(MoonEaterVisual.PILE_GROUP) as Node3D
+	_check(pile != null and pile.get_child_count() >= 10 and pile.get_child(0).global_position.distance_to(fell_at) < 2.5,
+		"it fell apart into a heap of planks and stones where it stood")
 	_check(not hud.call("boss_bar_visible"), "the boss bar is gone")
 	await get_tree().process_frame
 	var mums: Array = get_tree().get_nodes_in_group("mum")  # the story scenario left one too

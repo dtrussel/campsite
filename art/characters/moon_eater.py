@@ -86,10 +86,12 @@ FACE_TILT = -0.3
 SHOULDER = Vector((1.7, 3.7, 0.15))
 FIST = Vector((0.25, -2.9, 0.25))
 
-BUDGETS = {"Body": 11000, "ArmL": 3600, "ArmR": 3600, "Head": 1800, "Hoard": 900}
-SIZES = {"Body": 1024, "ArmL": 1024, "ArmR": 1024, "Head": 512, "Hoard": 256}
+BUDGETS = {"Body": 11000, "ArmL": 3600, "ArmR": 3600, "Head": 4500, "Hoard": 900}
+SIZES = {"Body": 1024, "ArmL": 1024, "ArmR": 1024, "Head": 1024, "Hoard": 256}
 
 QUICK = bool(os.environ.get("QUICK"))
+## HEAD_ONLY=1 builds just the head and renders close-ups (no export).
+HEAD_ONLY = bool(os.environ.get("HEAD_ONLY"))
 rng = random.Random(38)
 
 
@@ -598,34 +600,112 @@ def build_hoard(c, right, up, normal):
     return parts
 
 
+FACE_EYES = (
+    # (centre x, y, half-width, half-height, tilt): the big eye is on the
+    # viewer's left (-x); the small one sits lower, near the other edge.
+    (-0.17, 0.14, 0.15, 0.1, 0.12),
+    (0.25, 0.08, 0.1, 0.075, -0.2),
+)
+## How far the face planks sit in front of the neck pivot.
+FACE_Z = 0.42
+
+
+def carve_eyes(mask):
+    """Carves the eye holes into the joined face planks (head-local Godot
+    axes): an almond bowl per eye, a soot-dark cavity, a raised brow
+    ridge above it and a darker lid line, so the eyes sit deep in the
+    wood like the sheet's."""
+    mesh = mask.data
+    attr = mesh.color_attributes.get("Col")
+    depth = 0.11
+    weights = []
+    for v in mesh.vertices:
+        x, y, z = v.co.x, v.co.z, -v.co.y
+        best, ridge = 0.0, 0.0
+        for cx, cy, rx, ry, tilt in FACE_EYES:
+            dx, dy = x - cx, y - cy
+            ca, sa = math.cos(tilt), math.sin(tilt)
+            u, w = (dx * ca + dy * sa) / rx, (-dx * sa + dy * ca) / ry
+            e = u * u + w * w
+            front = z > FACE_Z - 0.03
+            if front and e < 1.0:
+                best = max(best, 1.0 - e)
+            elif front and e < 2.2 and w > 0.2:
+                ridge = max(ridge, (1.0 - abs(e - 1.5) / 0.7) * min(1.0, w))
+        if best > 0:
+            v.co.y += depth * math.sqrt(best) + 0.02
+        if ridge > 0:
+            v.co.y -= 0.035 * ridge
+        weights.append((best, ridge))
+    soot = common.srgb(CORE)
+    ember = common.srgb((0.45, 0.2, 0.08))
+    for loop in mesh.loops:
+        best, ridge = weights[loop.vertex_index]
+        c = attr.data[loop.index].color
+        if best > 0:
+            t = min(1.0, best * 4.0)
+            target = tuple(soot[k] + (ember[k] - soot[k]) * best for k in range(3))
+            attr.data[loop.index].color = (*(c[k] + (target[k] - c[k]) * t for k in range(3)), 1.0)
+        elif ridge > 0:
+            attr.data[loop.index].color = (*(c[k] * (1.0 - 0.35 * ridge) for k in range(3)), 1.0)
+
+
 def build_head():
     """Head parts in head-local Godot axes (origin at the neck pivot, before
-    the lean and face tilt), plus the eyes."""
+    the lean and face tilt), plus the eyes. After the sheet's close-ups:
+    a tall, slightly convex mask of upright planks with tight dark gaps,
+    jagged plank ends at the chin, almond eye holes carved deep into the
+    wood and glowing from inside (the right one bigger), a nailed patch
+    plank on each cheek, and planks, moss and a sprig rising behind the
+    top like a hood."""
     parts = []
-    parts.append(blob("skull", [((0, 0.05, 0.0), (0.46, 0.5, 0.38))], lambda p, n: CORE, resolution=0.04, bumps=0.03))
-    xs = [-0.34, -0.11, 0.12, 0.35]
-    for i, x in enumerate(xs):
-        h = rng.uniform(0.85, 1.2)
-        parts.append(plank(Vector((x + rng.uniform(-0.03, 0.03), rng.uniform(-0.06, 0.08), 0.38 + rng.uniform(-0.03, 0.06))),
-                           (rng.uniform(-0.14, 0.14), 1, 0), (rng.uniform(-0.1, 0.1), 0, 1), h, rng.uniform(0.2, 0.27),
-                           thick=0.12, step=0.04))
+    parts.append(blob("skull", [((0, 0.02, 0.0), (0.42, 0.55, 0.38))], lambda p, n: CORE, resolution=0.04, bumps=0.03))
+    # The mask: five upright planks on a gentle arc, tops roughly level,
+    # bottoms ragged.
+    mask = []
+    xs = [-0.38, -0.19, 0.0, 0.19, 0.38]
+    tops = [0.42, 0.53, 0.57, 0.54, 0.44]
+    bottoms = [-0.46, -0.53, -0.6, -0.55, -0.47]
+    for x, top, bottom in zip(xs, tops, bottoms):
+        top += rng.uniform(-0.03, 0.03)
+        bottom += rng.uniform(-0.05, 0.05)
+        a = x / 0.95
+        n = Vector((math.sin(a), 0.0, math.cos(a)))
+        at = Vector((math.sin(a) * 0.95, (top + bottom) * 0.5, FACE_Z - 0.95 + math.cos(a) * 0.95 + rng.uniform(-0.01, 0.015)))
+        mask.append(plank(at, (rng.uniform(-0.025, 0.025), 1, 0), n, top - bottom, rng.uniform(0.175, 0.185), thick=0.12,
+                          step=0.02, carve=0.02, tone=(WOOD_GREY, (0.8, 0.74, 0.64), (0.24, 0.19, 0.15))))
+    face = common.join(mask, "mask")
+    apply_all(face)
+    carve_eyes(face)
+    parts.append(face)
+    # Nailed patch planks across the cheeks.
+    for at, ang, length in (((-0.5, 0.1, FACE_Z - 0.04), 0.25, 0.24),):
+        parts.append(plank(Vector(at), (math.cos(ang), math.sin(ang), 0), (0, 0, 1), length, 0.09, thick=0.04, step=0.02,
+                           tone=(WOOD_DARK, WOOD, CORE)))
+    # Sides of the head: a plank each, set back.
     for side in (-1, 1):
-        for k in range(2):
-            parts.append(plank(Vector((0.48 * side, 0.05, 0.12 - k * 0.32)), (0, 1, 0), (side, 0, 0), 0.95, 0.3, thick=0.1,
-                               step=0.04))
-    # A heavy brow plank and a slanted lid plank on top.
-    parts.append(plank(Vector((0.0, 0.26, 0.5)), (1, 0.08, 0), (0, 0.3, 1), 1.22, 0.2, thick=0.16, step=0.04,
-                       tone=(WOOD_DARK, WOOD, CORE)))
-    parts.append(plank(Vector((0.04, 0.62, 0.05)), (1, -0.18, 0), (0.1, 1, 0.2), 1.15, 0.85, thick=0.1, step=0.04))
-    parts.append(blob("moss", [((0.1, 0.72, -0.05), (0.45, 0.12, 0.38))], moss_colour(7), resolution=0.03, bumps=0.04, seed=7))
-    sprig = detail.leaf_clump(g(Vector((-0.28, 0.82, -0.1))), 0.16, 23, tufts=8, subdivisions=3)
+        parts.append(plank(Vector((0.44 * side, -0.05, 0.05)), (0, 1, 0.1), (side, 0, 0.3), 0.8, 0.32, thick=0.1, step=0.04))
+    # A hood of planks leaning back over the top, moss and a sprig on it.
+    for k, x in enumerate((-0.3, -0.1, 0.1, 0.3)):
+        ang = rng.uniform(-0.12, 0.12)
+        drop = 0.12 * (abs(x) / 0.3) ** 2
+        parts.append(plank(Vector((x, 0.5 - drop + 0.02 * (k % 2), 0.02)), (math.sin(ang), 0.25, -1.0),
+                           (x * 0.8, 1, 0.25), 0.72, 0.21, thick=0.08, step=0.04))
+    parts.append(blob("moss", [((-0.08, 0.56, 0.3), (0.3, 0.09, 0.17)), ((0.26, 0.48, 0.25), (0.16, 0.08, 0.14)),
+                               ((0.05, 0.52, 0.05), (0.3, 0.08, 0.2))],
+                      moss_colour(7), resolution=0.025, bumps=0.04, seed=7))
+    sprig = detail.leaf_clump(g(Vector((-0.32, 0.74, -0.15))), 0.13, 23, tufts=8, subdivisions=3)
     detail.colour_foliage(sprig, MOSS_DARK, LEAF, LEAF_LIGHT, seed=23)
     parts.append(sprig)
-    # Dark sockets under the brow, the eyes glowing in them.
+    # The glow sits inside each carved hole.
     eyes = []
-    for x, r in ((-0.21, 0.12), (0.23, 0.155)):
-        parts.append(ball(Vector((x, 0.04, 0.47)), (r * 1.45, r * 1.3, 0.06), CORE))
-        eyes.append(ball(Vector((x, 0.04, 0.53)), (r, r * 0.85, 0.035), EYE))
+    for cx, cy, rx, ry, tilt in FACE_EYES:
+        eye = ball(Vector((0, 0, 0)), (rx * 0.8, ry * 0.72, 0.02), EYE)
+        eye.rotation_euler = (0, -tilt, 0)  # a roll in the face plane (Godot +Z is Blender -Y)
+        # Just behind the plank faces: the decimated game mesh keeps only a
+        # shallow bowl, so a deeper glow would hide behind it.
+        eye.location = g(Vector((cx, cy - ry * 0.12, FACE_Z + 0.03)))
+        eyes.append(eye)
     return parts, eyes
 
 
@@ -705,6 +785,69 @@ def build_arm(side):
     return parts, glass
 
 
+def build_debris():
+    """Loose pieces for the falling-apart ending: planks, boulders, logs and
+    fist blocks, each laid where it sits on the standing golem (unleaned
+    Godot axes). Godot hides them until the golem collapses, then drops
+    them into a pile."""
+    parts = []
+    for az, el, length, width in ((0.9, 0.3, 1.2, 0.42), (-1.0, 0.35, 1.1, 0.4), (1.6, -0.3, 1.0, 0.38),
+                                  (-1.7, -0.25, 1.15, 0.44), (2.5, 0.4, 1.25, 0.4), (-2.6, 0.1, 0.9, 0.36),
+                                  (0.6, -0.6, 0.85, 0.32), (-0.5, 0.75, 0.8, 0.3)):
+        p, n, up, around = chest_point(az, el, 0.12)
+        parts.append(plank(p, up, n, length, width, thick=0.1))
+    for at, size in (((-1.0, 3.9, -0.1), (0.8, 0.6, 0.7)), ((1.0, 3.95, -0.2), (0.75, 0.6, 0.75)),
+                     ((0.0, 4.05, -0.5), (0.85, 0.65, 0.7)), ((0.5, 1.45, 0.1), (0.7, 0.45, 0.65))):
+        parts.append(boulder(at, size, moss=0.35))
+    for side in (-1.0, 1.0):
+        log = detail.bark_log(1.2, 0.18, seed=40 + int(side), segments=40, taper=0.92)
+        orient(log, Vector((1.85 * side, 2.8, 0.1)), (0.1 * side, 1, 0), (0, 0, 1))
+        parts.append(log)
+        parts.append(wood_block(Vector((1.95 * side, 0.85, 0.45)), (0.7, 0.6, 0.6), tone=WOOD, round_=0.16, warp=0.04))
+        parts.append(wood_block(Vector((1.7 * side, 0.55, 0.85)), (0.3, 0.4, 0.34), tone=WOOD_GREY, round_=0.1))
+    return parts
+
+
+def finish_debris(parts, matrix):
+    """Bakes the debris as one object, then splits it into its loose pieces
+    (one shared texture) under an empty `Debris`."""
+    obj = common.join(parts, "Debris_all")
+    apply_all(obj)
+    obj.data.transform(matrix)
+    if not QUICK:
+        high = obj.copy()
+        high.data = obj.data.copy()
+        obj.users_collection[0].objects.link(high)
+        high.hide_render = True
+        detail.decimate_tris(obj, 3000)
+        paint_bake.paint_direct(obj, high, name="moon_eater_debris", size=512, ao_distance=0.3, ao_strength=0.7,
+                                edge_strength=0.4, edge_radius=0.02, noise_scale=6.0, cavity=0.6, max_ray_distance=0.06,
+                                cage_extrusion=0.03)
+    common.select_only([obj])
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.mesh.separate(type="LOOSE")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    pieces = [o for o in bpy.context.selected_objects if o.type == "MESH"]
+    root = common.link(bpy.data.objects.new("Debris", None))
+    kept = []
+    for k, piece in enumerate(sorted(pieces, key=lambda o: -len(o.data.polygons))):
+        if len(piece.data.polygons) < 12:
+            data = piece.data
+            bpy.data.objects.remove(piece)
+            bpy.data.meshes.remove(data)
+            continue
+        common.select_only([piece])
+        bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
+        piece.name = "Debris_%02d" % len(kept)
+        world = piece.matrix_world.copy()
+        piece.parent = root
+        piece.matrix_world = world
+        kept.append(piece)
+    print("Debris pieces:", len(kept), "tris:", common.triangle_count(kept))
+    return root, kept
+
+
 # --- Bake and export --------------------------------------------------------------
 
 def finish(parts, name, matrix=None, location=None):
@@ -747,6 +890,16 @@ def glow(parts, name, colour, strength, parent, matrix=None):
 
 def main():
     common.reset(38)
+    if HEAD_ONLY:
+        head_parts, eye_parts = build_head()
+        head = finish(head_parts, "Head", location=Vector((0, 0, 0)))
+        eyes = glow(eye_parts, "Head_Eyes", EYE, 3.0, head)
+        if QUICK:
+            preview.render_clay([head, eyes], "moon_eater_head", views=preview.FACE_VIEWS, zoom=0.9)
+        else:
+            preview.render([head, eyes], "moon_eater_head", elevation=5, azimuth=0)
+            preview.render([head, eyes], "moon_eater_head_34", elevation=8, azimuth=30)
+        return
     lean_m = Matrix.Translation(g(HIP)) @ rot_x(LEAN) @ Matrix.Translation(-g(HIP))
 
     upper, legs, window, moon, glass, hoard = build_body()
@@ -764,6 +917,7 @@ def main():
     head_parts, eye_parts = build_head()
     neck = lean(NECK)
     head_m = Matrix.Translation(g(neck)) @ rot_x(LEAN + FACE_TILT)
+    bpy.context.view_layer.update()  # pieces placed by location/rotation must have fresh matrices
     for o in head_parts + eye_parts:
         o.matrix_world = head_m @ o.matrix_world
     head = finish(head_parts, "Head", location=neck)
@@ -774,6 +928,7 @@ def main():
         pivot = lean(Vector((SHOULDER.x * side, SHOULDER.y, SHOULDER.z)))
         parts, glass_parts = build_arm(side)
         m = Matrix.Translation(g(pivot))
+        bpy.context.view_layer.update()
         for o in parts + glass_parts:
             o.matrix_world = m @ o.matrix_world
         arm = finish(parts, name, location=pivot)
@@ -781,8 +936,10 @@ def main():
         if glass_parts:
             glows.append(glow(glass_parts, name + "_Glow", GLOW, 2.5, arm))
 
-    objects = [body, hoard_obj, head] + arms + glows
-    for o in objects:
+    debris, pieces = finish_debris(build_debris(), lean_m)
+
+    objects = [body, hoard_obj, head] + arms + glows + [debris] + pieces
+    for o in [body, hoard_obj, head] + arms + glows:
         print("%-12s origin %s" % (o.name, tuple(round(v, 3) for v in o.matrix_world.translation)))
     print("total tris:", common.triangle_count(objects))
     if QUICK:

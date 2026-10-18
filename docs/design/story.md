@@ -73,9 +73,10 @@ The two run lengths become chapters of one story.
   reaches for the Moon Lantern: the brighter the lantern, the longer the
   kids have to calm it. It is never killed.
 - **True ending:** the lantern is lit, the Moon-Eater lets the moon go:
-  loose planks and stones tumble off, the lost things float out of its
-  chest, and it shrinks into a small, warm golem that curls up by the
-  fire. The moon comes back and **mum
+  it falls apart into a heap of planks and stones, the crescent rises
+  out of the heap into a beam of moonlight and the lost things float up
+  and fade. Then a small, warm golem climbs out of the rubble and curls
+  up by the fire. The moon comes back and **mum
   walks out of the woods**. The final card shows the family by the fire.
 
 ### Defeat

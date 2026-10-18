@@ -29,8 +29,11 @@
   - The window tips up (`WINDOW_TILT`) and bulges out of the trunk, so it reads from the high game camera; the face tips up for the same reason.
   - The body leans forward from the hips (`LEAN`) for the sheet's ape-like hunch.
   - It gets the heroes' brown ink line, not the imps' purple one.
-  - The ending keeps the story's beat (it shrinks and curls up by the fire), with the sheet's "shrink ending" folded in: planks and stones tumble off and its hoard floats out of its chest.
+  - The ending keeps the story's beat (it shrinks and curls up by the fire), with the sheet's "shrink ending" folded in: planks and stones tumble off and its hoard floats out of its chest. (Superseded by the falling-apart ending below.)
 - **A baked model with rigid parts (second pass, 2026-10-18).** The primitive golem read as a robot, so it was rebuilt in the Blender pipeline like the other creatures (dense model, painted high-to-low bake).
   - No skeleton: a golem is rigid, and the clips were already tweens on pivots. The GLB has one node per moving part with its origin at its pivot, so `MoonEaterVisual` swings `Head`, `ArmL` and `ArmR` directly, and nothing in `BossController` changed.
   - The glowing parts keep materials set in Godot, so the window can dim while it drains the lantern and everything warms in the shrink.
   - The lean, window and pivots are constants in both `moon_eater.py` and `moon_eater_visual.gd`; change them together.
+- **The sheet's falling-apart ending (2026-10-18, decided with the user).** At 0 HP it sags, then falls apart: the golem hides and 18 loose pieces (baked with the model under a `Debris` node) drop into a heap where it stood. The crescent rises out of the heap into the moonbeam and its hoard floats up and fades. Then a small warm golem climbs out of the rubble and walks to the fire, as before. The heap stays until the scene ends (group `moon_eater_pile`).
+  - The pieces are tweened, not physics: deterministic (fixed seed) and cheap, and the smoke test can check the heap.
+- **The face after the sheet's close-ups.** A tall, slightly convex mask of upright planks with jagged chin ends, almond eye holes carved into the wood (the big one on the viewer's left), a glow just behind the plank faces plus a soft amber halo, and a hood of planks and moss over the top. The eyes sit near the surface because the decimated game mesh keeps only a shallow bowl.

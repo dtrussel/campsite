@@ -21,8 +21,10 @@ extends Node3D
 ## so the shrink can fade and warm them. Front is +Z.
 
 const MODEL: PackedScene = preload("res://assets/custom/moon_eater.glb")
+## The heap left behind by the ending (smoke checks it).
+const PILE_GROUP: StringName = &"moon_eater_pile"
 const CHIP_COLOR: Color = Color(0.5, 0.38, 0.27)
-const EYE_COLOR: Color = Color(1.0, 0.8, 0.42)
+const EYE_COLOR: Color = Color(1.0, 0.6, 0.18)
 ## The swallowed moonlight: warm gold, as on the sheet.
 const BELLY_COLOR: Color = Color(1.0, 0.74, 0.34)
 ## These match art/characters/moon_eater.py: the hunch (how far the body
@@ -33,6 +35,13 @@ const HIP: Vector3 = Vector3(0, 1.45, 0)
 const WINDOW: Vector3 = Vector3(0, 2.3, 1.55)
 const WINDOW_TILT: float = -0.55
 ## How far below the ground it starts its rise.
+## The eye holes (head-local, before the face tilt), as in moon_eater.py:
+## centre and glow size. The halos sit on them.
+const FACE_TILT: float = -0.3
+const EYES: Array[Vector4] = [Vector4(-0.17, 0.128, 0.45, 0.5), Vector4(0.25, 0.071, 0.45, 0.34)]
+## The pile it falls apart into: how wide, and how long the pieces take to land.
+const PILE_RADIUS: float = 1.5
+const FALL_SECONDS: float = 1.1
 const RISE_DEPTH: float = 5.2
 const TURN_SPEED: float = 2.5
 
@@ -50,8 +59,11 @@ var _belly_material: StandardMaterial3D = null
 var _moon_material: StandardMaterial3D = null
 var _belly_light: OmniLight3D = null
 var _motes: CPUParticles3D = null
-var _debris: CPUParticles3D = null
-var _hoard_home: Vector3 = Vector3.ZERO
+var _chips: CPUParticles3D = null
+var _body: Node3D = null
+var _moon: Node3D = null
+## The loose planks and stones of the ending (hidden until it falls apart).
+var _pile: Node3D = null
 var _action: Tween = null
 var _action_left: float = 0.0
 var _locked: bool = false
@@ -257,31 +269,104 @@ func _rest() -> float:
 	return 0.5
 
 
-## It lets the moon go: loose planks and stones tumble off, the lost
-## things float up out of its chest and fade, the light streams away,
-## and it settles into a small, warm golem.
+## It lets the moon go, as on the sheet's "shrink ending": it sags, then
+## falls apart into a heap of planks and stones. The crescent rises out
+## of the heap into the moonbeam and its hoard floats up and fades. Then
+## a small, warm golem climbs out of the rubble (BossController walks it
+## to the fire); the heap stays where it fell.
 func _shrink() -> float:
+	var sag: float = 0.8
+	var release: float = 2.2
+	var climb: float = 0.9
 	var tween: Tween = _tween()
-	tween.tween_property(_rig, "rotation", Vector3(-0.25, 0, 0), 0.8)
-	tween.parallel().tween_property(_arm_l, "rotation", Vector3(-0.5, 0, -1.2), 0.8)
-	tween.parallel().tween_property(_arm_r, "rotation", Vector3(-0.5, 0, 1.2), 0.8)
-	tween.parallel().tween_property(_head, "rotation:x", -0.6, 0.8)
-	tween.tween_callback(func() -> void: _debris.emitting = true)
-	tween.tween_method(set_belly, _belly, 0.0, 1.6)
-	tween.parallel().tween_property(_hoard, "position", _hoard_home + Vector3(0, 1.4, 1.0), 1.6).set_trans(Tween.TRANS_SINE)
-	tween.parallel().tween_property(_hoard, "scale", Vector3.ONE * 0.01, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	tween.tween_property(_rig, "scale", Vector3.ONE * 0.24, 2.0).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN_OUT)
-	tween.parallel().tween_property(_eye_material, "emission", Color(1.0, 0.62, 0.3), 2.0)
-	tween.parallel().tween_property(_rig, "rotation", Vector3.ZERO, 2.0)
-	tween.parallel().tween_property(_arm_l, "rotation", Vector3(-0.3, 0, -0.3), 2.0)
-	tween.parallel().tween_property(_arm_r, "rotation", Vector3(-0.3, 0, 0.3), 2.0)
-	tween.parallel().tween_property(_head, "rotation:x", 0.15, 2.0)
-	tween.parallel().tween_property(_belly_light, "light_color", Color(1.0, 0.6, 0.32), 2.0)
-	tween.parallel().tween_property(_belly_material, "emission", Color(1.0, 0.55, 0.28), 2.0)
-	tween.tween_callback(func() -> void: _motes.emitting = false)
+	tween.tween_property(_rig, "rotation", Vector3(-0.25, 0, 0), sag)
+	tween.parallel().tween_property(_arm_l, "rotation", Vector3(-0.5, 0, -1.2), sag)
+	tween.parallel().tween_property(_arm_r, "rotation", Vector3(-0.5, 0, 1.2), sag)
+	tween.parallel().tween_property(_head, "rotation:x", -0.6, sag)
+	tween.tween_callback(_fall_apart)
+	tween.tween_method(set_belly, _belly, 0.0, 1.0)
+	tween.tween_interval(FALL_SECONDS + 0.4 - 1.0)
+	# The small golem: the same parts, a quarter the size, warm.
+	tween.tween_callback(_reassemble_small)
+	tween.tween_property(_rig, "position:y", 0.0, climb).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(_eye_material, "emission", Color(1.0, 0.5, 0.25), climb)
+	tween.parallel().tween_property(_belly_light, "light_color", Color(1.0, 0.6, 0.32), climb)
+	tween.parallel().tween_property(_belly_material, "emission", Color(1.0, 0.55, 0.28), climb)
 	# A small warm glow of its own, like a coal by the fire.
 	tween.tween_method(set_belly, 0.0, 0.35, 1.0)
-	return 0.8 + 1.6 + 2.0
+	var total: float = sag + FALL_SECONDS + 0.4 + climb + 1.0
+	return maxf(total, sag + release + 0.2)
+
+
+## Hides the golem and drops its loose pieces into a heap where it stood.
+func _fall_apart() -> void:
+	_chips.emitting = true
+	_motes.emitting = false
+	var world: Node = _world()
+	# The crescent and the hoard float free; the heap stays behind.
+	for node in [_moon, _hoard]:
+		node.reparent(world, true)
+	_pile.visible = true
+	_pile.reparent(world, true)
+	_pile.name = "MoonEaterPile"
+	_pile.add_to_group(PILE_GROUP)
+	for part in [_body, _head, _arm_l, _arm_r]:
+		part.visible = false
+	var centre: Vector3 = global_position
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 38
+	var pieces: Array[Node] = _pile.get_children()
+	var drop: Tween = create_tween().set_parallel(true)
+	for k in pieces.size():
+		var piece: Node3D = pieces[k] as Node3D
+		var angle: float = TAU * float(k) / float(pieces.size()) + rng.randf_range(-0.3, 0.3)
+		var reach: float = sqrt(rng.randf()) * PILE_RADIUS * model_scale
+		var target: Vector3 = centre + Vector3(cos(angle) * reach, 0.0, sin(angle) * reach)
+		# Higher in the middle: a heap, not a carpet.
+		target.y = centre.y + (0.08 + 0.4 * (1.0 - reach / (PILE_RADIUS * model_scale))) * model_scale
+		var start_height: float = piece.global_position.y - centre.y
+		var delay: float = clampf(0.25 - start_height * 0.04, 0.0, 0.25) + rng.randf_range(0.0, 0.15)
+		var land: float = FALL_SECONDS - delay - 0.15
+		var spin: Vector3 = piece.rotation + Vector3(rng.randf_range(-1.6, 1.6), rng.randf_range(-2.0, 2.0),
+			rng.randf_range(-1.6, 1.6))
+		drop.tween_property(piece, "global_position", target, land).set_delay(delay) \
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		drop.tween_property(piece, "rotation", spin, land).set_delay(delay)
+		# A little bounce as it lands.
+		drop.tween_property(piece, "global_position:y", target.y + 0.12 * model_scale, 0.08).set_delay(delay + land)
+		drop.tween_property(piece, "global_position:y", target.y, 0.08).set_delay(delay + land + 0.08)
+	# The crescent rises into the moonbeam and fades away up there.
+	var float_up: Tween = create_tween().set_parallel(true)
+	float_up.tween_property(_moon, "global_position", _moon.global_position + Vector3(0, 7.0, 0), 2.2) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	float_up.tween_property(_moon, "scale", _moon.scale * 2.2, 1.4).set_trans(Tween.TRANS_SINE)
+	float_up.tween_property(_moon, "scale", Vector3.ONE * 0.01, 0.6).set_delay(1.6)
+	# Its hoard drifts up, turning slowly, and fades.
+	float_up.tween_property(_hoard, "global_position", _hoard.global_position + Vector3(0.3, 2.6, 0.4), 2.2) \
+		.set_trans(Tween.TRANS_SINE)
+	float_up.tween_property(_hoard, "rotation:y", _hoard.rotation.y + 1.2, 2.2)
+	float_up.tween_property(_hoard, "scale", Vector3.ONE * 0.01, 0.8).set_delay(1.4)
+	float_up.chain().tween_callback(_moon.queue_free)
+	float_up.tween_callback(_hoard.queue_free)
+
+
+## The small golem, under the heap's top, about to climb out.
+func _reassemble_small() -> void:
+	for part in [_body, _head, _arm_l, _arm_r]:
+		part.visible = true
+	_rig.scale = Vector3.ONE * 0.24
+	_rig.rotation = Vector3.ZERO
+	_rig.position.y = -0.5
+	_arm_l.rotation = Vector3(-0.3, 0, -0.3)
+	_arm_r.rotation = Vector3(-0.3, 0, 0.3)
+	_head.rotation = Vector3(0.15, 0, 0)
+
+
+## Where the heap and the floating things go: the boss's own parent, so
+## they stay put when the small golem walks off.
+func _world() -> Node:
+	var boss: Node = get_parent()
+	return boss.get_parent() if boss != null and boss.get_parent() != null else self
 
 
 # --- Model -------------------------------------------------------------------
@@ -293,20 +378,23 @@ func _build() -> void:
 	var model: Node3D = MODEL.instantiate() as Node3D
 	_rig.add_child(model)
 	var body: Node3D = _find(model, "Body")
+	_body = body
+	_moon = _find(model, "Body_Moon")
+	_pile = _find(model, "Debris")
+	_pile.visible = false
 	_head = _find(model, "Head")
 	_arm_l = _find(model, "ArmL")
 	_arm_r = _find(model, "ArmR")
 	_hoard = _find(model, "Hoard")
-	_hoard_home = _hoard.position
 	# The heroes' warm brown ink line suits wood and stone better than
 	# the imps' purple one.
 	Stylize.apply(_rig, "hero")
 
 	_eye_material = StandardMaterial3D.new()
-	_eye_material.albedo_color = EYE_COLOR
+	_eye_material.albedo_color = Color(1.0, 0.42, 0.08)
 	_eye_material.emission_enabled = true
 	_eye_material.emission = EYE_COLOR
-	_eye_material.emission_energy_multiplier = 1.2
+	_eye_material.emission_energy_multiplier = 2.2
 	_belly_material = StandardMaterial3D.new()
 	_belly_material.albedo_color = Color(0.5, 0.32, 0.14)
 	_belly_material.emission_enabled = true
@@ -315,7 +403,9 @@ func _build() -> void:
 	_moon_material.albedo_color = Color(0.9, 0.86, 0.76)
 	_moon_material.emission_enabled = true
 	_moon_material.emission = Color(1.0, 0.94, 0.8)
-	(_find(model, "Head_Eyes") as MeshInstance3D).material_override = _eye_material
+	var eyes: MeshInstance3D = _find(model, "Head_Eyes") as MeshInstance3D
+	eyes.material_override = _eye_material
+	_add_eye_halos()
 	(_find(model, "Body_Window") as MeshInstance3D).material_override = _belly_material
 	(_find(model, "Body_Moon") as MeshInstance3D).material_override = _moon_material
 
@@ -355,31 +445,53 @@ func _build() -> void:
 	body.add_child(_motes)
 
 	# Chips of plank and stone that tumble off it in the shrink.
-	_debris = CPUParticles3D.new()
-	_debris.emitting = false
-	_debris.one_shot = true
-	_debris.explosiveness = 0.85
-	_debris.amount = 28
-	_debris.lifetime = 1.6
-	_debris.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
-	_debris.emission_sphere_radius = 1.6
-	_debris.direction = Vector3.UP
-	_debris.spread = 70.0
-	_debris.initial_velocity_min = 1.5
-	_debris.initial_velocity_max = 3.5
-	_debris.gravity = Vector3(0, -9.0, 0)
-	_debris.angular_velocity_min = -360.0
-	_debris.angular_velocity_max = 360.0
-	_debris.scale_amount_min = 0.6
-	_debris.scale_amount_max = 1.4
+	_chips = CPUParticles3D.new()
+	_chips.emitting = false
+	_chips.one_shot = true
+	_chips.explosiveness = 0.85
+	_chips.amount = 28
+	_chips.lifetime = 1.6
+	_chips.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	_chips.emission_sphere_radius = 1.6
+	_chips.direction = Vector3.UP
+	_chips.spread = 70.0
+	_chips.initial_velocity_min = 1.5
+	_chips.initial_velocity_max = 3.5
+	_chips.gravity = Vector3(0, -9.0, 0)
+	_chips.angular_velocity_min = -360.0
+	_chips.angular_velocity_max = 360.0
+	_chips.scale_amount_min = 0.6
+	_chips.scale_amount_max = 1.4
 	var chip: BoxMesh = BoxMesh.new()
 	chip.size = Vector3(0.22, 0.12, 0.16)
 	var chip_material: StandardMaterial3D = StandardMaterial3D.new()
 	chip_material.albedo_color = CHIP_COLOR
 	chip.material = chip_material
-	_debris.mesh = chip
-	_debris.position.y = 2.6
-	body.add_child(_debris)
+	_chips.mesh = chip
+	_chips.position.y = 2.6
+	body.add_child(_chips)
+
+
+## A soft amber glow round each eye hole, like the sheet's lit eyes.
+func _add_eye_halos() -> void:
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	material.albedo_texture = Fx.soft_texture()
+	material.albedo_color = Color(1.0, 0.55, 0.15, 0.9)
+	material.disable_receive_shadows = true
+	var tilt: Basis = Basis(Vector3.RIGHT, LEAN + FACE_TILT)
+	for eye in EYES:
+		var halo: MeshInstance3D = MeshInstance3D.new()
+		var quad: QuadMesh = QuadMesh.new()
+		quad.size = Vector2.ONE * eye.w
+		quad.material = material
+		halo.mesh = quad
+		halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		halo.position = tilt * Vector3(eye.x, eye.y, eye.z + 0.14)
+		_head.add_child(halo)
 
 
 func _find(model: Node, part: String) -> Node3D:

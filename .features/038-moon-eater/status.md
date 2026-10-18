@@ -15,6 +15,7 @@
   - A hunched wood-and-stone golem (about 3.6 m) after the team's character sheet (`art/reference/concept-2026-10/15_moon_eater_character_sheet.webp`, 2026-10-18): plank trunk lashed with rope, stone legs and fists, a small plank head with two amber eyes, a golden chest window with a crescent and its hoard (a chair, a teddy, a pocket watch), lanterns, bells, a key, a red scarf, moss and saplings.
   - It replaced the first stand-in, a moon-dark shadow blob, the same day.
   - Second pass (same day): the code-built golem looked like a robot, so it is now a baked, painted model, `art/characters/moon_eater.py` → `assets/custom/moon_eater.glb` (~22k tris). Crooked, weathered planks, chiselled boulders, rope, moss and saplings instead of boxes; rigid parts that the same tween clips swing.
+  - Third pass: the face is rebuilt after the sheet's close-ups (plank mask, carved glowing eyes), and the ending follows the sheet: it falls apart into a heap, the crescent and its hoard float up, and a small warm golem climbs out and walks to the fire. Screenshots `13d_boss_falls_apart` and `13d2_boss_lets_moon_go`.
   - Tween clips: rise, idle and walk, stomp, sweep, summon, stagger, reach and shrink.
 - **Telegraphs:** `scripts/mobs/telegraph.gd`, a ground ring (the stomp) or slice (the sweep) that fills over the windup. Kids outside it when it lands are safe.
 - **Eyes at the treeline:** `scripts/mobs/moon_eater_eyes.gd`, on nights 5 and 6 of Chapter 2.
