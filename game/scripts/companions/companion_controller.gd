@@ -306,12 +306,24 @@ func _tick_gather_nearest() -> void:
 	_walk_to(target.global_position)
 
 
-## Fixes the most damaged structure (the campfire first when it is
-## low), fighting any imp that comes within reach. With nothing to fix,
-## or no wood left, the companion guards the camp instead.
+## Builds waiting blueprints first (feature 044), then fixes the most
+## damaged structure (the campfire first when it is low), fighting any
+## imp that comes within reach. With nothing to do, or no wood left,
+## the companion guards the camp instead.
 func _tick_repair(delta: float) -> void:
 	_repair_timer = maxf(0.0, _repair_timer - delta)
 	var mob: Node3D = _find_nearest_mob(get_attack_range())
+	var site: Building = BuildManager.next_blueprint() if mob == null else null
+	if site != null:
+		if site.distance_to_footprint(global_position) > REPAIR_REACH - 0.6:
+			_walk_to(site.global_position)
+			return
+		_stop()
+		_visual.face(site.global_position - global_position, delta)
+		if not _visual.is_in_action():
+			_visual.play_action(&"gather", 1.3)
+		site.add_build_progress(delta, self)
+		return
 	var target: Node3D = Repair.most_damaged(get_tree())
 	if mob != null or target == null or not ResourceManager.has(Repair.WOOD_ID, Repair.WOOD_PER_TAP):
 		_tick_guard_base()

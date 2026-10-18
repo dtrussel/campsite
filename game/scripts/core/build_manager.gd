@@ -9,10 +9,17 @@ extends Node
 ## On confirm_build it spends the resources via ResourceManager and
 ## spawns the real building. Stays in build mode after a placement so
 ## the player can drop several buildings in a row.
+##
+## Playtest 1 (feature 044): a placed building is a *blueprint* (see
+## Building) that the hero walks over to and hammers up; XP comes when
+## it is finished (`building_completed`). Clicking an unstarted
+## blueprint in build mode takes it back with a full refund.
 
 signal build_mode_entered(definition: BuildingDefinition)
 signal build_mode_exited
 signal building_placed(building: Node)
+signal building_completed(building: Node)
+signal blueprint_removed(building: Node)
 signal placement_validity_changed(is_valid: bool)
 
 const BUILDINGS_DIR: String = "res://resources/buildings/"
@@ -133,32 +140,79 @@ func _select_index(idx: int) -> void:
 
 
 func _try_confirm() -> void:
+	var unstarted: Building = _blueprint_under_ghost()
+	if unstarted != null:
+		remove_blueprint(unstarted)
+		_update_validity(_compute_validity(), true)
+		return
 	if not _is_valid:
 		return
 	if _active_definition == null or _active_definition.get_scene() == null:
 		return
-	if not ResourceManager.spend_costs(_active_definition.cost):
+	if get_tree().current_scene == null or not ResourceManager.spend_costs(_active_definition.cost):
 		return
-	var scene_root: Node = get_tree().current_scene
-	if scene_root == null:
-		return
-	var building: Node = _active_definition.get_scene().instantiate()
-	scene_root.add_child(building)
-	if _ghost != null:
-		(building as Node3D).global_transform = _ghost.global_transform
-	building_placed.emit(building)
-	AudioManager.play_sfx(_active_definition.place_sound, (building as Node3D).global_position)
-	_award_build_xp()
+	place_blueprint(_active_definition, _ghost.global_transform if _ghost != null else Transform3D.IDENTITY)
 	# Force a validity re-eval so the ghost flips to red if the cost can
 	# no longer be afforded after spending.
 	_update_validity(_compute_validity(), true)
 
 
-func _award_build_xp() -> void:
-	var players: Array = get_tree().get_nodes_in_group("player")
-	if players.is_empty():
-		return
-	ProgressionManager.award_xp(players[0] as Node, BUILD_XP_REWARD, &"build")
+## Puts down a paid-for blueprint of `definition` at `where`.
+func place_blueprint(definition: BuildingDefinition, where: Transform3D) -> Building:
+	var building: Building = definition.get_scene().instantiate() as Building
+	building.set_meta(&"blueprint", true)
+	get_tree().current_scene.add_child(building)
+	building.global_transform = where
+	building_placed.emit(building)
+	AudioManager.play_sfx(&"stone_place", building.global_position)
+	Fx.burst(&"dust", building.global_position)
+	return building
+
+
+## Takes back a blueprint nobody has started on, refunding its cost.
+func remove_blueprint(building: Building) -> bool:
+	if building == null or not building.is_blueprint() or building.build_progress > 0.0:
+		return false
+	if building.definition != null:
+		for id in building.definition.cost.keys():
+			ResourceManager.add(StringName(id), int(building.definition.cost[id]))
+	Fx.burst(&"dust", building.global_position)
+	AudioManager.play_sfx(&"ui_click")
+	building.remove_from_group(Building.BLUEPRINT_GROUP)
+	blueprint_removed.emit(building)
+	building.queue_free()
+	return true
+
+
+## The oldest blueprint still waiting (the hero's next job).
+func next_blueprint() -> Building:
+	for node in get_tree().get_nodes_in_group(Building.BLUEPRINT_GROUP):
+		var building: Building = node as Building
+		if building != null and is_instance_valid(building) and building.current_hp > 0 and not building.is_queued_for_deletion():
+			return building
+	return null
+
+
+## Called by Building.complete_construction(): the builder (or the
+## player) gets the build XP.
+func on_construction_finished(building: Building, builder: Node) -> void:
+	var earner: Node = builder
+	if earner == null:
+		var players: Array = get_tree().get_nodes_in_group("player")
+		earner = players[0] if not players.is_empty() else null
+	if earner != null:
+		ProgressionManager.award_xp(earner, BUILD_XP_REWARD, &"build")
+	building_completed.emit(building)
+
+
+func _blueprint_under_ghost() -> Building:
+	if _ghost_footprint == null or not _has_ground_hit:
+		return null
+	for body in _ghost_footprint.get_overlapping_bodies():
+		var building: Building = body as Building
+		if building != null and is_instance_valid(building) and building.is_blueprint() and building.build_progress <= 0.0:
+			return building
+	return null
 
 
 func _spawn_ghost(definition: BuildingDefinition) -> bool:

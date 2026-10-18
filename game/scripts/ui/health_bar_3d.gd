@@ -6,7 +6,8 @@ extends Node3D
 ## Floating health bar above a unit, in the HUD's campcraft style. The fill snaps to the
 ## new value; a pale trail drains after it so hits read clearly.
 ## Styles: "ally" (green), "hero" (green, with level badge),
-## "enemy" (red), "structure" (gold, for the campfire and buildings).
+## "enemy" (red), "structure" (gold, for the campfire and buildings),
+## "build" (blue, a blueprint's construction progress, feature 044).
 
 const SHADER: Shader = preload("res://shaders/health_bar.gdshader")
 const STYLES: Dictionary = {
@@ -14,6 +15,7 @@ const STYLES: Dictionary = {
 	"ally": [Color(0.33, 0.62, 0.24), Color(0.62, 0.86, 0.42)],
 	"enemy": [Color(0.78, 0.16, 0.12), Color(1.0, 0.45, 0.32)],
 	"structure": [Color(0.9, 0.42, 0.1), Color(1.0, 0.78, 0.36)],
+	"build": [Color(0.3, 0.58, 0.86), Color(0.62, 0.84, 1.0)],
 }
 
 @export var width: float = 1.2

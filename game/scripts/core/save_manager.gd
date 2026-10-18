@@ -10,7 +10,7 @@ extends Node
 ## deletes its save, and a new run replaces it.
 ##
 ## Saved: run length and day, inventory, campfire (HP, hearth),
-## buildings (type, place, HP / trap snaps), the party (which hero is
+## buildings (type, place, HP / trap snaps, construction progress), the party (which hero is
 ## played, feature 034), both heroes' progress and upgrades, the
 ## companion's task, run stats, the Moon Lantern's shards (feature 036;
 ## older saves start it at 0, same VERSION). Not saved: resource nodes and
@@ -130,6 +130,7 @@ func snapshot() -> Dictionary:
 			"pos": [p.x, p.y, p.z],
 			"yaw": building.global_rotation.y,
 			"hp": building.current_hp,
+			"progress": building.build_progress,
 		})
 	var lantern: MoonLantern = MoonLantern.find(tree)
 	var stats: Dictionary = {}
@@ -173,12 +174,17 @@ func apply(data: Dictionary) -> void:
 		if definition == null or definition.get_scene() == null:
 			continue
 		var building: Building = definition.get_scene().instantiate() as Building
+		var progress: float = float(entry.get("progress", 1.0))
+		if progress < 1.0:
+			building.set_meta(&"blueprint", true)
+			building.set_meta(&"blueprint_progress", progress)
 		tree.current_scene.add_child(building)
 		var pos: Array = entry["pos"]
 		building.global_position = Vector3(float(pos[0]), float(pos[1]), float(pos[2]))
 		building.global_rotation.y = float(entry.get("yaw", 0.0))
-		building.current_hp = clampi(int(entry["hp"]), 1, definition.max_hp)
-		building.call("_refresh_hp_label")
+		if progress >= 1.0:
+			building.current_hp = clampi(int(entry["hp"]), 1, definition.max_hp)
+			building.call("_refresh_hp_label")
 	var player: Node = tree.get_first_node_in_group("player")
 	var sibling: Node = tree.get_first_node_in_group("companions")
 	ProgressionManager.restore_xp(player, int(data["player"]["xp"]))

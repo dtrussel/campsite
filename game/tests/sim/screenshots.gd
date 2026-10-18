@@ -58,6 +58,17 @@ func _ready() -> void:
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	await _settle(1.0)
 	_shot("03_day_hud")
+	# Feature 044: the camera tilts as it zooms in; the three blur levels.
+	var rig: Node = get_tree().get_first_node_in_group("camera_rig")
+	rig.set("_zoom_target", rig.get("min_zoom"))
+	await _settle(1.0)
+	_shot("03d_zoom_close")
+	rig.set("_zoom_target", 1.0)
+	await _settle(1.0)
+	for level in [PostFx.Blur.OFF, PostFx.Blur.STRONG, PostFx.Blur.SOFT]:
+		PostFx.set_blur_level(level)
+		await _settle(0.3)
+		_shot("03e_blur_%s" % PostFx.BLUR_NAMES[level].to_lower())
 	# Feature 037: a call and response over both kids' heads.
 	var director: BarkDirector = get_tree().get_first_node_in_group("bark_director") as BarkDirector
 	await _settle(2.5)  # past the DAY banner
@@ -101,6 +112,15 @@ func _ready() -> void:
 	BuildManager.call("_try_confirm")
 	print("build: placed=", placed.size(), " wood_left=", ResourceManager.get_count(&"wood"))
 	BuildManager.exit_build_mode()
+	# Feature 044: the hero walks over and hammers the blueprint up.
+	if not placed.is_empty():
+		var site: Building = placed[0] as Building
+		for i in 200:
+			if site.build_progress >= 0.5:
+				break
+			await _settle(0.05)
+		_shot("04b2_blueprint_building")
+		site.complete_construction(player)
 
 	# Feature 017: the Stone Hearth, a snap trap and a glow lantern by the fire,
 	# and a glow shard pickup lying in the grass.

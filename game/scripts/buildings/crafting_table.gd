@@ -10,7 +10,6 @@ extends Building
 const GROUP: StringName = &"crafting_table"
 
 
-func _ready() -> void:
+func _on_built() -> void:
 	super()
-	if not has_meta(&"build_ghost"):
-		add_to_group(GROUP)
+	add_to_group(GROUP)

@@ -142,6 +142,7 @@ func _run_win_scenario() -> void:
 
 	await _check_auto_attack(player)
 	await _check_companion_unstuck(companion)
+	await _check_construction(player, companion)
 
 	# Watch Post pelts a nearby imp on its own.
 	var post_def: BuildingDefinition = BuildManager.get_definition(&"watch_post")
@@ -602,6 +603,51 @@ func _check_auto_attack(player: Node3D) -> void:
 	_check(int(player.get("_state")) == 2 and player.get("_active_node") == bush, "then the hero goes back to the bush (%.1fs)" % t)
 	player.call("_cancel_active_gather")
 	player.set("auto_attack", false)
+
+
+## Feature 044: a placed building is a blueprint that does nothing until
+## the hero walks over and hammers it up; an unstarted one refunds.
+func _check_construction(player: Node3D, companion: Node3D) -> void:
+	var crate_def: BuildingDefinition = BuildManager.get_definition(&"storage_crate")
+	var cap_before: int = ResourceManager.get_cap(&"wood")
+	var spot: Transform3D = Transform3D(Basis(), player.global_position + Vector3(4.0, 0, 0))
+	var refund: Building = BuildManager.place_blueprint(crate_def, Transform3D(Basis(), player.global_position + Vector3(-4.0, 0, 3.0)))
+	var stone_before: int = ResourceManager.get_count(&"stone")
+	_check(BuildManager.remove_blueprint(refund) and ResourceManager.get_count(&"stone") == stone_before + int(crate_def.cost[&"stone"]),
+		"an unstarted blueprint comes back with a full refund")
+	await get_tree().process_frame
+	var xp_before: int = ProgressionManager.get_xp(player)
+	var crate: Building = BuildManager.place_blueprint(crate_def, spot)
+	await get_tree().process_frame
+	_check(crate.is_blueprint() and not crate.is_in_group(ResourceManager.STORAGE_GROUP) and ResourceManager.get_cap(&"wood") == cap_before,
+		"a fresh blueprint does nothing yet")
+	_check(crate.get_node("Visual").position.y < -0.3 and crate.current_hp < crate_def.max_hp, "it starts sunk into the ground, with less HP")
+	var t: float = 0.0
+	var hammered: bool = false
+	while crate.is_blueprint() and t < 15.0:
+		await _wait(0.1)
+		t += 0.1
+		hammered = hammered or int(player.get("command")) == 6
+	_check(hammered and crate.is_built(), "the idle hero walks over and builds it (%.1fs for %.0fs of work)" % [t, crate_def.build_seconds])
+	_check(is_equal_approx(crate.get_node("Visual").position.y, 0.0) and crate.current_hp == crate_def.max_hp, "built: full height, full HP")
+	_check(ResourceManager.get_cap(&"wood") > cap_before and ProgressionManager.get_xp(player) >= xp_before + BuildManager.BUILD_XP_REWARD,
+		"then it works, and the build XP comes on completion")
+	# The companion's Repair task builds too.
+	player.global_position = Vector3(-14, 0, -14)
+	player.set_physics_process(false)
+	var fence: Building = BuildManager.place_blueprint(BuildManager.get_definition(&"wooden_fence"), Transform3D(Basis(), companion.global_position + Vector3(0, 0, 2.5)))
+	companion.call("set_task", 4)
+	t = 0.0
+	while is_instance_valid(fence) and fence.is_blueprint() and t < 12.0:
+		await _wait(0.1)
+		t += 0.1
+	_check(is_instance_valid(fence) and fence.is_built(), "on Repair the companion builds blueprints too (%.1fs)" % t)
+	companion.call("set_task", 0)
+	player.set_physics_process(true)
+	crate.queue_free()
+	if is_instance_valid(fence):
+		fence.queue_free()
+	await get_tree().process_frame
 
 
 ## Feature 044: told to guard from behind a long wall, the companion

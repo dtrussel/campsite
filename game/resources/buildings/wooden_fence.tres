@@ -13,6 +13,7 @@ cost = {
 &"wood": 3
 }
 max_hp = 50
+build_seconds = 2.0
 footprint_size = Vector3(1.6, 1.2, 0.3)
 ui_color = Color(0.55, 0.36, 0.18, 1)
 sort_order = 10

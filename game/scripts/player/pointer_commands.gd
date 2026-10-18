@@ -77,7 +77,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_player.command_gather(_hover_target)
 			_spawn_marker(_hover_target.global_position, Color(1.0, 0.85, 0.35))
 		Hover.REPAIR:
-			_player.command_repair(_hover_target)
+			if _hover_target is Building and (_hover_target as Building).is_blueprint():
+				_player.command_build(_hover_target)
+			else:
+				_player.command_repair(_hover_target)
 			_spawn_marker(_hover_target.global_position, Color(0.45, 1.0, 0.5))
 		Hover.CAMPFIRE:
 			_player.command_campfire(_hover_target)
@@ -124,7 +127,7 @@ func _pick_under_mouse() -> void:
 		if collider.is_in_group("base_core"):
 			_set_hover(Hover.CAMPFIRE, collider as Node3D)
 			return
-		if collider is Building and Repair.needs_repair(collider):
+		if collider is Building and ((collider as Building).is_blueprint() or Repair.needs_repair(collider)):
 			_set_hover(Hover.REPAIR, collider as Node3D)
 			return
 		if collider is CraftingTable:

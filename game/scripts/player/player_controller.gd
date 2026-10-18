@@ -7,7 +7,9 @@ extends CharacterBody3D
 ## auto-attack until it dies), gather a resource node (walk to it,
 ## then gather), use the campfire (walk to it, open crafting), or
 ## repair a damaged building (walk to it, then hammer until it is fixed
-## or the wood runs out; see Repair).
+## or the wood runs out; see Repair), or build a blueprint (walk to
+## it, then hammer it up; feature 044). An idle hero takes the oldest
+## waiting blueprint on its own.
 ## Paths come from the world's navigation mesh; WASD still works as a
 ## direct override and cancels the current command.
 ##
@@ -28,7 +30,7 @@ signal command_changed(command: int, target: Node)
 signal attacked(target: Node)
 
 enum PlayerState { IDLE, MOVING, GATHERING, KNOCKED_OUT }
-enum Command { NONE, MOVE, ATTACK, GATHER, CAMPFIRE, REPAIR }
+enum Command { NONE, MOVE, ATTACK, GATHER, CAMPFIRE, REPAIR, BUILD }
 
 const TORCH_SCENE: PackedScene = preload("res://scenes/buildings/Torch.tscn")
 const TORCH_ITEM_ID: StringName = &"torch"
@@ -44,6 +46,10 @@ const GATHER_REACH: float = 1.5
 const CAMPFIRE_REACH: float = 2.6
 ## Distance (plus the target's radius) at which a repair command hammers.
 const REPAIR_REACH: float = 1.4
+## Seconds between hammer swings while building (each one throws chips).
+const BUILD_SWING_SECONDS: float = 0.6
+## How close to a blueprint's footprint edge the hero hammers from.
+const BUILD_REACH: float = 0.75
 ## Seconds into the swing when damage lands (the "wind-up").
 const ATTACK_WINDUP: float = 0.22
 const REPATH_SECONDS: float = 0.25
@@ -88,6 +94,7 @@ var _regen_accumulator: float = 0.0
 var _move_goal: Vector3 = Vector3.ZERO
 var _repath_timer: float = 0.0
 var _repair_timer: float = 0.0
+var _build_swing_timer: float = 0.0
 var _auto_scan_timer: float = 0.0
 ## The gather auto-attack interrupted, resumed once no mob is near.
 var _resume_node: ResourceNode = null
@@ -193,6 +200,17 @@ func command_repair(target: Node3D) -> void:
 	_agent.target_position = target.global_position
 
 
+## Walk to a blueprint and hammer it up (feature 044).
+func command_build(target: Building) -> void:
+	if not _can_command() or target == null or not target.is_blueprint():
+		return
+	_cancel_active_gather()
+	_resume_node = null
+	_set_command(Command.BUILD, target)
+	_build_swing_timer = 0.0
+	_agent.target_position = target.global_position
+
+
 func stop_commands() -> void:
 	_resume_node = null
 	_set_command(Command.NONE, null)
@@ -254,7 +272,7 @@ func _physics_process(delta: float) -> void:
 	_auto_scan_timer -= delta
 	if _auto_scan_timer <= 0.0:
 		_auto_scan_timer = AUTO_ATTACK_SCAN_SECONDS
-		_tick_auto_attack()
+		_tick_auto()
 
 	var desired: Vector3 = Vector3.ZERO
 	var input_dir: Vector2 = _keyboard_direction()
@@ -350,6 +368,23 @@ func _tick_command(delta: float) -> Vector3:
 						_set_command(Command.NONE, null)
 				return Vector3.ZERO
 			return _path_velocity(command_target.global_position)
+		Command.BUILD:
+			var site: Building = command_target as Building if is_instance_valid(command_target) else null
+			if site == null or site.is_queued_for_deletion() or not site.is_blueprint():
+				_set_command(Command.NONE, null)
+				return Vector3.ZERO
+			if site.distance_to_footprint(global_position) <= BUILD_REACH:
+				_build_swing_timer -= delta
+				if _build_swing_timer <= 0.0:
+					_build_swing_timer = BUILD_SWING_SECONDS
+					_visual.face_instantly(site.global_position - global_position)
+					_visual.play_action(&"chop", 1.4)
+					Fx.burst(&"wood", site.global_position + Vector3(0, 0.5, 0))
+				if site.add_build_progress(delta, self):
+					_set_command(Command.NONE, null)
+					_visual.play_action(&"cheer", 1.2)
+				return Vector3.ZERO
+			return _path_velocity(site.global_position)
 	return Vector3.ZERO
 
 
@@ -373,8 +408,10 @@ func _set_command(new_command: int, target: Node3D) -> void:
 	command_changed.emit(command, target)
 
 
+## Build mode no longer blocks commands (the pointer and keys are off in
+## it anyway), so the hero can go and build while the player places.
 func _can_command() -> bool:
-	return _state != PlayerState.KNOCKED_OUT and not BuildManager.is_in_build_mode()
+	return _state != PlayerState.KNOCKED_OUT
 
 
 func _flat_distance(point: Vector3) -> float:
@@ -393,8 +430,10 @@ func _node_radius(node: Node3D) -> float:
 	return 0.4
 
 
-func _is_attackable(target: Node3D) -> bool:
-	return target != null and is_instance_valid(target) and target.is_in_group("mobs")
+## Untyped: auto-attack can leave a freed mob here, which a typed
+## argument would reject.
+func _is_attackable(target: Variant) -> bool:
+	return is_instance_valid(target) and (target as Node).is_in_group("mobs")
 
 
 # --- Actions ---------------------------------------------------------------
@@ -569,14 +608,15 @@ func _on_level_up(character: Node, _new_level: int) -> void:
 		Fx.burst(&"level_up", global_position)
 
 
-## Auto-attack (feature 044): only when the player gave no command (or
-## the hero is gathering), never in build mode or while walking by hand.
-func _tick_auto_attack() -> void:
-	if not auto_attack or not _can_command() or _keyboard_direction().length() > 0.0:
+## Auto-attack and auto-build (feature 044): only when the player gave
+## no command (or the hero is gathering), never while walking by hand.
+## Fighting comes first, then the interrupted gather, then blueprints.
+func _tick_auto() -> void:
+	if not _can_command() or _keyboard_direction().length() > 0.0:
 		return
 	if command != Command.NONE:
 		return
-	var target: Node3D = _find_nearest_mob_in_range(auto_attack_radius())
+	var target: Node3D = _find_nearest_mob_in_range(auto_attack_radius()) if auto_attack else null
 	if target != null:
 		var interrupted: ResourceNode = _active_node if _state == PlayerState.GATHERING else _resume_node
 		command_attack(target)
@@ -586,6 +626,10 @@ func _tick_auto_attack() -> void:
 		_resume_node = null
 		if is_instance_valid(node) and node.is_gatherable:
 			command_gather(node)
+	elif _state != PlayerState.GATHERING:
+		var site: Building = BuildManager.next_blueprint()
+		if site != null:
+			command_build(site)
 
 
 func _find_nearest_mob_in_range(radius: float = -1.0) -> Node3D:

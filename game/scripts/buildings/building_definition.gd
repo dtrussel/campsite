@@ -17,6 +17,8 @@ extends Resource
 @export var sort_order: int = 100        # lower comes first in the build menu
 ## Sound when placed (AudioLibrary id).
 @export var place_sound: StringName = &"place"
+## Seconds of hammering from blueprint to building (feature 044).
+@export var build_seconds: float = 3.0
 ## Picture for the build hint (number keys follow sort_order).
 @export var icon: Texture2D = null
 
