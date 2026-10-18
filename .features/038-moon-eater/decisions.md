@@ -24,3 +24,9 @@
 - **The stand-in is built in code** (like the 036 lantern) with tween clips, and is about 3.6 m tall (scale 0.72). At 5 m it towered off the screen.
 - **The boss gets a HUD bar, not an overhead bar.** The rise banner says "The Moon-Eater rises!" so it doesn't just repeat the bar's title.
 - **Barks:** two triggers, both urgent, so they get through the nightfall chatter.
+- **It's a golem (2026-10-18).** The team's character sheet (`art/reference/concept-2026-10/15_moon_eater_character_sheet.webp`) made it a wood-and-stone golem, so the code stand-in was rebuilt after it.
+  - The chest window is warm gold, as on the sheet, not moon-blue. The moonbeam when it lets the moon go stays moon-coloured.
+  - The window tips up (`WINDOW_TILT`) and bulges out of the trunk, so it reads from the high game camera; the face tips up for the same reason.
+  - The body leans forward from the hips (`LEAN`) for the sheet's ape-like hunch.
+  - It gets the heroes' brown ink line, not the imps' purple one.
+  - The ending keeps the story's beat (it shrinks and curls up by the fire), with the sheet's "shrink ending" folded in: planks and stones tumble off and its hoard floats out of its chest.

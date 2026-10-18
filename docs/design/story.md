@@ -72,8 +72,10 @@ The two run lengths become chapters of one story.
   where), calls imp packs and blows out the torches, and at the end it
   reaches for the Moon Lantern: the brighter the lantern, the longer the
   kids have to calm it. It is never killed.
-- **True ending:** the lantern is lit, the Moon-Eater lets the moon go and shrinks into a small,
-  warm shadow that curls up by the fire. The moon comes back and **mum
+- **True ending:** the lantern is lit, the Moon-Eater lets the moon go:
+  loose planks and stones tumble off, the lost things float out of its
+  chest, and it shrinks into a small, warm golem that curls up by the
+  fire. The moon comes back and **mum
   walks out of the woods**. The final card shows the family by the fire.
 
 ### Defeat
@@ -177,16 +179,29 @@ cooldown, `urgent`, and `once: "night"`.
 
 - **For now, placeholders.** Story cards reuse the existing loading-screen
   paintings, and new models (Moon Lantern, Moon-Eater) start as
-  code-built stand-ins in the 031 style. The Moon-Eater stand-in has
-  its eyes, moonlit hollow belly and lost things (a teddy, a boot,
-  branches), with tween clips (`moon_eater_visual.gd`).
+  code-built stand-ins in the 031 style. The Moon-Eater stand-in
+  follows its character sheet (below) and has tween clips
+  (`moon_eater_visual.gd`).
 - **Received:** Mum's character sheet (feature 043). Her six expressions
   are her storybook portraits (`assets/ui/story/mum_<face>.png`, picked
   per line with `face`), and she is a 3D model on the kids' rig
   (`art/characters/mum.py`): she walks home in the true ending and sits
   by the title fire afterwards.
+- **Received:** the Moon-Eater's character sheet (2026-10-18,
+  `art/reference/concept-2026-10/15_moon_eater_character_sheet.webp`).
+  It is a **golem**: a hulking, hunched heap of weathered planks and
+  stacked stones lashed with rope, about 3× a beast. Short stone legs,
+  long ape-like arms with huge stone fists, and a small plank head set
+  low between the shoulders, with two amber eyes (one bigger). Its chest
+  is a round window of golden moonlight with a crescent, and the lost
+  things it hoards float in it (a little chair, a teddy, a pocket
+  watch, stars). Lanterns, brass bells, keys, a pocket watch and red
+  plaid scarves hang off it; moss, saplings, fence pickets and
+  branches grow on its back. Palette: dusk navy and purple-grey, weathered
+  brown wood, then orange, amber, gold and cream for the glow. The code
+  stand-in is built after it.
 - **Later, from the team:** intro and chapter-ending
-  paintings; the journal page frame; Moon-Eater concept art and
+  paintings; the journal page frame; a baked Moon-Eater model and
   animations. Each feature swaps its art in when it arrives, without
   changing code. The art is data: painting textures on `StoryBeat`, and a
   model scene with clips on the mob definition.

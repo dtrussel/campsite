@@ -252,8 +252,8 @@ func _ready() -> void:
 		if node != boss:
 			node.queue_free()
 	boss.global_position = Vector3(3.0, 0, 1.5)
-	boss.get_node("Visual").call("face_instantly", Vector3(-1, 0, 0.3))
-	hero.global_position = Vector3(-2.5, 0, -1.5)
+	boss.get_node("Visual").call("face_instantly", Vector3(-0.6, 0, 1.0))
+	hero.global_position = Vector3(-0.5, 0, -1.0)
 	boss.take_damage(260, hero)
 	await _settle(0.8)
 	boss.stomp()

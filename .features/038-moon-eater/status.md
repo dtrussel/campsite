@@ -12,7 +12,8 @@
     - at 0 HP it is calmed: the moonbeam, the shrink, and it curls up by the fire.
   - It holds the night while it stands, and snap traps don't hold it.
 - **The stand-in model:** `scripts/mobs/moon_eater_visual.gd` (`MoonEaterVisual`), built in code.
-  - A hunched moon-dark shadow (about 3.6 m) with glowing eyes, a hollow belly full of moonlight, and a teddy, a boot and branches caught in it.
+  - A hunched wood-and-stone golem (about 3.6 m) after the team's character sheet (`art/reference/concept-2026-10/15_moon_eater_character_sheet.webp`, 2026-10-18): plank trunk lashed with rope, stone legs and fists, a small plank head with two amber eyes, a golden chest window with a crescent and its hoard (a chair, a teddy, a pocket watch), lanterns, bells, a key, a red scarf, moss and saplings.
+  - It replaced the first stand-in, a moon-dark shadow blob, the same day.
   - Tween clips: rise, idle and walk, stomp, sweep, summon, stagger, reach and shrink.
 - **Telegraphs:** `scripts/mobs/telegraph.gd`, a ground ring (the stomp) or slice (the sweep) that fills over the windup. Kids outside it when it lands are safe.
 - **Eyes at the treeline:** `scripts/mobs/moon_eater_eyes.gd`, on nights 5 and 6 of Chapter 2.

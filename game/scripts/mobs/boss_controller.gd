@@ -4,9 +4,10 @@ extends Mob
 ## BossController
 ##
 ## The Moon-Eater (feature 038, docs/design/story.md): the final night
-## of Chapter 2. A huge, sad shadow that swallowed the moon's light. It
-## is never killed, only calmed: at 0 HP it lets the moon go and shrinks
-## into a small warm shadow by the fire, and the night ends.
+## of Chapter 2. A huge, sad golem of planks and stones that swallowed
+## the moon's light. It is never killed, only calmed: at 0 HP it lets
+## the moon go and shrinks into a small warm golem by the fire, and the
+## night ends.
 ##
 ## Phases (by HP):
 ##   1. It walks to the campfire with a telegraphed **stomp** (a ring on
@@ -31,7 +32,7 @@ signal calmed(boss: Node3D)
 enum Phase { RISING, STOMPING, SUMMONING, REACHING, CALMED }
 
 const GROUP: StringName = &"boss"
-## Where the small warm shadow curls up, next to the campfire.
+## Where the small warm golem curls up, next to the campfire.
 const CURL_UP_OFFSET: Vector3 = Vector3(-2.0, 0.0, 0.3)
 
 @export_group("Phases")
@@ -403,7 +404,7 @@ func _swallow(lantern: MoonLantern) -> void:
 # --- The ending ----------------------------------------------------------------
 
 ## Never killed: at 0 HP it lets the moon go and shrinks into a small
-## warm shadow by the fire. `defeated` fires once that is done, so the
+## warm golem by the fire. `defeated` fires once that is done, so the
 ## spawner ends the night and the run is won at dawn.
 func _die() -> void:
 	state = State.DYING
@@ -438,7 +439,7 @@ func _die() -> void:
 	defeated.emit(self)
 
 
-## The small warm shadow pads over to the campfire and curls up.
+## The small warm golem pads over to the campfire and curls up.
 func _curl_up_by_fire() -> void:
 	if _base == null or not is_instance_valid(_base):
 		return
