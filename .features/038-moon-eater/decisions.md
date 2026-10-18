@@ -30,3 +30,7 @@
   - The body leans forward from the hips (`LEAN`) for the sheet's ape-like hunch.
   - It gets the heroes' brown ink line, not the imps' purple one.
   - The ending keeps the story's beat (it shrinks and curls up by the fire), with the sheet's "shrink ending" folded in: planks and stones tumble off and its hoard floats out of its chest.
+- **A baked model with rigid parts (second pass, 2026-10-18).** The primitive golem read as a robot, so it was rebuilt in the Blender pipeline like the other creatures (dense model, painted high-to-low bake).
+  - No skeleton: a golem is rigid, and the clips were already tweens on pivots. The GLB has one node per moving part with its origin at its pivot, so `MoonEaterVisual` swings `Head`, `ArmL` and `ArmR` directly, and nothing in `BossController` changed.
+  - The glowing parts keep materials set in Godot, so the window can dim while it drains the lantern and everything warms in the shrink.
+  - The lean, window and pivots are constants in both `moon_eater.py` and `moon_eater_visual.gd`; change them together.

@@ -179,8 +179,8 @@ cooldown, `urgent`, and `once: "night"`.
 
 - **For now, placeholders.** Story cards reuse the existing loading-screen
   paintings, and new models (Moon Lantern, Moon-Eater) start as
-  code-built stand-ins in the 031 style. The Moon-Eater stand-in
-  follows its character sheet (below) and has tween clips
+  code-built stand-ins in the 031 style. The Moon-Eater is now a baked
+  model after its character sheet (below), with tween clips
   (`moon_eater_visual.gd`).
 - **Received:** Mum's character sheet (feature 043). Her six expressions
   are her storybook portraits (`assets/ui/story/mum_<face>.png`, picked
@@ -198,10 +198,10 @@ cooldown, `urgent`, and `once: "night"`.
   watch, stars). Lanterns, brass bells, keys, a pocket watch and red
   plaid scarves hang off it; moss, saplings, fence pickets and
   branches grow on its back. Palette: dusk navy and purple-grey, weathered
-  brown wood, then orange, amber, gold and cream for the glow. The code
-  stand-in is built after it.
+  brown wood, then orange, amber, gold and cream for the glow. The game
+  model is built and baked after it (`art/characters/moon_eater.py`).
 - **Later, from the team:** intro and chapter-ending
-  paintings; the journal page frame; a baked Moon-Eater model and
+  paintings; the journal page frame; hand-made Moon-Eater
   animations. Each feature swaps its art in when it arrives, without
   changing code. The art is data: painting textures on `StoryBeat`, and a
   model scene with clips on the mob definition.

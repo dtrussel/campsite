@@ -2,6 +2,7 @@
 
 - **Done:** the Moon-Eater is in the game (see `status.md`).
 - **Concept:** the character sheet is `art/reference/concept-2026-10/15_moon_eater_character_sheet.webp`, and `docs/design/story.md` (Art plan) sums it up. The code stand-in follows it.
+- **The model:** `art/characters/moon_eater.py` builds and bakes `assets/custom/moon_eater.glb` (`QUICK=1` for clay views). To change a pivot, the lean or the window, change the matching constant in `scripts/mobs/moon_eater_visual.gd` too.
 - **Swapping in the team's art:** replace the `Visual` node of `scenes/mobs/MoonEater.tscn`.
   - `BossController` calls `play_action(clip, windup)`, `play_final(&"shrink")`, `set_locomotion`, `face`, `face_instantly` and `rotation.y` on it.
   - Either keep that interface in a wrapper, or give `CharacterVisual` the clips rise, stomp, sweep, summon, stagger, reach and shrink.
