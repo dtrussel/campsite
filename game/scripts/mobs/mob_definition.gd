@@ -52,6 +52,9 @@ extends Resource
 ## Shadow creatures take light damage inside the Moon Lantern's ring
 ## (feature 036); everything is slowed there.
 @export var hurt_by_moonlight: bool = false
+## A boss (the Moon-Eater, feature 038): the HUD shows its health in
+## the boss bar, and it rises at the spawner's boss spawn point.
+@export var is_boss: bool = false
 @export var ui_color: Color = Color(0.6, 0.4, 0.7, 1)
 
 

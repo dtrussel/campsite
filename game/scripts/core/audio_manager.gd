@@ -159,8 +159,8 @@ func is_voice_playing() -> bool:
 	return _voice.playing
 
 
-## Crossfades music and ambience to a mood: &"day", &"night", or
-## &"" (silence).
+## Crossfades music and ambience to a mood: &"day", &"night", &"boss"
+## (the Moon-Eater, feature 038), or &"" (silence).
 func set_mood(new_mood: StringName) -> void:
 	if new_mood == mood:
 		return
@@ -173,6 +173,9 @@ func set_mood(new_mood: StringName) -> void:
 			ambience_stream = library.ambience_day
 		&"night":
 			music_stream = library.music_night
+			ambience_stream = library.ambience_night
+		&"boss":
+			music_stream = library.music_boss
 			ambience_stream = library.ambience_night
 	_crossfade(_music, music_stream, MUSIC_DB)
 	_crossfade(_ambience, ambience_stream, AMBIENCE_DB)

@@ -7,7 +7,7 @@ Tone: warm, toy-like and never harsh; the players are young kids.
 """
 import numpy as np
 
-from dsp import (RATE, bandpass, bell, env_adsr, env_perc, fade, highpass, knock, lowpass, midi_hz, noise, owl,
+from dsp import (RATE, bandpass, bell, brown, env_adsr, env_perc, fade, highpass, knock, lowpass, midi_hz, noise, owl,
                  pad, place, pluck, reverb, rng, sine, soft_clip, soft_tone, sweep, t_axis, write)
 
 
@@ -434,6 +434,73 @@ def win(v):
 def lose(v):
     return stinger([69, 65, 62, 57], [50, 62, 65, 69], 2.8, 310)
 
+def moon_eater_rise(v):
+    """The Moon-Eater rising out of the ground (feature 038): a very deep,
+    slow, sad groan swelling up, earth rumbling and a far moan on top."""
+    d = 3.2
+    t = t_axis(d)
+    f = (38 + 3 * v) * (1 + 0.25 * np.sin(np.pi * t / d)) + 2 * np.sin(2 * np.pi * 4 * t)
+    groan = sine(f, d) + 0.7 * sine(f * 2.0, d) + 0.35 * sine(f * 3.01, d)
+    groan = lowpass(soft_clip(groan * 1.6, 1.8), 600) * env_adsr(d, 0.8, 1.2) * 0.7
+    rumble = lowpass(brown(d, 700 + v), 160) * env_adsr(d, 0.4, 1.4) * 1.2
+    moan = sine(sweep(220, 160, d, 1.0) + 4 * np.sin(2 * np.pi * 5 * t), d) * env_adsr(d, 1.2, 1.4) * 0.12
+    return reverb(groan + rumble + moan, 0.35, 2.6, damp=1800)
+
+
+def moon_eater_stomp(v):
+    """Its two fists hitting the ground: a huge boom, a crunch of earth
+    and a low ring like a dropped bell."""
+    d = 1.6
+    out = silence(d)
+    boom = sine(sweep(60 + 4 * v, 26, 0.9), 0.9) * env_perc(0.9, 0.003, 0.3)
+    place(out, soft_clip(boom * 2.0, 1.6) * 1.0, 0.0)
+    dirt = lowpass(noise(0.8, 720 + v), 1200) * env_perc(0.8, 0.004, 0.22) * 0.6
+    place(out, dirt, 0.01)
+    r = rng(730 + v)
+    for k in range(3):
+        place(out, knock(r.uniform(120, 260), 0.25, seed=740 + 10 * v + k) * 0.5, 0.01 + k * 0.03)
+    place(out, lowpass(bell(midi_hz(36), 1.4, 0.3), 500) * 0.3, 0.02)
+    return reverb(out, 0.3, 1.6, damp=1800)
+
+
+def moon_eater_sweep(v):
+    """A great arm swinging through the air: a deep whoosh, then a thump."""
+    d = 1.0
+    out = silence(d)
+    whoosh = lowpass(highpass(noise(0.5, 760 + v), 180), sweep(300, 1100, 0.5, 1.0)) * env_adsr(0.5, 0.25, 0.2) * 1.6
+    place(out, whoosh, 0.0)
+    thud = sine(sweep(90, 40, 0.4), 0.4) * env_perc(0.4, 0.003, 0.12)
+    place(out, thud * 0.9, 0.42)
+    return reverb(out, 0.25, 1.1)
+
+
+def moon_eater_summon(v):
+    """It calls the lost things: a long, lonely, falling howl over a
+    rising swirl of wind."""
+    d = 2.4
+    t = t_axis(d)
+    f = sweep(260 + 20 * v, 150, d, 0.7) * (1 + 0.01 * np.sin(2 * np.pi * 5.5 * t))
+    howl = (sine(f, d) + 0.5 * sine(f * 2, d) + 0.2 * sine(f * 3, d))
+    howl = bandpass(howl, 700, 0.8) * 0.6 + lowpass(howl, 500) * 0.5
+    howl = howl * env_adsr(d, 0.4, 1.0) * 0.5
+    swirl = lowpass(highpass(noise(d, 780 + v), 250), sweep(400, 1800, d, 1.0)) * env_adsr(d, 1.0, 0.8) * 0.5
+    return reverb(howl + swirl, 0.4, 2.4, damp=2500)
+
+
+def moon_eater_sigh(v):
+    """The end: one long, deep sigh as it lets the moon go, and the
+    moonlight streaming up as a rising shimmer of bells."""
+    d = 4.0
+    out = silence(d)
+    sigh = lowpass(brown(2.2, 800 + v), sweep(900, 250, 2.2, 1.0)) * env_adsr(2.2, 0.5, 1.5) * 1.1
+    hum = sine(sweep(110, 70, 2.2, 1.0), 2.2) * env_adsr(2.2, 0.4, 1.4) * 0.25
+    place(out, sigh + hum, 0.0)
+    for k, n in enumerate([72, 76, 79, 84, 88, 91]):
+        place(out, bell(midi_hz(n), 1.6, 0.6) * 0.18, 1.2 + k * 0.22)
+    place(out, pad([midi_hz(n) for n in (60, 64, 67, 72)], 2.4, 0.8, 1.2) * 0.12, 1.2)
+    return reverb(out, 0.4, 2.8)
+
+
 def babble(v, base, seed):
     """A bark chirp (feature 037): 3-4 sung syllables with vowel-ish
     formants, like a toy voice saying a short line."""
@@ -502,6 +569,11 @@ SOUNDS = {
     "sunset": (sunset, 1),
     "win": (win, 1),
     "lose": (lose, 1),
+    "moon_eater_rise": (moon_eater_rise, 1),
+    "moon_eater_stomp": (moon_eater_stomp, 2),
+    "moon_eater_sweep": (moon_eater_sweep, 2),
+    "moon_eater_summon": (moon_eater_summon, 1),
+    "moon_eater_sigh": (moon_eater_sigh, 1),
     "chirp_leo": (chirp_leo, 4),
     "chirp_nela": (chirp_nela, 4),
 }

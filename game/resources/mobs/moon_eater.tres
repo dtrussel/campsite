@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="MobDefinition" load_steps=2 format=3 uid="uid://b0campsitemobdefmooneater"]
+
+[ext_resource type="Script" path="res://scripts/mobs/mob_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"moon_eater"
+display_name = "The Moon-Eater"
+scene_path = "res://scenes/mobs/MoonEater.tscn"
+max_hp = 800
+move_speed = 0.9
+attack_damage = 10
+attack_range = 3.0
+aggro_radius = 7.0
+attack_cooldown_seconds = 3.0
+xp_reward = 120
+ui_color = Color(0.55, 0.45, 0.9, 1)
+building_damage_multiplier = 3.0
+knockback_scale = 0.0
+spawn_burst = &"moon_eater_rise"
+death_burst = &"moon_eater_sigh"
+is_boss = true

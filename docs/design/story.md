@@ -3,8 +3,9 @@
 > Companion to [`game-design-spec.md`](game-design-spec.md). Status:
 > features 035&ndash;042, see
 > [`docs/roadmap/roadmap.md`](../roadmap/roadmap.md). **In the game:** the
-> story frame (035: intro, dawn cards, endings, defeat lines) and the
-> Moon Lantern (036). The rest is planned. Decided with the user
+> story frame (035: intro, dawn cards, endings, defeat lines), the
+> Moon Lantern (036), the sibling barks (037), Mum (043) and the
+> Moon-Eater (038). The rest is planned. Decided with the user
 > (2026-10): the missing adult is **Mum**, the boss is the **Moon-Eater**,
 > the team provides concept art and animations later (see the Art plan),
 > and the characters get **voiced lines** (see Voice).
@@ -66,9 +67,16 @@ The two run lengths become chapters of one story.
 - **Intro:** the kids decide to stay and finish the Moon Lantern.
 - **Dawn cards:** journal fragments and growing danger. From night 5, the
   Moon-Eater's eyes appear at the treeline.
-- **Final night:** the Moon-Eater comes to the camp (038).
-- **True ending:** the lantern is lit, the Moon-Eater lets the moon go and shrinks into a small,
-  warm shadow that curls up by the fire. The moon comes back and **mum
+- **Final night:** the Moon-Eater comes to the camp (038). The night
+  does not end while it stands. It stomps and sweeps (the ground shows
+  where), calls imp packs and blows out the torches, and at the end it
+  reaches for the Moon Lantern: the brighter the lantern, the longer the
+  kids have to calm it. It is never killed.
+- **True ending:** the lantern is lit, the Moon-Eater lets the moon go:
+  it falls apart into a heap of planks and stones, the crescent rises
+  out of the heap into a beam of moonlight and the lost things float up
+  and fade. Then a small, warm golem climbs out of the rubble and curls
+  up by the fire. The moon comes back and **mum
   walks out of the woods**. The final card shows the family by the fire.
 
 ### Defeat
@@ -157,7 +165,9 @@ cooldown, `urgent`, and `once: "night"`.
 
 - Triggers: `low_hp`, `thief`, `thief_caught`, `first_beast`, `level_up`,
   `sunset`, `night_start`, `lantern_stage`, `companion_down`,
-  `companion_up` and `danger_behind` (the companion's "Behind you!").
+  `companion_up`, `danger_behind` (the companion's "Behind you!"), and
+  the Moon-Eater's `boss` (it rises) and `boss_lantern` (it reaches for
+  the lantern).
   Dawn has no bark, because every dawn already has its story card.
 - At least two lines per hero for every trigger, at most 30 characters,
   and no placeholders (write one line per hero). `tools/check.sh` fails
@@ -170,14 +180,29 @@ cooldown, `urgent`, and `once: "night"`.
 
 - **For now, placeholders.** Story cards reuse the existing loading-screen
   paintings, and new models (Moon Lantern, Moon-Eater) start as
-  code-built stand-ins in the 031 style.
+  code-built stand-ins in the 031 style. The Moon-Eater is now a baked
+  model after its character sheet (below), with tween clips
+  (`moon_eater_visual.gd`).
 - **Received:** Mum's character sheet (feature 043). Her six expressions
   are her storybook portraits (`assets/ui/story/mum_<face>.png`, picked
   per line with `face`), and she is a 3D model on the kids' rig
   (`art/characters/mum.py`): she walks home in the true ending and sits
   by the title fire afterwards.
+- **Received:** the Moon-Eater's character sheet (2026-10-18,
+  `art/reference/concept-2026-10/15_moon_eater_character_sheet.webp`).
+  It is a **golem**: a hulking, hunched heap of weathered planks and
+  stacked stones lashed with rope, about 3× a beast. Short stone legs,
+  long ape-like arms with huge stone fists, and a small plank head set
+  low between the shoulders, with two amber eyes (one bigger). Its chest
+  is a round window of golden moonlight with a crescent, and the lost
+  things it hoards float in it (a little chair, a teddy, a pocket
+  watch, stars). Lanterns, brass bells, keys, a pocket watch and red
+  plaid scarves hang off it; moss, saplings, fence pickets and
+  branches grow on its back. Palette: dusk navy and purple-grey, weathered
+  brown wood, then orange, amber, gold and cream for the glow. The game
+  model is built and baked after it (`art/characters/moon_eater.py`).
 - **Later, from the team:** intro and chapter-ending
-  paintings; the journal page frame; Moon-Eater concept art and
+  paintings; the journal page frame; hand-made Moon-Eater
   animations. Each feature swaps its art in when it arrives, without
   changing code. The art is data: painting textures on `StoryBeat`, and a
   model scene with clips on the mob definition.

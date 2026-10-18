@@ -15,6 +15,8 @@ extends CanvasLayer
 ##   left, under the companion - the dawn story card (feature 035), out
 ##                   of the way of the camp; left of the top strip, the
 ##                   Moon Lantern dial (feature 036)
+##   under the top strip - the boss bar while the Moon-Eater stands
+##                   (feature 038), with a thin bar for its lantern reach
 ## Everything is signal-driven except the clock, cooldown and imp count,
 ## which tick in _process. Names and portraits come from the party
 ## (GameManager.party_hero / party_companion, feature 034).
@@ -27,6 +29,10 @@ const _PHASE_COLOR_DAWN: Color = Color(1, 0.88, 0.65)
 
 const _TOP_WIDTH: float = 330.0
 const _DIAL_SIZE: float = 58.0
+const _BANNER_Y: float = 104.0
+## The banner drops below the boss bar while it is up.
+const _BANNER_Y_BOSS: float = 170.0
+const _BOSS_COLOR: Color = Color(0.5, 0.36, 0.86)
 
 var _vignette: TextureRect = null
 const _TRAY_ITEMS: Array[StringName] = [&"wood", &"stone", &"berries", &"fiber", &"leaves", &"resin", &"clay",
@@ -58,6 +64,10 @@ var _task_buttons: Array = []  # Button per companion task (index = task)
 var _build_row: HBoxContainer = null
 
 var _story_host: Control = null
+var _boss_plate: PanelContainer = null
+var _boss_bar: HudWidgets.StatBar = null
+var _reach_bar: HudWidgets.StatBar = null
+var _boss: BossController = null
 var _story_card: StoryCard = null
 var _lantern_dial: HudWidgets.LanternDial = null
 var _tray_labels: Dictionary = {}  # StringName -> Label
@@ -76,6 +86,7 @@ func _ready() -> void:
 	_build_tray(root)
 	_build_hero_bar(root)
 	_build_banner(root)
+	_build_boss_bar(root)
 	_build_story_host(root)
 
 	ResourceManager.resource_changed.connect(_on_resource_changed)
@@ -389,7 +400,7 @@ func _build_banner(root: Control) -> void:
 	_banner_plate.add_theme_stylebox_override("panel", ribbon)
 	_banner_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_banner_plate.custom_minimum_size = Vector2(260, 60)
-	_anchor(_banner_plate, Control.PRESET_CENTER_TOP, Vector2(0, 104))
+	_anchor(_banner_plate, Control.PRESET_CENTER_TOP, Vector2(0, _BANNER_Y))
 	_banner_plate.modulate.a = 0.0
 	root.add_child(_banner_plate)
 	_banner = UiKit.title("", 30, UiKit.COLOR_GOLD_LIGHT)
@@ -397,6 +408,64 @@ func _build_banner(root: Control) -> void:
 	_banner.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_banner.add_theme_constant_override("outline_size", 9)
 	_banner_plate.add_child(_banner)
+
+
+## The Moon-Eater's health under the top strip (feature 038), and a thin
+## moon-coloured bar for how long the kids have while it holds the
+## lantern. Hidden until a boss rises.
+func _build_boss_bar(root: Control) -> void:
+	_boss_plate = _plate(6, 16)
+	_anchor(_boss_plate, Control.PRESET_CENTER_TOP, Vector2(0, 100))
+	root.add_child(_boss_plate)
+	var column: VBoxContainer = UiKit.vbox(3)
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	_boss_plate.add_child(column)
+	var name_label: Label = UiKit.title("THE MOON-EATER", 22, UiKit.COLOR_MOON.lightened(0.35))
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.add_theme_constant_override("outline_size", 7)
+	column.add_child(name_label)
+	_boss_bar = HudWidgets.StatBar.new(_BOSS_COLOR, Color(0.75, 0.62, 1.0))
+	_boss_bar.custom_minimum_size = Vector2(420, 16)
+	_boss_bar.show_text = false
+	column.add_child(_boss_bar)
+	_reach_bar = HudWidgets.StatBar.new(UiKit.COLOR_MOON, UiKit.COLOR_MOON.lightened(0.4))
+	_reach_bar.custom_minimum_size = Vector2(420, 8)
+	_reach_bar.show_text = false
+	_reach_bar.tick_every = 0.0
+	_reach_bar.tooltip_text = "Time before it swallows the lantern's light"
+	column.add_child(_reach_bar)
+	_boss_plate.visible = false
+	_reach_bar.visible = false
+
+
+func _show_boss(boss: BossController) -> void:
+	_boss = boss
+	_boss_plate.visible = true
+	_boss_bar.set_values(boss.current_hp, boss.max_hp())
+	_set_banner_y(_BANNER_Y_BOSS)
+	boss.health_changed.connect(func(hp: int, max_hp: int) -> void: _boss_bar.set_values(hp, max_hp))
+	boss.phase_changed.connect(_on_boss_phase.bind(boss))
+	boss.calmed.connect(func(_b: Node3D) -> void:
+		_boss_plate.visible = false
+		_set_banner_y(_BANNER_Y)
+		show_banner("It let the moon go!", UiKit.COLOR_MOON.lightened(0.4)))
+
+
+func boss_bar_visible() -> bool:
+	return _boss_plate.visible
+
+
+func _on_boss_phase(phase: int, boss: BossController) -> void:
+	_reach_bar.visible = boss.is_draining()
+	if boss.is_draining():
+		show_banner("It wants the lantern!", UiKit.COLOR_MOON.lightened(0.4))
+	elif phase == BossController.Phase.SUMMONING:
+		_pulse_vignette(Color(0.45, 0.2, 0.7, 0.6))
+
+
+func _set_banner_y(y: float) -> void:
+	_banner_plate.offset_top = y
+	_banner_plate.offset_bottom = y
 
 
 ## The story card's place: down the left edge, under the companion and
@@ -503,6 +572,8 @@ func _process(_delta: float) -> void:
 	_lantern_dial.visible = lantern != null
 	if lantern != null:
 		_lantern_dial.set_stage(lantern.stage, lantern.max_stage())
+	if _reach_bar.visible and _boss != null and is_instance_valid(_boss):
+		_reach_bar.set_values(_boss.reach_left_ratio(), 1.0)
 
 
 func _refresh_slots() -> void:
@@ -706,7 +777,10 @@ func _pulse_vignette(color: Color) -> void:
 
 ## A heavy mob gets its own warning: kids should run to their fences.
 func _on_mob_spawned(mob: Node3D, definition: MobDefinition) -> void:
-	if definition != null and definition.prefers_buildings:
+	if definition != null and definition.is_boss and mob is BossController:
+		_show_boss(mob as BossController)
+		show_banner("%s rises!" % definition.display_name, UiKit.COLOR_MOON.lightened(0.4))
+	elif definition != null and definition.prefers_buildings:
 		show_banner("%s!" % definition.display_name, Color(0.6, 0.9, 0.35))
 	elif definition != null and definition.steals_resources:
 		show_banner("%s!" % definition.display_name, Color(0.85, 0.55, 1.0))

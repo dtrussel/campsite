@@ -219,9 +219,63 @@ func _ready() -> void:
 	await arrival.finished
 	await _settle(0.4)
 	_shot("11b_mum_waves")
-	# ...and after it she sits by the title fire.
 	arrival.queue_free()
 	main.queue_free()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	# Feature 038: the Moon-Eater on Chapter 2's last night.
+	get_tree().paused = false
+	GameManager.call("_reset_autoloads")
+	GameManager.set_party(&"leo")
+	GameManager.nights_to_win = 7
+	main = load("res://scenes/main/Main.tscn").instantiate()
+	add_child(main)
+	await _settle(0.5)
+	get_tree().get_first_node_in_group("controls_overlay").close()
+	var lantern_7: MoonLantern = MoonLantern.find(get_tree())
+	lantern_7.restore(lantern_7.shards_for_max())
+	hero = get_tree().get_first_node_in_group("player")
+	hero.global_position = Vector3(-2.0, 0, -12.0)
+	TimeManager.day_number = 7
+	while not TimeManager.is_night():
+		TimeManager.skip_phase()
+	var boss: BossController = null
+	while boss == null:
+		await _settle(0.2)
+		boss = BossController.find(get_tree())
+	await _settle(1.4)
+	_shot("13_boss_rise")
+	while boss.phase == BossController.Phase.RISING:
+		await _settle(0.2)
+	boss.set_physics_process(false)
+	for node in get_tree().get_nodes_in_group("mobs"):
+		if node != boss:
+			node.queue_free()
+	boss.global_position = Vector3(3.0, 0, 1.5)
+	boss.get_node("Visual").call("face_instantly", Vector3(-0.6, 0, 1.0))
+	hero.global_position = Vector3(-0.5, 0, -1.0)
+	boss.take_damage(260, hero)
+	await _settle(0.8)
+	boss.stomp()
+	await _settle(0.5)
+	_shot("13b_boss_stomp")
+	await _settle(2.0)
+	_shot("13c_boss_bar")
+	var done: Array = [false]
+	boss.defeated.connect(func(_b: Node) -> void: done[0] = true)
+	boss.take_damage(99999, hero)
+	while get_tree().get_first_node_in_group(MoonEaterVisual.PILE_GROUP) == null:  # slow frames under xvfb
+		await _settle(0.1)
+	await _settle(0.5)
+	_shot("13d_boss_falls_apart")
+	await _settle(0.9)
+	_shot("13d2_boss_lets_moon_go")
+	while not done[0]:  # the shrink and the walk to the fire (slow frames under xvfb)
+		await _settle(0.2)
+	_shot("13e_boss_warm_shadow")
+	main.queue_free()
+	GameManager.nights_to_win = 3
+	# ...and after the true ending Mum sits by the title fire.
 	StoryLibrary.progress_path = "user://screenshot_story.cfg"
 	StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING)
 	var home: Node = load("res://scenes/ui/TitleScreen.tscn").instantiate()

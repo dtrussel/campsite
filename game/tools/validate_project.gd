@@ -89,6 +89,18 @@ func _validate_data() -> void:
 			_fail("%s drops unknown item '%s'" % [mob.resource_path, mob.drop_item])
 		if mob.drop_item != &"" and mob.drop_chance <= 0.0 and mob.drop_pity <= 0:
 			_fail("%s has a drop_item but can never drop it" % mob.resource_path)
+		if mob.is_boss:
+			# Feature 038: a boss runs BossController and is never farmed.
+			var boss_scene: PackedScene = mob.get_scene()
+			var boss: Node = boss_scene.instantiate() if boss_scene != null else null
+			if not boss is BossController:
+				_fail("%s is a boss but its scene is not a BossController" % mob.resource_path)
+			elif (boss as BossController).summon_definition == null:
+				_fail("%s has no summon_definition" % mob.resource_path)
+			if mob.drop_item != &"":
+				_fail("%s is a boss and must not drop loot" % mob.resource_path)
+			if boss != null:
+				boss.free()
 
 	var recipe_ids: Dictionary = {}
 	for res in DefinitionLoader.load_all("res://resources/recipes/"):
@@ -159,7 +171,7 @@ func _validate_audio() -> void:
 	for kind in Fx.BURSTS.keys():
 		if not library.has_sound(kind) and not Fx.SILENT_BURSTS.has(kind):
 			_fail("Fx burst '%s' has no sound in the audio library" % kind)
-	for loop_name in ["music_day", "music_night", "ambience_day", "ambience_night", "ambience_campfire"]:
+	for loop_name in ["music_day", "music_night", "music_boss", "ambience_day", "ambience_night", "ambience_campfire"]:
 		if library.get(loop_name) == null:
 			_fail("audio library has no %s" % loop_name)
 	for bus_name in [&"Music", &"SFX", &"UI", &"Voice"]:
@@ -335,6 +347,6 @@ func _validate_barks(line_ids: Dictionary, hero_ids: Array[String]) -> void:
 		if text.contains("{"):
 			_fail("bark %s has a placeholder; barks are voiced, write one per hero" % line_id)
 	for trigger in [&"low_hp", &"thief", &"thief_caught", &"first_beast", &"level_up", &"sunset", &"night_start",
-			&"lantern_stage", &"companion_down", &"companion_up", &"danger_behind"]:
+			&"lantern_stage", &"companion_down", &"companion_up", &"danger_behind", &"boss", &"boss_lantern"]:
 		if not barks.triggers.has(trigger):
 			_fail("bark trigger '%s' is fired by BarkDirector but has no tuning" % trigger)

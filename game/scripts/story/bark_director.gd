@@ -208,6 +208,8 @@ func _on_node_added(node: Node) -> void:
 		var definition: MobDefinition = (node as Mob).definition
 		if definition != null and definition.id == &"bramble_beast":
 			bark(&"first_beast")
+		elif definition != null and definition.is_boss:
+			bark.call_deferred(&"boss")
 
 
 func _hook_mob(node: Node) -> void:
@@ -218,6 +220,15 @@ func _hook_mob(node: Node) -> void:
 		mob.stole.connect(_on_mob_stole)
 	if not mob.defeated.is_connected(_on_mob_defeated):
 		mob.defeated.connect(_on_mob_defeated)
+	var boss: BossController = mob as BossController
+	if boss != null and not boss.phase_changed.is_connected(_on_boss_phase):
+		boss.phase_changed.connect(_on_boss_phase.bind(boss))
+
+
+## The Moon-Eater reaches for the lantern (feature 038).
+func _on_boss_phase(_phase: int, boss: BossController) -> void:
+	if boss.is_draining():
+		bark(&"boss_lantern")
 
 
 func _on_mob_stole(_mob: Node3D, _item_id: StringName, _amount: int) -> void:

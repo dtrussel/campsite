@@ -25,6 +25,9 @@ var day_number: int = 1
 ## The clock only ticks during a run; the title screen and end screens
 ## leave it stopped. GameManager drives start_run / stop.
 var is_running: bool = false
+## While true the night never runs out (the Moon-Eater holds it,
+## feature 038); skip_phase still ends it.
+var hold_night: bool = false
 
 
 func _ready() -> void:
@@ -34,6 +37,7 @@ func _ready() -> void:
 ## Resets to the start of day 1 without emitting anything.
 func reset() -> void:
 	is_running = false
+	hold_night = false
 	current_phase = Phase.DAY
 	remaining_seconds = day_seconds
 	day_number = 1
@@ -66,6 +70,9 @@ func _process(delta: float) -> void:
 		return
 	remaining_seconds -= delta
 	if remaining_seconds <= 0.0:
+		if hold_night and current_phase == Phase.NIGHT:
+			remaining_seconds = 0.0
+			return
 		_advance_phase()
 
 
