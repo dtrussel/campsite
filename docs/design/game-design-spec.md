@@ -230,6 +230,28 @@ These are stored as `ResourceDefinition` `.tres` files; see the architecture doc
 - Left-click commits placement and spends resources.
 - Right-click or Esc cancels build mode.
 
+*Construction (playtest 1, feature 044):*
+- A placed building is a **blueprint**. It stands sunk into a pale,
+  marked-out site with a blue progress bar, and it does nothing yet: no
+  light, aura, trap, crate cap or table recipes.
+- Its HP starts at 20% and grows as it is built.
+- An idle hero walks to the oldest blueprint and hammers it up. Each
+  building has its own `build_seconds` (2–4 s). Right-clicking a
+  blueprint sends the hero to it.
+- The companion's Repair task builds blueprints before it repairs.
+- When the building is finished it rises to full height and puffs dust,
+  and the builder gets the build XP.
+- Clicking an unstarted blueprint in build mode takes it back with a full
+  refund.
+
+### Auto-attack
+
+*Playtest 1 (feature 044):* when the hero is idle or gathering, it fights
+the nearest mob within max(attack range × 1.3, 3.5 m) on its own. When
+that mob is beaten it moves on to the next one, then goes back to the
+gather it left. A player command or WASD always wins. The pause menu's
+**Auto-fight** switch turns it off.
+
 ### Building health and repair
 
 - Each building has HP.

@@ -83,7 +83,7 @@ Each autoload is a single small node script registered in
 | `GameManager`        | High-level game state; coordinates day/night transitions.   |
 | `TimeManager`        | Drives the day/night cycle and emits time-of-day signals.   |
 | `ResourceManager`    | Tracks resource inventory; validates costs; adds/removes.   |
-| `BuildManager`       | Handles build mode, placement validation, building spawn.   |
+| `BuildManager`       | Handles build mode, placement validation, blueprint spawn and completion. |
 | `ProgressionManager` | Handles XP totals and level-up rules.                       |
 | `SaveManager`        | Serializes and deserializes save data.                      |
 
@@ -274,7 +274,8 @@ Initial signal vocabulary (declared on the relevant autoload or scene):
 | `night_started`          | `TimeManager`        | `(day_number: int)`               |
 | `sunset_warning`         | `TimeManager`        | `(seconds_until_night: float)`    |
 | `base_damaged`           | `BaseCore`           | `(new_hp: int)`                   |
-| `building_placed`        | `BuildManager`       | `(building_node: Node3D)`         |
+| `building_placed`        | `BuildManager`       | `(building_node: Node3D)` (a blueprint since 044) |
+| `building_completed`     | `BuildManager`       | `(building_node: Node3D)`         |
 | `mob_spawned`            | `MobSpawner`         | `(mob_node: Node3D)`              |
 | `mob_defeated`           | `MobController`      | `(mob_node: Node3D)`              |
 | `xp_gained`              | `ProgressionManager` | `(character: Node, amount: int)`  |
