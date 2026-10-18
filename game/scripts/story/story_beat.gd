@@ -11,8 +11,9 @@ extends Resource
 ##   page of Mum's notebook the kids found, read in her voice; feature 046).
 ## - `when` (optional): only shown when that hero is played, so the
 ##   played hero speaks first and the companion replies.
-## - `face` (optional, Mum and her notes only): her expression portrait, one of
-##   StoryLibrary.MUM_FACES.
+## - `face` (optional): an expression portrait. For Mum and her notes one
+##   of StoryLibrary.MUM_FACES; for a kid, one the team has painted
+##   (assets/ui/story/<hero>_<face>.png, feature 047).
 ## - The voice recording is found by the line id (StoryLibrary.voice),
 ##   so the team's voice files drop in without code changes.
 

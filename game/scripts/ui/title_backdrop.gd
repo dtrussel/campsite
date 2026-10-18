@@ -55,6 +55,14 @@ func _ready() -> void:
 			mum.position = Vector3(0.9, 0, -1.8)
 			add_child(mum)
 			mum.face_instantly(-mum.position)
+			# The little golem from the true ending, warm by the fire (047).
+			var golem: LittleGolem = LittleGolem.new()
+			golem.name = "LittleGolem"
+			golem.scale = Vector3.ONE * 0.8
+			golem.position = Vector3(-1.5, 0, -1.2)
+			add_child(golem)
+			golem.look_at(Vector3.ZERO, Vector3.UP, true)
+			golem.curl_up(0.0)
 	for spot in [Vector3(-7.5, 0, -8.0), Vector3(-5.0, 0, -9.5), Vector3(8.0, 0, -7.0)]:
 		_character("custom/shadow_imp.glb", 0.62, "shadow", spot, [], "Imp_Idle")
 

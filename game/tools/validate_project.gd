@@ -260,6 +260,8 @@ func _validate_story() -> void:
 			_fail("%s has unknown chapter %d" % [beat.resource_path, beat.chapter])
 		if beat.trigger in [&"intro", &"win"] and beat.painting == null:
 			_fail("%s is a storybook page without a painting" % beat.resource_path)
+		elif beat.trigger in [&"intro", &"win"] and not beat.painting.resource_path.begins_with("res://assets/ui/story/"):
+			_fail("%s uses a placeholder painting (%s), not its own (047)" % [beat.resource_path, beat.painting.resource_path])
 		for hero_id in hero_ids:
 			if beat.lines_for(StringName(hero_id)).is_empty():
 				_fail("%s has no lines when %s is played" % [beat.resource_path, hero_id])
@@ -271,8 +273,13 @@ func _validate_story() -> void:
 			if not StoryBeat.SPEAKERS.has(String(line.get("speaker", ""))) and not hero_ids.has(String(line.get("speaker", ""))):
 				_fail("%s line %s has unknown speaker '%s'" % [beat.resource_path, line_id, line.get("speaker", "")])
 			var face: String = String(line.get("face", ""))
-			if face != "" and (not String(line.get("speaker", "")) in ["mum", "note"] or not StoryLibrary.MUM_FACES.has(face)):
-				_fail("%s line %s has face '%s' (only Mum's lines, one of %s)" % [beat.resource_path, line_id, face, StoryLibrary.MUM_FACES])
+			var speaker: String = String(line.get("speaker", ""))
+			if face != "" and speaker in ["mum", "note"] and not StoryLibrary.MUM_FACES.has(face):
+				_fail("%s line %s has face '%s' (Mum's are %s)" % [beat.resource_path, line_id, face, StoryLibrary.MUM_FACES])
+			elif face != "" and hero_ids.has(speaker) and not ResourceLoader.exists(StoryLibrary.hero_face_path(speaker, face)):
+				_fail("%s line %s has face '%s', but %s has no such portrait" % [beat.resource_path, line_id, face, speaker])
+			elif face != "" and speaker == "narrator":
+				_fail("%s line %s: the narrator has no face" % [beat.resource_path, line_id])
 			var when: String = String(line.get("when", ""))
 			if when != "" and not hero_ids.has(when):
 				_fail("%s line %s is for unknown hero '%s'" % [beat.resource_path, line_id, when])

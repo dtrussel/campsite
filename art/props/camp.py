@@ -1292,10 +1292,161 @@ def hammer():
     detail.bake_prop(parts, "hammer", budget=500, size=256, ray=0.01, edge_strength=0.3, preview_elevation=20)
 
 
+GRANITE = (0.6, 0.57, 0.53)
+GRANITE_LIGHT = (0.78, 0.74, 0.66)
+GRANITE_DARK = (0.38, 0.36, 0.34)
+IVY = (0.36, 0.46, 0.16)
+
+
+def granite_colour(seed=0, moss=0.5, joints=0.0):
+    """Weathered granite: soft blotches and specks, moss and ivy creeping
+    over the tops and down from the joints (the Moon Lantern sheet)."""
+    off = Vector((seed * 1.7, seed * 0.3, seed * 2.9))
+
+    def colour(pos, normal):
+        n = noise.noise(pos * 3.0 + off)
+        c = common.lerp(GRANITE, GRANITE_LIGHT, _clamp(0.5 + n * 0.8))
+        speck = noise.noise(pos * 22.0 + off)
+        if speck > 0.4:
+            c = common.lerp(c, GRANITE_DARK, _clamp((speck - 0.4) * 4) * 0.6)
+        if joints and abs(normal.z) < 0.5:
+            j = (pos.z + noise.noise(pos * 4.0 + off) * 0.015) / joints
+            if abs(j - round(j)) * joints < 0.008:
+                c = common.lerp(c, GRANITE_DARK, 0.7)
+            # Staggered vertical joints between the courses.
+            along = pos.x if abs(normal.y) > abs(normal.x) else pos.y
+            course = math.floor(j)
+            v = (along + (0.11 if course % 2 else 0.0)) / 0.22
+            if abs(v - round(v)) * 0.22 < 0.006:
+                c = common.lerp(c, GRANITE_DARK, 0.6)
+        m = normal.z * 1.6 + noise.noise(pos * 5.0 + off * 2) * 1.3 - (1.0 - moss) * 1.6
+        streak = noise.noise(Vector((pos.x * 9.0, pos.y * 9.0, pos.z * 1.5)) + off) - 0.25 - (1.0 - moss)
+        m = max(m, streak * 2.0)
+        if m > 0:
+            c = common.lerp(c, MOSS if noise.noise(pos * 11.0 + off) > -0.1 else IVY, _clamp(m) * 0.85)
+        return c
+    return colour
+
+
+def taper_box(bottom, top, height, z0, step=0.03, seed=0, moss=0.5, joints=0.0):
+    """A square stone block narrowing from `bottom` to `top` width."""
+    obj = dense_box((bottom, bottom, height), location=(0, 0, z0 + height / 2), step=step, bevel=0.02, warp=0.006,
+                    seed=seed)
+    for v in obj.data.vertices:
+        t = (v.co.z + height / 2) / height
+        k = common.lerp((1.0, 1.0, 1.0), (top / bottom,) * 3, t)[0]
+        v.co.x *= k
+        v.co.y *= k
+    common.color_by(obj, granite_colour(seed, moss, joints), smooth=True)
+    return obj
+
+
+def crescent(radius, depth, location, tilt=0.0, seed=0, segments=40):
+    """A raised crescent moon relief on the -Y face (the front in the game):
+    a disc with a smaller disc bitten out of its right side."""
+    r2, d = 0.74, 0.56                     # the bite, in units of `radius`
+    ix = (1.0 - r2 * r2 + d * d) / (2 * d)
+    iy = math.sqrt(max(0.0, 1.0 - ix * ix))
+    a0 = math.atan2(iy, ix)
+    b0 = math.atan2(iy, ix - d)
+    pts = []
+    for i in range(segments + 1):          # the outer rim, round the left
+        a = a0 + (math.tau - 2 * a0) * i / segments
+        pts.append((math.cos(a), math.sin(a)))
+    for i in range(1, segments):           # back up the bite's left rim
+        a = (math.tau - b0) - (math.tau - 2 * b0) * i / segments
+        pts.append((d + math.cos(a) * r2, math.sin(a) * r2))
+    bm = bmesh.new()
+    face = bm.faces.new([bm.verts.new((x * radius, 0.0, z * radius)) for x, z in pts])
+    ext = bmesh.ops.extrude_face_region(bm, geom=[face])
+    for v in [e for e in ext["geom"] if isinstance(e, bmesh.types.BMVert)]:
+        v.co.y -= depth
+    bmesh.ops.triangulate(bm, faces=bm.faces[:], ngon_method="EAR_CLIP")
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    obj = common.mesh_object("crescent", bm)
+    common.shade_smooth(obj, auto_angle=40)
+    common.color_by(obj, lambda pos, nrm: common.lerp(GRANITE_LIGHT, (0.92, 0.88, 0.78),
+                                                      _clamp(0.5 + noise.noise(pos * 18.0 + Vector((seed, 0, 0))))))
+    obj.rotation_euler = (tilt, 0, 0)
+    obj.location = location
+    return obj
+
+
+def moon_lantern():
+    """Feature 047: the old stone Moon Lantern by the tent, after
+    reference/concept-2026-10/16_moon_lantern_sheet.webp. A low base of
+    rough stones, a tapered granite plinth with a crescent carved on the
+    front (-Y, +Z in Godot), a collar, an iron-framed lamp housing left
+    open (Godot puts the glass panes, the shards and the glow inside), a
+    stepped stone roof and a pointed finial; moss and ivy on the tops and
+    joints. About 1.9 m tall."""
+    common.reset(16)
+    parts = []
+    parts.append(taper_box(0.78, 0.74, 0.14, 0.0, seed=1, moss=0.7))
+    for k in range(9):
+        a = k * math.tau / 9 + random.uniform(-0.2, 0.2)
+        r = random.uniform(0.5, 0.6)
+        sz = random.uniform(0.12, 0.2)
+        parts.append(stone((sz, sz * 0.9, sz * 0.8), location=(math.cos(a) * r, math.sin(a) * r, 0.0),
+                           rotation=(0, 0, random.uniform(0, math.pi)), seed=k + 20, base=GRANITE, light=GRANITE_LIGHT,
+                           dark=GRANITE_DARK, subdiv=2, moss=0.6))
+    plinth_h = 0.78
+    parts.append(taper_box(0.56, 0.44, plinth_h, 0.14, step=0.02, seed=2, moss=0.35, joints=0.19))
+    # The carved crescent, leaning back with the plinth's taper.
+    lean = math.atan2((0.56 - 0.44) / 2, plinth_h)
+    parts.append(crescent(0.14, 0.03, (0.0, -0.25 + 0.006, 0.14 + plinth_h * 0.5), tilt=lean, seed=3))
+    parts.append(taper_box(0.58, 0.54, 0.1, 0.92, seed=4, moss=0.8))
+    # The lamp housing: iron corner posts, rails top and bottom, a stone floor.
+    hz0, hz1, hw = 1.02, 1.5, 0.2
+    parts.append(taper_box(0.42, 0.42, 0.03, hz0, seed=5, moss=0.1))
+    iron = lambda pos, nrm: common.lerp(IRON_DARK, RUST, _clamp(0.35 + noise.noise(pos * 14.0) * 0.8))  # noqa: E731
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            post = dense_box((0.045, 0.045, hz1 - hz0), location=(sx * hw, sy * hw, (hz0 + hz1) / 2), step=0.03,
+                             bevel=0.008)
+            common.color_by(post, iron)
+            parts.append(post)
+    for z in (hz0 + 0.03, hz1 - 0.02):
+        for k in range(4):
+            rail = dense_box((hw * 2 + 0.05, 0.035, 0.035), location=(0, -hw if k < 2 else hw, z), step=0.03,
+                             bevel=0.006)
+            if k % 2:
+                rail.rotation_euler = (0, 0, math.pi / 2)
+                rail.location = (-hw if k < 2 else hw, 0, z)
+            common.color_by(rail, iron)
+            parts.append(rail)
+    # Leading on each pane, as on the sheet: a mullion and a pointed arch.
+    for k in range(4):
+        ang = k * math.pi / 2
+        n = Vector((math.sin(ang), -math.cos(ang), 0))
+        side = Vector((math.cos(ang), math.sin(ang), 0))
+        mid = n * hw + Vector((0, 0, hz0 + 0.03))
+        bar = dense_box((0.012, 0.012, 0.4), location=tuple(mid + Vector((0, 0, 0.2))), step=0.03, bevel=0.003)
+        bar.rotation_euler = (0, 0, ang)
+        common.color_by(bar, iron)
+        parts.append(bar)
+        pts = []
+        for i in range(13):
+            t = i / 12.0
+            x = (t * 2 - 1) * (hw - 0.03)
+            z = 0.3 + 0.12 * (1 - abs(t * 2 - 1)) ** 0.6
+            pts.append(mid + side * x + Vector((0, 0, z)))
+        parts.append(rope_tube(pts, 0.006, strands=0, base=IRON_DARK, seg=6, name="leading"))
+    # The stepped roof and its finial.
+    parts.append(taper_box(0.6, 0.58, 0.08, hz1, seed=6, moss=0.9))
+    parts.append(taper_box(0.5, 0.46, 0.08, hz1 + 0.08, seed=7, moss=0.9))
+    parts.append(taper_box(0.42, 0.08, 0.2, hz1 + 0.16, seed=8, moss=0.7))
+    finial = revolve([(0.0, 0.0), (0.05, 0.0), (0.06, 0.04), (0.035, 0.1), (0.0, 0.16)], 16, name="finial")
+    finial.location = (0, 0, hz1 + 0.34)
+    common.color_by(finial, granite_colour(9, 0.2))
+    parts.append(finial)
+    detail.bake_prop(parts, "moon_lantern", budget=2400, size=1024, preview_elevation=15, ray=0.04)
+
+
 PROPS = {
     "campfire": campfire, "tent": tent, "fence": fence, "watch_post": watch_post, "torch": torch,
     "woodpile": woodpile, "crate": crate, "barrel": barrel, "toadstools": toadstools,
-    "hammer": hammer,
+    "hammer": hammer, "moon_lantern": moon_lantern,
 }
 
 if __name__ == "__main__":

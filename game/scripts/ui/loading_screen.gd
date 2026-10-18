@@ -16,15 +16,22 @@ const MIN_SECONDS: float = 1.2
 const FADE_IN: float = 0.2
 const FADE_OUT: float = 0.35
 
-## The team's paintings (features 029-030), each with tips that fit it:
+## The team's paintings (features 029-030, 047), each with tips that fit it:
 ## [art, [[tip, icon], ...]]. Short, simple words for young players.
 const SCREENS: Array = [
 	["res://assets/ui/key_art.webp", [
 		["Give {companion} a job: gather, guard or repair.", "{companion_portrait}"],
 		["Hurt? Press R to eat berries and heal.", "res://assets/icons/berries.png"],
 		["Keep the campfire burning all night long!", "res://assets/icons/campfire.png"],
-		["Glow Shards are bits of moonlight. Bring them to the Moon Lantern!", "res://assets/icons/glow_shards.png"],
+	]],
+	# Feature 047: the two storybook paintings that give nothing away.
+	["res://assets/ui/story/story_c1_1.webp", [
 		["Mum left pages from her notebook. Look for them at dawn.", "res://assets/icons/tent.png"],
+		["Keep the fire burning, no matter what.", "res://assets/icons/campfire.png"],
+	]],
+	["res://assets/ui/story/story_c2_2.webp", [
+		["Glow Shards are bits of moonlight. Bring them to the Moon Lantern!", "res://assets/icons/glow_shards.png"],
+		["Each shard makes the Moon Lantern's safe ring bigger.", "res://assets/icons/lantern.png"],
 	]],
 	["res://assets/ui/loading_imp.webp", [
 		["Torches slow the Shadow Imps down.", "res://assets/icons/torch.png"],

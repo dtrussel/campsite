@@ -17,6 +17,7 @@ lines = [{
 }, {
 "id": "dawn.c2.n3.leo.2",
 "speaker": "nela",
+"face": "worried",
 "text": "They go into the Hollow. She went that way.",
 "when": "leo"
 }, {

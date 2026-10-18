@@ -17,11 +17,13 @@ lines = [{
 }, {
 "id": "dawn.c2.n5.leo.2",
 "speaker": "nela",
+"face": "worried",
 "text": "I saw them. Something huge is watching us.",
 "when": "leo"
 }, {
 "id": "dawn.c2.n5.nela.1",
 "speaker": "nela",
+"face": "worried",
 "text": "Leo. Big eyes in the trees. Did you see them?",
 "when": "nela"
 }, {

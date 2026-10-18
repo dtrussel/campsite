@@ -63,6 +63,12 @@ func _ready() -> void:
 	rig.set("_zoom_target", rig.get("min_zoom"))
 	await _settle(1.0)
 	_shot("03d_zoom_close")
+	# Feature 047: the team's Moon Lantern by day, still dark.
+	var day_spot: Vector3 = player.global_position
+	player.global_position = MoonLantern.find(get_tree()).global_position + Vector3(1.6, 0, 1.2)
+	await _settle(1.5)
+	_shot("03g_moon_lantern_day")
+	player.global_position = day_spot
 	rig.set("_zoom_target", 1.0)
 	await _settle(1.0)
 	for level in [PostFx.Blur.OFF, PostFx.Blur.STRONG, PostFx.Blur.SOFT]:
@@ -250,6 +256,12 @@ func _ready() -> void:
 	player.global_position = lantern.global_position + Vector3(2.2, 0, 0.8)
 	await _settle(2.0)
 	_shot("06b_moon_lantern")
+	# Feature 047: the team's lantern, fully lit, up close.
+	lantern.restore(lantern.shards_for_max())
+	rig.set("_zoom_target", rig.get("min_zoom"))
+	await _settle(2.0)
+	_shot("06c_moon_lantern_full")
+	rig.set("_zoom_target", 1.0)
 	player.global_position = spot
 	await get_tree().create_timer(3.0, true, false, true).timeout
 	_shot("07_night_later")
@@ -275,17 +287,18 @@ func _ready() -> void:
 	_shot("09b_chapter_1_ending")
 	ending.skip()
 	await _settle(0.4)
-	# Feature 046: the true ending's golem and homecoming pages.
-	ending = StoryBook.play(StoryLibrary.find(&"win", 2), &"leo", 30)
-	await _settle(0.5)
-	ending.next()
-	await _settle(1.5)
-	_shot("09c_true_ending_golem")
-	ending.next()
-	await _settle(1.5)
-	_shot("09d_true_ending_mum")
-	ending.skip()
-	await _settle(0.4)
+	# Feature 047: every storybook page with the team's paintings.
+	for book_spec in [[&"intro", 1], [&"intro", 2], [&"win", 1], [&"win", 2]]:
+		var pages: Array = StoryLibrary.find(book_spec[0], book_spec[1])
+		var story: StoryBook = StoryBook.play(pages, &"nela" if book_spec[1] == 1 and book_spec[0] == &"intro" else &"leo", 30)
+		await _settle(1.2)
+		for i in pages.size():
+			_shot("14_story_%s" % String((pages[i] as StoryBeat).id).replace(".", "_"))
+			story.next()
+			await _settle(1.2)
+		if is_instance_valid(story):
+			story.skip()
+		await _settle(0.4)
 	# Feature 034: a run playing Nela, with Leo as the companion.
 	main.queue_free()
 	await get_tree().process_frame

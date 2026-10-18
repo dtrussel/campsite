@@ -17,6 +17,7 @@ lines = [{
 }, {
 "id": "shard.nela",
 "speaker": "nela",
+"face": "surprised",
 "text": "It's glowing... like a tiny piece of the moon.",
 "when": "nela"
 }]

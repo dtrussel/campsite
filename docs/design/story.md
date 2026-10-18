@@ -256,13 +256,28 @@ barks only for the first beast of a run).
 
 ## Art plan
 
-- **For now, placeholders.** Story cards reuse the existing loading-screen
-  paintings, picked per page to fit the words (dusk for the dark moon,
-  the moonlit woods for Mum walking in, the beast for the shadows and the
-  golem, the kids for the homecoming), and new models (Moon Lantern, Moon-Eater) start as
-  code-built stand-ins in the 031 style. The Moon-Eater is now a baked
-  model after its character sheet (below), with tween clips
-  (`moon_eater_visual.gd`).
+- **Received (047): the storybook paintings.** One painting per intro and
+  ending page (12), in the team's style, generated from the art brief
+  (`.features/047-story-art`). Sources are in `art/ui/source/story/`, and
+  `art/ui/story_art.py` writes the game's 1600×900 copies to
+  `assets/ui/story/story_<page>.webp`. The Chapter 2 intro painting
+  showed Mum's lantern lit, so the script retouches it cold
+  (`cold_lantern`; the original is kept as `c2_1_lit.webp`). The camping
+  and Moon Lantern paintings double as loading screens.
+- **Received (047): Nela's faces** (surprised, worried, laugh). Like Mum's,
+  they are cut into round portraits (`assets/ui/story/nela_<face>.png`) and
+  picked with `face` on her lines. A kid's line may carry a `face` once that
+  portrait exists; until then the hero portrait shows. **Still wanted:**
+  Leo's six faces, Nela's smile, curious and proud, and Mum's notebook art.
+- **Received (047): the Moon Lantern and the little golem.** Both are 3D
+  models after their sheets (`16_moon_lantern_sheet.webp`,
+  `18_little_golem_sheet.webp`): the lantern by the tent (shards stack up
+  inside its glass, its carved crescent lights up near the top stage), and
+  the little golem that climbs out of the Moon-Eater's heap, curls up by
+  the fire and sits by the title fire once Mum is home. Mum's lantern
+  sheet (`17_mum_lantern_sheet.webp`) is reference for a later prop.
+- The Moon-Eater is a baked model after its character sheet (below), with
+  tween clips (`moon_eater_visual.gd`).
 - **Received:** Mum's character sheet (feature 043). Her six expressions
   are her storybook portraits (`assets/ui/story/mum_<face>.png`, picked
   per line with `face`), and she is a 3D model on the kids' rig
@@ -281,8 +296,7 @@ barks only for the first beast of a run).
   branches grow on its back. Palette: dusk navy and purple-grey, weathered
   brown wood, then orange, amber, gold and cream for the glow. The game
   model is built and baked after it (`art/characters/moon_eater.py`).
-- **Later, from the team:** intro and chapter-ending
-  paintings; the journal page frame; hand-made Moon-Eater
+- **Later, from the team:** the journal page frame; hand-made Moon-Eater
   animations. Each feature swaps its art in when it arrives, without
   changing code. The art is data: painting textures on `StoryBeat`, and a
   model scene with clips on the mob definition.

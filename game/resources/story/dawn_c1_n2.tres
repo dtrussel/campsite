@@ -17,6 +17,7 @@ lines = [{
 }, {
 "id": "dawn.c1.n2.leo.2",
 "speaker": "nela",
+"face": "surprised",
 "text": "Shards are moonlight. Maybe the lantern wants them!",
 "when": "leo"
 }, {

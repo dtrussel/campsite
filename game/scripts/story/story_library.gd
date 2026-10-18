@@ -72,15 +72,25 @@ static func speaker_name(speaker: String) -> String:
 
 
 ## `face` picks one of Mum's expressions (a line's "face" key). Her
-## notes show her face too.
+## notes show her face too, and a kid's line shows their painted
+## expression when one exists.
 static func speaker_portrait(speaker: String, face: String = "") -> Texture2D:
 	if speaker == "mum" or speaker == "note":
 		var path: String = MUM_PORTRAIT.replace(".png", "_%s.png" % face) if face != "" else MUM_PORTRAIT
 		if not ResourceLoader.exists(path):
 			path = MUM_PORTRAIT
 		return load(path) as Texture2D if ResourceLoader.exists(path) else null
+	# The kids' painted expressions (feature 047), where the team has drawn
+	# that one; otherwise the hero's own portrait.
+	if face != "" and ResourceLoader.exists(hero_face_path(speaker, face)):
+		return load(hero_face_path(speaker, face)) as Texture2D
 	var hero: HeroDefinition = HeroRoster.get_hero(StringName(speaker))
 	return hero.portrait if hero != null else null
+
+
+## Where a kid's expression portrait lives: assets/ui/story/<hero>_<face>.png.
+static func hero_face_path(hero_id: String, face: String) -> String:
+	return MUM_PORTRAIT.get_base_dir().path_join("%s_%s.png" % [hero_id, face])
 
 
 ## The recording for a line id, or null while there is none yet.

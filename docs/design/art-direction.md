@@ -70,6 +70,25 @@ An unfinished building must never read as a finished one.
 - **Site:** four wooden stakes with a twine line, a faint dirt patch, and a small crossed pile of planks (stones, clay, scrap or shards to match the cost). Simple boxes styled as props; they sink away when the building is done.
 - **Mallet:** a kid-sized barrel mallet (`art/props/camp.py` `hammer`, about 500 tris) held in the right hand while building or repairing.
 
+## Storybook and story props (feature 047)
+
+- **Storybook paintings:** 16:9, painted in the key art's storybook style:
+  golden-hour warmth, deep-blue nights, the kids exactly as on their
+  turnarounds. In game they are cover-fitted at 1600×900 under a dark text
+  band over the bottom third, so faces and key props sit in the top two
+  thirds (`story_art.py` can `lift` a painting that needs it).
+- **Expression portraits:** the head and shoulders, cut into a 192 px round with
+  a brass ring, the same for Mum and the kids.
+- **Moon Lantern:** weathered granite, about 1.9 m tall. A tapered plinth of
+  stone courses with a carved crescent on the front, then an iron-framed
+  glass lamp, a stepped stone roof and a pointed finial. Moss and ivy grow on
+  the tops and joints. Its light is moon-blue: shards inside the glass, a
+  soft core, and the crescent glowing warm gold at the top stage.
+- **Little golem:** knee-high and chibi, in the Moon-Eater's materials. A
+  round plank face under a shaggy shingle cap, big amber eyes, a sprout and
+  stick pegs on top, a roped plank barrel body over round stones, and a warm
+  crescent window. It is the only warm glow of its own by the fire.
+
 ## Mum (feature 043)
 
 Mum follows the team's character sheet

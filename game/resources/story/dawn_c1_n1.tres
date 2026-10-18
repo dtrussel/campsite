@@ -22,6 +22,7 @@ lines = [{
 }, {
 "id": "dawn.c1.n1.nela.1",
 "speaker": "nela",
+"face": "laugh",
 "text": "We made it. The fire is still burning.",
 "when": "nela"
 }, {

@@ -387,6 +387,19 @@ func _run_story_scenario() -> void:
 	_check(StoryLibrary.speaker_portrait("mum", "worried").resource_path.ends_with("mum_worried.png")
 		and StoryLibrary.speaker_portrait("mum").resource_path.ends_with("mum.png")
 		and StoryLibrary.speaker_portrait("mum", "nope").resource_path.ends_with("mum.png"), "Mum's expressions, with a fallback")
+	# Feature 047: the team's paintings, the kids' faces, the lantern model.
+	var painted: bool = true
+	for trigger in [&"intro", &"win"]:
+		for chapter in [1, 2]:
+			for beat in StoryLibrary.find(trigger, chapter):
+				painted = painted and (beat as StoryBeat).painting.resource_path.begins_with("res://assets/ui/story/story_")
+	_check(painted, "every storybook page has its own painting")
+	_check(StoryLibrary.speaker_portrait("nela", "worried").resource_path.ends_with("nela_worried.png")
+		and StoryLibrary.speaker_portrait("leo", "worried") == HeroRoster.get_hero(&"leo").portrait,
+		"Nela's painted faces; Leo keeps his portrait until his arrive")
+	var lantern_model: Node3D = MoonLantern.find(get_tree()).get_node_or_null("Visual") as Node3D
+	_check(lantern_model != null and lantern_model.find_child("moon_lantern*", true, false) is MeshInstance3D,
+		"the Moon Lantern is the team's model")
 	var hero: Node3D = get_tree().get_first_node_in_group("player")
 	get_tree().paused = true  # as behind the end screen
 	var arrival: MumArrival = MumArrival.play(get_tree().current_scene, hero.global_position)
@@ -408,6 +421,15 @@ func _run_story_scenario() -> void:
 	_check(not backdrop.call("mum_is_home"), "Mum isn't home before the true ending")
 	StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING)
 	_check(backdrop.call("mum_is_home"), "after the true ending Mum sits by the title fire")
+	var game_camera: Camera3D = get_viewport().get_camera_3d()
+	var title: Node3D = backdrop.new()
+	add_child(title)
+	await get_tree().process_frame
+	var title_golem: LittleGolem = title.get_node_or_null("LittleGolem") as LittleGolem
+	_check(title_golem != null and title_golem.curled, "and the little golem curls up by it too")
+	title.free()
+	if game_camera != null:
+		game_camera.make_current()
 	StoryLibrary.forget_progress()
 
 
@@ -1353,6 +1375,9 @@ func _run_boss_scenario() -> void:
 	_check(int(GameManager.stats.get(&"boss_calmed", 0)) == 1, "the calm is counted")
 	_check(is_instance_valid(boss) and boss.global_position.distance_to(_campfire().global_position) < 3.0,
 		"a small warm golem curls up by the fire")
+	var look: MoonEaterVisual = boss.get_node_or_null("Visual") as MoonEaterVisual if is_instance_valid(boss) else null
+	_check(look != null and look.little_golem() != null and look.little_golem().curled,
+		"it is the team's little golem, curled up")
 	var pile: Node3D = get_tree().get_first_node_in_group(MoonEaterVisual.PILE_GROUP) as Node3D
 	_check(pile != null and pile.get_child_count() >= 10 and pile.get_child(0).global_position.distance_to(fell_at) < 2.5,
 		"it fell apart into a heap of planks and stones where it stood")
