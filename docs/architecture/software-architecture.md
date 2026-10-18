@@ -151,7 +151,10 @@ game/scripts/companions/companion_controller.gd
 game/scripts/companions/companion_tasks.gd
 
 game/scripts/mobs/mob_controller.gd
-game/scripts/mobs/mob_spawner.gd               # later
+game/scripts/mobs/mob_spawner.gd
+game/scripts/mobs/boss_controller.gd           # the Moon-Eater (038), extends Mob
+game/scripts/mobs/moon_eater_visual.gd         # its code-built stand-in model
+game/scripts/mobs/telegraph.gd                 # ground warnings for big blows
 
 game/scripts/base/base_core.gd
 

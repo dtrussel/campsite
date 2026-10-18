@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="AudioLibrary" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="AudioLibrary" load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/audio/audio_library.gd" id="1_lib"]
 [ext_resource type="AudioStream" path="res://assets/audio/music/day.ogg" id="2_day"]
@@ -6,6 +6,7 @@
 [ext_resource type="AudioStream" path="res://assets/audio/ambience/day.ogg" id="4_amb_day"]
 [ext_resource type="AudioStream" path="res://assets/audio/ambience/night.ogg" id="5_amb_night"]
 [ext_resource type="AudioStream" path="res://assets/audio/ambience/campfire.ogg" id="6_fire"]
+[ext_resource type="AudioStream" path="res://assets/audio/music/boss.ogg" id="7_boss"]
 
 [resource]
 script = ExtResource("1_lib")
@@ -31,6 +32,11 @@ volumes = {
 &"leaves": -5.0,
 &"level_up": -1.0,
 &"mushrooms": -5.0,
+&"moon_eater_rise": 0.0,
+&"moon_eater_sigh": -1.0,
+&"moon_eater_stomp": 0.0,
+&"moon_eater_summon": -1.0,
+&"moon_eater_sweep": -2.0,
 &"lose": 0.0,
 &"place": -2.0,
 &"repair": -5.0,
@@ -56,6 +62,7 @@ ui_ids = Array[StringName]([&"ui_click", &"task", &"sunset", &"win", &"lose", &"
 pitch_jitter = 0.08
 music_day = ExtResource("2_day")
 music_night = ExtResource("3_night")
+music_boss = ExtResource("7_boss")
 ambience_day = ExtResource("4_amb_day")
 ambience_night = ExtResource("5_amb_night")
 ambience_campfire = ExtResource("6_fire")

@@ -242,6 +242,11 @@ const BURSTS: Dictionary = {
 	&"gremlin_death": [24, 0.9, Color(0.95, 0.9, 0.75), Color(0.6, 0.25, 0.7, 0), 2.6, -1.0, 0.25, false, 90.0],
 	&"bramble_slam": [28, 0.9, Color(0.66, 0.52, 0.34, 0.85), Color(0.45, 0.36, 0.22, 0), 3.4, -5.0, 0.3, false, 85.0],
 	&"bramble_death": [30, 1.2, Color(0.45, 0.7, 0.22), Color(0.85, 0.5, 0.18, 0), 3.2, -4.0, 0.2, false, 80.0],
+	&"moon_eater_rise": [60, 2.2, Color(0.3, 0.12, 0.5, 0.9), Color(0.05, 0.0, 0.12, 0), 3.0, -2.0, 1.1, false, 45.0],
+	&"moon_eater_stomp": [48, 1.1, Color(0.62, 0.5, 0.4, 0.85), Color(0.4, 0.2, 0.55, 0), 5.0, -6.0, 0.7, false, 88.0],
+	&"moon_eater_sweep": [30, 0.8, Color(0.45, 0.25, 0.7, 0.8), Color(0.2, 0.05, 0.3, 0), 4.0, -3.0, 0.6, false, 70.0],
+	&"moon_eater_summon": [50, 1.6, Color(0.55, 0.3, 0.95, 0.9), Color(0.15, 0.0, 0.3, 0), 3.5, 1.0, 0.6, true, 180.0],
+	&"moon_eater_sigh": [90, 3.0, Color(0.75, 0.85, 1.0), Color(0.6, 0.7, 1.0, 0), 4.0, 3.5, 0.35, true, 25.0],
 }
 
 ## Bursts that are purely visual (footsteps): no AudioLibrary sound.

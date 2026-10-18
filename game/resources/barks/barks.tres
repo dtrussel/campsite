@@ -5,6 +5,18 @@
 [resource]
 script = ExtResource("1_set")
 triggers = {
+&"boss": {
+"cooldown": 0.0,
+"once": "night",
+"role": "call_response",
+"urgent": true
+},
+&"boss_lantern": {
+"cooldown": 20.0,
+"once": "",
+"role": "hero",
+"urgent": true
+},
 &"low_hp": {
 "cooldown": 25.0,
 "once": "",
@@ -73,6 +85,46 @@ triggers = {
 }
 }
 lines = [{
+"id": "bark.boss.leo.1",
+"speaker": "leo",
+"text": "It's HUGE! Stay by the fire!",
+"trigger": "boss"
+}, {
+"id": "bark.boss.leo.2",
+"speaker": "leo",
+"text": "That's the Moon-Eater!",
+"trigger": "boss"
+}, {
+"id": "bark.boss.nela.1",
+"speaker": "nela",
+"text": "Look at its belly. The moon!",
+"trigger": "boss"
+}, {
+"id": "bark.boss.nela.2",
+"speaker": "nela",
+"text": "It's so big... and so sad.",
+"trigger": "boss"
+}, {
+"id": "bark.boss_lantern.leo.1",
+"speaker": "leo",
+"text": "Hey! Not our lantern!",
+"trigger": "boss_lantern"
+}, {
+"id": "bark.boss_lantern.leo.2",
+"speaker": "leo",
+"text": "Quick! It wants the lantern!",
+"trigger": "boss_lantern"
+}, {
+"id": "bark.boss_lantern.nela.1",
+"speaker": "nela",
+"text": "It's eating the light! Hurry!",
+"trigger": "boss_lantern"
+}, {
+"id": "bark.boss_lantern.nela.2",
+"speaker": "nela",
+"text": "Get it off the lantern!",
+"trigger": "boss_lantern"
+}, {
 "id": "bark.low_hp.leo.1",
 "speaker": "leo",
 "text": "Ow! I need a breather!",

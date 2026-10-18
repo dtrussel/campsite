@@ -9,6 +9,8 @@ extends Node
 ## which one is the AI companion, picked on the hero select screen.
 ## The run lengths are the story's chapters (feature 035): 3 nights is
 ## Chapter 1, 7 nights is Chapter 2, and each opens with its intro.
+## Chapter 2's last night lasts until the Moon-Eater is calmed (feature
+## 038); its dawn is the win.
 
 signal day_number_changed(new_day: int)
 signal camp_destroyed
@@ -263,7 +265,10 @@ func _on_dawn_started(day_number: int) -> void:
 	stats[&"nights_survived"] = day_number
 	PlaytestLog.write("night_survived night=%d" % day_number)
 	if day_number >= nights_to_win:
-		_end_run(true, "You survived %d nights!" % nights_to_win, &"win")
+		if int(stats.get(&"boss_calmed", 0)) > 0:
+			_end_run(true, "You calmed the Moon-Eater!", &"win")
+		else:
+			_end_run(true, "You survived %d nights!" % nights_to_win, &"win")
 
 
 func _on_resource_changed(_id: StringName, _new_value: int, delta: int) -> void:

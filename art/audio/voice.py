@@ -47,7 +47,7 @@ CAST = {
 }
 
 # Spoken text where the card's spelling trips the TTS up (card text stays).
-SAY = {}
+SAY = {"bark.boss.leo.1": "It's huge! Stay by the fire!"}
 
 # The kids' names are said the German way: Nela [ˈneːla], Leo [ˈleːo].
 # Keys are the English phonemes Kokoro's tokenizer gives (en-us, en-gb).

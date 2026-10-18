@@ -50,6 +50,13 @@ func _physics_process(delta: float) -> void:
 
 
 func _on_dawn_started(_day_number: int) -> void:
+	snuff()
+
+
+## Goes out: at dawn, or blown out by the Moon-Eater (feature 038).
+func snuff() -> void:
+	if _is_burning_out:
+		return
 	_is_burning_out = true
 	remove_from_group("torches")
 	var tween: Tween = create_tween()

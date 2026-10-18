@@ -4,6 +4,9 @@
                      I-vi-IV-V, 96 BPM, 16 bars.
 - music/night.ogg:   D minor drone, heartbeat drum and sparse eerie
                      bells, 72 BPM, 16 bars. Tense but not scary.
+- music/boss.ogg:    the Moon-Eater (feature 038): slow war drums under a
+                     C minor pad, a deep lament line and a ticking
+                     heartbeat, 84 BPM, 16 bars. Big and sad, not cruel.
 - ambience/day.ogg:  wind in leaves and bird chirps.
 - ambience/night.ogg: crickets and a soft wind.
 - ambience/campfire.ogg: crackle and a low roar (played 3D at the fire).
@@ -93,6 +96,50 @@ def night_music():
     return reverb(out, 0.35, 3.0, damp=2500, loop=True)
 
 
+def boss_music():
+    bpm = 84
+    beat = 60.0 / bpm
+    bars = 16
+    length = bars * 4 * beat
+    n = int(length * RATE)
+    out = np.zeros(n)
+    t = np.arange(n) / RATE
+    def cyc(f):
+        return round(f * length) / length
+    # A low C drone that swells every two bars.
+    swell = 0.65 + 0.35 * np.sin(2 * np.pi * t / length * 8)
+    out += (np.sin(2 * np.pi * cyc(midi_hz(36)) * t) + 0.5 * np.sin(2 * np.pi * cyc(midi_hz(43)) * t)) * swell * 0.2
+    chords = [[48, 51, 55], [44, 48, 51], [46, 50, 53], [43, 47, 50]]  # Cm Ab Bb G
+    for bar in range(0, bars, 2):
+        place(out, pad([midi_hz(x) for x in chords[(bar // 2) % 4]], 8 * beat + 1.5, 1.2, 1.8, 0.3, seed=40 + bar) * 0.15,
+              bar * 4 * beat, wrap=True)
+    # War drums: a heavy boom on 1, two lighter on the "and" of 2 and on 3.
+    for bar in range(bars):
+        for b, g in ((0.0, 1.0), (1.5, 0.55), (2.0, 0.7), (3.5, 0.4 if bar % 2 else 0.0)):
+            if g <= 0.0:
+                continue
+            at = (bar * 4 + b) * beat
+            boom = sine(sweep(70, 34, 0.6), 0.6) * env_perc(0.6, 0.003, 0.2)
+            skin = lowpass(noise(0.15, 700 + bar * 4 + int(b * 2)), 900) * env_perc(0.15, 0.001, 0.03)
+            place(out, soft_clip(boom * 1.4, 1.3) * 0.6 * g, at, wrap=True)
+            place(out, skin * 0.25 * g, at, wrap=True)
+    # A tick on every beat, like a big slow heart.
+    for k in range(bars * 4):
+        place(out, highpass(noise(0.03, 900 + k), 2500) * env_perc(0.03, 0.0005, 0.008) * 0.12, k * beat, wrap=True)
+    # The lament: a slow low line in bars 5-8 and 13-16.
+    line = [60, 58, 56, 55, 56, 55, 53, 55]
+    for bar in range(bars):
+        if bar % 8 < 4:
+            continue
+        for half in range(2):
+            note = line[(bar % 4) * 2 + half]
+            place(out, soft_tone(midi_hz(note - 12), beat * 2.2, 0.15, 0.8, (1.0, 0.5, 0.25, 0.1)) * 0.22,
+                  (bar * 4 + half * 2) * beat, wrap=True)
+    wind = fft_filter(noise(length, 41), 50, 380)
+    out += wind * 0.3
+    return reverb(out, 0.35, 3.2, damp=2200, loop=True)
+
+
 def chirp(seed):
     r = rng(seed)
     out = np.zeros(int(0.5 * RATE))
@@ -157,6 +204,7 @@ def campfire():
 LOOPS = {
     "music/day.ogg": (day_music, -3.0),
     "music/night.ogg": (night_music, -3.0),
+    "music/boss.ogg": (boss_music, -3.0),
     "ambience/day.ogg": (day_ambience, -6.0),
     "ambience/night.ogg": (night_ambience, -6.0),
     "ambience/campfire.ogg": (campfire, -4.0),

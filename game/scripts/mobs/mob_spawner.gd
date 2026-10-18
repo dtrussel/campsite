@@ -1,3 +1,4 @@
+class_name MobSpawner
 extends Node3D
 
 ## MobSpawner
@@ -8,6 +9,9 @@ extends Node3D
 ## imps with `get_heavy_count()` heavy mobs (Bramble Beasts, feature
 ## 018) mixed into its second half and `get_sneak_count()` thieves
 ## (Mushroom Gremlins, feature 021) in its first half.
+## Feature 038: Chapter 2's last night is the Moon-Eater with a small
+## escort, its eyes watch from the treeline the nights before, and it
+## summons imp packs through summon() (never past mob_cap).
 
 signal wave_started(night_number: int, mob_count: int)
 signal wave_ended
@@ -28,6 +32,15 @@ signal mob_spawned(mob: Node3D, definition: MobDefinition)
 @export var sneak_definition: MobDefinition
 @export var sneak_counts: PackedInt32Array = PackedInt32Array([0, 1, 1])
 @export var sneak_per_night_extra: int = 1
+## The Moon-Eater (feature 038): the last night of Chapter 2 is the boss
+## and `boss_escort` imps; from `eyes_from_night` its eyes watch from
+## the treeline. It rises at the spawn point named `boss_spawn_point`.
+@export var boss_definition: MobDefinition
+@export var boss_escort: int = 4
+@export var eyes_from_night: int = 5
+@export var boss_spawn_point: StringName = &"SpawnPointN"
+## Summons never push the mobs on the field past this.
+@export var mob_cap: int = 14
 @export var spawn_interval_seconds: float = 4.0
 @export var initial_delay_seconds: float = 2.0
 
@@ -38,6 +51,7 @@ var _remaining_to_spawn: int = 0
 var _queue: Array[MobDefinition] = []
 var _next_spawn_in: float = 0.0
 var _base_destroyed: bool = false
+var _eyes: Node3D = null
 
 
 func _ready() -> void:
@@ -85,6 +99,31 @@ func _on_night_started(day_number: int) -> void:
 	_alive_mobs.clear()
 	PlaytestLog.write("wave_started night=%d mobs=%d" % [day_number, _remaining_to_spawn])
 	wave_started.emit(day_number, _remaining_to_spawn)
+	if _eyes_night(day_number):
+		_show_eyes()
+
+
+## The night the Moon-Eater comes: Chapter 2's last.
+func is_boss_night(night: int) -> bool:
+	return boss_definition != null and GameManager.chapter() == 2 and night == GameManager.nights_to_win
+
+
+func _eyes_night(night: int) -> bool:
+	return boss_definition != null and GameManager.chapter() == 2 and night >= eyes_from_night and night < GameManager.nights_to_win
+
+
+func _show_eyes() -> void:
+	var parent: Node = get_tree().current_scene
+	if parent == null:
+		return
+	_eyes = MoonEaterEyes.new()
+	parent.add_child(_eyes)
+	_eyes.global_position = _boss_point() * 1.25 + Vector3(0, MoonEaterEyes.HEIGHT, 0)
+
+
+func _boss_point() -> Vector3:
+	var point: Marker3D = get_node_or_null(NodePath(String(boss_spawn_point))) as Marker3D
+	return point.global_position if point != null else _pick_spawn_position()
 
 
 func get_wave_size(night: int) -> int:
@@ -121,6 +160,11 @@ func _count_for(counts: PackedInt32Array, extra: int, night: int) -> int:
 ## second half, so the camp gets a few easy imps before the big one.
 func build_wave(night: int) -> Array[MobDefinition]:
 	var wave: Array[MobDefinition] = []
+	if is_boss_night(night):
+		wave.append(boss_definition)
+		for i in boss_escort:
+			wave.append(mob_definition)
+		return wave
 	for i in get_wave_size(night):
 		wave.append(mob_definition)
 	var heavies: int = get_heavy_count(night)
@@ -135,6 +179,9 @@ func build_wave(night: int) -> Array[MobDefinition]:
 
 
 func _on_dawn_started(_day_number: int) -> void:
+	if _eyes != null and is_instance_valid(_eyes):
+		_eyes.call("leave")
+	_eyes = null
 	if not _wave_active:
 		return
 	# Cleanup: free any leftover mobs at dawn so day starts fresh.
@@ -159,11 +206,30 @@ func _spawn_one(definition: MobDefinition) -> void:
 		instance.queue_free()
 		return
 	parent.add_child(mob)
-	mob.global_position = _pick_spawn_position()
+	mob.global_position = _boss_point() if definition.is_boss else _pick_spawn_position()
 	_alive_mobs.append(mob)
 	mob_spawned.emit(mob, definition)
 	if instance.has_signal("defeated"):
 		instance.defeated.connect(_on_mob_defeated)
+	if instance is BossController:
+		# Calmed: the moon is back, so no more of its escort comes.
+		(instance as BossController).calmed.connect(func(_boss: Node3D) -> void:
+			_remaining_to_spawn = 0
+			_queue.clear())
+
+
+## The Moon-Eater's summons (feature 038): up to `count` of `definition`
+## from random lanes, never past mob_cap. They count toward the wave.
+## Returns how many came.
+func summon(definition: MobDefinition, count: int) -> int:
+	if _base_destroyed:
+		return 0
+	var room: int = mob_cap - get_tree().get_nodes_in_group("mobs").size()
+	var came: int = 0
+	for i in mini(count, room):
+		_spawn_one(definition)
+		came += 1
+	return came
 
 
 func _pick_spawn_position() -> Vector3:

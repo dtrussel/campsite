@@ -157,6 +157,29 @@ func restore(delivered: int) -> void:
 	_refresh(false)
 
 
+## Loses `count` stages of light (the Moon-Eater swallowed them,
+## feature 038). Returns how many it lost.
+func lose_stages(count: int) -> int:
+	var keep: int = maxi(0, stage - count)
+	var lost: int = stage - keep
+	var total: int = 0
+	for i in keep:
+		total += costs()[i]
+	shards = total
+	_refresh(false)
+	if lost > 0:
+		PlaytestLog.write("lantern_swallowed stages=%d stage=%d" % [lost, stage])
+	return lost
+
+
+## Dims the lantern while the Moon-Eater drinks its light (0 = full
+## glow, 1 = nearly dark).
+func set_drain(fraction: float) -> void:
+	var glow: float = float(stage) / float(maxi(1, max_stage())) * (1.0 - 0.85 * clampf(fraction, 0.0, 1.0))
+	_orb_material.emission_energy_multiplier = 0.15 + glow * 1.1
+	_light.light_energy = 0.0 if stage == 0 else 0.2 + glow * 1.3
+
+
 ## For the dawn card: what the lantern needs next.
 func hint_text() -> String:
 	if is_full():

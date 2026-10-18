@@ -1,4 +1,26 @@
 # Feature 038: Decisions
 
-- **From the 2026-10 brainstorm.** The user chose story (B) and choices / meta (C), with an **adventure** tone (see `docs/design/story.md`), and asked for the roadmap first. This folder is a plan only: nothing is built yet.
+- **From the 2026-10 brainstorm.** The user chose story (B) and choices / meta (C), with an **adventure** tone (see `docs/design/story.md`), and asked for the roadmap first.
 - **The boss is never killed, only calmed,** to fit the tone: the shadows are lost things, not evil.
+- **Chapter 2's last night lasts until the Moon-Eater is calmed.** `TimeManager.hold_night` stops the clock at 0 while it stands.
+  - Calming it ends the night: the spawner sees the wave is cleared and dawn comes, so "win on boss defeat" and "win at dawn" are one path.
+  - The debug skip and Chapter 1 still win at dawn as before.
+  - Why: dawn rescuing the kids from the final boss would undercut the true ending.
+- **Phase 3, the reach.** Below 25% it walks to the Moon Lantern and drinks its light.
+  - The kids get `6 + 3 × stage` seconds (a full lantern 24 s, half 15 s).
+  - Their hits do half damage while it curls round the lantern, and the lantern burns it for 2 × stage every 1.5 s.
+  - If the time runs out, the lantern loses 2 stages, the boss heals to 45% and goes back to phase 2.
+  - With a dark lantern there is nothing to eat, so it fights on to the end.
+  - So the lantern decides how hard the ending is, but a run is never unwinnable. On paper, a level 5 party wins the reach with a full lantern, and a half lantern is tight.
+- **Numbers (tune by playing):**
+  - 800 HP, speed 0.9, a 3 s cooldown;
+  - stomp: 10 damage, a 3.2 m ring, 0.9 s windup;
+  - sweep: 7 damage, 5 m and 140°, 0.8 s windup;
+  - campfire 6 damage, buildings ×3;
+  - summons: 3 imps every 16 s, capped at 14 mobs;
+  - no loot, 120 XP.
+- **Calming it clears the field.** The other shadows fade, and any escort still to come is cancelled: the moon is back.
+- **The eyes are Chapter 2 only (nights 5–6).** There's no night-3 mini boss in Chapter 1; this answers the open question in the handoff. It could come later.
+- **The stand-in is built in code** (like the 036 lantern) with tween clips, and is about 3.6 m tall (scale 0.72). At 5 m it towered off the screen.
+- **The boss gets a HUD bar, not an overhead bar.** The rise banner says "The Moon-Eater rises!" so it doesn't just repeat the bar's title.
+- **Barks:** two triggers, both urgent, so they get through the nightfall chatter.

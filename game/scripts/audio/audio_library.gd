@@ -21,6 +21,8 @@ const MAX_VARIANTS: int = 8
 @export var pitch_jitter: float = 0.08
 @export var music_day: AudioStream = null
 @export var music_night: AudioStream = null
+## The Moon-Eater's fight (feature 038).
+@export var music_boss: AudioStream = null
 @export var ambience_day: AudioStream = null
 @export var ambience_night: AudioStream = null
 @export var ambience_campfire: AudioStream = null
