@@ -6,6 +6,7 @@
 script = ExtResource("1_def")
 id = &"moon_eater"
 display_name = "The Moon-Eater"
+description = "The loneliest lost thing of all. It swallowed the moon to keep warm."
 scene_path = "res://scenes/mobs/MoonEater.tscn"
 max_hp = 800
 move_speed = 0.75

@@ -30,6 +30,8 @@ const _PHASE_COLOR_DAWN: Color = Color(1, 0.88, 0.65)
 const _TOP_WIDTH: float = 330.0
 const _DIAL_SIZE: float = 58.0
 const _BANNER_Y: float = 104.0
+## The banner's subtitle sits this far under the ribbon's top.
+const _BANNER_SUB_GAP: float = 62.0
 ## The banner drops below the boss bar while it is up.
 const _BANNER_Y_BOSS: float = 170.0
 const _BOSS_COLOR: Color = Color(0.5, 0.36, 0.86)
@@ -50,6 +52,11 @@ var _imps_label: Label = null
 var _banner: Label = null
 var _banner_plate: PanelContainer = null
 var _banner_tween: Tween = null
+## A line under the banner: what a creature is, the first time one shows
+## up in a run (feature 046).
+var _banner_sub: Label = null
+var _banner_sub_plate: PanelContainer = null
+var _met_mobs: Dictionary = {}
 var _build_label: Label = null
 
 var _hero_portrait: HudWidgets.Portrait = null
@@ -68,6 +75,7 @@ var _boss_bar: HudWidgets.StatBar = null
 var _reach_bar: HudWidgets.StatBar = null
 var _boss: BossController = null
 var _story_card: StoryCard = null
+var _story_queue: Array = []
 var _lantern_dial: HudWidgets.LanternDial = null
 var _tray_labels: Dictionary = {}  # StringName -> Label
 var _tray_rows: Dictionary = {}    # StringName -> Control
@@ -277,7 +285,7 @@ func _build_tray(root: Control) -> void:
 			continue
 		var row: HBoxContainer = HBoxContainer.new()
 		row.add_theme_constant_override("separation", 3)
-		row.tooltip_text = "%s - %s" % [definition.display_name, definition.description]
+		row.tooltip_text = "%s - %s" % [definition.display_name, UiKit.party_text(definition.description)]
 		row.mouse_filter = Control.MOUSE_FILTER_PASS
 		var icon: TextureRect = TextureRect.new()
 		icon.texture = definition.icon
@@ -407,6 +415,17 @@ func _build_banner(root: Control) -> void:
 	_banner.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_banner.add_theme_constant_override("outline_size", 9)
 	_banner_plate.add_child(_banner)
+	_banner_sub_plate = _plate(6, 16)
+	_anchor(_banner_sub_plate, Control.PRESET_CENTER_TOP, Vector2(0, _BANNER_Y + _BANNER_SUB_GAP))
+	_banner_sub_plate.modulate.a = 0.0
+	_banner_sub_plate.visible = false
+	root.add_child(_banner_sub_plate)
+	_banner_sub = UiKit.label("", 19, UiKit.COLOR_TEXT)
+	_banner_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_banner_sub.add_theme_constant_override("outline_size", 6)
+	_banner_sub.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
+	_banner_sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_banner_sub_plate.add_child(_banner_sub)
 
 
 ## The Moon-Eater's health under the top strip (feature 038), and a thin
@@ -465,6 +484,8 @@ func _on_boss_phase(phase: int, boss: BossController) -> void:
 func _set_banner_y(y: float) -> void:
 	_banner_plate.offset_top = y
 	_banner_plate.offset_bottom = y
+	_banner_sub_plate.offset_top = y + _BANNER_SUB_GAP
+	_banner_sub_plate.offset_bottom = y + _BANNER_SUB_GAP
 
 
 ## The story card's place: down the left edge, under the companion and
@@ -475,20 +496,35 @@ func _build_story_host(root: Control) -> void:
 	_anchor(_story_host, Control.PRESET_TOP_LEFT, Vector2(12, 176))
 	root.add_child(_story_host)
 	GameManager.run_ended.connect(func(_won: bool, _reason: String) -> void:
+		_story_queue.clear()
+		_met_mobs.clear()
 		if story_card() != null:
 			story_card().dismiss())
 
 
-## Shows a story card (dawn talk, first shard), replacing any open one.
+## Shows a story card (dawn talk, first shard). A card that is still
+## talking is never cut short (feature 046): the new one waits for it
+## and null is returned.
 func show_story(beat: StoryBeat, hint: String = "") -> StoryCard:
 	if beat == null:
 		return null
-	if _story_card != null and is_instance_valid(_story_card):
-		_story_card.queue_free()
+	var open: StoryCard = story_card()
+	if open != null and not open.is_closing():
+		_story_queue.append([beat, hint])
+		return null
+	if open != null:
+		open.queue_free()
 	_story_card = StoryCard.make(beat, GameManager.hero_id, hint)
+	_story_card.dismissed.connect(_show_queued_story, CONNECT_DEFERRED)
 	_story_host.add_child(_story_card)
 	PlaytestLog.write("story_card id=%s" % beat.id)
 	return _story_card
+
+
+func _show_queued_story() -> void:
+	if not _story_queue.is_empty() and GameManager.is_playing():
+		var next: Array = _story_queue.pop_front()
+		show_story(next[0] as StoryBeat, String(next[1]))
 
 
 func story_card() -> StoryCard:
@@ -621,7 +657,7 @@ func _refresh_tray() -> void:
 		var definition: ResourceDefinition = ResourceManager.get_definition(id)
 		if definition != null:
 			var amount: String = "%d/%d" % [count, cap] if cap > 0 else str(count)
-			row.tooltip_text = "%s %s - %s" % [definition.display_name, amount, definition.description]
+			row.tooltip_text = "%s %s - %s" % [definition.display_name, amount, UiKit.party_text(definition.description)]
 
 
 func _refresh_progress(character: Node) -> void:
@@ -673,16 +709,29 @@ func _phase_duration(phase: int) -> float:
 
 # --- Events --------------------------------------------------------------------
 
-func show_banner(text: String, color: Color = UiKit.COLOR_GOLD_LIGHT) -> void:
+func show_banner(text: String, color: Color = UiKit.COLOR_GOLD_LIGHT, subtitle: String = "") -> void:
 	_banner.text = text.to_upper()
 	_banner.add_theme_color_override("font_color", color)
+	_banner_sub.text = subtitle
+	_banner_sub_plate.visible = subtitle != ""
+	_banner_sub_plate.reset_size()
 	if _banner_tween != null:
 		_banner_tween.kill()
-	_banner_plate.modulate.a = 0.0
+	_set_banner_alpha(0.0)
 	_banner_tween = create_tween()
-	_banner_tween.tween_property(_banner_plate, "modulate:a", 1.0, 0.25)
-	_banner_tween.tween_interval(_BANNER_SECONDS)
-	_banner_tween.tween_property(_banner_plate, "modulate:a", 0.0, 0.6)
+	_banner_tween.tween_method(_set_banner_alpha, 0.0, 1.0, 0.25)
+	# A subtitle needs a moment longer to read.
+	_banner_tween.tween_interval(_BANNER_SECONDS + (2.0 if subtitle != "" else 0.0))
+	_banner_tween.tween_method(_set_banner_alpha, 1.0, 0.0, 0.6)
+
+
+func banner_subtitle() -> String:
+	return _banner_sub.text
+
+
+func _set_banner_alpha(alpha: float) -> void:
+	_banner_plate.modulate.a = alpha
+	_banner_sub_plate.modulate.a = alpha
 
 
 func _on_resource_changed(id: StringName, _value: int, delta: int) -> void:
@@ -716,7 +765,7 @@ func _refresh_build_label(definition: BuildingDefinition) -> void:
 		chip.custom_minimum_size = Vector2(40, 40)
 		(chip as HudWidgets.AbilitySlot).set_state(ResourceManager.can_afford(known[i].cost))
 		(chip as HudWidgets.AbilitySlot).highlight = known[i] == definition
-		chip.tooltip_text = "%s (%d): %s" % [known[i].display_name, i + 1, known[i].description]
+		chip.tooltip_text = "%s (%d): %s" % [known[i].display_name, i + 1, UiKit.party_text(known[i].description)]
 		_build_row.add_child(chip)
 	var picture: TextureRect = TextureRect.new()
 	picture.texture = definition.icon
@@ -775,18 +824,31 @@ func _pulse_vignette(color: Color) -> void:
 
 
 ## A heavy mob gets its own warning: kids should run to their fences.
+## The first of a kind in a run also says what it is.
 func _on_mob_spawned(mob: Node3D, definition: MobDefinition) -> void:
-	if definition != null and definition.is_boss and mob is BossController:
+	if definition == null:
+		return
+	var about: String = ""
+	if not _met_mobs.has(definition.id):
+		_met_mobs[definition.id] = true
+		about = definition.description
+	if definition.is_boss and mob is BossController:
 		_show_boss(mob as BossController)
-		show_banner("%s rises!" % definition.display_name, UiKit.COLOR_MOON.lightened(0.4))
-	elif definition != null and definition.prefers_buildings:
-		show_banner("%s!" % definition.display_name, Color(0.6, 0.9, 0.35))
-	elif definition != null and definition.steals_resources:
-		show_banner("%s!" % definition.display_name, Color(0.85, 0.55, 1.0))
+		show_banner("%s rises!" % definition.display_name, UiKit.COLOR_MOON.lightened(0.4), about)
+	elif definition.prefers_buildings:
+		show_banner("%s!" % definition.display_name, Color(0.6, 0.9, 0.35), about)
+	elif definition.steals_resources:
+		show_banner("%s!" % definition.display_name, Color(0.85, 0.55, 1.0), about)
 		mob.stole.connect(func(_m: Node3D, item: StringName, amount: int) -> void:
 			show_banner("Thief! -%d %s" % [amount, _item_name(item)], Color(1.0, 0.55, 0.5)))
 		mob.escaped.connect(func(_m: Node3D, item: StringName, amount: int) -> void:
 			show_banner("It got away with %d %s!" % [amount, _item_name(item)], Color(1.0, 0.55, 0.5)))
+	elif about != "":
+		# Imps come right after the "Night" banner: let that one read first.
+		var name_text: String = "%s!" % definition.display_name
+		get_tree().create_timer(2.5, false).timeout.connect(func() -> void:
+			if GameManager.is_playing():
+				show_banner(name_text, UiKit.COLOR_MOON.lightened(0.4), about))
 
 
 func _item_name(id: StringName) -> String:

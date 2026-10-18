@@ -29,6 +29,12 @@ triggers = {
 "role": "call_response",
 "urgent": false
 },
+&"thief_escaped": {
+"cooldown": 15.0,
+"once": "",
+"role": "hero",
+"urgent": false
+},
 &"thief_caught": {
 "cooldown": 15.0,
 "once": "",
@@ -37,7 +43,7 @@ triggers = {
 },
 &"first_beast": {
 "cooldown": 0.0,
-"once": "night",
+"once": "run",
 "role": "call_response",
 "urgent": false
 },
@@ -162,7 +168,7 @@ lines = [{
 }, {
 "id": "bark.thief.leo.2",
 "speaker": "leo",
-"text": "A gremlin! Grab it!",
+"text": "It's taking it to the Hollow!",
 "trigger": "thief"
 }, {
 "id": "bark.thief.nela.1",
@@ -197,12 +203,12 @@ lines = [{
 }, {
 "id": "bark.first_beast.leo.1",
 "speaker": "leo",
-"text": "Whoa, that's a big one!",
+"text": "Whoa, a tree is walking!",
 "trigger": "first_beast"
 }, {
 "id": "bark.first_beast.leo.2",
 "speaker": "leo",
-"text": "The trees are walking!",
+"text": "That old tree woke up angry!",
 "trigger": "first_beast"
 }, {
 "id": "bark.first_beast.nela.1",
@@ -242,12 +248,12 @@ lines = [{
 }, {
 "id": "bark.sunset.leo.2",
 "speaker": "leo",
-"text": "Back to the fire!",
+"text": "Everybody back to camp!",
 "trigger": "sunset"
 }, {
 "id": "bark.sunset.nela.1",
 "speaker": "nela",
-"text": "Back to the fire!",
+"text": "It's getting dark, Leo!",
 "trigger": "sunset"
 }, {
 "id": "bark.sunset.nela.2",
@@ -287,7 +293,7 @@ lines = [{
 }, {
 "id": "bark.lantern_stage.nela.1",
 "speaker": "nela",
-"text": "Mum's lantern is waking up!",
+"text": "The moonlight's coming back!",
 "trigger": "lantern_stage"
 }, {
 "id": "bark.lantern_stage.nela.2",
@@ -297,7 +303,7 @@ lines = [{
 }, {
 "id": "bark.companion_down.leo.1",
 "speaker": "leo",
-"text": "Hang on, I'm coming!",
+"text": "Hang on, Nela! I'm coming!",
 "trigger": "companion_down"
 }, {
 "id": "bark.companion_down.leo.2",
@@ -307,7 +313,7 @@ lines = [{
 }, {
 "id": "bark.companion_down.nela.1",
 "speaker": "nela",
-"text": "Hang on, I'm coming!",
+"text": "Hang on, Leo! I'm coming!",
 "trigger": "companion_down"
 }, {
 "id": "bark.companion_down.nela.2",
@@ -347,11 +353,51 @@ lines = [{
 }, {
 "id": "bark.danger_behind.nela.1",
 "speaker": "nela",
-"text": "Behind you!",
+"text": "Leo! Behind you!",
 "trigger": "danger_behind"
 }, {
 "id": "bark.danger_behind.nela.2",
 "speaker": "nela",
 "text": "Look out, behind!",
 "trigger": "danger_behind"
+}, {
+"id": "bark.night_start.leo.3",
+"speaker": "leo",
+"text": "They just want our warm fire!",
+"trigger": "night_start"
+}, {
+"id": "bark.night_start.nela.3",
+"speaker": "nela",
+"text": "Poor cold shadows. Still no!",
+"trigger": "night_start"
+}, {
+"id": "bark.danger_behind.leo.3",
+"speaker": "leo",
+"text": "Nela, turn around!",
+"trigger": "danger_behind"
+}, {
+"id": "bark.danger_behind.nela.3",
+"speaker": "nela",
+"text": "Something's sneaking up!",
+"trigger": "danger_behind"
+}, {
+"id": "bark.thief_escaped.leo.1",
+"speaker": "leo",
+"text": "Aw, it got away!",
+"trigger": "thief_escaped"
+}, {
+"id": "bark.thief_escaped.leo.2",
+"speaker": "leo",
+"text": "Gone... into the Hollow.",
+"trigger": "thief_escaped"
+}, {
+"id": "bark.thief_escaped.nela.1",
+"speaker": "nela",
+"text": "It ran off to the Hollow!",
+"trigger": "thief_escaped"
+}, {
+"id": "bark.thief_escaped.nela.2",
+"speaker": "nela",
+"text": "Next time, mushroom!",
+"trigger": "thief_escaped"
 }]

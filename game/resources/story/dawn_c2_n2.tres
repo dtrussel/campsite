@@ -17,7 +17,7 @@ lines = [{
 }, {
 "id": "dawn.c2.n2.leo.2",
 "speaker": "nela",
-"text": "Maybe they're cold. They all crowd near the light.",
+"text": "Maybe they're cold. Mum thought so too.",
 "when": "leo"
 }, {
 "id": "dawn.c2.n2.nela.1",
@@ -27,6 +27,11 @@ lines = [{
 }, {
 "id": "dawn.c2.n2.nela.2",
 "speaker": "leo",
-"text": "Cold? They're shadows! ...Huh. Maybe.",
+"text": "Cold? They're shadows! ...Huh. Mum thought so too.",
 "when": "nela"
+}, {
+"id": "dawn.c2.n2.note",
+"speaker": "note",
+"face": "curious",
+"text": "The shadows aren't wicked. They're lost things, and cold."
 }]

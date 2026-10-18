@@ -6,9 +6,11 @@
 
 ## A. High-level pitch
 
-A 7-year-old boy must protect his family campsite from evil forest mobs by
-gathering resources, crafting tools, building defenses, assigning
-companions to tasks, and surviving increasingly dangerous nights.
+Leo (7) and his little sister Nela must protect their campsite from the
+shadows of the forest by gathering resources, crafting tools, building
+defenses, giving the companion tasks, and surviving increasingly
+dangerous nights. The shadows are not evil: they are lost things,
+cold and drawn to the light (see [`story.md`](story.md)).
 
 By day, the woods are cozy and inviting: birdsong, dappled light,
 gatherable plants and rocks. At sunset, light fades and shadows lengthen.
@@ -17,8 +19,8 @@ campfire is the heart of safety; everything is about keeping it lit and
 your family alive until dawn.
 
 The story (an adventure: mum is missing, the moon has gone dark, and the
-kids must rebuild the Moon Lantern) is planned in
-[`story.md`](story.md).
+kids must fill the old Moon Lantern again) is in [`story.md`](story.md):
+the cast, the creatures' place in it, the named places and Mum's notes.
 
 ## B. Core gameplay loop
 
@@ -96,6 +98,11 @@ the party, so Continue skips the screen.
 
 Family members and pets form a small team around the boy. Each companion
 has a clear role.
+
+> **Superseded by the story (035, 043):** the companion is the other
+> sibling. Mum is the missing parent, so there is no Parent companion,
+> and there are no pets (the dog on Mum's sheet is concept flavour). The
+> roles below are kept as the original design notes.
 
 ### Parent Companion
 
@@ -322,7 +329,7 @@ data only.
 |------------------|---------------------------------------------------------------|
 | Shadow Imp       | Small, fast, weak. Attacks structures and characters alike.   |
 | Bramble Beast    | Slow, durable. Specializes in destroying fences.              |
-| Night Crow       | Flying scout / harasser. Damages soft targets and flees.      |
+| Night Crow       | Flying scout / harasser. Damages soft targets and flees. (Not planned: no place in the story.) |
 | Mushroom Gremlin | Steals resources from the base, then runs.                    |
 
 ### Prototype subset
@@ -501,7 +508,8 @@ A successful first vertical slice means:
 
 - [ ] The player can move the boy around a small test map.
 - [ ] The map contains a campfire core.
-- [ ] The UI shows time of day, base health, and all 10 resources.
+- [ ] The UI shows time of day, base health, and all resources (6 since
+      playtest 1).
 - [ ] The player can gather at least 3 resource types
       (recommended: Wood, Stone, Berries).
 - [ ] The player can place at least one Wooden Fence.

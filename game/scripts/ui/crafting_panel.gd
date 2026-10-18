@@ -47,7 +47,7 @@ func _ready() -> void:
 		# [inputs x n] -> [result]   [make!]  (one compact row per recipe)
 		var row: HBoxContainer = HBoxContainer.new()
 		row.add_theme_constant_override("separation", 6)
-		row.tooltip_text = "%s: %s" % [recipe.display_name, recipe.description]
+		row.tooltip_text = "%s: %s" % [recipe.display_name, UiKit.party_text(recipe.description)]
 		row.mouse_filter = Control.MOUSE_FILTER_PASS
 		for key in recipe.inputs.keys():
 			var input_def: ResourceDefinition = ResourceManager.get_definition(StringName(key))

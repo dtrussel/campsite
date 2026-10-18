@@ -65,13 +65,16 @@ static func speaker_name(speaker: String) -> String:
 			return ""
 		"mum":
 			return "Mum"
+		"note":
+			return "Mum's note"
 	var hero: HeroDefinition = HeroRoster.get_hero(StringName(speaker))
 	return hero.display_name if hero != null else speaker.capitalize()
 
 
-## `face` picks one of Mum's expressions (a line's "face" key).
+## `face` picks one of Mum's expressions (a line's "face" key). Her
+## notes show her face too.
 static func speaker_portrait(speaker: String, face: String = "") -> Texture2D:
-	if speaker == "mum":
+	if speaker == "mum" or speaker == "note":
 		var path: String = MUM_PORTRAIT.replace(".png", "_%s.png" % face) if face != "" else MUM_PORTRAIT
 		if not ResourceLoader.exists(path):
 			path = MUM_PORTRAIT

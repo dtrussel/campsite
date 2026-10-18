@@ -1,15 +1,16 @@
 # Campsite (working title)
 
-> A stylized 3D base-builder / survival defense game about Leo, a 7-year-old boy,
-> protecting his family campsite from evil forest mobs that emerge at night.
+> A stylized 3D base-builder / survival defense game about Leo (7) and his
+> sister Nela, protecting their campsite from the forest's shadows at night
+> while their mum is missing and the moon has gone dark.
 
 ## Pitch
 
 By day you explore the woods, gather resources, craft tools, improve the
-campsite, and assign tasks to family members and pets. At sunset, the forest
-turns hostile: evil mobs swarm the camp and you must defend the campfire, the
-tent, your family, and yourself. Survive the night, level up, and turn a
-fragile camping trip into a magical woodland fortress.
+campsite, and give your sibling tasks. At sunset, the forest turns hostile:
+lost, cold shadows swarm toward the light and you must defend the campfire,
+the tent, each other, and the old Moon Lantern. Survive the nights, follow
+Mum's notes, and bring the moon back.
 
 ## Status
 

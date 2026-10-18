@@ -23,19 +23,24 @@ const SCREENS: Array = [
 		["Give {companion} a job: gather, guard or repair.", "{companion_portrait}"],
 		["Hurt? Press R to eat berries and heal.", "res://assets/icons/berries.png"],
 		["Keep the campfire burning all night long!", "res://assets/icons/campfire.png"],
+		["Glow Shards are bits of moonlight. Bring them to the Moon Lantern!", "res://assets/icons/glow_shards.png"],
+		["Mum left pages from her notebook. Look for them at dawn.", "res://assets/icons/tent.png"],
 	]],
 	["res://assets/ui/loading_imp.webp", [
 		["Torches slow the Shadow Imps down.", "res://assets/icons/torch.png"],
 		["Glow Lanterns zap imps that come too close.", "res://assets/icons/lantern.png"],
 		["Imps love the campfire: build fences around it!", "res://assets/icons/fence.png"],
+		["Shadow Imps aren't mean. They're lost and cold, so they crowd the light.", "res://assets/icons/portrait_imp.png"],
 	]],
 	["res://assets/ui/loading_beast.webp", [
 		["Watch the Bramble Beast's fists: step away before the SLAM!", ""],
 		["Bramble Beasts smash fences first. Reinforced Walls last longer.", "res://assets/icons/stone.png"],
+		["Bramble Beasts are old fallen trees that the dark woke up.", "res://assets/icons/tree.png"],
 	]],
 	["res://assets/ui/loading_gremlin.webp", [
 		["Build a Storage Crate so Mushroom Gremlins can't grab everything.", "res://assets/icons/crate.png"],
 		["Catch a gremlin to get your things back!", "res://assets/icons/mushrooms.png"],
+		["Gremlins run home to the Hollow with what they grab. Be quick!", "res://assets/icons/mushrooms.png"],
 	]],
 ]
 

@@ -44,6 +44,8 @@ CAST = {
     "nela": {"voice": {"af_jessica": 0.6, "af_bella": 0.4}, "speed": 0.95, "shift": 2.5, "lang": "en-us"},
     "mum": {"voice": "af_heart", "speed": 0.92, "shift": 0.0, "lang": "en-us"},
     "narrator": {"voice": "bm_fable", "speed": 0.9, "shift": 0.0, "lang": "en-gb"},
+    # Mum's notebook pages (feature 046), read in her voice, a little slower.
+    "note": {"voice": "af_heart", "speed": 0.88, "shift": 0.0, "lang": "en-us"},
 }
 
 # Spoken text where the card's spelling trips the TTS up (card text stays).

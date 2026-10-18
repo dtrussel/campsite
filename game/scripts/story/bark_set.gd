@@ -18,7 +18,8 @@ extends Resource
 ##   hero, then the companion replies).
 ## - `cooldown`: seconds before this trigger barks again.
 ## - `urgent`: skips the shared cooldown and an open story card.
-## - `once`: "night" barks once per night (day number), "" any time.
+## - `once`: "night" barks once per night (day number), "run" once per
+##   run, "" any time.
 
 const ROLES: Array[String] = ["hero", "companion", "subject", "call_response"]
 

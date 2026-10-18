@@ -6,6 +6,7 @@
 script = ExtResource("1_def")
 id = &"mushroom_gremlin"
 display_name = "Mushroom Gremlin"
+description = "It carries shiny things off to the Hollow. Catch it to get them back!"
 scene_path = "res://scenes/mobs/MushroomGremlin.tscn"
 max_hp = 8
 move_speed = 2.5

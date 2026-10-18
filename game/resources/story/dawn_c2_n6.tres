@@ -29,4 +29,9 @@ lines = [{
 "speaker": "leo",
 "text": "Then we light the lantern. All the way. Together!",
 "when": "nela"
+}, {
+"id": "dawn.c2.n6.note",
+"speaker": "note",
+"face": "proud",
+"text": "Light the lantern all the way. The big one is just lonely."
 }]

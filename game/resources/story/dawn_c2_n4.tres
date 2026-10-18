@@ -12,7 +12,7 @@ page = 1
 lines = [{
 "id": "dawn.c2.n4.leo.1",
 "speaker": "leo",
-"text": "The lantern's getting really bright now!",
+"text": "Every shard we bring makes the lantern brighter!",
 "when": "leo"
 }, {
 "id": "dawn.c2.n4.leo.2",
@@ -22,11 +22,16 @@ lines = [{
 }, {
 "id": "dawn.c2.n4.nela.1",
 "speaker": "nela",
-"text": "The lantern is brighter. The woods feel calmer.",
+"text": "Every shard makes the lantern a bit brighter.",
 "when": "nela"
 }, {
 "id": "dawn.c2.n4.nela.2",
 "speaker": "leo",
 "text": "Mum's going to be so proud of us!",
 "when": "nela"
+}, {
+"id": "dawn.c2.n4.note",
+"speaker": "note",
+"face": "smile",
+"text": "Near the old lantern, the woods breathe easier."
 }]

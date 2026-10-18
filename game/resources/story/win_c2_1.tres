@@ -14,9 +14,9 @@ painting = ExtResource("2_art")
 lines = [{
 "id": "win.c2.1.1",
 "speaker": "narrator",
-"text": "The Moon Lantern blazed, and the great shadow stopped."
+"text": "The Moon Lantern blazed, and the Moon-Eater stopped."
 }, {
 "id": "win.c2.1.2",
 "speaker": "narrator",
-"text": "It let the moon go and shrank into a warm little shadow."
+"text": "It fell into planks and stones, and the moon floated free."
 }]

@@ -13,7 +13,7 @@ extends RefCounted
 ##   NW  Pine Grove     pines, needle litter, ferns, an old giant pine
 ##   NE  Stony Pond     a pond with reeds, rocks and clay banks
 ##   SW  Woodlot        broadleaf trees, cut stumps, a woodpile
-##   SE  Berry Hollow   berry bushes, flowers, a great oak with a fairy ring
+##   SE  Fairy Ring     berry bushes, flowers, a giant old stump in a ring of toadstools
 ##
 ## Footpaths lead from the camp yard to each grove; the old road runs
 ## out south along the south lane. Positions are (x, z); north is -z,

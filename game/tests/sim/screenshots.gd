@@ -87,6 +87,17 @@ func _ready() -> void:
 	await _settle(1.5)
 	_shot("03b_dawn_card")
 	card.dismiss()
+	# Feature 046: a Chapter 2 dawn card with one of Mum's notes, and a
+	# creature's first banner saying what it is.
+	await _settle(0.8)
+	card = hud.call("show_story", StoryLibrary.first(&"dawn", 2, 2), "")
+	await _settle(1.5)
+	_shot("03b2_dawn_note")
+	if card != null:
+		card.dismiss()
+	hud.call("_on_mob_spawned", player, load("res://resources/mobs/bramble_beast.tres"))
+	await _settle(2.0)  # the banner fades in, and xvfb renders slowly
+	_shot("03f_creature_banner")
 
 	ResourceManager.add(&"wood", 9)
 	# Feature 017 items, so the tray, recipes and build chips light up.
@@ -262,6 +273,17 @@ func _ready() -> void:
 	var ending: StoryBook = StoryBook.play(StoryLibrary.find(&"win", 1), &"leo", 30)
 	await _settle(1.5)
 	_shot("09b_chapter_1_ending")
+	ending.skip()
+	await _settle(0.4)
+	# Feature 046: the true ending's golem and homecoming pages.
+	ending = StoryBook.play(StoryLibrary.find(&"win", 2), &"leo", 30)
+	await _settle(0.5)
+	ending.next()
+	await _settle(1.5)
+	_shot("09c_true_ending_golem")
+	ending.next()
+	await _settle(1.5)
+	_shot("09d_true_ending_mum")
 	ending.skip()
 	await _settle(0.4)
 	# Feature 034: a run playing Nela, with Leo as the companion.

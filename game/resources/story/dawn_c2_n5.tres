@@ -29,4 +29,9 @@ lines = [{
 "speaker": "leo",
 "text": "I saw them. I'm not scared. ...A little scared.",
 "when": "nela"
+}, {
+"id": "dawn.c2.n5.note",
+"speaker": "note",
+"face": "worried",
+"text": "Something big in the Hollow eats light to keep warm."
 }]

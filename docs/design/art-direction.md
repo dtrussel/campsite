@@ -95,7 +95,7 @@ The camp sits in a forest clearing. Four mob lanes come in along the axes as ope
 | NW | Pine Grove |
 | NE | Stony Pond |
 | SW | Woodlot |
-| SE | Berry Hollow |
+| SE | Fairy Ring |
 
 Footpaths lead to each grove, and the old road runs south.
 

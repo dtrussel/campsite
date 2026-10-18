@@ -7,7 +7,8 @@ extends Node
 ## game's events, picks who speaks (keyed by who is played), shows the
 ## line in a SpeechBubble and plays its recording, or a chirp until the
 ## recordings arrive. Cooldowns keep it from chattering: one shared gap
-## between barks, one per trigger, and once-a-night triggers. Urgent
+## between barks, one per trigger, and once-a-night or once-a-run
+## triggers. Urgent
 ## barks (hurt, knocked out, danger) skip the shared gap.
 ## Added to the gameplay scene by Main.
 
@@ -64,7 +65,10 @@ func bark(trigger: StringName, subject: Node = null) -> bool:
 	var urgent: bool = bool(tuning.get("urgent", false))
 	if clock - float(_last_trigger.get(trigger, -INF)) < float(tuning.get("cooldown", 0.0)):
 		return false
-	if String(tuning.get("once", "")) == "night" and int(_once_day.get(trigger, -1)) == TimeManager.day_number:
+	var once: String = String(tuning.get("once", ""))
+	if once == "night" and int(_once_day.get(trigger, -1)) == TimeManager.day_number:
+		return false
+	if once == "run" and _once_day.has(trigger):
 		return false
 	if not urgent and (clock - _last_any < GLOBAL_COOLDOWN or _story_open()):
 		return false
@@ -218,6 +222,8 @@ func _hook_mob(node: Node) -> void:
 		return
 	if not mob.stole.is_connected(_on_mob_stole):
 		mob.stole.connect(_on_mob_stole)
+	if not mob.escaped.is_connected(_on_mob_escaped):
+		mob.escaped.connect(_on_mob_escaped)
 	if not mob.defeated.is_connected(_on_mob_defeated):
 		mob.defeated.connect(_on_mob_defeated)
 	var boss: BossController = mob as BossController
@@ -233,6 +239,11 @@ func _on_boss_phase(_phase: int, boss: BossController) -> void:
 
 func _on_mob_stole(_mob: Node3D, _item_id: StringName, _amount: int) -> void:
 	bark(&"thief")
+
+
+## A gremlin made it back to the woods with its loot (feature 046).
+func _on_mob_escaped(_mob: Node3D, _item_id: StringName, _amount: int) -> void:
+	bark(&"thief_escaped")
 
 
 func _on_mob_defeated(mob: Node) -> void:

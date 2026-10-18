@@ -320,6 +320,29 @@ func _run_story_scenario() -> void:
 	await get_tree().process_frame
 	var card: StoryCard = _main.get_node("HUD").call("story_card")
 	_check(card != null and String(card.lines()[0]["id"]) == "shard.leo", "the first shard of a run gets its story card")
+	# Feature 046: a card still talking is never cut short, and dawn
+	# cards carry a page of Mum's notebook.
+	var hud: Node = _main.get_node("HUD")
+	_check(hud.call("show_story", StoryLibrary.first(&"dawn", 1, 2), "") == null and hud.call("story_card") == card,
+		"a dawn card waits while the shard card talks")
+	card.dismiss()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var dawn_card: StoryCard = hud.call("story_card")
+	var note: Dictionary = dawn_card.lines().back() if dawn_card != null else {}
+	_check(dawn_card != null and dawn_card != card and dawn_card.lines().size() == 3 and String(note.get("speaker", "")) == "note",
+		"then it shows: Leo, Nela, and one of Mum's notes")
+	_check(StoryLibrary.speaker_name("note") == "Mum's note"
+		and StoryLibrary.speaker_portrait("note", String(note.get("face", ""))).resource_path.ends_with("mum_curious.png"),
+		"the note shows as Mum's, with her face")
+	if dawn_card != null:
+		dawn_card.dismiss()
+	var beast_intro: MobDefinition = load("res://resources/mobs/bramble_beast.tres") as MobDefinition
+	hud.call("_on_mob_spawned", player, beast_intro)
+	_check(hud.call("banner_subtitle") == beast_intro.description and beast_intro.description != "",
+		"the first Bramble Beast of a run says what it is")
+	hud.call("_on_mob_spawned", player, beast_intro)
+	_check(hud.call("banner_subtitle") == "", "the next one only warns")
 	_check(player.call("try_feed_lantern") and lantern.stage == 1 and ResourceManager.get_count(&"glow_shards") == 0,
 		"E by the lantern hands over the shards: stage 1")
 	_check(is_equal_approx(lantern.radius(), lantern.min_radius), "stage 1 lights a %.1f m ring" % lantern.radius())
@@ -1120,6 +1143,19 @@ func _run_bark_scenario() -> void:
 		"Nela replies")
 	_check(SpeechBubble.on(companion).position.y > float(companion.get("_hp_bar").position.y),
 		"the bubble sits above the health bar")
+	# Feature 046: a gremlin that gets away, and the first beast once a run.
+	director.clock += BarkDirector.GLOBAL_COOLDOWN + 1.0
+	var runaway: Mob = _spawn_mob(load("res://resources/mobs/mushroom_gremlin.tres") as MobDefinition,
+		player.global_position + Vector3(0, 0, 14))
+	await get_tree().process_frame
+	runaway.escaped.emit(runaway, &"wood", 2)
+	_check(SpeechBubble.on(player) != null and _bark_line(SpeechBubble.on(player).text, &"thief_escaped", &"leo"),
+		"a gremlin gets away: Leo says where it went")
+	runaway.queue_free()
+	director.clock += BarkDirector.GLOBAL_COOLDOWN + 1.0
+	_check(director.bark(&"first_beast"), "the first Bramble Beast of a run gets a shout")
+	director.clock += BarkDirector.GLOBAL_COOLDOWN + 1.0
+	_check(not director.bark(&"first_beast"), "later beasts in the run do not")
 
 	# A story line keeps speaking under a bark.
 	var story_voice: AudioStream = load("res://assets/audio/sfx/chirp_nela_1.ogg")
@@ -1333,8 +1369,9 @@ func _run_boss_scenario() -> void:
 		book = get_tree().get_first_node_in_group("story_book") as StoryBook
 		if book != null:
 			break
-	_check(book != null and book.page_count() == 2, "and the true ending opens")
+	_check(book != null and book.page_count() == 3, "and the true ending opens (3 pages)")
 	if book != null:
+		book.next()
 		book.next()
 		book.next()
 		await get_tree().process_frame

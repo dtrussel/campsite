@@ -1,6 +1,6 @@
 # Feature 035: Story frame (plan)
 
-Status: **planned** (roadmap from the 2026-10 brainstorm). Rough size: **M**.
+Status: **done** (see `status.md`; text revised by 046). Rough size: **M**.
 
 ## Goal
 Give a run a beginning, a middle and an end. It follows [`docs/design/story.md`](../../docs/design/story.md): mum has gone into the Hollow Wood, the moon is dark, and the kids hold the fire.

@@ -4,8 +4,10 @@
 > features 035&ndash;042, see
 > [`docs/roadmap/roadmap.md`](../roadmap/roadmap.md). **In the game:** the
 > story frame (035: intro, dawn cards, endings, defeat lines), the
-> Moon Lantern (036), the sibling barks (037), Mum (043) and the
-> Moon-Eater (038). The rest is planned. Decided with the user
+> Moon Lantern (036), the sibling barks (037), Mum (043), the
+> Moon-Eater (038) and the story polish pass (046: Mum's notes on the
+> dawn cards, the creatures' place in the story, named places). The rest
+> is planned. Decided with the user
 > (2026-10): the missing adult is **Mum**, the boss is the **Moon-Eater**,
 > the team provides concept art and animations later (see the Art plan),
 > and the characters get **voiced lines** (see Voice).
@@ -20,7 +22,8 @@ runs. It is not a cozy story where nothing is ever wrong.
 - It is never gory, cruel or hopeless. Shadows are made of what the
   forest lost, not of evil people. Every chapter ends on hope.
 - Short sentences a 7-year-old can read, or have read to them. One
-  idea per card and at most two lines of dialogue at a time.
+  idea per card and at most two lines of dialogue at a time, plus one
+  of Mum's notes on a dawn card.
 - The art stays in the team's storybook paintings (`docs/design/art-direction.md`).
 
 ## Premise
@@ -40,15 +43,74 @@ When the light goes, the shadows come: imps, bramble beasts and thieving
 gremlins. The campfire is the only light left, and the kids have to hold
 it until mum comes home.
 
+### Three lights (keep them apart)
+
+- **The moon's light.** The Moon-Eater swallowed it. The Glow Shards are
+  bits of it.
+- **Mum's lantern**, her ranger lantern. The Moon-Eater drank its light
+  too. The kids find it cold at the edge of the trees (Chapter 1
+  ending), carry it home and hang it by the tent. In the true ending it
+  flickers back on, just before Mum comes home.
+- **The Moon Lantern**, the old stone lantern by the tent. The first
+  rangers built it long ago to keep the Hollow Wood calm. The kids fill
+  it with shards. Always call it "the Moon Lantern" (or "the lantern by
+  the tent"), never "Mum's lantern".
+
+### The creatures: lost things
+
+Everything the dark brings is something the forest lost. None of them
+is evil; each wants something.
+
+| Creature | What it is | Why it comes |
+|---|---|---|
+| **Shadow Imp** | A lost shadow: an old path, a forgotten corner. | It is cold and crowds toward light. Torches and moonlight sting it. |
+| **Bramble Beast** | A fallen tree, woken up angry by the dark. | It wrecks what people build: walls, fences, posts (the things made of its wood). |
+| **Mushroom Gremlin** | A forest collector. | It carries shiny things to the Hollow, as gifts for the Moon-Eater (the lost things in its chest). Catch it and it drops them. |
+| **Moon-Eater** | The biggest and loneliest lost thing. | It swallowed the moon to keep warm. Calmed, it becomes a small warm golem. |
+
+The shards: imps and beasts carry crumbs of the swallowed moonlight, and
+drop them when they are beaten.
+
+### Places
+
+The names the player sees (dawn cards, item text, loading tips). The map
+is `game/scripts/world/world_layout.gd`.
+
+| Place | Where | What is there |
+|---|---|---|
+| **The camp** | The clearing in the middle | Campfire, tent, the Moon Lantern, the well. |
+| **Pine Grove** | NW | Pines and an old giant pine. Wood. |
+| **Stony Pond** | NE | The pond, rocks, clay banks. Stone and clay. Mum's boot prints. |
+| **Woodcutters' Glade** | SW (the "Woodlot") | Broadleaf trees, old stumps, a woodpile. Wood. |
+| **Fairy Ring** | SE | Berry bushes round a giant old stump in a ring of toadstools. Berries. |
+| **The Old Road** | Out south | Junk the old campers left: scrap. |
+| **The Hollow** | Deep in the woods, never on the map | Where Mum went, and where the Moon-Eater lives. |
+
 ## The mystery (revealed across runs)
 
 | Layer | What the player learns | Where |
 |---|---|---|
 | 1 | The Glow Shards the shadows drop are **pieces of the moon's light**. | First shard pickup (035/036) |
-| 2 | Long ago a **Moon Lantern** stood by the camp and kept the Hollow Wood calm at night. Someone has to rebuild it. | Dawn cards, night 1&ndash;2 (035) |
-| 3 | Mum knew about the lantern: her **field-journal pages** are hidden around the woods. | Day chests, badges (041) |
-| 4 | The shadows are not evil. They are made of **everything the forest lost** (fallen trees, lost toys, forgotten paths) and they are cold, so they crowd toward light. | Journal pages (041) |
-| 5 | At the heart of the Hollow sits the **Moon-Eater**. It is the biggest, loneliest shadow. It swallowed the moon's light, and mum's lantern with it, to keep from being cold. | Chapter 2 finale (038) |
+| 2 | Long ago the first rangers built a **Moon Lantern** by the camp, and it kept the Hollow Wood calm at night. Someone has to fill it again. | Dawn cards, Chapter 1 nights 1&ndash;2 (035, 046) |
+| 3 | Mum knew about the lantern: the kids find **pages of her notebook** around the camp. | Mum's notes on the dawn cards (046); collected in a journal later (041) |
+| 4 | The shadows are not evil. They are made of **everything the forest lost** (fallen trees, lost toys, forgotten paths) and they are cold, so they crowd toward light. | Mum's notes, Chapter 2 nights 2&ndash;3 (046); creature banners and loading tips |
+| 5 | At the heart of the Hollow sits the **Moon-Eater**. It is the biggest, loneliest lost thing. It swallowed the moon's light, and drank the light of Mum's lantern, to keep from being cold. | Mum's notes, nights 5&ndash;6; Chapter 2 finale (038) |
+
+### Mum's notes (046)
+
+One page of Mum's notebook on each dawn card from Chapter 1 night 2 on,
+read in her voice (`speaker: "note"`, a Mum `face`). The kid's line
+before it says they found a page. These are the source of truth.
+
+| Dawn | Face | Note |
+|---|---|---|
+| C1 n2 | curious | The rangers' old Moon Lantern kept the Hollow calm once. |
+| C2 n1 | worried | Bits of moon in the moss. Something is breaking the light. |
+| C2 n2 | curious | The shadows aren't wicked. They're lost things, and cold. |
+| C2 n3 | surprised | Gremlins carry shiny things into the Hollow. Like gifts. |
+| C2 n4 | smile | Near the old lantern, the woods breathe easier. |
+| C2 n5 | worried | Something big in the Hollow eats light to keep warm. |
+| C2 n6 | proud | Light the lantern all the way. The big one is just lonely. |
 
 ## Run structure: chapters
 
@@ -56,16 +118,20 @@ The two run lengths become chapters of one story.
 
 ### Chapter 1: "The Dark Moon" (3 Nights)
 - **Intro:** mum leaves; "Keep the fire burning."
-- **Each dawn:** a story card. The siblings talk, they find a clue, and
-  the lantern gets one stage brighter.
+- **Each dawn:** a story card. The siblings talk and find a clue (from
+  night 2, a page of Mum's notebook). The lantern brightens only when the
+  kids bring it shards, so the cards never claim it is brighter.
 - **Ending (win):** at the last dawn the kids find **mum's lantern** at
-  the treeline. It is cold and empty. The ending is a cliffhanger:
-  "She went deeper. We have to finish the Moon Lantern."
+  the edge of the trees. It is cold: its light is gone. The ending is a
+  cliffhanger: "She went deeper. Into the Hollow." / "We'll keep her
+  lantern safe. And we'll find her."
 - Winning unlocks Chapter 2 (041).
 
 ### Chapter 2: "Into the Hollow" (7 Nights)
-- **Intro:** the kids decide to stay and finish the Moon Lantern.
-- **Dawn cards:** journal fragments and growing danger. From night 5, the
+- **Intro:** Mum's lantern hangs cold by the tent; the kids decide to
+  stay and finish the Moon Lantern. It reads right without Chapter 1.
+- **Dawn cards:** Mum's notes and growing danger: her boot prints by
+  Stony Pond lead into the Hollow (night 3). From night 5, the
   Moon-Eater's eyes appear at the treeline.
 - **Final night:** the Moon-Eater comes to the camp (038). The night
   does not end while it stands. It stomps and sweeps (the ground shows
@@ -76,16 +142,20 @@ The two run lengths become chapters of one story.
   it falls apart into a heap of planks and stones, the crescent rises
   out of the heap into a beam of moonlight and the lost things float up
   and fade. Then a small, warm golem climbs out of the rubble and curls
-  up by the fire. The moon comes back and **mum
-  walks out of the woods**. The final card shows the family by the fire.
+  up by the fire. Mum's lantern flickers back on, and **mum
+  walks out of the woods** (from the Hollow, where the boot prints
+  went). The final card shows the family by the fire. The book is three
+  pages: the Moon-Eater falls apart; the little golem ("It wasn't bad.
+  It was just cold. And lonely."); Mum comes home ("My brave ones. You
+  kept the fire burning.").
 
 ### Defeat
 A defeat is a story beat, not an error. The end screen shows a line
 for the reason:
-- The fire went out: "The dark came in... but the moon will rise again.
-  Try again?"
+- The fire went out: "The dark came in... but the moon will rise again."
 - The played hero was knocked out: "[Hero] was too tired to stand.
-  [Companion] will need you tomorrow."
+  [Companion] needs you tomorrow."
+- The end screen's Again button is the "try again".
 
 ## Cast and voice
 
@@ -93,7 +163,7 @@ for the reason:
 |---|---|---|
 | **Leo** | Brave, impulsive, jokes when scared. | "Stay behind me, Nela! ...Okay, maybe next to me." |
 | **Nela** | Clever, wry, notices things. | "Those imps only come where it's dark. Light means safe." |
-| **Mum** | In the intro and the true ending, and in her journal pages (041): calm, curious, warm, a ranger's notes. Her storybook portraits are the sheet's six expressions. | "Day 3. The moss glows where the shards fell. I think the moon is asking for help." |
+| **Mum** | In the intro and the true ending, and in her notes on the dawn cards (046): calm, curious, warm, a ranger's notes. Her storybook portraits are the sheet's six expressions. | "The shadows aren't wicked. They're lost things, and cold." |
 | **Moon-Eater** | No words. Sounds, glowing eyes, a belly full of swallowed moonlight, and one final sigh. | |
 
 Lines are keyed by **who is played**. Leo played gets Nela's replies,
@@ -110,10 +180,12 @@ adds their own lines.
   about 30.
 - Content lives in `game/resources/story/*.tres` (`StoryBeat`). A line is
   `{id, speaker, text, when, face}` (`face`: one of Mum's expressions,
-  `smile`, `curious`, `laugh`, `surprised`, `worried` or `proud`). `speaker` is `leo`, `nela`, `mum` or
-  `narrator`; the optional `when` shows the line only when that hero is
+  `smile`, `curious`, `laugh`, `surprised`, `worried` or `proud`). `speaker` is `leo`, `nela`, `mum`,
+  `narrator` or `note` (a page of Mum's notebook: shown as "Mum's note"
+  with her face, in quotes, read in her voice); the optional `when` shows the line only when that hero is
   played. Dawn cards have one pair of lines per played hero: the
-  played hero speaks first and the companion replies.
+  played hero speaks first and the companion replies. A note line has
+  no `when`, so it follows either pair.
 - Voiced lines avoid `{hero}`/`{companion}`, because a recording can't
   change its words. Write one `when` variant per hero instead (see
   `loss.hero.leo` and `loss.hero.nela`).
@@ -143,6 +215,7 @@ only, 038).
   | Nela (3) | `af_jessica` + `af_bella` | 0.95, deliberate | +2.5 semitones | ~245 Hz |
   | Mum | `af_heart`, warm | 0.92 | none | ~205 Hz |
   | Narrator | `bm_fable`, a British storyteller | 0.9 | none | ~135 Hz |
+  | Mum's notes | `af_heart`, as Mum | 0.88, a little slower | none | ~200 Hz |
 
   The names are said the German way: Nela [ˈneːla] ("NAY-lah"), Leo
   [ˈleːo] ("LAY-oh"); `NAMES` in `voice.py` swaps them into the
@@ -161,14 +234,19 @@ Short lines over a sibling's head while you play, in
 `game/resources/barks/barks.tres` (`BarkSet`). A line is
 `{id, trigger, speaker, text, when}` and the set tunes each trigger:
 who speaks (`hero`, `companion`, `subject` or `call_response`), its
-cooldown, `urgent`, and `once: "night"`.
+cooldown, `urgent`, and `once` (`"night"`, or `"run"`: `first_beast`
+barks only for the first beast of a run).
 
-- Triggers: `low_hp`, `thief`, `thief_caught`, `first_beast`, `level_up`,
+- Triggers: `low_hp`, `thief`, `thief_caught`, `thief_escaped` (a
+  gremlin got home with its loot, 046), `first_beast`, `level_up`,
   `sunset`, `night_start`, `lantern_stage`, `companion_down`,
   `companion_up`, `danger_behind` (the companion's "Behind you!"), and
   the Moon-Eater's `boss` (it rises) and `boss_lantern` (it reaches for
   the lantern).
   Dawn has no bark, because every dawn already has its story card.
+- The barks carry the lore too: gremlins run "to the Hollow", the beast
+  is "that old tree", imps "just want our warm fire". The two heroes
+  never share a line.
 - At least two lines per hero for every trigger, at most 30 characters,
   and no placeholders (write one line per hero). `tools/check.sh` fails
   anything else.
@@ -179,7 +257,9 @@ cooldown, `urgent`, and `once: "night"`.
 ## Art plan
 
 - **For now, placeholders.** Story cards reuse the existing loading-screen
-  paintings, and new models (Moon Lantern, Moon-Eater) start as
+  paintings, picked per page to fit the words (dusk for the dark moon,
+  the moonlit woods for Mum walking in, the beast for the shadows and the
+  golem, the kids for the homecoming), and new models (Moon Lantern, Moon-Eater) start as
   code-built stand-ins in the 031 style. The Moon-Eater is now a baked
   model after its character sheet (below), with tween clips
   (`moon_eater_visual.gd`).

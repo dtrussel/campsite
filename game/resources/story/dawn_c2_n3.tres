@@ -12,21 +12,26 @@ page = 1
 lines = [{
 "id": "dawn.c2.n3.leo.1",
 "speaker": "leo",
-"text": "I found Mum's boot print by the stream!",
+"text": "I found Mum's boot prints by the pond!",
 "when": "leo"
 }, {
 "id": "dawn.c2.n3.leo.2",
 "speaker": "nela",
-"text": "It points to the Hollow. She went that way.",
+"text": "They go into the Hollow. She went that way.",
 "when": "leo"
 }, {
 "id": "dawn.c2.n3.nela.1",
 "speaker": "nela",
-"text": "Mum's boot prints. They lead into the Hollow.",
+"text": "Mum's boot prints, by the pond. They go into the Hollow.",
 "when": "nela"
 }, {
 "id": "dawn.c2.n3.nela.2",
 "speaker": "leo",
 "text": "Then that's where we go. Later. In daylight.",
 "when": "nela"
+}, {
+"id": "dawn.c2.n3.note",
+"speaker": "note",
+"face": "surprised",
+"text": "Gremlins carry shiny things into the Hollow. Like gifts."
 }]

@@ -271,7 +271,7 @@ func _validate_story() -> void:
 			if not StoryBeat.SPEAKERS.has(String(line.get("speaker", ""))) and not hero_ids.has(String(line.get("speaker", ""))):
 				_fail("%s line %s has unknown speaker '%s'" % [beat.resource_path, line_id, line.get("speaker", "")])
 			var face: String = String(line.get("face", ""))
-			if face != "" and (String(line.get("speaker", "")) != "mum" or not StoryLibrary.MUM_FACES.has(face)):
+			if face != "" and (not String(line.get("speaker", "")) in ["mum", "note"] or not StoryLibrary.MUM_FACES.has(face)):
 				_fail("%s line %s has face '%s' (only Mum's lines, one of %s)" % [beat.resource_path, line_id, face, StoryLibrary.MUM_FACES])
 			var when: String = String(line.get("when", ""))
 			if when != "" and not hero_ids.has(when):
@@ -324,7 +324,7 @@ func _validate_barks(line_ids: Dictionary, hero_ids: Array[String]) -> void:
 		var tuning: Dictionary = barks.triggers[trigger] as Dictionary
 		if not BarkSet.ROLES.has(String(tuning.get("role", ""))):
 			_fail("bark trigger '%s' has unknown role '%s'" % [trigger, tuning.get("role", "")])
-		if not String(tuning.get("once", "")) in ["", "night"]:
+		if not String(tuning.get("once", "")) in ["", "night", "run"]:
 			_fail("bark trigger '%s' has unknown once '%s'" % [trigger, tuning.get("once", "")])
 		for hero_id in hero_ids:
 			for played in hero_ids:
