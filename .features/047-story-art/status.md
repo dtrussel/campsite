@@ -13,7 +13,8 @@
   - Leo's six and Nela's smile, curious and proud are cut from the storybook paintings.
 - **Mum's notebook:**
   - a blank page and seven sketches, made by `art/ui/notebook_art.py` from the team's paintings and sheets;
-  - each note on a dawn card shows its sketch beside it.
+  - each note on a dawn card shows its sketch beside it;
+  - redone as cut-outs on a taped notebook scrap, with insets and pencil marks; shown larger on the card (2.4× the portrait).
 - **Moon Lantern:** a model after its sheet. Shards fill its glass, the core glows, and the crescent glows at the top stage.
 - **Little golem:** a model after its sheet. It climbs out of the Moon-Eater's heap, curls up by the fire, and sits by the title fire once Mum is home.
 - **Checks:** `tools/check.sh` passes (validate and smoke, including the 047 checks).

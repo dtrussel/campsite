@@ -22,6 +22,10 @@
   - Leo's faces and three of Nela's are cut from the paintings, where the kids already appear in the style.
   - The notebook sketches are crops of the paintings and sheets, turned into pencil and watercolour by a script.
   - This keeps everything on model without inventing a new style. Painted versions replace them file by file.
+- **The sketches were redone as cut-outs on a notebook scrap.**
+  - The first pass filtered whole crops, so dark sources stayed dark, backgrounds came along, and the card showed blobs.
+  - Now each subject is keyed out of its sheet's flat background, so paper shows round it, and it is redrawn as pencil and wash on a taped, torn scrap that reads on the dark card.
+  - Mum's marks are pencil only, without words (the user's call): nothing to translate, and no repeat of the note.
 - **A lifted page shows the whole painting, a little smaller and higher.**
   - The painting can't move up without losing its top, and the moon sits there.
   - Under and beside it is the same painting, blurred and darkened towards the bottom, behind a soft seam; the text band hides most of it.
