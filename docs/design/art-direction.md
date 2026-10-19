@@ -84,10 +84,14 @@ An unfinished building must never read as a finished one.
   glass lamp, a stepped stone roof and a pointed finial. Moss and ivy grow on
   the tops and joints. Its light is moon-blue: shards inside the glass, a
   soft core, and the crescent glowing warm gold at the top stage.
-- **Little golem:** knee-high and chibi, in the Moon-Eater's materials. A
-  round plank face under a shaggy shingle cap, big amber eyes, a sprout and
-  stick pegs on top, a roped plank barrel body over round stones, and a warm
-  crescent window. It is the only warm glow of its own by the fire.
+- **Little golem:** knee-high and chibi, in warmer versions of the
+  Moon-Eater's materials, with a head 0.42 of its height. It has a rounded face
+  of upright planks with tall, deep-set amber eyes and a small smile, under a
+  shaggy shingle bob with a round plank-slice ear on each side, and stick
+  pegs and a sprout on top. Its shield-shaped plank trunk has a big amber
+  window with a pale gold crescent. Chunky arms of stones and planks hang
+  to its hips, and its legs are stacked stones. It is the only warm glow of
+  its own by the fire.
 
 ## Mum (feature 043)
 

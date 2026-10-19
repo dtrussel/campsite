@@ -610,32 +610,33 @@ FACE_EYES = (
 FACE_Z = 0.42
 
 
-def carve_eyes(mask):
+def carve_eyes(mask, eyes=FACE_EYES, front_z=FACE_Z - 0.03, depth=0.11, sink=0.02, ridge_depth=0.035):
     """Carves the eye holes into the joined face planks (head-local Godot
     axes): an almond bowl per eye, a soot-dark cavity, a raised brow
     ridge above it and a darker lid line, so the eyes sit deep in the
-    wood like the sheet's."""
+    wood like the sheet's. `eyes` are (x, y, half-width, half-height,
+    tilt); only vertices in front of `front_z` are carved. The little
+    golem reuses it at its own scale."""
     mesh = mask.data
     attr = mesh.color_attributes.get("Col")
-    depth = 0.11
     weights = []
     for v in mesh.vertices:
         x, y, z = v.co.x, v.co.z, -v.co.y
         best, ridge = 0.0, 0.0
-        for cx, cy, rx, ry, tilt in FACE_EYES:
+        for cx, cy, rx, ry, tilt in eyes:
             dx, dy = x - cx, y - cy
             ca, sa = math.cos(tilt), math.sin(tilt)
             u, w = (dx * ca + dy * sa) / rx, (-dx * sa + dy * ca) / ry
             e = u * u + w * w
-            front = z > FACE_Z - 0.03
+            front = z > front_z
             if front and e < 1.0:
                 best = max(best, 1.0 - e)
             elif front and e < 2.2 and w > 0.2:
                 ridge = max(ridge, (1.0 - abs(e - 1.5) / 0.7) * min(1.0, w))
         if best > 0:
-            v.co.y += depth * math.sqrt(best) + 0.02
+            v.co.y += depth * math.sqrt(best) + sink
         if ridge > 0:
-            v.co.y -= 0.035 * ridge
+            v.co.y -= ridge_depth * ridge
         weights.append((best, ridge))
     soot = common.srgb(CORE)
     ember = common.srgb((0.45, 0.2, 0.08))

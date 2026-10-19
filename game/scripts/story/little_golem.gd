@@ -15,7 +15,8 @@ extends Node3D
 
 const MODEL: PackedScene = preload("res://assets/custom/little_golem.glb")
 const EYE_COLOR: Color = Color(1.0, 0.62, 0.22)
-const WINDOW_COLOR: Color = Color(1.0, 0.7, 0.32)
+const WINDOW_COLOR: Color = Color(1.0, 0.56, 0.2)
+const MOON_COLOR: Color = Color(1.0, 0.9, 0.62)
 
 var curled: bool = false
 
@@ -37,7 +38,8 @@ func _ready() -> void:
 	_arm_r = model.find_child("ArmR", true, false) as Node3D
 	Stylize.apply(model, "hero")
 	_glow(model, "Head_Eyes", EYE_COLOR, 2.4)
-	_glow(model, "Body_Window", WINDOW_COLOR, 2.0)
+	_glow(model, "Body_Window", WINDOW_COLOR, 1.4)
+	_glow(model, "Body_Moon", MOON_COLOR, 2.6)
 	var warm: OmniLight3D = OmniLight3D.new()
 	warm.light_color = Color(1.0, 0.65, 0.35)
 	warm.light_energy = 0.6
@@ -63,16 +65,18 @@ func _process(delta: float) -> void:
 func curl_up(seconds: float = 0.8) -> void:
 	curled = true
 	_head_rest = 0.35
-	var arms: Vector3 = Vector3(-0.9, 0, 0)
+	# Forward and in, so the long arms hug its knees.
+	var arm_l: Vector3 = Vector3(-0.75, 0, 0.45)
+	var arm_r: Vector3 = Vector3(-0.75, 0, -0.45)
 	if seconds <= 0.0:
 		scale = Vector3(scale.x * 1.05, scale.y * 0.85, scale.z * 1.05)
-		_arm_l.rotation = arms
-		_arm_r.rotation = arms
+		_arm_l.rotation = arm_l
+		_arm_r.rotation = arm_r
 		return
 	var tween: Tween = create_tween().set_parallel()
 	tween.tween_property(self, "scale", Vector3(scale.x * 1.05, scale.y * 0.85, scale.z * 1.05), seconds)
-	tween.tween_property(_arm_l, "rotation", arms, seconds)
-	tween.tween_property(_arm_r, "rotation", arms, seconds)
+	tween.tween_property(_arm_l, "rotation", arm_l, seconds)
+	tween.tween_property(_arm_r, "rotation", arm_r, seconds)
 
 
 func _glow(model: Node3D, part: String, color: Color, energy: float) -> void:
