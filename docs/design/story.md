@@ -272,14 +272,13 @@ barks only for the first beast of a run).
   head can replace any of them later.
 - **Mum's notebook (047):** a blank journal page and a sketch for each of
   her seven notes, shown beside the note on the dawn card (`sketch` on the
-  line). `art/ui/notebook_art.py` cuts each subject out of the team's
-  sheets or paintings and redraws it on a torn, taped scrap of the
-  notebook: pencil lines and hatching, a loose watercolour wash, a
-  close-up inset where it helps (the lantern's crescent, the lost things in
-  the Moon-Eater's chest), and Mum's pencil marks: arrows, a size bar,
-  sparkles, a snowflake for the cold imp, a '?'. There are no words, so
-  nothing in a sketch needs translating and none repeats the note. The 041
-  journal can use the same page and sketches.
+  line). The sketches are the team's painted pages, ink and watercolour
+  on cream paper (`art/ui/source/notebook/`): the rangers round the old
+  lantern, shards in the moss, the imp and the stump and log it was made
+  from, a gremlin with a spoon and a button, a lantern glowing in the
+  woods, eyes in the Hollow, and the Moon-Eater alone with its lost things.
+  `art/ui/notebook_art.py` tidies their edges and pins each to the card
+  with tape. The 041 journal can use the same page and sketches.
 - **Lifted pages:** where the text band covered a face (the dark moon, the
   shadows, the lantern by the tent) or the found lantern, `story_art.py`
   raises the painting a little over a soft, blurred extension of itself.
