@@ -539,6 +539,8 @@ func _try_place_torch() -> void:
 	var torch: Node3D = TORCH_SCENE.instantiate() as Node3D
 	get_tree().current_scene.add_child(torch)
 	torch.global_position = global_position + get_facing() * 1.0
+	if torch.has_method("kindle"):
+		torch.call("kindle", self)
 	Fx.burst(&"dust", torch.global_position)
 	GameManager.record(&"torches_placed")
 	PlaytestLog.write("torch_placed day=%d phase=%s" % [TimeManager.day_number, TimeManager.get_phase_name()])
@@ -551,7 +553,7 @@ func _try_eat_berries() -> void:
 		return
 	var amount: int = heal_per_meal
 	if ResourceManager.spend(SNACK_ITEM_ID, 1):
-		amount = heal_per_snack
+		amount = roundi(heal_per_snack * PerkManager.multiplier(self, &"snack_heal"))
 	elif not ResourceManager.spend(BERRY_ITEM_ID, BERRIES_PER_MEAL):
 		Fx.icon_popup(self, Fx.icon("berries"), "", Color.WHITE, true)
 		return

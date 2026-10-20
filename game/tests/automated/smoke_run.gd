@@ -48,6 +48,7 @@ func _ready() -> void:
 	await _run_boss_scenario()
 	await _run_perk_01_scenario()
 	await _run_perk_02_scenario()
+	await _run_perk_03_scenario()
 	await _run_perk_06_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
@@ -506,8 +507,10 @@ func _check_feature_017(player: Node3D, companion: Node3D, fence: Building) -> v
 	player.take_damage(40)
 	var hp: int = player.current_hp
 	player.call("_try_eat_berries")
-	_check(player.current_hp == hp + int(player.heal_per_snack) and ResourceManager.get_count(&"snack") == 0,
-		"ate the snack (+%d HP)" % player.heal_per_snack)
+	# A level-up earlier in the run may have dealt Berry Belly (ticket 03).
+	var snack_heal: int = roundi(player.heal_per_snack * PerkManager.multiplier(player, &"snack_heal"))
+	_check(player.current_hp == mini(player.max_hp, hp + snack_heal) and ResourceManager.get_count(&"snack") == 0,
+		"ate the snack (+%d HP)" % snack_heal)
 
 	# Snap trap: holds and hurts the first imp, uses a charge.
 	var trap: SnapTrap = (load("res://scenes/buildings/SnapTrap.tscn") as PackedScene).instantiate() as SnapTrap
@@ -1423,6 +1426,12 @@ func _run_perk_01_scenario() -> void:
 	_check(is_equal_approx(base_seconds, tree_node.gather_time_seconds) and PerkManager.perks_of(player).is_empty(),
 		"no perks at run start (gather %.1f s)" % base_seconds)
 
+	# More cards than fit in a deal: seed one that has Quick Hands in it.
+	for deal_seed in range(256):
+		PerkManager.rng.seed = deal_seed
+		if PerkManager.offer(player).any(func(p: PerkDefinition) -> bool: return p.id == &"quick_hands"):
+			PerkManager.rng.seed = deal_seed
+			break
 	ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"test")
 	var picker: PerkPicker = PerkManager.picker()
 	_check(ProgressionManager.get_level(player) == 2 and picker != null, "reaching level 2 opens the perk picker")
@@ -1590,6 +1599,105 @@ func _run_perk_02_scenario() -> void:
 		and not PerkManager.is_picking(), "a save from before perks loads with no perks")
 
 
+## Perk cards 03: Ember Heart (torch life and radius), Berry Belly (snack
+## healing) and Builder's Knack (Wood cost, in the build menu too).
+func _run_perk_03_scenario() -> void:
+	print("smoke: --- perk 03 scenario ---")
+	await _start_fresh_run()
+	var player: Node3D = get_tree().get_first_node_in_group("player") as Node3D
+	for id in [&"ember_heart", &"berry_belly", &"builders_knack"]:
+		var perk: PerkDefinition = PerkManager.get_definition(id)
+		_check(perk != null and perk.pool == &"shared" and not PerkManager.has(player, id), "%s is a shared card, not yet held" % id)
+
+	# Ember Heart: a torch planted after it burns one more dawn, wider.
+	ResourceManager.add(&"torch", 2)
+	var plain: Node3D = _plant_torch(player)
+	_check(PerkManager.take(player, &"ember_heart"), "took Ember Heart")
+	var ember: Node3D = _plant_torch(player)
+	if plain == null or ember == null:
+		_check(false, "planted two torches")
+		return
+	var factor: float = PerkManager.get_definition(&"ember_heart").value
+	var base_radius: float = float(plain.get("radius"))
+	var plain_fire: Node = plain.get_node("Fire")
+	var ember_fire: Node = ember.get_node("Fire")
+	var ember_light: OmniLight3D = ember_fire.get("_light") as OmniLight3D
+	_check(is_equal_approx(float(ember.get("radius")), base_radius * factor),
+		"Ember Heart: torch radius %.1f -> %.1f m" % [base_radius, float(ember.get("radius"))])
+	_check(is_equal_approx((ember.get_node("Radius") as Node3D).scale.x, factor * (plain.get_node("Radius") as Node3D).scale.x),
+		"Ember Heart: the torch's ring grows with the radius")
+	_check(is_equal_approx(float(ember_fire.get("light_range")), float(plain_fire.get("light_range")) * factor)
+		and ember_light != null and is_equal_approx(ember_light.omni_range, float(ember_fire.get("light_range"))),
+		"Ember Heart: the torch's light reaches %.1f m" % float(ember_fire.get("light_range")))
+	var past_edge: Vector3 = Vector3(base_radius + 0.5, 0, 0)
+	_check(ember.call("affects", ember.global_position + past_edge) and not plain.call("affects", plain.global_position + past_edge),
+		"Ember Heart: the torch reaches imps past the old radius")
+	plain.call("_on_dawn_started", TimeManager.day_number + 1)
+	ember.call("_on_dawn_started", TimeManager.day_number + 1)
+	_check(not plain.call("affects", plain.global_position) and ember.call("affects", ember.global_position),
+		"Ember Heart: the torch outlasts the first dawn")
+	ember.call("_on_dawn_started", TimeManager.day_number + 2)
+	_check(not ember.call("affects", ember.global_position), "Ember Heart: the torch goes out at the second dawn")
+
+	# Berry Belly: a Berry Snack heals 50% more.
+	player.set("max_hp", 500)
+	player.set("current_hp", 100)
+	ResourceManager.add(&"snack", 2)
+	player.call("_try_eat_berries")
+	var plain_heal: int = int(player.get("current_hp")) - 100
+	_check(PerkManager.take(player, &"berry_belly"), "took Berry Belly")
+	player.set("current_hp", 100)
+	player.call("_try_eat_berries")
+	var belly_heal: int = int(player.get("current_hp")) - 100
+	_check(plain_heal == int(player.get("heal_per_snack")) and belly_heal == roundi(plain_heal * 1.5),
+		"Berry Belly: a snack heals %d HP, not %d" % [belly_heal, plain_heal])
+
+	# Builder's Knack: 1 Wood less, never below 0, everywhere the cost shows.
+	var fence: BuildingDefinition = BuildManager.get_definition(&"wooden_fence")
+	var full_wood: int = int(fence.cost[&"wood"])
+	_check(int(BuildManager.cost_of(fence).get(&"wood", 0)) == full_wood, "a fence costs %d Wood without the perk" % full_wood)
+	_check(PerkManager.take(player, &"builders_knack"), "took Builder's Knack")
+	_check(int(BuildManager.cost_of(fence).get(&"wood", 0)) == full_wood - 1, "Builder's Knack: a fence costs %d Wood" % (full_wood - 1))
+	var cheap: BuildingDefinition = BuildingDefinition.new()
+	cheap.cost = {&"wood": 1, &"stone": 2}
+	var cheap_cost: Dictionary = BuildManager.cost_of(cheap)
+	_check(not cheap_cost.has(&"wood") and int(cheap_cost.get(&"stone", 0)) == 2 and int(cheap.cost[&"wood"]) == 1,
+		"Builder's Knack: a 1-Wood cost drops to nothing, never below 0")
+	ResourceManager.add(&"wood", full_wood - 1 - ResourceManager.get_count(&"wood"))
+	_check(ResourceManager.can_afford(BuildManager.cost_of(fence)) and not ResourceManager.can_afford(fence.cost),
+		"Builder's Knack: %d Wood is enough for a fence" % (full_wood - 1))
+	_check(BuildManager.enter_build_mode(fence), "build mode with the fence")
+	await get_tree().process_frame
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	var shown: Array[String] = []
+	for row in (hud.get("_build_row") as Node).get_children():
+		if row is HBoxContainer and not row.is_queued_for_deletion():
+			for label in row.find_children("*", "Label", true, false):
+				shown.append((label as Label).text)
+	_check(shown == ["%d" % (full_wood - 1)], "Builder's Knack: the build menu shows %s Wood" % ", ".join(shown))
+	BuildManager.set("_is_valid", true)
+	var blueprints_before: int = get_tree().get_nodes_in_group(Building.BLUEPRINT_GROUP).size()
+	BuildManager.call("_try_confirm")
+	var placed: Array[Node] = get_tree().get_nodes_in_group(Building.BLUEPRINT_GROUP)
+	_check(placed.size() == blueprints_before + 1 and ResourceManager.get_count(&"wood") == 0,
+		"Builder's Knack: placing a fence spends %d Wood" % (full_wood - 1))
+	BuildManager.exit_build_mode()
+	if placed.size() > blueprints_before:
+		_check(BuildManager.remove_blueprint(placed[placed.size() - 1] as Building) and ResourceManager.get_count(&"wood") == full_wood - 1,
+			"Builder's Knack: taking it back refunds the %d Wood paid" % (full_wood - 1))
+
+
+## Plants a torch with the hero's Q action and returns it.
+func _plant_torch(player: Node3D) -> Node3D:
+	var before: Array[Node] = get_tree().get_nodes_in_group("torches")
+	player.call("_try_place_torch")
+	for node in get_tree().get_nodes_in_group("torches"):
+		if not before.has(node):
+			player.global_position += Vector3(0, 0, 2.0)
+			return node as Node3D
+	return null
+
+
 func _clear_mobs_except(keep: Node) -> void:
 	for node in get_tree().get_nodes_in_group("mobs"):
 		if node != keep:
@@ -1617,6 +1725,9 @@ func _start_fresh_run() -> void:
 	# Level-ups take the first perk card at once, so the picker never
 	# slows a scenario down. The perk scenarios turn it back on.
 	PerkManager.auto_pick_seconds = 0.0
+	# A fixed deal, so the cards taken (and their effects) are the same
+	# every run. Scenarios that need a particular deal reseed after this.
+	PerkManager.rng.seed = 1
 	if _main != null:
 		# Wait until the old camp is really gone: resuming from a physics-
 		# frame timer, one process frame can still run before it is freed.
