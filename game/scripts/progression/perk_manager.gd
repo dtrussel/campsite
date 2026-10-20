@@ -34,6 +34,9 @@ var _picker: PerkPicker = null
 var _picker_character: Node = null
 ## Level-ups that came while the picker was open, per character.
 var _pending: Dictionary = {}  # Node -> int
+## Seconds of unpaused, time-scaled play: the clock HeroHits stamps
+## hits with (Twin Strike's "recently").
+var clock: float = 0.0
 
 
 func _ready() -> void:
@@ -44,6 +47,10 @@ func _ready() -> void:
 			_definitions.append(perk)
 	_definitions.sort_custom(func(a: PerkDefinition, b: PerkDefinition) -> bool: return String(a.id) < String(b.id))
 	ProgressionManager.level_up.connect(_on_level_up)
+
+
+func _process(delta: float) -> void:
+	clock += delta
 
 
 # --- Definitions ---------------------------------------------------------------
@@ -220,6 +227,7 @@ func _on_picker_closed(perk: PerkDefinition, character: Node) -> void:
 func _on_level_up(character: Node, _new_level: int) -> void:
 	if ProgressionManager.is_restoring or character == null:
 		return
+	HeroHits.cheer_up(character)  # before this level's card is taken
 	if character.is_in_group("player"):
 		open_picker(character)
 	elif character.is_in_group("companions"):

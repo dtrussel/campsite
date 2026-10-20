@@ -51,6 +51,7 @@ func _ready() -> void:
 	await _run_perk_03_scenario()
 	await _run_perk_06_scenario()
 	await _run_perk_04_scenario()
+	await _run_perk_05_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	_finish()
@@ -1919,3 +1920,66 @@ func _finish() -> void:
 	else:
 		printerr("smoke: FAILED (%d)" % _failures)
 		get_tree().quit(1)
+
+
+## Perk cards 05: the sibling cards work whichever hero is the player.
+## Twin Strike hits harder only on a mob the other hero hit within
+## HeroHits.TWIN_STRIKE_SECONDS; Cheer Up's level-ups heal the other hero.
+func _run_perk_05_scenario() -> void:
+	print("smoke: --- perk 05 scenario ---")
+	for hero_id in [&"leo", &"nela"]:
+		GameManager.set_party(hero_id)
+		await _start_fresh_run()
+		var player: Node3D = get_tree().get_first_node_in_group("player")
+		var companion: Node3D = get_tree().get_first_node_in_group("companions")
+		companion.set_physics_process(false)
+		for building in get_tree().current_scene.find_children("*", "Building", true, false):
+			building.set_physics_process(false)
+		_check(HeroHits.other_hero(player) == companion and HeroHits.other_hero(companion) == player,
+			"party %s: each hero's other hero is their sibling" % hero_id)
+		for who in [player, companion]:
+			await _check_perk_05_twin_strike(who, HeroHits.other_hero(who))
+		for who in [player, companion]:
+			_check_perk_05_cheer_up(who, HeroHits.other_hero(who))
+	GameManager.set_party(&"leo")
+
+
+func _check_perk_05_twin_strike(hero: Node3D, other: Node3D) -> void:
+	var role: String = "player" if hero.is_in_group("player") else "companion"
+	var spot: Vector3 = _campfire().global_position + Vector3(9, 0, 0)
+	var beast_def: MobDefinition = load("res://resources/mobs/bramble_beast.tres") as MobDefinition
+	var mob: Mob = _spawn_mob(beast_def, spot)
+	var lone: Mob = _spawn_mob(beast_def, spot + Vector3(0, 0, 3))
+	mob.set_physics_process(false)
+	lone.set_physics_process(false)
+	await get_tree().process_frame
+	PerkManager.take(hero, &"twin_strike")
+	var hits: Array[int] = []
+	hits.append(HeroHits.strike(hero, lone, 4))  # nobody else on it
+	hits.append(HeroHits.strike(hero, lone, 4))  # only its own hits
+	HeroHits.strike(other, mob, 1)
+	hits.append(HeroHits.strike(hero, mob, 4))  # the other hero just hit it
+	await _wait(HeroHits.TWIN_STRIKE_SECONDS + 0.5)
+	hits.append(HeroHits.strike(hero, mob, 4))  # too long ago
+	_check(hits == [4, 4, 6, 4], "%s, Twin Strike: +50%% only on a mob the other hero just hit (%s)" % [role, hits])
+	PerkManager.restore(hero, [])
+	await _perk_04_clear_mobs()
+
+
+func _check_perk_05_cheer_up(hero: Node3D, other: Node3D) -> void:
+	var role: String = "player" if hero.is_in_group("player") else "companion"
+	PerkManager.restore(hero, [])
+	PerkManager.restore(other, [])
+	other.set("current_hp", 10)
+	ProgressionManager.award_xp(hero, ProgressionManager.get_xp_to_next_level(hero), &"test")
+	var without: int = int(other.get("current_hp"))
+	PerkManager.restore(hero, [&"cheer_up"])
+	PerkManager.restore(other, [])
+	ProgressionManager.award_xp(hero, ProgressionManager.get_xp_to_next_level(hero), &"test")
+	var with_perk: int = int(other.get("current_hp"))
+	var share: int = HeroHits.cheer_up_heal(other)
+	_check(without == 10 and share > 0 and with_perk == 10 + share,
+		"%s, Cheer Up: a level-up heals the other hero (%d -> %d, +%d)" % [role, without, with_perk, share])
+	other.set("current_hp", int(other.get("max_hp")))
+	PerkManager.restore(hero, [])
+	PerkManager.restore(other, [])

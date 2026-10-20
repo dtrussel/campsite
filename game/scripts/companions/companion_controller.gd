@@ -194,6 +194,14 @@ func apply_signature() -> void:
 	Fx.burst(&"level_up", global_position)
 
 
+## Heals `amount` HP, up to max (Cheer Up). Not while knocked out.
+func heal(amount: int) -> void:
+	if amount <= 0 or is_knocked_out or current_hp >= max_hp:
+		return
+	current_hp = mini(max_hp, current_hp + amount)
+	health_changed.emit(current_hp, max_hp)
+
+
 ## A bandage: +25 HP, or wakes the companion up (with 25 HP) when
 ## knocked out. False when they do not need one.
 func apply_bandage() -> bool:

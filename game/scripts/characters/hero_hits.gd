@@ -15,17 +15,40 @@ extends RefCounted
 ## Every melee swing, pebble and pebble bounce deals its damage through
 ## strike(), and so through damage_factor(): the one place a per-target
 ## damage multiplier goes (Twin Strike, ticket 05).
+##
+## The sibling cards (ticket 05) need "the other hero": the companion for
+## the player, the player for the companion (other_hero()). "A mob the
+## other hero is hitting" means one the other hero struck within
+## TWIN_STRIKE_SECONDS of game time. strike() stamps each hero hit on the
+## mob (the HIT_META meta: hero instance id -> game seconds); the mob's
+## own _last_damage_source is not enough, as your own hits overwrite it.
 
 ## How close to the campfire (the "base_core" node) counts as "near the
 ## fire" for Stand Firm, in metres.
 const NEAR_FIRE_RADIUS: float = 6.0
+## How recently (game seconds) the other hero must have hit a mob for
+## Twin Strike to count it as "a mob the other hero is hitting".
+const TWIN_STRIKE_SECONDS: float = 2.0
+## The meta on a struck mob: {hero instance id: game seconds of the hit}.
+const HIT_META: StringName = &"hero_hit_at"
 
 
 ## The factor on `attacker`'s damage against `target`. 1.0 without perks.
-## Add per-target multipliers here (Twin Strike: +50% on a mob the other
-## hero is hitting, via the mob's _last_damage_source).
-static func damage_factor(_attacker: Node, _target: Node) -> float:
-	return 1.0
+## Twin Strike: x`value` (1.5) on a mob the other hero is hitting.
+static func damage_factor(attacker: Node, target: Node) -> float:
+	var factor: float = 1.0
+	if attacker == null or target == null:
+		return factor
+	var twin: bool = false
+	for id in PerkManager.perks_of(attacker):
+		var perk: PerkDefinition = PerkManager.get_definition(id)
+		if perk.effect_kind == &"flag" and perk.flag_name() == &"twin_strike":
+			if not twin:
+				twin = is_hitting(other_hero(attacker), target)
+				if not twin:
+					break
+			factor *= perk.value
+	return factor
 
 
 ## `base` damage after damage_factor(), never below 1 for a real hit.
@@ -42,7 +65,79 @@ static func strike(attacker: Node, target: Node, base: int) -> int:
 		return 0
 	var amount: int = damage_against(attacker, target, base)
 	target.take_damage(amount, attacker)
+	_stamp_hit(attacker, target)
 	return amount
+
+
+## The game clock the hit stamps use (PerkManager.clock): it follows
+## Engine.time_scale (hit stop, the perk picker's slow-down, test speed)
+## and stops while paused.
+static func game_seconds() -> float:
+	return PerkManager.clock
+
+
+## The other sibling: the companion for the player, the player for the
+## companion. Null if `character` is neither, or the other is gone.
+static func other_hero(character: Node) -> Node3D:
+	if character == null or not character.is_inside_tree():
+		return null
+	var group: StringName
+	if character.is_in_group("player"):
+		group = &"companions"
+	elif character.is_in_group("companions"):
+		group = &"player"
+	else:
+		return null
+	for node in character.get_tree().get_nodes_in_group(group):
+		if node != character and node.get("hero") is HeroDefinition:
+			return node as Node3D
+	return null
+
+
+## True if `hero` struck `target` within TWIN_STRIKE_SECONDS.
+static func is_hitting(hero: Node, target: Node) -> bool:
+	if hero == null or target == null or not target.has_meta(HIT_META):
+		return false
+	var stamps: Dictionary = target.get_meta(HIT_META)
+	if not stamps.has(hero.get_instance_id()):
+		return false
+	return game_seconds() - float(stamps[hero.get_instance_id()]) <= TWIN_STRIKE_SECONDS
+
+
+static func _stamp_hit(attacker: Node, target: Node) -> void:
+	if attacker == null or not is_instance_valid(target) or not attacker.get("hero") is HeroDefinition:
+		return
+	var stamps: Dictionary = target.get_meta(HIT_META, {})
+	stamps[attacker.get_instance_id()] = game_seconds()
+	target.set_meta(HIT_META, stamps)
+
+
+## The HP Cheer Up gives `other` when its holder levels up: `value` (a
+## quarter) of `other`'s max HP. 0 without the card's data.
+static func cheer_up_heal(other: Node) -> int:
+	var perk: PerkDefinition = PerkManager.get_definition(&"cheer_up")
+	if other == null or perk == null:
+		return 0
+	return maxi(1, roundi(int(other.get("max_hp")) * perk.value))
+
+
+## Cheer Up: `character` levelled up, so the other hero heals too (once
+## per copy). Knocked-out heroes stay down.
+static func cheer_up(character: Node) -> void:
+	var copies: int = 0
+	for id in PerkManager.perks_of(character):
+		var perk: PerkDefinition = PerkManager.get_definition(id)
+		if perk.effect_kind == &"flag" and perk.flag_name() == &"cheer_up":
+			copies += 1
+	var other: Node3D = other_hero(character)
+	if copies == 0 or other == null or bool(other.get("is_knocked_out")) or not other.has_method("heal"):
+		return
+	var before: int = int(other.get("current_hp"))
+	other.call("heal", cheer_up_heal(other) * copies)
+	var gained: int = int(other.get("current_hp")) - before
+	if gained > 0:
+		Fx.float_text(other, "+%d HP" % gained, Color(0.5, 1, 0.5))
+		Fx.burst(&"heal", other.global_position)
 
 
 ## The other mobs a hit from `source` (&"melee" or &"pebble") on `first`
