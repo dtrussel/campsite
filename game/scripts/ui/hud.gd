@@ -62,6 +62,10 @@ var _banner_tween: Tween = null
 ## up in a run (feature 046).
 var _banner_sub: Label = null
 var _banner_sub_plate: PanelContainer = null
+## The banner's faded-in alpha; it is drawn at zero while the perk
+## picker is open, so "NIGHT N!" never sits on the picker's heading.
+var _banner_alpha: float = 0.0
+var _pickers_open: int = 0
 var _met_mobs: Dictionary = {}
 var _build_label: Label = null
 
@@ -580,8 +584,22 @@ func _build_perk_host(root: Control) -> void:
 ## and takes the card the picker closes with.
 func show_perk_picker(cards: Array[PerkDefinition], auto_pick_seconds: float) -> PerkPicker:
 	var picker: PerkPicker = PerkPicker.make(cards, auto_pick_seconds)
+	_pickers_open += 1
+	picker.closed.connect(_on_perk_picker_closed, CONNECT_ONE_SHOT)
 	_perk_host.add_child(picker)
+	_set_banner_alpha(_banner_alpha)
 	return picker
+
+
+func _on_perk_picker_closed(_perk: PerkDefinition) -> void:
+	_pickers_open = maxi(0, _pickers_open - 1)
+	if _banner_plate != null and is_instance_valid(_banner_plate):
+		_set_banner_alpha(_banner_alpha)
+
+
+## True while the centre banner is hidden under an open perk picker.
+func is_banner_hidden() -> bool:
+	return _pickers_open > 0
 
 
 func _show_queued_story() -> void:
@@ -793,8 +811,10 @@ func banner_subtitle() -> String:
 
 
 func _set_banner_alpha(alpha: float) -> void:
-	_banner_plate.modulate.a = alpha
-	_banner_sub_plate.modulate.a = alpha
+	_banner_alpha = alpha
+	var shown: float = 0.0 if _pickers_open > 0 else alpha
+	_banner_plate.modulate.a = shown
+	_banner_sub_plate.modulate.a = shown
 
 
 func _on_resource_changed(id: StringName, _value: int, delta: int) -> void:

@@ -620,7 +620,9 @@ func _on_level_up(character: Node, _new_level: int) -> void:
 	current_hp = min(max_hp, current_hp + stats.max_health_per_level)
 	health_changed.emit(current_hp, max_hp)
 	if not ProgressionManager.is_restoring:
-		Fx.float_text(self, "LEVEL UP!", Color(1.0, 0.85, 0.4), 2.8)
+		# The perk picker (opened first, by PerkManager) says it itself.
+		if not PerkManager.is_picking():
+			Fx.float_text(self, "LEVEL UP!", Color(1.0, 0.85, 0.4), 2.8)
 		Fx.burst(&"level_up", global_position)
 
 

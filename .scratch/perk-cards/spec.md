@@ -1,8 +1,8 @@
 # Perk cards
 
-Status: ready-for-agent
+Status: done
 
-From the 2026-10 brainstorm, planned as feature 039 and never started. It is split into tickets in `issues/` (01&ndash;07). Start with 01; the `Blocked by:` lines give the order.
+From the 2026-10 brainstorm, feature 039. Built (tickets 01&ndash;07 done). It is split into tickets in `issues/` (01&ndash;07). Start with 01; the `Blocked by:` lines give the order.
 
 ## Plan
 
@@ -42,16 +42,17 @@ Make levelling a choice. On each level-up, pick 1 of 3 perk cards, so two runs w
 
 ## Acceptance criteria
 
-- [ ] `tools/check.sh` reports validate OK and smoke PASSED.
-- [ ] Validate: every perk has an icon, text and a known effect kind; each hero has at least two hero-only perks.
-- [ ] Smoke: award XP to level 2 → the picker opens with 3 distinct cards → pick → the effect applies (for example the gather time drops); the save then Continue keeps perks.
-- [ ] Smoke: the auto-pick fires after the timeout.
-- [ ] Screenshot: the picker over a night scene at 1280×720.
+- [x] `tools/check.sh` reports validate OK and smoke PASSED.
+- [x] Validate: every perk has an icon, text and a known effect kind; each hero has at least two hero-only perks.
+- [x] Smoke: award XP to level 2 → the picker opens with 3 distinct cards → pick → the effect applies (for example the gather time drops); the save then Continue keeps perks.
+- [x] Smoke: the auto-pick fires after the timeout.
+- [x] Screenshot: the picker over a night scene at 1280×720.
 
 ## Decisions so far
 
-- **From the 2026-10 brainstorm.** The user chose story (B) and choices / meta (C), with an **adventure** tone (see `docs/design/story.md`), and asked for the roadmap first. This folder is a plan only: nothing is built yet.
+- **From the 2026-10 brainstorm.** The user chose story (B) and choices / meta (C), with an **adventure** tone (see `docs/design/story.md`), and asked for the roadmap first.
 - **Perks are data (`PerkDefinition`) with a small set of effect kinds** (stat multiplier, flag, on-hit), the same pattern as `HeroDefinition`.
+- **The flat bump per level is +3 HP for both heroes (was +5 / +4); damage stays +1** (ticket 07, from the balance sim: a smaller damage bump lost night 3).
 - **Picking slows time instead of pausing it,** so the night keeps its tension; the auto-pick covers kids who ignore it.
 
 - **The companion picks its own card,** at random from its pool, shown on a toast (decided 2026-10-20). The picker only ever opens for the player's hero, so combat is never interrupted twice.

@@ -52,6 +52,7 @@ func _ready() -> void:
 	await _run_perk_06_scenario()
 	await _run_perk_04_scenario()
 	await _run_perk_05_scenario()
+	await _run_perk_07_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	_finish()
@@ -1983,3 +1984,28 @@ func _check_perk_05_cheer_up(hero: Node3D, other: Node3D) -> void:
 	other.set("current_hp", int(other.get("max_hp")))
 	PerkManager.restore(hero, [])
 	PerkManager.restore(other, [])
+
+
+## Perk cards 07: the centre banner ("NIGHT N!") hides while the perk
+## picker is open, so it never sits on the picker's heading, and comes
+## back once a card is taken.
+func _run_perk_07_scenario() -> void:
+	print("smoke: --- perk 07 scenario ---")
+	await _start_fresh_run()
+	PerkManager.auto_pick_seconds = 5.0
+	var player: Node = get_tree().get_first_node_in_group("player")
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	var plate: Control = hud.get("_banner_plate") as Control
+	hud.show_banner("Night 9!")
+	await get_tree().create_timer(0.15, true, false, true).timeout
+	_check(plate.modulate.a > 0.9, "the night banner shows (alpha %.2f)" % plate.modulate.a)
+	ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"test")
+	var picker: PerkPicker = PerkManager.picker()
+	_check(picker != null and is_zero_approx(plate.modulate.a) and hud.is_banner_hidden(),
+		"the banner hides while the perk picker is open")
+	if picker == null:
+		return
+	picker.pick(0)
+	# The level-up restarted the banner (its own fade-in) under the picker.
+	await get_tree().create_timer(0.15, true, false, true).timeout
+	_check(plate.modulate.a > 0.9 and not hud.is_banner_hidden(), "the banner comes back once a card is taken (alpha %.2f)" % plate.modulate.a)

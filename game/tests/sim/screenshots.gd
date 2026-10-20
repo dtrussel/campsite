@@ -265,6 +265,13 @@ func _ready() -> void:
 	player.global_position = spot
 	await get_tree().create_timer(3.0, true, false, true).timeout
 	_shot("07_night_later")
+	# Perk cards (039): the level-up picker over the night. A fixed deal.
+	PerkManager.rng.seed = 3
+	ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"screenshot")
+	await _settle(0.8)
+	_shot("07c_perk_picker")
+	PerkManager.close_picker()
+	await _settle(0.4)
 	# Feature 022: the remodelled Shadow Imp up close, next to Leo.
 	for offset in [Vector3(-1.4, 0, 1.2), Vector3(1.5, 0, 1.0)]:
 		var imp: Node3D = (load("res://scenes/mobs/ShadowImp.tscn") as PackedScene).instantiate() as Node3D

@@ -79,12 +79,18 @@ func _build() -> void:
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	center.add_child(column)
 
-	var heading: Label = UiKit.title("Level up! Pick a card", 34, UiKit.COLOR_GOLD_LIGHT)
+	# The heading sits on the banner's canvas ribbon, so the night's own
+	# words (the "LEVEL UP!" over the hero, a bark) never read through it.
+	var ribbon_plate: PanelContainer = PanelContainer.new()
+	ribbon_plate.add_theme_stylebox_override("panel", _ribbon_style())
+	ribbon_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ribbon_plate.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	column.add_child(ribbon_plate)
+	var heading: Label = UiKit.title("Level up! Pick a card", 32, UiKit.COLOR_GOLD_LIGHT)
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(heading)
-	var rule: Control = UiKit.divider(420)
-	rule.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	column.add_child(rule)
+	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	heading.add_theme_constant_override("outline_size", 9)
+	ribbon_plate.add_child(heading)
 
 	var row: HBoxContainer = HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -101,6 +107,22 @@ func _build() -> void:
 	_countdown.add_theme_constant_override("outline_size", 5)
 	_countdown.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
 	column.add_child(_countdown)
+
+
+## The HUD banner's ribbon (hud.gd `_build_banner`), sized for the heading.
+func _ribbon_style() -> StyleBox:
+	var ribbon: StyleBox = UiKit.art_style("ribbon", 0)
+	if ribbon is StyleBoxTexture:
+		var texture_style: StyleBoxTexture = ribbon as StyleBoxTexture
+		texture_style.texture_margin_left = 46
+		texture_style.texture_margin_right = 46
+		texture_style.texture_margin_top = 0
+		texture_style.texture_margin_bottom = 0
+	ribbon.content_margin_left = 64
+	ribbon.content_margin_right = 64
+	ribbon.content_margin_top = 12
+	ribbon.content_margin_bottom = 10
+	return ribbon
 
 
 ## One card: a wood plate button holding its key cap, icon, name and line.

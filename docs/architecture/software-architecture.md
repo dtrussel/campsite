@@ -256,6 +256,25 @@ extends Resource
 @export var xp_table: PackedInt32Array  # threshold per level
 ```
 
+```gdscript
+# game/scripts/progression/perk_definition.gd (feature 039; data in
+# game/resources/perks/*.tres, dealt and applied by PerkManager)
+class_name PerkDefinition
+extends Resource
+
+@export var id: StringName
+@export var pool: StringName         # shared, leo, nela or sibling
+@export var effect_kind: StringName  # stat_mult, flag or on_hit
+@export var stat: StringName         # for stat_mult (one of STATS)
+@export var value: float
+@export var stacks: bool = false
+```
+
+Perk effects are read where they apply, through `PerkManager`
+(`multiplier(character, stat)`, `has_flag(...)`, `on_hit_perks(...)`),
+and every hero hit and damage taken goes through `HeroHits`
+(`game/scripts/characters/hero_hits.gd`).
+
 For Phase 0 **only the script declarations are introduced as stubs** if
 needed at all. The actual `.tres` assets are created in later phases as
 features are built.
@@ -397,7 +416,7 @@ Detailed plan in
 | `game/scripts/buildings/`     | Building behavior and definitions.              |
 | `game/scripts/resources/`     | Gathering and resource definitions.             |
 | `game/scripts/crafting/`      | Recipes and crafting flow.                      |
-| `game/scripts/progression/`   | XP, levels, character stats.                    |
+| `game/scripts/progression/`   | XP, levels, character stats, perk cards.        |
 | `game/scripts/ui/`            | UI controllers.                                 |
 | `game/scripts/save/`          | Save / load.                                    |
 | `game/scripts/utilities/`     | Math, helpers, reusable bits.                   |

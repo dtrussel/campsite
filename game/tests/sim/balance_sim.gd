@@ -2,7 +2,7 @@ extends Node
 
 ## Scratch balance simulation (not a pass/fail test). Plays nights
 ## unattended with the given companion task and prints HP at each dawn.
-##   -- <companion task 0-4> <fight|idle> [no_beasts] [7]
+##   -- <companion task 0-4> <fight|idle> [no_beasts] [7] [seed=N]
 ## "fight" chases the nearest mob like an active player; days are
 ## skipped, so the boy is healed to full at each nightfall.
 
@@ -21,6 +21,11 @@ func _ready() -> void:
 	GameManager.nights_to_win = nights
 	# Level-ups take the first perk card at once; the picker never opens.
 	PerkManager.auto_pick_seconds = 0.0
+	# A fixed deal, so the auto-picked cards repeat run to run.
+	PerkManager.rng.seed = 1
+	for arg in args:
+		if arg.begins_with("seed="):
+			PerkManager.rng.seed = int(arg.trim_prefix("seed="))
 	var main: Node = MAIN_SCENE.instantiate()
 	add_child(main)
 	await get_tree().process_frame
@@ -56,6 +61,7 @@ func _ready() -> void:
 		print("sim: night %d end t=%.0fs fire=%d/%d boy=%d/%d sib=%d ko=%s state=%d reason=%s" % [
 			night, t, fire.current_hp, fire.max_hp, player.current_hp, player.max_hp,
 			companion.current_hp, companion.is_knocked_out, GameManager.run_state, GameManager.end_reason])
+		print("sim: night %d perks boy=%s sib=%s" % [night, PerkManager.perks_of(player), PerkManager.perks_of(companion)])
 		if not GameManager.is_playing():
 			break
 	get_tree().quit(0)

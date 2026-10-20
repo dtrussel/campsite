@@ -77,10 +77,10 @@ All numbers are placeholder until balancing.
 
 ### Level-up effects
 
-- Every level grants a small stat boost on at least one of the above.
-- Specific level-up bonuses are defined in
-  `game/resources/companions/` and via a `CharacterStatsDefinition`
-  resource (see architecture doc).
+- Every level grants a small flat boost to max HP and attack damage,
+  and a perk card (see [J. XP and leveling](#j-xp-and-leveling)).
+- The numbers live in a `CharacterStatsDefinition` per hero
+  (`game/resources/progression/`, see the architecture doc).
 
 ## D. Companions
 
@@ -420,8 +420,48 @@ level_5 = 900
 ... (level_n = level_n-1 + 150 * n until rebalanced)
 ```
 
-- Skill trees are **out of scope** for the first prototype. Stat bumps
-  only.
+- Skill trees are **out of scope**. Levels give a small flat bump plus
+  a perk card (below).
+
+### Flat bump per level
+
+| Hero | Base HP / damage | Per level (since 039) | Before 039 |
+|------|------------------|-----------------------|------------|
+| Leo  | 50 / 4           | +3 HP, +1 damage      | +5 HP, +1  |
+| Nela | 40 / 3           | +3 HP, +1 damage      | +4 HP, +1  |
+
+The HP bump was made smaller when perk cards arrived, so that a run
+with perks lands near the pre-perk balance in the balance sim
+(`game/tests/sim/balance_sim.gd`). The damage bump stays at +1: at +1
+every other level, or three levels in four, the sim's fighting player
+started losing night 3 (perk cards ticket 07).
+
+### Perk cards (feature 039)
+
+![The perk picker over a night](screenshots/perk-picker.png)
+
+- On each level-up the played hero picks **1 of 3 cards**: click a
+  card or press 1/2/3. The game slows to 10% while the picker is open,
+  and after 10 s of real time the first card is taken, so the picker
+  never hides a fight for long. The centre banner hides while it is up.
+- The companion takes a **random card** from its own pool when it
+  levels up, shown on a small toast.
+- A card is not offered again once taken, unless it stacks. Perks are
+  saved with the run.
+- The cards are data (`game/resources/perks/*.tres`):
+
+| Pool | Card | Effect |
+|------|------|--------|
+| Shared | Quick Hands | Gather 30% faster. |
+| Shared | Ember Heart | Torches burn a night longer and light 40% wider. |
+| Shared | Berry Belly | Snacks heal 50% more. |
+| Shared | Builder's Knack | Buildings cost 1 Wood less. |
+| Leo | Big Swing | Each swing hits up to 2 mobs. |
+| Leo | Stand Firm | 25% less damage taken near the fire. |
+| Nela | Ricochet | A pebble bounces to a second mob. |
+| Nela | Eagle Eye | Shoots from 20% further away. |
+| Sibling | Twin Strike | +50% damage on a mob the other hero just hit. |
+| Sibling | Cheer Up | On a level-up, the other hero heals a quarter of their health. |
 
 ## K. Camera and controls
 
