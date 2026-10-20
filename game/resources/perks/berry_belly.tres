@@ -9,6 +9,7 @@ display_name = "Berry Belly"
 description = "Berry Snacks heal 50% more."
 icon = "snack"
 pool = &"shared"
+player_only = true
 effect_kind = &"stat_mult"
 stat = &"snack_heal"
 value = 1.5

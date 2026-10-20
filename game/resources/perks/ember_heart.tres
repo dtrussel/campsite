@@ -9,5 +9,6 @@ display_name = "Ember Heart"
 description = "Your torches burn a night longer and light 40% wider."
 icon = "torch"
 pool = &"shared"
+player_only = true
 effect_kind = &"flag"
 value = 1.4

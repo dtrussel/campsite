@@ -9,7 +9,8 @@ extends Node3D
 ##
 ## The Ember Heart perk (perk cards, ticket 03): a torch its holder
 ## plants lasts one more dawn and its radius, ring and light grow by the
-## perk's `value`. See kindle().
+## perk's `value`. See kindle(). Such a torch outlives the dawn autosave,
+## so SaveManager keeps it (its place, dawns left and radius).
 
 @export var radius: float = 3.5
 @export var slow_factor: float = 0.45

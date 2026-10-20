@@ -13,8 +13,11 @@ extends Node
 ## buildings (type, place, HP / trap snaps, construction progress), the party (which hero is
 ## played, feature 034), both heroes' progress and upgrades, the
 ## companion's task, run stats, the Moon Lantern's shards (feature 036;
-## older saves start it at 0, same VERSION). Not saved: resource nodes and
-## pickups (they reset), torches (they burn out at dawn anyway).
+## older saves start it at 0, same VERSION), each hero's perk cards, the
+## Ember Heart torches still burning after the dawn (their dawns left and
+## radius) and what each blueprint was paid with (perk cards). Not saved:
+## resource nodes and pickups (they reset), plain torches (they burn out
+## at the dawn the save is made on).
 ## VERSION 2 (playtest 1, feature 044): four resources were cut and
 ## buildings carry their construction progress, so v1 saves are ignored.
 
@@ -22,6 +25,7 @@ signal saved(day: int)
 
 const SAVE_PATH: String = "user://save.json"
 const VERSION: int = 2
+const TORCH_SCENE: String = "res://scenes/buildings/Torch.tscn"
 
 var _save_path: String = SAVE_PATH
 
@@ -125,13 +129,20 @@ func snapshot() -> Dictionary:
 		if building == null or building.definition == null or building.current_hp <= 0:
 			continue
 		var p: Vector3 = building.global_position
-		buildings.append({
+		var entry: Dictionary = {
 			"id": String(building.definition.id),
 			"pos": [p.x, p.y, p.z],
 			"yaw": building.global_rotation.y,
 			"hp": building.current_hp,
 			"progress": building.build_progress,
-		})
+		}
+		if building.is_blueprint() and building.has_meta(BuildManager.PAID_COST_META):
+			var paid: Dictionary = {}
+			var cost: Dictionary = building.get_meta(BuildManager.PAID_COST_META)
+			for id in cost.keys():
+				paid[String(id)] = int(cost[id])
+			entry["paid"] = paid
+		buildings.append(entry)
 	var lantern: MoonLantern = MoonLantern.find(tree)
 	var stats: Dictionary = {}
 	for key in GameManager.stats.keys():
@@ -156,6 +167,7 @@ func snapshot() -> Dictionary:
 		},
 		"stats": stats,
 		"lantern": {"shards": lantern.shards if lantern != null else 0},
+		"torches": _torches(tree),
 	}
 
 
@@ -180,6 +192,13 @@ func apply(data: Dictionary) -> void:
 		if progress < 1.0:
 			building.set_meta(&"blueprint", true)
 			building.set_meta(&"blueprint_progress", progress)
+			# Saves from before perk cards have no "paid": the refund falls
+			# back to BuildManager.cost_of.
+			if entry.get("paid") is Dictionary:
+				var paid: Dictionary = {}
+				for id in (entry["paid"] as Dictionary).keys():
+					paid[StringName(id)] = int(entry["paid"][id])
+				building.set_meta(BuildManager.PAID_COST_META, paid)
 		tree.current_scene.add_child(building)
 		var pos: Array = entry["pos"]
 		building.global_position = Vector3(float(pos[0]), float(pos[1]), float(pos[2]))
@@ -194,6 +213,13 @@ func apply(data: Dictionary) -> void:
 	# Saves from before perk cards have no "perks": the heroes hold none.
 	PerkManager.restore(player, _saved_perks(data["player"]))
 	PerkManager.restore(sibling, _saved_perks(data["sibling"]))
+	# The dawn autosave can land while the picker is open (the dawn's own
+	# level-up) or with level-ups queued behind it: deal what is owed once
+	# the camp is up. Saves from before perk cards keep holding none.
+	if data["player"].has("perks"):
+		PerkManager.top_up.call_deferred(player)
+	if data["sibling"].has("perks"):
+		PerkManager.top_up.call_deferred(sibling)
 	# Saves from before feature 034 name the upgrades "stick" / "slingshot".
 	if bool(data["player"].get("signature", data["player"].get("stick", false))):
 		player.call("apply_signature")
@@ -206,11 +232,41 @@ func apply(data: Dictionary) -> void:
 	if lantern != null:
 		var saved: Variant = data.get("lantern", {})
 		lantern.restore(int((saved as Dictionary).get("shards", 0)) if saved is Dictionary else 0)
+	var torches: Variant = data.get("torches", [])
+	if torches is Array:
+		_restore_torches(tree, torches)
 
 
 ## A hero's taken perk ids as strings, one per copy, in the order taken.
 func _perk_ids(character: Node) -> Array:
 	return PerkManager.perks_of(character).map(func(id: StringName) -> String: return String(id))
+
+
+## The planted torches still burning, as {pos, dawns, radius}. A Glow
+## Lantern's aura (same script, inside its building) never burns out and
+## is rebuilt with its building.
+func _torches(tree: SceneTree) -> Array:
+	var out: Array = []
+	for node in tree.get_nodes_in_group("torches"):
+		var torch: Node3D = node as Node3D
+		if torch == null or torch.get_parent() != tree.current_scene or not bool(torch.get("burns_out_at_dawn")):
+			continue
+		var p: Vector3 = torch.global_position
+		out.append({"pos": [p.x, p.y, p.z], "dawns": int(torch.get("dawns_to_burn")), "radius": float(torch.get("radius"))})
+	return out
+
+
+func _restore_torches(tree: SceneTree, torches: Array) -> void:
+	var scene: PackedScene = load(TORCH_SCENE) as PackedScene
+	for entry in torches:
+		if not entry is Dictionary or int(entry.get("dawns", 0)) <= 0:
+			continue
+		var torch: Node3D = scene.instantiate() as Node3D
+		tree.current_scene.add_child(torch)
+		var pos: Array = entry["pos"]
+		torch.global_position = Vector3(float(pos[0]), float(pos[1]), float(pos[2]))
+		torch.set("dawns_to_burn", int(entry["dawns"]))
+		torch.call("set_radius", float(entry.get("radius", torch.get("radius"))))
 
 
 func _saved_perks(hero: Dictionary) -> Array:

@@ -17,6 +17,10 @@ extends Node
 signal perk_taken(character: Node, perk: PerkDefinition)
 signal picker_opened(character: Node, picker: PerkPicker)
 signal picker_closed(character: Node)
+## Any character's held perks changed: a card taken, perks restored from
+## a save, a run reset, or a character left. BuildManager's cached Wood
+## discount listens to it.
+signal perks_changed
 
 const PERKS_DIR: String = "res://resources/perks/"
 const OFFER_SIZE: int = 3
@@ -29,6 +33,7 @@ var auto_pick_seconds: float = 10.0
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 var _definitions: Array[PerkDefinition] = []
+var _by_id: Dictionary = {}  # StringName -> PerkDefinition
 var _taken: Dictionary = {}  # Node -> Array[StringName], in the order taken
 var _picker: PerkPicker = null
 var _picker_character: Node = null
@@ -46,6 +51,8 @@ func _ready() -> void:
 		if perk != null:
 			_definitions.append(perk)
 	_definitions.sort_custom(func(a: PerkDefinition, b: PerkDefinition) -> bool: return String(a.id) < String(b.id))
+	for perk in _definitions:
+		_by_id[perk.id] = perk
 	ProgressionManager.level_up.connect(_on_level_up)
 
 
@@ -60,22 +67,21 @@ func definitions() -> Array[PerkDefinition]:
 
 
 func get_definition(id: StringName) -> PerkDefinition:
-	for perk in _definitions:
-		if perk.id == id:
-			return perk
-	return null
+	return _by_id.get(id, null) as PerkDefinition
 
 
 # --- Taking perks ----------------------------------------------------------------
 
 ## Up to `n` distinct cards `character` can take now, in random order:
 ## its hero's pool plus the shared and sibling cards, minus the ones
-## already taken that do not stack. Empty when the pool is used up.
+## already taken that do not stack. A companion is never dealt a
+## player-only card. Empty when the pool is used up.
 func offer(character: Node, n: int = OFFER_SIZE) -> Array[PerkDefinition]:
 	var hero_id: StringName = _hero_id(character)
+	var as_companion: bool = character != null and character.is_in_group("companions")
 	var pool: Array[PerkDefinition] = []
 	for perk in _definitions:
-		if perk.is_for_hero(hero_id) and (perk.stacks or not has(character, perk.id)):
+		if perk.is_for(hero_id, as_companion) and (perk.stacks or not has(character, perk.id)):
 			pool.append(perk)
 	# Fisher-Yates with our own rng, so a seeded deal repeats.
 	for i in range(pool.size() - 1, 0, -1):
@@ -97,6 +103,7 @@ func take(character: Node, id: StringName) -> bool:
 	_list(character).append(id)
 	PlaytestLog.write("perk_taken who=%s id=%s" % [_hero_id(character), id])
 	perk_taken.emit(character, perk)
+	perks_changed.emit()
 	return true
 
 
@@ -129,6 +136,25 @@ func restore(character: Node, ids: Array) -> void:
 		var perk: PerkDefinition = get_definition(StringName(str(raw)))
 		if perk != null and (perk.stacks or not list.has(perk.id)):
 			list.append(perk.id)
+	perks_changed.emit()
+
+
+## Deals the cards `character` is owed: one per level-up past level 1
+## that it holds no card for. Continue calls it after a save is applied,
+## so a card is never lost to the dawn autosave (it can land while the
+## picker is open, or with level-ups queued behind it). The player gets
+## the picker (the rest queue behind it); the companion takes its cards
+## itself. A used-up pool simply gives nothing.
+func top_up(character: Node) -> void:
+	if character == null or not is_instance_valid(character):
+		return
+	var owed: int = ProgressionManager.get_level(character) - 1 - perks_of(character).size()
+	for i in owed:
+		if character.is_in_group("player"):
+			open_picker(character)
+		elif character.is_in_group("companions"):
+			if companion_pick(character) == null:
+				return
 
 
 ## Forgets every character's perks and closes the picker (new run).
@@ -136,6 +162,7 @@ func reset() -> void:
 	close_picker()
 	_taken.clear()
 	_pending.clear()
+	perks_changed.emit()
 
 
 # --- Effect queries ----------------------------------------------------------------
@@ -144,26 +171,42 @@ func reset() -> void:
 ## counts). 1.0 when there are none.
 func multiplier(character: Node, stat: StringName) -> float:
 	var result: float = 1.0
-	for perk in _held(character):
-		if perk.effect_kind == &"stat_mult" and perk.stat == stat:
+	if not _taken.has(character):
+		return result
+	for id in _taken[character]:
+		var perk: PerkDefinition = _by_id.get(id, null) as PerkDefinition
+		if perk != null and perk.effect_kind == &"stat_mult" and perk.stat == stat:
 			result *= perk.value
 	return result
 
 
 ## True if a taken `flag` perk sets `flag`.
 func has_flag(character: Node, flag: StringName) -> bool:
-	for perk in _held(character):
-		if perk.effect_kind == &"flag" and perk.flag_name() == flag:
-			return true
-	return false
+	return flag_count(character, flag) > 0
+
+
+## How many taken `flag` perks set `flag` (each copy of a stacking card
+## counts once).
+func flag_count(character: Node, flag: StringName) -> int:
+	var copies: int = 0
+	if not _taken.has(character):
+		return copies
+	for id in _taken[character]:
+		var perk: PerkDefinition = _by_id.get(id, null) as PerkDefinition
+		if perk != null and perk.effect_kind == &"flag" and perk.flag_name() == flag:
+			copies += 1
+	return copies
 
 
 ## The taken `on_hit` perks that fire on a hit from `source` (&"melee" or
 ## &"pebble"), one entry per copy.
 func on_hit_perks(character: Node, source: StringName) -> Array[PerkDefinition]:
 	var out: Array[PerkDefinition] = []
-	for perk in _held(character):
-		if perk.effect_kind == &"on_hit" and (perk.hit_source == &"any" or perk.hit_source == source):
+	if not _taken.has(character):
+		return out
+	for id in _taken[character]:
+		var perk: PerkDefinition = _by_id.get(id, null) as PerkDefinition
+		if perk != null and perk.effect_kind == &"on_hit" and (perk.hit_source == &"any" or perk.hit_source == source):
 			out.append(perk)
 	return out
 
@@ -266,17 +309,7 @@ func _list(character: Node) -> Array[StringName]:
 	return _taken[character]
 
 
-func _held(character: Node) -> Array[PerkDefinition]:
-	var out: Array[PerkDefinition] = []
-	if not _taken.has(character):
-		return out
-	for id in _taken[character]:
-		var perk: PerkDefinition = get_definition(id)
-		if perk != null:
-			out.append(perk)
-	return out
-
-
 func _on_character_exiting(character: Node) -> void:
 	_taken.erase(character)
 	_pending.erase(character)
+	perks_changed.emit()

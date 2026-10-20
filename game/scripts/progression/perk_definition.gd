@@ -26,6 +26,16 @@ const STATS: Array[StringName] = [
 	&"snack_heal",  # player_controller.gd: HP a Berry Snack heals
 	&"attack_range",  # player_controller / companion_controller get_attack_range()
 ]
+## Switches a `flag` perk can set (its `flag_name()`). A hook reads each
+## one; add the name here when you add its hook, so a typo in a .tres
+## fails validation.
+const FLAGS: Array[StringName] = [
+	&"builders_knack",  # build_manager.gd cost_of(): Wood off
+	&"cheer_up",  # hero_hits.gd cheer_up(): heals the other hero
+	&"ember_heart",  # torch.gd kindle(): longer, wider torches
+	&"stand_firm",  # hero_hits.gd damage_taken(): less damage near the fire
+	&"twin_strike",  # hero_hits.gd damage_factor(): harder on a shared mob
+]
 ## Which hits an `on_hit` perk listens to.
 const HIT_SOURCES: Array[StringName] = [&"any", &"melee", &"pebble"]
 
@@ -41,6 +51,9 @@ const HIT_SOURCES: Array[StringName] = [&"any", &"melee", &"pebble"]
 @export var effect_kind: StringName = &"stat_mult"
 ## True if it can be taken again; each copy applies once more.
 @export var stacks: bool = false
+## True if only the played hero's own actions use it (planting torches,
+## eating snacks), so the companion is never dealt it.
+@export var player_only: bool = false
 
 @export_group("Stat multiplier")
 ## One of STATS.
@@ -71,6 +84,12 @@ func is_for_hero(hero_id: StringName) -> bool:
 	return pool == &"shared" or pool == &"sibling" or pool == hero_id
 
 
+## True if `hero_id` can be dealt this card in that role: its pool, and
+## never a player-only card as the companion.
+func is_for(hero_id: StringName, as_companion: bool) -> bool:
+	return is_for_hero(hero_id) and not (as_companion and player_only)
+
+
 func icon_texture() -> Texture2D:
 	return Fx.icon(icon)
 
@@ -96,7 +115,14 @@ func problems() -> PackedStringArray:
 				out.append("scales unknown stat '%s'" % stat)
 			if value <= 0.0 or is_equal_approx(value, 1.0):
 				out.append("has a stat multiplier that does nothing (%s)" % value)
+		&"flag":
+			if not FLAGS.has(flag_name()):
+				out.append("sets unknown flag '%s'" % flag_name())
 		&"on_hit":
 			if not HIT_SOURCES.has(hit_source):
 				out.append("has unknown hit source '%s'" % hit_source)
+			if extra_targets <= 0:
+				out.append("reaches no extra mob (extra_targets %d)" % extra_targets)
+			if reach <= 0.0:
+				out.append("has no reach for its extra mobs (%s)" % reach)
 	return out

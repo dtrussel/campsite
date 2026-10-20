@@ -31,24 +31,31 @@ const NEAR_FIRE_RADIUS: float = 6.0
 const TWIN_STRIKE_SECONDS: float = 2.0
 ## The meta on a struck mob: {hero instance id: game seconds of the hit}.
 const HIT_META: StringName = &"hero_hit_at"
+const TWIN_STRIKE: StringName = &"twin_strike"
+const CHEER_UP: StringName = &"cheer_up"
+const STAND_FIRM: StringName = &"stand_firm"
 
 
 ## The factor on `attacker`'s damage against `target`. 1.0 without perks.
-## Twin Strike: x`value` (1.5) on a mob the other hero is hitting.
+## Twin Strike: x`value` (1.5) per copy on a mob the other hero is
+## hitting. Further per-target multipliers go here, each its own factor.
 static func damage_factor(attacker: Node, target: Node) -> float:
 	var factor: float = 1.0
 	if attacker == null or target == null:
 		return factor
-	var twin: bool = false
-	for id in PerkManager.perks_of(attacker):
-		var perk: PerkDefinition = PerkManager.get_definition(id)
-		if perk.effect_kind == &"flag" and perk.flag_name() == &"twin_strike":
-			if not twin:
-				twin = is_hitting(other_hero(attacker), target)
-				if not twin:
-					break
-			factor *= perk.value
+	factor *= _flag_factor(attacker, TWIN_STRIKE,
+		func() -> bool: return is_hitting(other_hero(attacker), target))
 	return factor
+
+
+## `flag`'s card value once per copy held (stacking cards multiply),
+## when `applies` says it counts now. 1.0 without the card.
+static func _flag_factor(character: Node, flag: StringName, applies: Callable) -> float:
+	var copies: int = PerkManager.flag_count(character, flag)
+	var perk: PerkDefinition = PerkManager.get_definition(flag)
+	if copies == 0 or perk == null or not applies.call():
+		return 1.0
+	return pow(perk.value, copies)
 
 
 ## `base` damage after damage_factor(), never below 1 for a real hit.
@@ -115,7 +122,7 @@ static func _stamp_hit(attacker: Node, target: Node) -> void:
 ## The HP Cheer Up gives `other` when its holder levels up: `value` (a
 ## quarter) of `other`'s max HP. 0 without the card's data.
 static func cheer_up_heal(other: Node) -> int:
-	var perk: PerkDefinition = PerkManager.get_definition(&"cheer_up")
+	var perk: PerkDefinition = PerkManager.get_definition(CHEER_UP)
 	if other == null or perk == null:
 		return 0
 	return maxi(1, roundi(int(other.get("max_hp")) * perk.value))
@@ -124,11 +131,7 @@ static func cheer_up_heal(other: Node) -> int:
 ## Cheer Up: `character` levelled up, so the other hero heals too (once
 ## per copy). Knocked-out heroes stay down.
 static func cheer_up(character: Node) -> void:
-	var copies: int = 0
-	for id in PerkManager.perks_of(character):
-		var perk: PerkDefinition = PerkManager.get_definition(id)
-		if perk.effect_kind == &"flag" and perk.flag_name() == &"cheer_up":
-			copies += 1
+	var copies: int = PerkManager.flag_count(character, CHEER_UP)
 	var other: Node3D = other_hero(character)
 	if copies == 0 or other == null or bool(other.get("is_knocked_out")) or not other.has_method("heal"):
 		return
@@ -173,11 +176,7 @@ static func extra_targets(attacker: Node, first: Node3D, source: StringName) -> 
 static func damage_taken(character: Node3D, amount: int) -> int:
 	if amount <= 0 or character == null:
 		return amount
-	var factor: float = 1.0
-	for id in PerkManager.perks_of(character):
-		var perk: PerkDefinition = PerkManager.get_definition(id)
-		if perk.effect_kind == &"flag" and perk.flag_name() == &"stand_firm" and is_near_fire(character):
-			factor *= perk.value
+	var factor: float = _flag_factor(character, STAND_FIRM, func() -> bool: return is_near_fire(character))
 	if is_equal_approx(factor, 1.0):
 		return amount
 	return maxi(1, roundi(amount * factor))

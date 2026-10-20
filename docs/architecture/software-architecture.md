@@ -268,10 +268,12 @@ extends Resource
 @export var stat: StringName         # for stat_mult (one of STATS)
 @export var value: float
 @export var stacks: bool = false
+@export var player_only: bool = false  # never dealt to the companion
 ```
 
 Perk effects are read where they apply, through `PerkManager`
-(`multiplier(character, stat)`, `has_flag(...)`, `on_hit_perks(...)`),
+(`multiplier(character, stat)`, `has_flag(...)`, `flag_count(...)`,
+`on_hit_perks(...)`),
 and every hero hit and damage taken goes through `HeroHits`
 (`game/scripts/characters/hero_hits.gd`).
 

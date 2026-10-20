@@ -445,9 +445,12 @@ started losing night 3 (perk cards ticket 07).
   and after 10 s of real time the first card is taken, so the picker
   never hides a fight for long. The centre banner hides while it is up.
 - The companion takes a **random card** from its own pool when it
-  levels up, shown on a small toast.
+  levels up, shown on a small toast. It is never dealt Ember Heart or
+  Berry Belly, which only work through the played hero's own actions.
 - A card is not offered again once taken, unless it stacks. Perks are
-  saved with the run.
+  saved with the run, and so are Ember Heart torches that outlast the
+  dawn. A card still being picked when the dawn autosave lands is dealt
+  again on Continue.
 - The cards are data (`game/resources/perks/*.tres`):
 
 | Pool | Card | Effect |

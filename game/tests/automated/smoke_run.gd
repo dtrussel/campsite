@@ -53,6 +53,7 @@ func _ready() -> void:
 	await _run_perk_04_scenario()
 	await _run_perk_05_scenario()
 	await _run_perk_07_scenario()
+	await _run_perk_review_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	_finish()
@@ -1665,15 +1666,15 @@ func _run_perk_06_scenario() -> void:
 	var fair: bool = not PerkManager.is_picking()
 	for id in taken:
 		var card: PerkDefinition = PerkManager.get_definition(id)
-		fair = fair and card.is_for_hero(hero.id) and (card.stacks or taken.count(id) == 1)
+		fair = fair and card.is_for(hero.id, true) and (card.stacks or taken.count(id) == 1)
 	var own: int = 0
 	var any_stacks: bool = false
 	for card in PerkManager.definitions():
-		if card.is_for_hero(hero.id):
+		if card.is_for(hero.id, true):
 			own += 1
 			any_stacks = any_stacks or card.stacks
 	_check(fair and (any_stacks or (taken.size() == own and PerkManager.offer(companion).is_empty())),
-		"the companion's cards follow the pool rules: own hero's, no repeats, stops when used up (%s)" % ", ".join(taken))
+		"the companion's cards follow the pool rules: own hero's, never player-only, no repeats, stops when used up (%s)" % ", ".join(taken))
 	var player: Node = get_tree().get_first_node_in_group("player")
 	_check(PerkManager.perks_of(player).is_empty(), "the companion's cards are not the player's")
 
@@ -2009,3 +2010,139 @@ func _run_perk_07_scenario() -> void:
 	# The level-up restarted the banner (its own fade-in) under the picker.
 	await get_tree().create_timer(0.15, true, false, true).timeout
 	_check(plate.modulate.a > 0.9 and not hud.is_banner_hidden(), "the banner comes back once a card is taken (alpha %.2f)" % plate.modulate.a)
+
+
+## Perk cards, review fixes: the companion never draws a player-only
+## card; a card the dawn autosave missed (a picker still open, a level-up
+## waiting behind it) is dealt again on Continue; Ember Heart torches and
+## a blueprint's paid cost survive Continue; the Wood discount follows
+## the perks; and stacking Twin Strike copies multiply.
+func _run_perk_review_scenario() -> void:
+	print("smoke: --- perk review scenario ---")
+	await _start_fresh_run()
+	var player: Node3D = get_tree().get_first_node_in_group("player")
+	var companion: Node3D = get_tree().get_first_node_in_group("companions")
+	companion.set_physics_process(false)
+	var player_only: Array = PerkManager.definitions().filter(func(p: PerkDefinition) -> bool: return p.player_only).map(
+		func(p: PerkDefinition) -> StringName: return p.id)
+	_check(player_only == [&"berry_belly", &"ember_heart"], "Berry Belly and Ember Heart are player-only cards (%s)" % [player_only])
+	var companion_deal: Array[PerkDefinition] = PerkManager.offer(companion, 99)
+	_check(not companion_deal.is_empty() and not companion_deal.any(func(p: PerkDefinition) -> bool: return p.player_only)
+		and PerkManager.offer(player, 99).any(func(p: PerkDefinition) -> bool: return p.player_only),
+		"the companion is never dealt a player-only card; the player is")
+
+	# The dawn autosave lands while the picker is open, with one more
+	# level-up queued behind it, and the companion is a card short too.
+	PerkManager.auto_pick_seconds = 5.0
+	ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"test")
+	ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"test")
+	ProgressionManager.award_xp(companion, ProgressionManager.get_xp_to_next_level(companion), &"test")
+	ProgressionManager.award_xp(companion, ProgressionManager.get_xp_to_next_level(companion), &"test")
+	PerkManager.restore(companion, PerkManager.perks_of(companion).slice(0, 1))
+	_check(ProgressionManager.get_level(player) == 3 and PerkManager.is_picking() and PerkManager.perks_of(player).is_empty()
+		and PerkManager.perks_of(companion).size() == 1, "saved mid-pick: the player holds 0 of 2 cards, the companion 1 of 2")
+	var data: Dictionary = SaveManager.snapshot()
+	PerkManager.close_picker()
+	GameManager.set("_pending_save", SaveManager.parse(SaveManager.serialize(data)))
+	await _start_fresh_run()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	player = get_tree().get_first_node_in_group("player")
+	companion = get_tree().get_first_node_in_group("companions")
+	companion.set_physics_process(false)
+	var cards: Array[StringName] = PerkManager.perks_of(companion)
+	_check(PerkManager.perks_of(player).size() == 2 and cards.size() == 2 and not PerkManager.is_picking(),
+		"Continue deals the cards the save missed (player %s, companion %s)" % [PerkManager.perks_of(player), cards])
+	# With the picker on, the top-up opens it, and queues the rest.
+	PerkManager.auto_pick_seconds = 5.0
+	PerkManager.restore(player, [])
+	PerkManager.top_up(player)
+	_check(PerkManager.is_picking() and int((PerkManager.get("_pending") as Dictionary).get(player, 0)) == 1,
+		"a top-up of 2 cards opens the picker and queues the second")
+	PerkManager.close_picker()
+	PerkManager.auto_pick_seconds = 0.0
+	PerkManager.restore(player, [])
+	PerkManager.restore(companion, [])  # its Builder's Knack would count for the party
+
+	# Builder's Knack: the cached discount follows taking and dropping it.
+	var fence: BuildingDefinition = BuildManager.get_definition(&"wooden_fence")
+	var full_wood: int = int(fence.cost[&"wood"])
+	_check(int(BuildManager.cost_of(fence).get(&"wood", 0)) == full_wood, "no Builder's Knack: a fence costs %d Wood" % full_wood)
+	PerkManager.take(player, &"builders_knack")
+	_check(int(BuildManager.cost_of(fence).get(&"wood", 0)) == full_wood - 1, "Builder's Knack taken: the cost drops at once")
+	PerkManager.restore(player, [])
+	_check(int(BuildManager.cost_of(fence).get(&"wood", 0)) == full_wood, "Builder's Knack dropped: the cost is back at once")
+	PerkManager.restore(player, [&"builders_knack", &"ember_heart"])
+
+	# A blueprint paid for with the discount, and a burning Ember Heart
+	# torch that has seen one dawn, both through save and Continue.
+	ResourceManager.add(&"wood", full_wood)
+	_check(BuildManager.enter_build_mode(fence), "build mode with the fence")
+	await get_tree().process_frame
+	BuildManager.set("_is_valid", true)
+	var before: Array[Node] = get_tree().get_nodes_in_group(Building.BLUEPRINT_GROUP)
+	BuildManager.call("_try_confirm")
+	BuildManager.exit_build_mode()
+	var blueprint: Building = null
+	for node in get_tree().get_nodes_in_group(Building.BLUEPRINT_GROUP):
+		if not before.has(node):
+			blueprint = node as Building
+	_check(blueprint != null and int((blueprint.get_meta(&"paid_cost", {}) as Dictionary).get(&"wood", 0)) == full_wood - 1,
+		"the blueprint records the %d Wood paid" % (full_wood - 1))
+	ResourceManager.add(&"torch", 1)
+	var torch: Node3D = _plant_torch(player)
+	if blueprint == null or torch == null:
+		_check(false, "placed a blueprint and planted a torch")
+		return
+	torch.call("_on_dawn_started", TimeManager.day_number + 1)
+	var radius: float = float(torch.get("radius"))
+	var ring: float = (torch.get_node("Radius") as Node3D).scale.x
+	var spot: Vector3 = torch.global_position
+	var site: Vector3 = blueprint.global_position
+	data = SaveManager.snapshot()
+	var saved_torches: Array = data.get("torches", [])
+	_check(saved_torches.size() == 1, "the save keeps the Ember Heart torch still burning (%d)" % saved_torches.size())
+	torch.queue_free()
+	blueprint.queue_free()
+	GameManager.set("_pending_save", SaveManager.parse(SaveManager.serialize(data)))
+	await _start_fresh_run()
+	await get_tree().process_frame
+	player = get_tree().get_first_node_in_group("player")
+	var loaded_torch: Node3D = null
+	for node in get_tree().get_nodes_in_group("torches"):
+		if (node as Node3D).global_position.distance_to(spot) < 0.01:
+			loaded_torch = node as Node3D
+	_check(loaded_torch != null and is_equal_approx(float(loaded_torch.get("radius")), radius)
+		and is_equal_approx((loaded_torch.get_node("Radius") as Node3D).scale.x, ring) and int(loaded_torch.get("dawns_to_burn")) == 1,
+		"Continue keeps the Ember Heart torch: same spot, %.1f m, one dawn left" % radius)
+	if loaded_torch != null:
+		loaded_torch.call("_on_dawn_started", TimeManager.day_number + 1)
+		_check(not loaded_torch.call("affects", loaded_torch.global_position), "the kept torch goes out at the next dawn")
+	var loaded_print: Building = null
+	for node in get_tree().get_nodes_in_group(Building.BLUEPRINT_GROUP):
+		if (node as Building).definition == fence and (node as Building).global_position.distance_to(site) < 0.01:
+			loaded_print = node as Building
+	PerkManager.restore(player, [])  # the refund is what was paid, not today's price
+	var wood_before: int = ResourceManager.get_count(&"wood")
+	_check(loaded_print != null and BuildManager.remove_blueprint(loaded_print)
+		and ResourceManager.get_count(&"wood") - wood_before == full_wood - 1,
+		"after Continue, taking the blueprint back refunds the %d Wood paid" % (full_wood - 1))
+
+	# Twin Strike, if it stacked: each copy multiplies.
+	for building in get_tree().current_scene.find_children("*", "Building", true, false):
+		building.set_physics_process(false)
+	companion = get_tree().get_first_node_in_group("companions")
+	var twin: PerkDefinition = PerkManager.get_definition(&"twin_strike")
+	var stacked: bool = twin.stacks
+	twin.stacks = true
+	PerkManager.restore(player, [&"twin_strike", &"twin_strike"])
+	var beast_def: MobDefinition = load("res://resources/mobs/bramble_beast.tres") as MobDefinition
+	var mob: Mob = _spawn_mob(beast_def, _campfire().global_position + Vector3(9, 0, 0))
+	mob.set_physics_process(false)
+	await get_tree().process_frame
+	HeroHits.strike(companion, mob, 1)
+	var factor: float = HeroHits.damage_factor(player, mob)
+	_check(is_equal_approx(factor, twin.value * twin.value), "two Twin Strike copies multiply (x%.2f)" % factor)
+	twin.stacks = stacked
+	PerkManager.restore(player, [])
+	await _perk_04_clear_mobs()

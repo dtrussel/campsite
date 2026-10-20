@@ -121,6 +121,7 @@ func _validate_data() -> void:
 	_validate_heroes(recipe_ids)
 	_validate_perks()
 	_validate_hero_perks()
+	_validate_perk_problems()
 	_validate_audio()
 	_validate_story()
 
@@ -260,17 +261,71 @@ func _validate_perks() -> void:
 
 
 ## Perk cards 04: each hero has at least two cards of their own, and no
-## hero is offered another hero's.
+## hero is dealt another hero's, as the player or as the companion.
+## Asks PerkManager.offer itself, with a stand-in for each hero, so a
+## broken pool filter fails here. As the companion, no player-only card
+## is dealt, and there is still a card to draw.
 func _validate_hero_perks() -> void:
+	var probe_script: GDScript = GDScript.new()
+	probe_script.source_code = "extends Node\nvar hero: HeroDefinition\n"
+	probe_script.reload()
 	for hero in HeroRoster.all():
 		var own: int = 0
 		for perk in PerkManager.definitions():
 			if perk.pool == hero.id:
 				own += 1
-			elif perk.is_for_hero(hero.id) and perk.pool != &"shared" and perk.pool != &"sibling":
-				_fail("%s is offered %s, another hero's perk" % [hero.id, perk.id])
 		if own < 2:
 			_fail("%s has %d hero-only perks (needs 2)" % [hero.id, own])
+		for as_companion in [false, true]:
+			var probe: Node = probe_script.new()
+			probe.set("hero", hero)
+			if as_companion:
+				probe.add_to_group("companions")
+			var role: String = "companion" if as_companion else "player"
+			var dealt: Array[PerkDefinition] = PerkManager.offer(probe, 999)
+			for perk in dealt:
+				if perk.pool != &"shared" and perk.pool != &"sibling" and perk.pool != hero.id:
+					_fail("%s (%s) is offered %s, another hero's perk" % [hero.id, role, perk.id])
+				if as_companion and perk.player_only:
+					_fail("%s (companion) is offered %s, a player-only perk" % [hero.id, perk.id])
+			if dealt.is_empty():
+				_fail("%s (%s) is offered no perk at all" % [hero.id, role])
+			probe.free()
+	for perk in PerkManager.definitions():
+		if perk.pool != &"shared" and perk.pool != &"sibling" and HeroRoster.get_hero(perk.pool) == null:
+			_fail("%s is for unknown hero '%s'" % [perk.resource_path, perk.pool])
+
+
+## PerkDefinition.problems() itself: a card with an unknown flag, or an
+## on_hit card that reaches no extra mob, is caught.
+func _validate_perk_problems() -> void:
+	var bad_flag: PerkDefinition = _probe_perk(&"flag")
+	bad_flag.flag = &"no_such_flag"
+	if bad_flag.problems().is_empty():
+		_fail("PerkDefinition.problems() lets an unknown flag through")
+	var no_targets: PerkDefinition = _probe_perk(&"on_hit")
+	no_targets.reach = 2.0
+	if no_targets.problems().is_empty():
+		_fail("PerkDefinition.problems() lets an on_hit perk with no extra targets through")
+	var no_reach: PerkDefinition = _probe_perk(&"on_hit")
+	no_reach.extra_targets = 1
+	if no_reach.problems().is_empty():
+		_fail("PerkDefinition.problems() lets an on_hit perk with no reach through")
+	var sound: PerkDefinition = _probe_perk(&"on_hit")
+	sound.extra_targets = 1
+	sound.reach = 2.0
+	if not sound.problems().is_empty():
+		_fail("PerkDefinition.problems() rejects a sound on_hit perk: %s" % ", ".join(sound.problems()))
+
+
+func _probe_perk(kind: StringName) -> PerkDefinition:
+	var perk: PerkDefinition = PerkDefinition.new()
+	perk.id = &"stand_firm"
+	perk.display_name = "Probe"
+	perk.description = "A probe."
+	perk.icon = "stick"
+	perk.effect_kind = kind
+	return perk
 
 
 ## Feature 035: every story beat is complete and readable, each

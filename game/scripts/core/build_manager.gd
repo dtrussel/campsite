@@ -29,6 +29,9 @@ const GROUND_GROUP: StringName = &"ground"
 const BUILD_XP_REWARD: int = 5
 const WOOD_ID: StringName = &"wood"
 const BUILDERS_KNACK: StringName = &"builders_knack"
+## The meta on a placed blueprint: the cost paid for it (a Dictionary),
+## refunded when it is taken back.
+const PAID_COST_META: StringName = &"paid_cost"
 
 var _definitions: Array[BuildingDefinition] = []
 var _by_id: Dictionary = {}                  # StringName -> BuildingDefinition
@@ -40,6 +43,11 @@ var _ghost_footprint: Area3D = null
 var _is_valid: bool = false
 var _has_ground_hit: bool = false
 var _ghost_yaw_degrees: float = 0.0  # kept between placements
+## The party's Builder's Knack discount in Wood, or -1 when it must be
+## worked out again. The HUD asks cost_of() for every building each
+## frame, so it is cached; PerkManager.perks_changed (a card taken,
+## perks restored, a reset, a hero leaving) clears it.
+var _wood_off: int = -1
 
 var _valid_material: StandardMaterial3D
 var _invalid_material: StandardMaterial3D
@@ -49,6 +57,18 @@ func _ready() -> void:
 	_valid_material = _make_ghost_material(Color(0.3, 1.0, 0.4, 0.55))
 	_invalid_material = _make_ghost_material(Color(1.0, 0.3, 0.3, 0.55))
 	_load_definitions()
+	# PerkManager is the next autoload but one: connect once it is ready.
+	_connect_perks.call_deferred()
+
+
+func _connect_perks() -> void:
+	if not PerkManager.perks_changed.is_connected(clear_cost_cache):
+		PerkManager.perks_changed.connect(clear_cost_cache)
+
+
+## Forgets the cached Wood discount (cost_of works it out again).
+func clear_cost_cache() -> void:
+	_wood_off = -1
 
 
 ## What `definition` costs now: its `cost`, less the party's perks. The
@@ -72,6 +92,12 @@ func cost_of(definition: BuildingDefinition) -> Dictionary:
 
 
 func _wood_discount() -> int:
+	if _wood_off < 0:
+		_wood_off = _party_wood_discount()
+	return _wood_off
+
+
+func _party_wood_discount() -> int:
 	var party: Array[Node] = get_tree().get_nodes_in_group("player")
 	party.append_array(get_tree().get_nodes_in_group("companions"))
 	for member in party:
@@ -181,11 +207,13 @@ func _try_confirm() -> void:
 		return
 	if _active_definition == null or _active_definition.get_scene() == null:
 		return
-	if get_tree().current_scene == null or not ResourceManager.spend_costs(cost_of(_active_definition)):
+	var cost: Dictionary = cost_of(_active_definition)
+	if get_tree().current_scene == null or not ResourceManager.spend_costs(cost):
 		return
 	var placed: Building = place_blueprint(_active_definition, _ghost.global_transform if _ghost != null else Transform3D.IDENTITY)
-	# Refund what was paid, even if the perks change before it is taken back.
-	placed.set_meta(&"paid_cost", cost_of(_active_definition))
+	# Refund what was paid, even if the perks change before it is taken
+	# back (the save keeps it too).
+	placed.set_meta(PAID_COST_META, cost)
 	# Force a validity re-eval so the ghost flips to red if the cost can
 	# no longer be afforded after spending.
 	_update_validity(_compute_validity(), true)
@@ -208,7 +236,7 @@ func remove_blueprint(building: Building) -> bool:
 	if building == null or not building.is_blueprint() or building.build_progress > 0.0:
 		return false
 	if building.definition != null:
-		var paid: Dictionary = building.get_meta(&"paid_cost", cost_of(building.definition))
+		var paid: Dictionary = building.get_meta(PAID_COST_META, cost_of(building.definition))
 		for id in paid.keys():
 			ResourceManager.add(StringName(id), int(paid[id]))
 	Fx.burst(&"dust", building.global_position)
