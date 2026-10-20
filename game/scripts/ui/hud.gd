@@ -103,6 +103,10 @@ func _ready() -> void:
 	BuildManager.build_mode_entered.connect(_on_build_mode_entered)
 	BuildManager.build_mode_exited.connect(func() -> void: (_build_label.get_meta(&"plate") as Control).visible = false)
 	BuildManager.placement_validity_changed.connect(_on_placement_validity_changed)
+	# A perk can change what buildings cost (Builder's Knack).
+	PerkManager.perk_taken.connect(func(_c: Node, _p: PerkDefinition) -> void:
+		if BuildManager.is_in_build_mode():
+			_refresh_build_label(BuildManager.get_active_definition()))
 	GameManager.companion_task_changed.connect(func(_c: Node, _t: int) -> void: _refresh_sibling())
 	ProgressionManager.xp_gained.connect(func(character: Node, _a: int, _s: StringName) -> void: _refresh_progress(character))
 	ProgressionManager.level_up.connect(_on_level_up)
@@ -657,7 +661,7 @@ func _refresh_slots() -> void:
 	(_slots[&"craft"] as HudWidgets.AbilitySlot).set_state(craft_ready)
 	var can_build: bool = false
 	for definition in BuildManager.get_known_definitions():
-		can_build = can_build or ResourceManager.can_afford(definition.cost)
+		can_build = can_build or ResourceManager.can_afford(BuildManager.cost_of(definition))
 	(_slots[&"build"] as HudWidgets.AbilitySlot).set_state(can_build)
 	(_slots[&"build"] as HudWidgets.AbilitySlot).highlight = BuildManager.is_in_build_mode()
 
@@ -782,7 +786,7 @@ func _refresh_build_label(definition: BuildingDefinition) -> void:
 	for i in range(known.size()):
 		var chip: Control = HudWidgets.AbilitySlot.new(known[i].icon, str(i + 1))
 		chip.custom_minimum_size = Vector2(40, 40)
-		(chip as HudWidgets.AbilitySlot).set_state(ResourceManager.can_afford(known[i].cost))
+		(chip as HudWidgets.AbilitySlot).set_state(ResourceManager.can_afford(BuildManager.cost_of(known[i])))
 		(chip as HudWidgets.AbilitySlot).highlight = known[i] == definition
 		chip.tooltip_text = "%s (%d): %s" % [known[i].display_name, i + 1, UiKit.party_text(known[i].description)]
 		_build_row.add_child(chip)
@@ -792,9 +796,10 @@ func _refresh_build_label(definition: BuildingDefinition) -> void:
 	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_build_row.add_child(picture)
-	for key in definition.cost.keys():
+	var cost: Dictionary = BuildManager.cost_of(definition)
+	for key in cost.keys():
 		var item: ResourceDefinition = ResourceManager.get_definition(StringName(key))
-		_build_row.add_child(HudWidgets.icon_count(item.icon if item != null else null, "star", "%d" % int(definition.cost[key]), 34))
+		_build_row.add_child(HudWidgets.icon_count(item.icon if item != null else null, "star", "%d" % int(cost[key]), 34))
 	_build_row.add_child(HudWidgets.Glyph.new("mouse_left", Color(0.4, 1.0, 0.5), 30))
 	_build_row.add_child(HudWidgets.Glyph.new("mouse_right", Color(1.0, 0.4, 0.35), 30))
 

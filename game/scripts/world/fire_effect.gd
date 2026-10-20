@@ -75,6 +75,13 @@ func _process(delta: float) -> void:
 	_light.light_energy = _base_energy * (1.0 + flicker)
 
 
+## Changes how far the light reaches (a bigger torch, Ember Heart).
+func set_light_range(range_m: float) -> void:
+	light_range = range_m
+	if _light != null:
+		_light.omni_range = range_m
+
+
 func set_intensity(factor: float) -> void:
 	_base_energy = light_energy * factor
 	# Flames read hotter at night, softer against a bright day.
