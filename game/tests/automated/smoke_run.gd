@@ -47,6 +47,7 @@ func _ready() -> void:
 	await _run_bark_scenario()
 	await _run_boss_scenario()
 	await _run_perk_01_scenario()
+	await _run_perk_06_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	_finish()
@@ -1484,6 +1485,70 @@ func _run_perk_01_scenario() -> void:
 	await get_tree().create_timer(0.6, true, false, true).timeout
 	_check(PerkManager.has(player, first) and not PerkManager.is_picking(), "the auto-pick takes the first card (%s)" % first)
 	_check(is_equal_approx(Engine.time_scale, SPEED), "normal speed after the auto-pick (%.2f)" % Engine.time_scale)
+
+
+## Perk cards 06: the companion takes a random card by itself, with a
+## toast, never the picker; its own pool's rules hold.
+func _run_perk_06_scenario() -> void:
+	print("smoke: --- perk 06 scenario ---")
+	await _start_fresh_run()
+	PerkManager.auto_pick_seconds = 5.0  # the player's level-up would open a picker
+	PerkManager.rng.seed = 6
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	var companion: Node = get_tree().get_first_node_in_group("companions")
+	var hero: HeroDefinition = companion.get("hero") as HeroDefinition
+	ProgressionManager.award_xp(companion, ProgressionManager.get_xp_to_next_level(companion), &"test")
+	var taken: Array[StringName] = PerkManager.perks_of(companion)
+	_check(ProgressionManager.get_level(companion) == 2 and taken.size() == 1 and not PerkManager.is_picking(),
+		"a companion level-up takes a card by itself, no picker (%s)" % ", ".join(taken))
+	if taken.is_empty():
+		return
+	var perk: PerkDefinition = PerkManager.get_definition(taken[0])
+	var toasts: Array = hud.call("toasts")
+	var line: String = "%s took %s!" % [hero.display_name, perk.display_name]
+	_check(toasts.size() == 1 and (toasts[0] as HudToast).text() == line, "a toast says \"%s\"" % line)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not toasts.is_empty():
+		var toast_rect: Rect2 = (toasts[0] as HudToast).get_global_rect()
+		var banner_rect: Rect2 = (hud.get("_banner_plate") as Control).get_global_rect()
+		var story_rect: Rect2 = (hud.get("_story_host") as Control).get_global_rect().grow_individual(0, 0, 430, 300)
+		_check(not toast_rect.intersects(banner_rect) and not toast_rect.intersects(story_rect)
+			and toast_rect.end.x <= 1280.0 and toast_rect.position.y > 60.0,
+			"the toast sits on the right under the tray, clear of the banner and story card (%s)" % toast_rect)
+
+	# Same pool rules as the picker: its own hero's cards, no repeats
+	# unless the card stacks, nothing once the pool is used up.
+	for i in PerkManager.definitions().size() + 1:
+		ProgressionManager.award_xp(companion, ProgressionManager.get_xp_to_next_level(companion), &"test")
+	taken = PerkManager.perks_of(companion)
+	var fair: bool = not PerkManager.is_picking()
+	for id in taken:
+		var card: PerkDefinition = PerkManager.get_definition(id)
+		fair = fair and card.is_for_hero(hero.id) and (card.stacks or taken.count(id) == 1)
+	var own: int = 0
+	var any_stacks: bool = false
+	for card in PerkManager.definitions():
+		if card.is_for_hero(hero.id):
+			own += 1
+			any_stacks = any_stacks or card.stacks
+	_check(fair and (any_stacks or (taken.size() == own and PerkManager.offer(companion).is_empty())),
+		"the companion's cards follow the pool rules: own hero's, no repeats, stops when used up (%s)" % ", ".join(taken))
+	var player: Node = get_tree().get_first_node_in_group("player")
+	_check(PerkManager.perks_of(player).is_empty(), "the companion's cards are not the player's")
+
+	# The toast fades by itself, in real time.
+	await get_tree().create_timer(HudToast.POP_SECONDS + HudToast.SECONDS + HudToast.FADE_SECONDS + 0.3, true, false, true).timeout
+	_check((hud.call("toasts") as Array).is_empty() and (hud.get("_toast_stack") as Node).get_child_count() == 0, "the toast fades and frees itself")
+
+	# Level-ups replayed from a save take no card and show no toast.
+	await _start_fresh_run()
+	hud = get_tree().get_first_node_in_group("hud")
+	companion = get_tree().get_first_node_in_group("companions")
+	var stats: CharacterStatsDefinition = ProgressionManager.get_stats(companion)
+	ProgressionManager.restore_xp(companion, stats.xp_threshold_for_level(3))
+	_check(ProgressionManager.get_level(companion) == 3 and PerkManager.perks_of(companion).is_empty()
+		and (hud.call("toasts") as Array).is_empty(), "a companion level-up while restoring a save takes no card")
 
 
 func _clear_mobs_except(keep: Node) -> void:

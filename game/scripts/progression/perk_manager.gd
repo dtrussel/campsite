@@ -4,8 +4,9 @@ extends Node
 ##
 ## Autoload that owns the perk cards each character has taken (perk
 ## cards, .scratch/perk-cards). When the player's hero levels up it
-## deals up to three cards and opens the PerkPicker in the HUD; the
-## gameplay hooks then ask it about the taken perks:
+## deals up to three cards and opens the PerkPicker in the HUD; when the
+## companion levels up it takes a random card itself and the HUD shows a
+## toast. The gameplay hooks then ask it about the taken perks:
 ##
 ##   PerkManager.multiplier(actor, &"gather_time")   # stat_mult, 1.0 if none
 ##   PerkManager.has_flag(actor, &"stand_firm")       # flag
@@ -221,7 +222,24 @@ func _on_level_up(character: Node, _new_level: int) -> void:
 		return
 	if character.is_in_group("player"):
 		open_picker(character)
-	# The companion takes a random card by itself (ticket 06).
+	elif character.is_in_group("companions"):
+		companion_pick(character)
+
+
+## The companion takes one random card from its own pool by itself (no
+## picker, so play never stops for it) and a HUD toast names it. Returns
+## the card, or null when its pool is used up.
+func companion_pick(character: Node) -> PerkDefinition:
+	var cards: Array[PerkDefinition] = offer(character, 1)
+	if cards.is_empty() or not take(character, cards[0].id):
+		return null
+	var perk: PerkDefinition = cards[0]
+	var hero: HeroDefinition = character.get("hero") as HeroDefinition
+	var who: String = hero.display_name if hero != null else "Your sibling"
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	if hud != null and hud.has_method("show_toast"):
+		hud.call("show_toast", "%s took %s!" % [who, perk.display_name], perk.icon)
+	return perk
 
 
 # --- Helpers -------------------------------------------------------------------------
