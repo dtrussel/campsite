@@ -27,6 +27,8 @@ const GHOST_NODE_NAME: StringName = &"_BuildGhost"
 const FOOTPRINT_NODE_NAME: StringName = &"_GhostFootprint"
 const GROUND_GROUP: StringName = &"ground"
 const BUILD_XP_REWARD: int = 5
+const WOOD_ID: StringName = &"wood"
+const BUILDERS_KNACK: StringName = &"builders_knack"
 
 var _definitions: Array[BuildingDefinition] = []
 var _by_id: Dictionary = {}                  # StringName -> BuildingDefinition
@@ -47,6 +49,36 @@ func _ready() -> void:
 	_valid_material = _make_ghost_material(Color(0.3, 1.0, 0.4, 0.55))
 	_invalid_material = _make_ghost_material(Color(1.0, 0.3, 0.3, 0.55))
 	_load_definitions()
+
+
+## What `definition` costs now: its `cost`, less the party's perks. The
+## Builder's Knack perk (perk cards, ticket 03) takes its `value` in Wood
+## off, never below 0; an item that drops to 0 is left out. Spending,
+## refunds, can-afford checks and the HUD's build menu all go through it.
+func cost_of(definition: BuildingDefinition) -> Dictionary:
+	if definition == null:
+		return {}
+	var cost: Dictionary = definition.cost.duplicate()
+	var wood_off: int = _wood_discount()
+	if wood_off > 0:
+		for key in cost.keys():
+			if StringName(key) == WOOD_ID:
+				var left: int = maxi(0, int(cost[key]) - wood_off)
+				if left > 0:
+					cost[key] = left
+				else:
+					cost.erase(key)
+	return cost
+
+
+func _wood_discount() -> int:
+	var party: Array[Node] = get_tree().get_nodes_in_group("player")
+	party.append_array(get_tree().get_nodes_in_group("companions"))
+	for member in party:
+		if PerkManager.has_flag(member, BUILDERS_KNACK):
+			var perk: PerkDefinition = PerkManager.get_definition(BUILDERS_KNACK)
+			return roundi(perk.value) if perk != null else 0
+	return 0
 
 
 func get_known_definitions() -> Array[BuildingDefinition]:
@@ -149,9 +181,11 @@ func _try_confirm() -> void:
 		return
 	if _active_definition == null or _active_definition.get_scene() == null:
 		return
-	if get_tree().current_scene == null or not ResourceManager.spend_costs(_active_definition.cost):
+	if get_tree().current_scene == null or not ResourceManager.spend_costs(cost_of(_active_definition)):
 		return
-	place_blueprint(_active_definition, _ghost.global_transform if _ghost != null else Transform3D.IDENTITY)
+	var placed: Building = place_blueprint(_active_definition, _ghost.global_transform if _ghost != null else Transform3D.IDENTITY)
+	# Refund what was paid, even if the perks change before it is taken back.
+	placed.set_meta(&"paid_cost", cost_of(_active_definition))
 	# Force a validity re-eval so the ghost flips to red if the cost can
 	# no longer be afforded after spending.
 	_update_validity(_compute_validity(), true)
@@ -174,8 +208,9 @@ func remove_blueprint(building: Building) -> bool:
 	if building == null or not building.is_blueprint() or building.build_progress > 0.0:
 		return false
 	if building.definition != null:
-		for id in building.definition.cost.keys():
-			ResourceManager.add(StringName(id), int(building.definition.cost[id]))
+		var paid: Dictionary = building.get_meta(&"paid_cost", cost_of(building.definition))
+		for id in paid.keys():
+			ResourceManager.add(StringName(id), int(paid[id]))
 	Fx.burst(&"dust", building.global_position)
 	AudioManager.play_sfx(&"ui_click")
 	building.remove_from_group(Building.BLUEPRINT_GROUP)
@@ -311,7 +346,7 @@ func _compute_validity() -> bool:
 		return false
 	if _active_definition == null:
 		return false
-	if not ResourceManager.can_afford(_active_definition.cost):
+	if not ResourceManager.can_afford(cost_of(_active_definition)):
 		return false
 	if _ghost_footprint == null:
 		return false
