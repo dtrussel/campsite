@@ -47,6 +47,7 @@ func _ready() -> void:
 	await _run_bark_scenario()
 	await _run_boss_scenario()
 	await _run_perk_01_scenario()
+	await _run_perk_04_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	_finish()
@@ -1484,6 +1485,135 @@ func _run_perk_01_scenario() -> void:
 	await get_tree().create_timer(0.6, true, false, true).timeout
 	_check(PerkManager.has(player, first) and not PerkManager.is_picking(), "the auto-pick takes the first card (%s)" % first)
 	_check(is_equal_approx(Engine.time_scale, SPEED), "normal speed after the auto-pick (%.2f)" % Engine.time_scale)
+
+
+## Perk cards 04: each hero is dealt their own cards and never the other
+## hero's, and Big Swing, Stand Firm, Ricochet and Eagle Eye work whether
+## the hero is played or tags along as the companion.
+func _run_perk_04_scenario() -> void:
+	print("smoke: --- perk 04 scenario ---")
+	for hero_id in [&"leo", &"nela"]:
+		GameManager.set_party(hero_id)
+		await _start_fresh_run()
+		var player: Node3D = get_tree().get_first_node_in_group("player")
+		var companion: Node3D = get_tree().get_first_node_in_group("companions")
+		# Hold the companion still (the test swings for it), and stop the
+		# watch post shooting the staged mobs.
+		companion.set_physics_process(false)
+		for building in get_tree().current_scene.find_children("*", "Building", true, false):
+			building.set_physics_process(false)
+		for who in [player, companion]:
+			var own: StringName = (who.get("hero") as HeroDefinition).id
+			var other: StringName = &"nela" if own == &"leo" else &"leo"
+			var dealt_own: bool = true
+			var dealt_other: bool = false
+			for i in 20:
+				var pools: Array = PerkManager.offer(who, 99).map(func(p: PerkDefinition) -> StringName: return p.pool)
+				dealt_own = dealt_own and pools.count(own) >= 2
+				dealt_other = dealt_other or pools.has(other)
+			_check(dealt_own and not dealt_other, "%s is dealt their own cards and never %s's" % [own, other])
+		for who in [player, companion]:
+			if (who.get("hero") as HeroDefinition).id == &"leo":
+				await _check_perk_04_leo(who)
+			else:
+				await _check_perk_04_nela(who)
+	GameManager.set_party(&"leo")
+
+
+func _check_perk_04_leo(leo: Node3D) -> void:
+	var role: String = "player" if leo.is_in_group("player") else "companion"
+	var fire: Node3D = _campfire()
+	var spot: Vector3 = fire.global_position + Vector3(9, 0, 0)
+	leo.global_position = spot
+	var beast_def: MobDefinition = load("res://resources/mobs/bramble_beast.tres") as MobDefinition
+	var first: Mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 0))
+	var second: Mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 1.5))
+	first.set_physics_process(false)
+	second.set_physics_process(false)
+	await get_tree().process_frame
+	# Big Swing: one swing, two mobs.
+	await _perk_04_swing(leo, first)
+	_check(first.current_hp < beast_def.max_hp and second.current_hp == beast_def.max_hp, "%s Leo: a swing hits one mob" % role)
+	var hp: Array[int] = [first.current_hp, second.current_hp]
+	PerkManager.take(leo, &"big_swing")
+	await _perk_04_swing(leo, first)
+	_check(first.current_hp < hp[0] and second.current_hp < hp[1], "%s Leo, Big Swing: a swing hits two mobs" % role)
+	await _perk_04_clear_mobs()
+
+	# Stand Firm: 25% less damage near the fire, none away from it.
+	PerkManager.take(leo, &"stand_firm")
+	var taken: Array[int] = []
+	for offset in [Vector3(2.5, 0, 0), Vector3(9, 0, 0)]:
+		leo.global_position = fire.global_position + offset
+		leo.set("_invulnerable_remaining", 0.0)
+		var before: int = int(leo.get("current_hp"))
+		leo.call("take_damage", 8, null)
+		taken.append(before - int(leo.get("current_hp")))
+	_check(taken == [6, 8], "%s Leo, Stand Firm: 8 damage is 6 near the fire, 8 away (%s)" % [role, taken])
+	leo.set("current_hp", int(leo.get("max_hp")))
+	leo.set("_invulnerable_remaining", 0.0)
+
+
+func _check_perk_04_nela(nela: Node3D) -> void:
+	var role: String = "player" if nela.is_in_group("player") else "companion"
+	var spot: Vector3 = _campfire().global_position + Vector3(9, 0, 0)
+	nela.global_position = spot
+	var beast_def: MobDefinition = load("res://resources/mobs/bramble_beast.tres") as MobDefinition
+	var first: Mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 0))
+	var second: Mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 2.5))
+	first.set_physics_process(false)
+	second.set_physics_process(false)
+	await get_tree().process_frame
+	# Ricochet: the pebble bounces on to a second mob.
+	await _perk_04_swing(nela, first)
+	_check(first.current_hp < beast_def.max_hp and second.current_hp == beast_def.max_hp, "%s Nela: a pebble hits one mob" % role)
+	var hp: Array[int] = [first.current_hp, second.current_hp]
+	PerkManager.take(nela, &"ricochet")
+	await _perk_04_swing(nela, first)
+	_check(first.current_hp < hp[0] and second.current_hp < hp[1], "%s Nela, Ricochet: the pebble bounces to a second mob" % role)
+	await _perk_04_clear_mobs()
+
+	# Eagle Eye: 20% more reach, for the attack and for finding a target.
+	var reach: float = float(nela.call("get_attack_range"))
+	# The player looks a little past her reach (x1.2), the companion at it.
+	var past: float = 1.3 if nela.is_in_group("player") else 1.1
+	var far: Mob = _spawn_mob(beast_def, spot + Vector3(reach * past, 0, 0))
+	far.set_physics_process(false)
+	await get_tree().process_frame
+	var found_before: bool = _perk_04_finds(nela, far, reach)
+	PerkManager.take(nela, &"eagle_eye")
+	var longer: float = float(nela.call("get_attack_range"))
+	_check(is_equal_approx(longer, reach * 1.2), "%s Nela, Eagle Eye: reach %.2f -> %.2f m" % [role, reach, longer])
+	_check(not found_before and _perk_04_finds(nela, far, longer), "%s Nela, Eagle Eye: targets a mob past her old reach" % role)
+	if nela.is_in_group("player"):
+		_check(is_equal_approx(float(nela.call("auto_attack_radius")), maxf(longer * 1.3, 3.5)), "player Nela, Eagle Eye: auto-attack reaches further")
+	await _perk_04_clear_mobs()
+
+
+## One attack from `hero` on `mob`, through its controller, then waits
+## for the swing or the pebble (and any bounce) to land.
+func _perk_04_swing(hero: Node3D, mob: Mob) -> void:
+	if hero.is_in_group("player"):
+		hero.call("_perform_attack", mob)
+	else:
+		hero.call("_attack_mob", mob)
+	await _wait(1.2)
+
+
+## Removes the staged mobs without a kill, so no XP (and no level-up
+## card) comes of it.
+func _perk_04_clear_mobs() -> void:
+	for node in get_tree().get_nodes_in_group("mobs"):
+		node.remove_from_group("mobs")
+		node.queue_free()
+	await get_tree().process_frame
+
+
+## True if `hero` would pick `mob` as a target at its current reach.
+func _perk_04_finds(hero: Node3D, mob: Mob, reach: float) -> bool:
+	if hero.is_in_group("player"):
+		return hero.call("_find_nearest_mob_in_range") == mob
+	return hero.call("_find_nearest_mob", reach) == mob
 
 
 func _clear_mobs_except(keep: Node) -> void:

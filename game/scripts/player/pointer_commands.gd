@@ -228,7 +228,8 @@ func _hover_color(kind: int) -> Color:
 func _make_range_ring() -> MeshInstance3D:
 	var ring: MeshInstance3D = MeshInstance3D.new()
 	var torus: TorusMesh = TorusMesh.new()
-	var reach: float = float(_player.get("attack_range"))
+	var reach: float = _player_reach()
+	ring.set_meta(&"reach", reach)
 	torus.inner_radius = reach - 0.05
 	torus.outer_radius = reach + 0.02
 	torus.rings = 48
@@ -253,6 +254,16 @@ func _update_range_ring() -> void:
 		return
 	var attacking: bool = int(_player.get("command")) == 2  # Command.ATTACK
 	_range_ring.visible = (attacking or _hover_kind == Hover.MOB) and not bool(_player.get("is_knocked_out"))
+	# The reach can grow during a run (the Slingshot, Eagle Eye).
+	var grow: float = _player_reach() / float(_range_ring.get_meta(&"reach", 1.0))
+	_range_ring.scale = Vector3(grow, 0.05, grow)
+
+
+## The player's attack reach now, perks included.
+func _player_reach() -> float:
+	if _player.has_method("get_attack_range"):
+		return float(_player.call("get_attack_range"))
+	return float(_player.get("attack_range"))
 
 
 func _spawn_marker(position: Vector3, color: Color) -> void:

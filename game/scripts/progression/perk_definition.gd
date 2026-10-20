@@ -23,6 +23,7 @@ const EFFECT_KINDS: Array[StringName] = [&"stat_mult", &"flag", &"on_hit"]
 ## name here when you add its hook, so a typo in a .tres fails validation.
 const STATS: Array[StringName] = [
 	&"gather_time",  # resource_node.gd: seconds per gather
+	&"attack_range",  # player_controller / companion_controller get_attack_range()
 ]
 ## Which hits an `on_hit` perk listens to.
 const HIT_SOURCES: Array[StringName] = [&"any", &"melee", &"pebble"]

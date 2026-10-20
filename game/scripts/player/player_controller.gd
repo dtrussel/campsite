@@ -215,9 +215,15 @@ func stop_commands() -> void:
 	_set_command(Command.NONE, null)
 
 
+## The reach of an attack now: attack_range after perks (Eagle Eye).
+## Use this, not attack_range, wherever the reach matters.
+func get_attack_range() -> float:
+	return attack_range * PerkManager.multiplier(self, &"attack_range")
+
+
 ## How close a mob must be for auto-attack to go for it.
 func auto_attack_radius() -> float:
-	return maxf(attack_range * 1.3, 3.5)
+	return maxf(get_attack_range() * 1.3, 3.5)
 
 
 func get_facing() -> Vector3:
@@ -234,6 +240,7 @@ func take_damage(amount: int, _source: Node = null) -> void:
 	if _invulnerable_remaining > 0.0:
 		return
 	_invulnerable_remaining = hurt_invulnerability_seconds
+	amount = HeroHits.damage_taken(self, amount)
 	current_hp = max(0, current_hp - amount)
 	health_changed.emit(current_hp, max_hp)
 	Fx.flash(self)
@@ -324,7 +331,7 @@ func _tick_command(delta: float) -> Vector3:
 			if not _is_attackable(command_target):
 				_set_command(Command.NONE, null)
 				return Vector3.ZERO
-			if _flat_distance(command_target.global_position) <= attack_range:
+			if _flat_distance(command_target.global_position) <= get_attack_range():
 				_visual.face(command_target.global_position - global_position, delta)
 				if _attack_cooldown_remaining <= 0.0:
 					_perform_attack(command_target)
@@ -450,9 +457,14 @@ func _perform_attack(target: Node3D) -> void:
 	var tween: Tween = create_tween()
 	tween.tween_interval(ATTACK_WINDUP)
 	tween.tween_callback(func() -> void:
-		if _is_attackable(target) and _flat_distance(target.global_position) <= attack_range * 1.4:
-			target.take_damage(attack_damage, self)
+		if _is_attackable(target) and _flat_distance(target.global_position) <= get_attack_range() * 1.4:
+			# Big Swing: the swing carries on to the next mob.
+			var extra: Array[Node3D] = HeroHits.extra_targets(self, target, &"melee")
+			HeroHits.strike(self, target, attack_damage)
 			Fx.burst(&"hit", target.global_position + Vector3(0, 0.7, 0))
+			for other in extra:
+				HeroHits.strike(self, other, attack_damage)
+				Fx.burst(&"hit", other.global_position + Vector3(0, 0.7, 0))
 			Fx.hit_stop()
 	)
 
@@ -637,7 +649,7 @@ func _tick_auto() -> void:
 func _find_nearest_mob_in_range(radius: float = -1.0) -> Node3D:
 	var best: Node3D = null
 	if radius < 0.0:
-		radius = attack_range * 1.2
+		radius = get_attack_range() * 1.2
 	var best_d_sq: float = radius * radius
 	for node in get_tree().get_nodes_in_group("mobs"):
 		var n3d: Node3D = node as Node3D

@@ -122,6 +122,7 @@ func take_damage(amount: int, _source: Node = null) -> void:
 	if amount <= 0 or is_knocked_out or _invulnerable_remaining > 0.0:
 		return
 	_invulnerable_remaining = hurt_invulnerability_seconds
+	amount = HeroHits.damage_taken(self, amount)
 	current_hp = max(0, current_hp - amount)
 	health_changed.emit(current_hp, max_hp)
 	Fx.flash(self)
@@ -177,8 +178,9 @@ func set_task(task: int) -> void:
 	_update_task_label()
 
 
+## The reach of an attack now, after perks (Eagle Eye).
 func get_attack_range() -> float:
-	return _attack_range
+	return _attack_range * PerkManager.multiplier(self, &"attack_range")
 
 
 ## The hero's signature upgrade (see HeroDefinition), once per run.
@@ -464,8 +466,13 @@ func _attack_mob(mob: Node3D) -> void:
 	if hero != null and hero.ranged:
 		PebbleShot.fire(self, mob, _current_attack_damage)
 		return
-	mob.take_damage(_current_attack_damage, self)
+	# Big Swing: the swing carries on to the next mob.
+	var extra: Array[Node3D] = HeroHits.extra_targets(self, mob, &"melee")
+	HeroHits.strike(self, mob, _current_attack_damage)
 	Fx.burst(&"sparkle", mob.global_position + Vector3(0, 0.7, 0))
+	for other in extra:
+		HeroHits.strike(self, other, _current_attack_damage)
+		Fx.burst(&"sparkle", other.global_position + Vector3(0, 0.7, 0))
 
 
 func _on_level_up(character: Node, _new_level: int) -> void:

@@ -120,6 +120,7 @@ func _validate_data() -> void:
 
 	_validate_heroes(recipe_ids)
 	_validate_perks()
+	_validate_hero_perks()
 	_validate_audio()
 	_validate_story()
 
@@ -256,6 +257,20 @@ func _validate_perks() -> void:
 		_fail("PerkManager loaded %d perks, %s has %d" % [PerkManager.definitions().size(), PerkManager.PERKS_DIR, perks.size()])
 	if PerkManager.offer(null, 3).is_empty():
 		_fail("no perk is offered to every hero (the shared pool is empty)")
+
+
+## Perk cards 04: each hero has at least two cards of their own, and no
+## hero is offered another hero's.
+func _validate_hero_perks() -> void:
+	for hero in HeroRoster.all():
+		var own: int = 0
+		for perk in PerkManager.definitions():
+			if perk.pool == hero.id:
+				own += 1
+			elif perk.is_for_hero(hero.id) and perk.pool != &"shared" and perk.pool != &"sibling":
+				_fail("%s is offered %s, another hero's perk" % [hero.id, perk.id])
+		if own < 2:
+			_fail("%s has %d hero-only perks (needs 2)" % [hero.id, own])
 
 
 ## Feature 035: every story beat is complete and readable, each
