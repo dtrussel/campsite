@@ -1,8 +1,8 @@
 # Perk cards
 
-Status: needs-triage
+Status: ready-for-agent
 
-From the 2026-10 brainstorm, planned as feature 039 and never started. Break it into tickets with `/to-tickets` once the open questions are answered.
+From the 2026-10 brainstorm, planned as feature 039 and never started. It is split into tickets in `issues/` (01&ndash;07). Start with 01; the `Blocked by:` lines give the order.
 
 ## Plan
 
@@ -54,6 +54,12 @@ Make levelling a choice. On each level-up, pick 1 of 3 perk cards, so two runs w
 - **Perks are data (`PerkDefinition`) with a small set of effect kinds** (stat multiplier, flag, on-hit), the same pattern as `HeroDefinition`.
 - **Picking slows time instead of pausing it,** so the night keeps its tension; the auto-pick covers kids who ignore it.
 
+- **The companion picks its own card,** at random from its pool, shown on a toast (decided 2026-10-20). The picker only ever opens for the player's hero, so combat is never interrupted twice.
+
 ## Open questions
 
-- should the player see the companion's card choice, or should the companion choose by itself?
+None.
+
+## Comments
+
+- 2026-10-20: split into seven tickets. 01 is the first end-to-end slice (data, picker, auto-pick, Quick Hands). 02, 03, 04 and 06 can follow in any order, 05 needs 04, and 07 closes the feature.
