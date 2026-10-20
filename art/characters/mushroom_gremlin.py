@@ -2,7 +2,7 @@
 resources and runs.
 
 Feature 027 remodel, after the concept in
-.features/027-gremlin-remodel/reference/concept.png: a cheeky mushroom
+docs/history/features/027-gremlin-remodel/reference/concept.png: a cheeky mushroom
 goblin rather than a walking mushroom.
 - a big, wide conical cap (purple, darker mottling, cream blocky spots,
   pale pleated gills), tipped back a little so the face shows;

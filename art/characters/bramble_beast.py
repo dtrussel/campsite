@@ -1,7 +1,7 @@
 """Bramble Beast: a hulking tree golem that tears down fences.
 
 Feature 026 remodel, after the concept in
-.features/026-bramble-remodel/reference/concept.png:
+docs/history/features/026-bramble-remodel/reference/concept.png:
 - a narrow waist under huge shoulders; long arms ending in giant log
   fists with end-grain rings; short trunk legs flaring into root toes;
 - no separate head: an angry face (heavy brow, slanted glowing eyes in

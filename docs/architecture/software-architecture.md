@@ -2,7 +2,7 @@
 
 > Engine: Godot 4.x. Language: GDScript with static typing wherever
 > practical. See
-> [`docs/decisions/ADR-0001-engine-and-language-selection.md`](../decisions/ADR-0001-engine-and-language-selection.md).
+> [`docs/adr/0001-engine-and-language-selection.md`](../adr/0001-engine-and-language-selection.md).
 
 ## Guiding principles
 
@@ -355,8 +355,8 @@ Detailed plan in
 
 - Most early testing is manual smoke testing: open the project, run the
   main scene, verify the checklist.
-- Per-phase manual playtest checklists live alongside each `.features/`
-  folder&rsquo;s `test-plan.md`.
+- Manual playtest checklists live in the `.scratch/` specs and tickets
+  (`ready-for-human` ones for hand play).
 - Data validation checks ensure required `.tres` files have valid IDs and
   references (later).
 - Script-level tests (e.g. via [GUT](https://github.com/bitwes/Gut)) are

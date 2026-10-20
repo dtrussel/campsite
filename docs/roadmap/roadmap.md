@@ -18,14 +18,15 @@
 **Deliverables**
 
 - Repository layout (folders for `game/`, `docs/`, `tools/`,
-  `.features/`).
+  `.features/`, now archived in `docs/history/features/`).
 - README.
 - Engine / language ADR.
 - Requirements specification.
 - Game design specification.
 - Software architecture specification.
 - Coding standards.
-- Feature workflow (`.features/README.md`).
+- Feature workflow (`.features/README.md`; replaced in 2026-10 by the
+  `.scratch/` issue tracker, see `docs/agents/issue-tracker.md`).
 - Minimal runnable Godot project skeleton.
 
 **Acceptance criteria**
@@ -34,7 +35,7 @@
 - Main scene runs.
 - All documents listed above exist and are coherent.
 - Next coding agent can continue from
-  `.features/000-project-bootstrap/handoff.md`.
+  `docs/history/features/000-project-bootstrap/handoff.md`.
 
 ## Phase 1 &mdash; Playable movement and camp scene
 
@@ -181,7 +182,7 @@ placeholder HUD.
 
 **Goal:** confirm that a first-time player understands the loop and
 enjoys it before we invest in save/load. Implemented by
-`.features/005-first-playtest-build`.
+`docs/history/features/005-first-playtest-build`.
 
 **Deliverables**
 
@@ -221,7 +222,8 @@ versioned `user://save.json`. No manual save or load menu.*
 ## Beyond Phase 8
 
 After Phase 8 the project has a complete vertical slice. Subsequent
-planning is captured in new `.features/` folders as new goals are chosen:
+planning is captured as specs and tickets in `.scratch/` (before 2026-10:
+feature folders, archived in `docs/history/features/`) as new goals are chosen:
 
 - Additional mob types (Bramble Beast, Night Crow, Mushroom Gremlin).
 - Additional companions (Parent, Cat).
@@ -270,8 +272,9 @@ art track in parallel.
 | 042 Endless mode | **Planned, optional.** "How long can you last?", unlocked by the true ending, with a best-nights record. |
 
 Features 035&ndash;042 come from the mechanics brainstorm of 2026-10 (story
-and meta progression, adventure tone). Their plans are in `.features/035-*`
-to `.features/042-*`. The order is story first (035&ndash;038), then
+and meta progression, adventure tone). The plans for 035&ndash;038 are archived in
+`docs/history/features/`. The unstarted 039&ndash;042 are specs in
+`.scratch/` (`perk-cards`, `tool-tiers`, `journal-badges`, `endless-mode`). The order is story first (035&ndash;038), then
 choices (039&ndash;040), then meta (041&ndash;042). Ideas that were not
 chosen this time: fire fuel and burn-down, night omens, last stand and
 revive, a trader, well blessings and signpost chores.

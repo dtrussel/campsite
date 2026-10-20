@@ -23,7 +23,7 @@ const SHARD_ID: StringName = &"glow_shards"
 
 ## Shards for each stage, per chapter. Tuned so a careful player lights
 ## the last stage on the last night (about 14 shards drop in Chapter 1
-## and 65 in Chapter 2, see .features/036-moon-lantern).
+## and 65 in Chapter 2, see docs/history/features/036-moon-lantern).
 @export var costs_chapter_1: PackedInt32Array = PackedInt32Array([2, 4, 5])
 @export var costs_chapter_2: PackedInt32Array = PackedInt32Array([3, 5, 6, 8, 10, 12])
 @export var min_radius: float = 4.0

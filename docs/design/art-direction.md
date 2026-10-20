@@ -122,7 +122,7 @@ The camp sits in a forest clearing. Four mob lanes come in along the axes as ope
 
 Footpaths lead to each grove, and the old road runs south.
 
-The plan lives in `WorldLayout`. The rules and the map are in [`.features/032-world-layout/plan.md`](../../.features/032-world-layout/plan.md).
+The plan lives in `WorldLayout`. The rules and the map are in [`docs/history/features/032-world-layout/plan.md`](../history/features/032-world-layout/plan.md).
 
 ## UI: "campcraft" (feature 033)
 

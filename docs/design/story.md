@@ -258,7 +258,7 @@ barks only for the first beast of a run).
 
 - **Received (047): the storybook paintings.** One painting per intro and
   ending page (12), in the team's style, generated from the art brief
-  (`.features/047-story-art`). Sources are in `art/ui/source/story/`, and
+  (`docs/history/features/047-story-art`). Sources are in `art/ui/source/story/`, and
   `art/ui/story_art.py` writes the game's 1600×900 copies to
   `assets/ui/story/story_<page>.webp`. The Chapter 2 intro painting
   showed Mum's lantern lit, so the script retouches it cold

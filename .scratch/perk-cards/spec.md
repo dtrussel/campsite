@@ -1,11 +1,17 @@
-# Feature 039: Perk cards (plan)
+# Perk cards
 
-Status: **planned** (roadmap from the 2026-10 brainstorm). Rough size: **M**.
+Status: needs-triage
 
-## Goal
+From the 2026-10 brainstorm, planned as feature 039 and never started. Break it into tickets with `/to-tickets` once the open questions are answered.
+
+## Plan
+
+Rough size: **M**.
+
+### Goal
 Make levelling a choice. On each level-up, pick 1 of 3 perk cards, so two runs with the same hero can play differently.
 
-## Scope
+### Scope
 - **A card picker** on level-up: three wood plate cards (each with an icon, a name and a line), picked by click or by 1/2/3. The game slows to about 10% while the picker is open. Ignoring it for 10 s auto-picks the first card, so the picker never hides combat for long.
 - **Pools:** a shared pool plus hero-only cards. A card can't be offered twice once taken, unless it stacks.
   - Shared:
@@ -25,11 +31,29 @@ Make levelling a choice. On each level-up, pick 1 of 3 perk cards, so two runs w
 - **The companion gets a random card** when they level up, shown on a small toast.
 - The flat +HP/+damage per level stays, but smaller. Perks carry the rest.
 
-## Systems touched
+### Systems touched
 - New: `scripts/progression/perk_definition.gd`, `resources/perks/*.tres`, `scripts/progression/perk_manager.gd` (an autoload or part of `progression_manager.gd`), and `scripts/ui/perk_picker.gd`.
 - `scripts/core/progression_manager.gd`: the `level_up` signal opens the picker. The stat bump is retuned in `resources/progression/*.tres`.
 - Hooks where perks apply: `resource_node.gd` (gather time), `torch.gd`, `crafting_manager.gd` (costs), `player_controller.gd` / `companion_controller.gd` / `pebble_shot.gd` (damage, reach, bounce).
 - `scripts/core/save_manager.gd`: `player.perks` and `sibling.perks`.
 
-## Depends on
+### Depends on
 034 (hero-only pools). It sets up 041's starting perks.
+
+## Acceptance criteria
+
+- [ ] `tools/check.sh` reports validate OK and smoke PASSED.
+- [ ] Validate: every perk has an icon, text and a known effect kind; each hero has at least two hero-only perks.
+- [ ] Smoke: award XP to level 2 → the picker opens with 3 distinct cards → pick → the effect applies (for example the gather time drops); the save then Continue keeps perks.
+- [ ] Smoke: the auto-pick fires after the timeout.
+- [ ] Screenshot: the picker over a night scene at 1280×720.
+
+## Decisions so far
+
+- **From the 2026-10 brainstorm.** The user chose story (B) and choices / meta (C), with an **adventure** tone (see `docs/design/story.md`), and asked for the roadmap first. This folder is a plan only: nothing is built yet.
+- **Perks are data (`PerkDefinition`) with a small set of effect kinds** (stat multiplier, flag, on-hit), the same pattern as `HeroDefinition`.
+- **Picking slows time instead of pausing it,** so the night keeps its tension; the auto-pick covers kids who ignore it.
+
+## Open questions
+
+- should the player see the companion's card choice, or should the companion choose by itself?

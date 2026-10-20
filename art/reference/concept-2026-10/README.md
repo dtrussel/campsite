@@ -6,7 +6,7 @@ They are **reference only**. The game never loads them.
 The style guide built from them is in
 [`docs/design/art-direction.md`](../../../docs/design/art-direction.md).
 The work that applies them is
-[`.features/031-concept-look-pass/`](../../../.features/031-concept-look-pass/plan.md).
+[`docs/history/features/031-concept-look-pass/`](../../../docs/history/features/031-concept-look-pass/plan.md).
 
 | File | Shows | Canonical for |
 |------|-------|---------------|

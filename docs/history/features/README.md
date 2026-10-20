@@ -1,11 +1,26 @@
-# `.features/` &mdash; Agent feature workflow
+# Archived feature folders (000&ndash;048)
+
+> **Archived, read-only.** Until 2026-10 the repo tracked work in these
+> five-file folders (they lived at `.features/`). New work is tracked as
+> local markdown issues in `.scratch/<feature-slug>/`, using Matt
+> Pocock's skills. See [`docs/agents/issue-tracker.md`](../../agents/issue-tracker.md).
+>
+> - The four features that were planned but never started (039 perk cards,
+>   040 tool tiers, 041 journal and badges, 042 endless mode) moved to
+>   `.scratch/` as specs.
+> - The unticked hand-play checks became
+>   `.scratch/hand-play-backlog/`.
+>
+> The rest of this page is the old workflow, kept for reference.
+
+## The old workflow
 
 This folder is where larger pieces of work are planned, tracked, and
 handed off between humans and coding agents. The goal is to keep
 multi-session work understandable and auditable without dragging the main
 documentation around with it.
 
-## When to create a feature folder
+### When to create a feature folder
 
 Create a folder when a piece of work:
 
@@ -17,7 +32,7 @@ Create a folder when a piece of work:
 Small fixes (a typo, a one-file bug fix, a renamed variable) do **not**
 need a feature folder. Use a normal commit.
 
-## Folder layout
+### Folder layout
 
 Each feature is a folder named `NNN-short-slug` where `NNN` is a zero-padded
 number. Each folder contains exactly these files:
@@ -30,7 +45,7 @@ test-plan.md    # acceptance criteria as checkboxes
 handoff.md      # what the next agent / contributor needs to know
 ```
 
-## Required behavior for agents
+### Required behavior for agents
 
 - Agents shall **update `status.md`** after meaningful work.
 - Agents shall **update `handoff.md`** before ending a session, including
@@ -42,7 +57,7 @@ handoff.md      # what the next agent / contributor needs to know
 - Agents shall keep documentation under `docs/` in sync when a feature
   changes the architecture, design, or roadmap.
 
-## File templates
+### File templates
 
 ### `plan.md`
 - Goal of the feature.
@@ -72,7 +87,7 @@ handoff.md      # what the next agent / contributor needs to know
 - Open questions.
 - How to open / run the project to reproduce current state.
 
-## Numbering
+### Numbering
 
 - `000-` is reserved for the bootstrap feature.
 - Subsequent features increment: `001-`, `002-`, etc.

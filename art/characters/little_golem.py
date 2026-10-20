@@ -53,7 +53,7 @@ WARM = (0.64, 0.44, 0.27)
 FACE_TONE = (WARM, (0.82, 0.62, 0.4), (0.36, 0.22, 0.12))
 SHINGLE_TONES = (FACE_TONE, (me.WOOD, me.WOOD_LIGHT, me.WOOD_DARK), ((0.5, 0.34, 0.21), WARM, me.WOOD_DARK))
 # Read off the sheet's front and side views (fractions of the height from
-# the feet to the top of the cap; see .features/048-little-golem-pass).
+# the feet to the top of the cap; see docs/history/features/048-little-golem-pass).
 SHEET = {"sticks_top": 1.14, "chin": 0.576, "shoulders": 0.555, "window": 0.39, "hips": 0.18, "hands": 0.15,
          "w_head": 0.47, "w_cap": 0.38, "w_face": 0.295, "w_trunk": 0.26, "w_arms": 0.51, "w_leg": 0.14,
          "d_head": 0.26, "d_trunk": 0.26}

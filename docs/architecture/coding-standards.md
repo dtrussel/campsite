@@ -132,7 +132,7 @@
   [`software-architecture.md`](software-architecture.md) and add an ADR if
   the change is significant.
 - When a system&rsquo;s public API changes, update the matching design
-  section and any `.features/*/handoff.md` notes.
+  section and any open `.scratch/` spec or ticket that describes it.
 - When a new resource type, mob type, or building type is added, update
   the design spec and the relevant `.tres` files.
 
