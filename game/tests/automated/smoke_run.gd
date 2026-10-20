@@ -47,6 +47,7 @@ func _ready() -> void:
 	await _run_bark_scenario()
 	await _run_boss_scenario()
 	await _run_perk_01_scenario()
+	await _run_perk_02_scenario()
 	await _run_perk_06_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
@@ -1549,6 +1550,44 @@ func _run_perk_06_scenario() -> void:
 	ProgressionManager.restore_xp(companion, stats.xp_threshold_for_level(3))
 	_check(ProgressionManager.get_level(companion) == 3 and PerkManager.perks_of(companion).is_empty()
 		and (hud.call("toasts") as Array).is_empty(), "a companion level-up while restoring a save takes no card")
+
+
+## Ticket 02: the perks both heroes hold survive save and Continue, quietly
+## (no picker), and a save from before perks loads with none.
+func _run_perk_02_scenario() -> void:
+	print("smoke: --- perk 02 scenario ---")
+	await _start_fresh_run()
+	var player: Node = get_tree().get_first_node_in_group("player")
+	var sibling: Node = get_tree().get_first_node_in_group("companions")
+	ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"test")
+	PerkManager.restore(player, [])  # forget the auto-picked card; take a known one
+	PerkManager.take(player, &"quick_hands")
+	PerkManager.take(sibling, &"quick_hands")
+	var data: Dictionary = SaveManager.snapshot()
+	_check(data["player"].get("perks", []) == ["quick_hands"] and data["sibling"].get("perks", []) == ["quick_hands"],
+		"the save lists each hero's perks")
+	GameManager.set("_pending_save", SaveManager.parse(SaveManager.serialize(data)))
+	await _start_fresh_run()
+	await get_tree().process_frame
+	player = get_tree().get_first_node_in_group("player")
+	sibling = get_tree().get_first_node_in_group("companions")
+	var tree_node: ResourceNode = _find_resource_node(&"wood")
+	_check(PerkManager.perks_of(player) == [&"quick_hands"] and PerkManager.perks_of(sibling) == [&"quick_hands"]
+		and not PerkManager.is_picking(), "Continue restores both heroes' perks without the picker")
+	_check(is_equal_approx(tree_node.gather_seconds_for(player), tree_node.gather_time_seconds * 0.7),
+		"a restored Quick Hands still speeds up gathering")
+
+	# A save from before perks: no "perks" keys at all.
+	data = SaveManager.snapshot()
+	(data["player"] as Dictionary).erase("perks")
+	(data["sibling"] as Dictionary).erase("perks")
+	GameManager.set("_pending_save", SaveManager.parse(SaveManager.serialize(data)))
+	await _start_fresh_run()
+	await get_tree().process_frame
+	player = get_tree().get_first_node_in_group("player")
+	sibling = get_tree().get_first_node_in_group("companions")
+	_check(GameManager.is_playing() and PerkManager.perks_of(player).is_empty() and PerkManager.perks_of(sibling).is_empty()
+		and not PerkManager.is_picking(), "a save from before perks loads with no perks")
 
 
 func _clear_mobs_except(keep: Node) -> void:

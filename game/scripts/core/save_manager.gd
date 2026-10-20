@@ -146,11 +146,13 @@ func snapshot() -> Dictionary:
 		"player": {
 			"xp": ProgressionManager.get_xp(player),
 			"signature": bool(player.get("has_signature")),
+			"perks": _perk_ids(player),
 		},
 		"sibling": {
 			"xp": ProgressionManager.get_xp(sibling),
 			"signature": bool(sibling.get("has_signature")),
 			"task": int(sibling.get("current_task")),
+			"perks": _perk_ids(sibling),
 		},
 		"stats": stats,
 		"lantern": {"shards": lantern.shards if lantern != null else 0},
@@ -189,6 +191,9 @@ func apply(data: Dictionary) -> void:
 	var sibling: Node = tree.get_first_node_in_group("companions")
 	ProgressionManager.restore_xp(player, int(data["player"]["xp"]))
 	ProgressionManager.restore_xp(sibling, int(data["sibling"]["xp"]))
+	# Saves from before perk cards have no "perks": the heroes hold none.
+	PerkManager.restore(player, _saved_perks(data["player"]))
+	PerkManager.restore(sibling, _saved_perks(data["sibling"]))
 	# Saves from before feature 034 name the upgrades "stick" / "slingshot".
 	if bool(data["player"].get("signature", data["player"].get("stick", false))):
 		player.call("apply_signature")
@@ -201,6 +206,16 @@ func apply(data: Dictionary) -> void:
 	if lantern != null:
 		var saved: Variant = data.get("lantern", {})
 		lantern.restore(int((saved as Dictionary).get("shards", 0)) if saved is Dictionary else 0)
+
+
+## A hero's taken perk ids as strings, one per copy, in the order taken.
+func _perk_ids(character: Node) -> Array:
+	return PerkManager.perks_of(character).map(func(id: StringName) -> String: return String(id))
+
+
+func _saved_perks(hero: Dictionary) -> Array:
+	var saved: Variant = hero.get("perks", [])
+	return saved if saved is Array else []
 
 
 func _on_dawn_started(_day: int) -> void:
