@@ -38,6 +38,8 @@ var is_gatherable: bool = true
 var _progress_bar: HealthBar3D = null
 
 var _active_gather_actor: Node = null
+## This gather's length: gather_time_seconds scaled by the actor's perks.
+var _active_gather_seconds: float = 0.0
 var _next_tick: float = 0.0
 var _gather_timer: Timer
 var _respawn_timer: Timer
@@ -64,10 +66,10 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	if _active_gather_actor == null or gather_time_seconds <= 0.0:
+	if _active_gather_actor == null or _active_gather_seconds <= 0.0:
 		return
-	var done: float = 1.0 - _gather_timer.time_left / gather_time_seconds
-	var elapsed: float = gather_time_seconds - _gather_timer.time_left
+	var done: float = 1.0 - _gather_timer.time_left / _active_gather_seconds
+	var elapsed: float = _active_gather_seconds - _gather_timer.time_left
 	# Tick sounds during the gather; the last one comes with the burst.
 	if elapsed >= _next_tick and _gather_timer.time_left > GATHER_TICK_SECONDS * 0.5:
 		_next_tick += GATHER_TICK_SECONDS
@@ -90,9 +92,16 @@ func begin_gather(actor: Node) -> bool:
 		return false
 	_active_gather_actor = actor
 	_next_tick = 0.2
-	_gather_timer.start(gather_time_seconds)
+	_active_gather_seconds = gather_seconds_for(actor)
+	_gather_timer.start(_active_gather_seconds)
 	_show_progress(true)
 	return true
+
+
+## How long `actor` takes to gather here: Quick Hands (a gather_time
+## perk) makes it shorter.
+func gather_seconds_for(actor: Node) -> float:
+	return gather_time_seconds * PerkManager.multiplier(actor, &"gather_time")
 
 
 func cancel_gather(actor: Node) -> void:

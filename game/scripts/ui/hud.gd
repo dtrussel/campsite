@@ -76,6 +76,7 @@ var _reach_bar: HudWidgets.StatBar = null
 var _boss: BossController = null
 var _story_card: StoryCard = null
 var _story_queue: Array = []
+var _perk_host: Control = null
 var _lantern_dial: HudWidgets.LanternDial = null
 var _tray_labels: Dictionary = {}  # StringName -> Label
 var _tray_rows: Dictionary = {}    # StringName -> Control
@@ -95,6 +96,7 @@ func _ready() -> void:
 	_build_banner(root)
 	_build_boss_bar(root)
 	_build_story_host(root)
+	_build_perk_host(root)
 
 	ResourceManager.resource_changed.connect(_on_resource_changed)
 	ResourceManager.caps_changed.connect(_refresh_tray)
@@ -519,6 +521,23 @@ func show_story(beat: StoryBeat, hint: String = "") -> StoryCard:
 	_story_host.add_child(_story_card)
 	PlaytestLog.write("story_card id=%s" % beat.id)
 	return _story_card
+
+
+## The perk picker's place: over the whole screen, above the story card.
+func _build_perk_host(root: Control) -> void:
+	_perk_host = Control.new()
+	_perk_host.name = "PerkHost"
+	_perk_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	UiKit.full_rect(_perk_host)
+	root.add_child(_perk_host)
+
+
+## Opens the level-up card picker (perk cards). PerkManager calls this
+## and takes the card the picker closes with.
+func show_perk_picker(cards: Array[PerkDefinition], auto_pick_seconds: float) -> PerkPicker:
+	var picker: PerkPicker = PerkPicker.make(cards, auto_pick_seconds)
+	_perk_host.add_child(picker)
+	return picker
 
 
 func _show_queued_story() -> void:

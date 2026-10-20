@@ -119,6 +119,7 @@ func _validate_data() -> void:
 			_fail("%s has no result icon (output item icon or icon_name)" % recipe.resource_path)
 
 	_validate_heroes(recipe_ids)
+	_validate_perks()
 	_validate_audio()
 	_validate_story()
 
@@ -236,6 +237,25 @@ func _validate_heroes(recipe_ids: Dictionary) -> void:
 			_fail("%s has unknown signature recipe '%s'" % [hero.resource_path, hero.signature_recipe])
 	if HeroRoster.all().size() < 2:
 		_fail("the roster needs at least two heroes (a hero and a companion)")
+
+
+## Perk cards: every perk has an icon, a name, a line of text and a
+## known effect kind (PerkDefinition.problems), and ids are unique.
+func _validate_perks() -> void:
+	var perk_ids: Dictionary = {}
+	var perks: Array[Resource] = DefinitionLoader.load_all(PerkManager.PERKS_DIR)
+	for res in perks:
+		var perk: PerkDefinition = res as PerkDefinition
+		if perk == null:
+			_fail("%s is not a PerkDefinition" % res.resource_path)
+			continue
+		_check_id(perk.id, perk.resource_path, perk_ids)
+		for problem in perk.problems():
+			_fail("%s %s" % [perk.resource_path, problem])
+	if perks.size() != PerkManager.definitions().size():
+		_fail("PerkManager loaded %d perks, %s has %d" % [PerkManager.definitions().size(), PerkManager.PERKS_DIR, perks.size()])
+	if PerkManager.offer(null, 3).is_empty():
+		_fail("no perk is offered to every hero (the shared pool is empty)")
 
 
 ## Feature 035: every story beat is complete and readable, each

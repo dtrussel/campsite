@@ -46,6 +46,7 @@ func _ready() -> void:
 	await _run_hero_scenario()
 	await _run_bark_scenario()
 	await _run_boss_scenario()
+	await _run_perk_01_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	_finish()
@@ -1407,6 +1408,84 @@ func _run_boss_scenario() -> void:
 	GameManager.nights_to_win = 3
 
 
+## Perk cards 01: a level-up opens the picker, a pick applies its
+## effect (Quick Hands: a shorter gather), the auto-pick fires after the
+## timeout, and the game returns to normal speed each time.
+func _run_perk_01_scenario() -> void:
+	print("smoke: --- perk 01 scenario ---")
+	await _start_fresh_run()
+	PerkManager.auto_pick_seconds = 5.0
+	var player: Node = get_tree().get_first_node_in_group("player")
+	var tree_node: ResourceNode = _find_resource_node(&"wood")
+	var base_seconds: float = tree_node.gather_seconds_for(player)
+	_check(is_equal_approx(base_seconds, tree_node.gather_time_seconds) and PerkManager.perks_of(player).is_empty(),
+		"no perks at run start (gather %.1f s)" % base_seconds)
+
+	ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"test")
+	var picker: PerkPicker = PerkManager.picker()
+	_check(ProgressionManager.get_level(player) == 2 and picker != null, "reaching level 2 opens the perk picker")
+	if picker == null:
+		return
+	var ids: Array = picker.cards().map(func(p: PerkDefinition) -> StringName: return p.id)
+	var distinct: Dictionary = {}
+	for id in ids:
+		distinct[id] = true
+	_check(ids.size() == mini(3, PerkManager.definitions().size()) and distinct.size() == ids.size()
+		and picker.card_buttons().size() == ids.size(), "the picker deals distinct cards (%s)" % ", ".join(ids))
+	_check(is_equal_approx(Engine.time_scale, SPEED * PerkPicker.SLOW_FACTOR), "the game runs at 10% speed while picking")
+	var index: int = ids.find(&"quick_hands")
+	_check(index >= 0, "Quick Hands is on offer")
+	# Press its number key, as a player would.
+	var key: InputEventKey = InputEventKey.new()
+	key.physical_keycode = KEY_1 + index
+	key.keycode = KEY_1 + index
+	key.pressed = true
+	Input.parse_input_event(key)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(PerkManager.has(player, &"quick_hands") and not PerkManager.is_picking(), "pressing %d takes Quick Hands" % (index + 1))
+	_check(is_equal_approx(Engine.time_scale, SPEED), "normal speed once a card is picked")
+	_check(is_equal_approx(tree_node.gather_seconds_for(player), base_seconds * 0.7), "Quick Hands: gathering takes 30% less time")
+	# The gather itself runs the shorter time (on a node nobody is using).
+	var started: bool = false
+	for node in get_tree().current_scene.find_children("*", "ResourceNode", true, false):
+		var gather_node: ResourceNode = node as ResourceNode
+		if gather_node.begin_gather(player):
+			var timer: Timer = gather_node.get("_gather_timer")
+			started = is_equal_approx(timer.wait_time, gather_node.gather_time_seconds * 0.7)
+			gather_node.cancel_gather(player)
+			break
+	_check(started, "the gather timer runs the shorter time")
+
+	# The pool is used up (Quick Hands does not stack): no picker.
+	if PerkManager.offer(player).is_empty():
+		ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"test")
+		_check(ProgressionManager.get_level(player) == 3 and not PerkManager.is_picking(), "an empty pool skips the picker")
+
+	# A new run: level-ups replayed from a save never open the picker.
+	await _start_fresh_run()
+	PerkManager.auto_pick_seconds = 0.5
+	player = get_tree().get_first_node_in_group("player")
+	_check(PerkManager.perks_of(player).is_empty(), "a new run starts with no perks")
+	var stats: CharacterStatsDefinition = ProgressionManager.get_stats(player)
+	ProgressionManager.restore_xp(player, stats.xp_threshold_for_level(2))
+	_check(ProgressionManager.get_level(player) == 2 and not PerkManager.is_picking(), "levelling up while restoring a save opens no picker")
+
+	# Nobody picks: the first card is taken after the timeout, through a hit-stop.
+	ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"test")
+	picker = PerkManager.picker()
+	_check(picker != null, "the next level-up opens the picker")
+	if picker == null:
+		return
+	var first: StringName = picker.cards()[0].id
+	Fx.hit_stop(0.05)
+	await get_tree().create_timer(0.2, true, false, true).timeout
+	_check(PerkManager.is_picking(), "the picker waits before it auto-picks")
+	await get_tree().create_timer(0.6, true, false, true).timeout
+	_check(PerkManager.has(player, first) and not PerkManager.is_picking(), "the auto-pick takes the first card (%s)" % first)
+	_check(is_equal_approx(Engine.time_scale, SPEED), "normal speed after the auto-pick (%.2f)" % Engine.time_scale)
+
+
 func _clear_mobs_except(keep: Node) -> void:
 	for node in get_tree().get_nodes_in_group("mobs"):
 		if node != keep:
@@ -1431,6 +1510,9 @@ func _bark_line(text: String, trigger: StringName, speaker: StringName) -> bool:
 func _start_fresh_run() -> void:
 	get_tree().paused = false
 	Engine.time_scale = 1.0
+	# Level-ups take the first perk card at once, so the picker never
+	# slows a scenario down. The perk scenarios turn it back on.
+	PerkManager.auto_pick_seconds = 0.0
 	if _main != null:
 		# Wait until the old camp is really gone: resuming from a physics-
 		# frame timer, one process frame can still run before it is freed.

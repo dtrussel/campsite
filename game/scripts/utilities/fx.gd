@@ -350,6 +350,7 @@ static func shake(amount: float) -> void:
 
 
 static var _hit_stop_scale: float = -1.0
+static var _hit_stop_previous: float = 1.0
 
 
 ## Freezes the game for a blink (a few frames) so a hit lands with
@@ -360,6 +361,7 @@ static func hit_stop(seconds: float = 0.05, slow_factor: float = 0.08) -> void:
 	if tree == null or _hit_stop_scale > 0.0 or tree.paused:
 		return
 	var previous: float = Engine.time_scale
+	_hit_stop_previous = previous
 	_hit_stop_scale = previous * slow_factor
 	Engine.time_scale = _hit_stop_scale
 	tree.create_timer(seconds, true, false, true).timeout.connect(func() -> void:
@@ -367,3 +369,11 @@ static func hit_stop(seconds: float = 0.05, slow_factor: float = 0.08) -> void:
 			Engine.time_scale = previous
 		_hit_stop_scale = -1.0
 	)
+
+
+## The time scale with any running hit-stop taken out: what it will
+## return to. The perk picker slows from (and restores to) this.
+static func unstopped_time_scale() -> float:
+	if _hit_stop_scale > 0.0 and is_equal_approx(Engine.time_scale, _hit_stop_scale):
+		return _hit_stop_previous
+	return Engine.time_scale

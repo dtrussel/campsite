@@ -85,6 +85,7 @@ Each autoload is a single small node script registered in
 | `ResourceManager`    | Tracks resource inventory; validates costs; adds/removes.   |
 | `BuildManager`       | Handles build mode, placement validation, blueprint spawn and completion. |
 | `ProgressionManager` | Handles XP totals and level-up rules.                       |
+| `PerkManager`        | Perk cards: deals cards on level-up, opens the picker, answers perk hooks. |
 | `SaveManager`        | Serializes and deserializes save data.                      |
 
 ### Autoload contract
@@ -280,6 +281,7 @@ Initial signal vocabulary (declared on the relevant autoload or scene):
 | `mob_defeated`           | `MobController`      | `(mob_node: Node3D)`              |
 | `xp_gained`              | `ProgressionManager` | `(character: Node, amount: int)`  |
 | `level_up`               | `ProgressionManager` | `(character: Node, new_level: int)`|
+| `perk_taken`             | `PerkManager`        | `(character: Node, perk: PerkDefinition)`|
 | `companion_task_changed` | `CompanionController`| `(companion: Node, task: int)`    |
 
 Signal names use snake_case and are documented in the script that emits

@@ -225,6 +225,7 @@ func _reset_autoloads() -> void:
 	BuildManager.exit_build_mode()
 	ResourceManager.reset()
 	ProgressionManager.reset()
+	PerkManager.reset()
 	current_day = 1
 	is_camp_destroyed = false
 	end_reason = ""

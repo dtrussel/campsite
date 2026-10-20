@@ -19,6 +19,8 @@ func _ready() -> void:
 	var no_beasts: bool = args.has("no_beasts")
 	var nights: int = 7 if args.has("7") else 3
 	GameManager.nights_to_win = nights
+	# Level-ups take the first perk card at once; the picker never opens.
+	PerkManager.auto_pick_seconds = 0.0
 	var main: Node = MAIN_SCENE.instantiate()
 	add_child(main)
 	await get_tree().process_frame
