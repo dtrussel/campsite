@@ -23,6 +23,7 @@ The words this project uses for its own concepts. Use them in code, tickets and 
 ## Across runs
 
 - **Profile:** what a player keeps across runs, such as the story beats seen, chapters won, records and (later) badges. It is never deleted when a run ends. *Not* device settings (audio, look, auto-attack), which live apart.
+- **Badge (Camp Badge):** a Scout-style milestone kept in the profile, such as First Night or Builder. Earned once, for good.
 - **Record:** a best value kept in the profile, like the most nights survived in endless mode.
 
 ## Building

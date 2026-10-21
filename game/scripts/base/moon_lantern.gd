@@ -160,6 +160,8 @@ func deliver(from: Node3D = null) -> int:
 	Fx.burst(&"shard", global_position + Vector3(0, 1.6, 0))
 	shards_delivered.emit(amount)
 	_refresh(true)
+	if is_full():
+		GameManager.set_stat(&"lantern_lit", 1)
 	return amount
 
 

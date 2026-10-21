@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="BadgeDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/meta/badge_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"shard_seeker"
+display_name = "Shard Seeker"
+how_to_earn = "Find 25 Glow Shards in total."
+icon = "glow_shards"
+condition = &"total"
+stat = &"shards"
+amount = 25

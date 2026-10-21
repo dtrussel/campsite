@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="BadgeDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/meta/badge_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"trapper"
+display_name = "Trapper"
+how_to_earn = "Snap 10 traps on monsters in total."
+icon = "trap"
+condition = &"total"
+stat = &"trap_snaps"
+amount = 10

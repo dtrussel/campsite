@@ -112,6 +112,8 @@ func _die() -> void:
 	collision_mask = 0
 	_award_kill_xp()
 	GameManager.record(&"kills")
+	if definition != null and definition.steals_resources:
+		GameManager.record(&"gremlins_caught")
 	_maybe_drop_loot()
 	defeated.emit(self)
 	if _hp_bar != null:
