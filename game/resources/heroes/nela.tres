@@ -26,6 +26,8 @@ damage_bonus = 0
 range_factor = 1.0
 companion_range_factor = 1.0
 effects = Array[StringName]([&"double_shot"])
+double_shot_every = 3
+double_shot_gap_seconds = 0.08
 
 [sub_resource type="Resource" id="tier_3"]
 script = ExtResource("5_tier")
@@ -36,6 +38,11 @@ damage_bonus = 0
 range_factor = 1.0
 companion_range_factor = 1.0
 effects = Array[StringName]([&"pierce", &"glow_hit"])
+pierce_reach = 3.0
+pierce_width = 0.8
+glow_seconds = 1.5
+glow_range = 2.5
+glow_energy = 1.4
 
 [resource]
 script = ExtResource("1_def")

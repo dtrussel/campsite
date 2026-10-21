@@ -151,7 +151,7 @@ func _on_down_changed(_is_down: bool) -> void:
 
 # --- Attack --------------------------------------------------------------
 # Attacking a target, reach, readiness, damage and the signature tool's
-# tiers (tool tiers): their bonuses, the burn and the night light.
+# tiers: their bonuses, the burn and the night light.
 # The module owns the cooldown and the melee vs pebble branch; HeroHits
 # stays the perk math underneath (every hit goes through its strike()).
 # The role adds the feel: `_show_attack` (the swing animation) and
@@ -181,15 +181,6 @@ var has_signature: bool:
 	get:
 		return tool_tier > 0
 
-## With a `double_shot` tier (the Double Sling), every this-many-th shot
-## fires a second pebble.
-const DOUBLE_SHOT_EVERY: int = 3
-## The second pebble of a double shot leaves this long after the first.
-const DOUBLE_SHOT_GAP_SECONDS: float = 0.08
-## The night light's reach in metres, and with a `bright_light` tier.
-const TOOL_LIGHT_RANGE: float = 3.0
-const TOOL_LIGHT_BRIGHT_RANGE: float = 4.2
-
 ## The small personal light an owned `night_light` tier gives at night.
 var _tool_light: OmniLight3D = null
 
@@ -218,15 +209,16 @@ func attack(target: Node3D) -> bool:
 	return true
 
 
-## Fires a pebble at `target`; with the Double Sling every third shot
-## fires a second one too (launched now, so it counts with its shot,
+## Fires a pebble at `target`; with the Double Sling every few shots
+## fire a second one too (launched now, so it counts with its shot,
 ## and flying a moment after the first).
 func _shoot(target: Node3D) -> void:
 	_shot_count += 1
 	var damage: int = get_attack_damage()
 	PebbleShot.fire(self, target, damage)
-	if has_tool_effect(&"double_shot") and _shot_count % DOUBLE_SHOT_EVERY == 0:
-		PebbleShot.fire(self, target, damage, DOUBLE_SHOT_GAP_SECONDS)
+	var double: ToolTier = tool_effect_tier(&"double_shot")
+	if double != null and _shot_count % maxi(double.double_shot_every, 1) == 0:
+		PebbleShot.fire(self, target, damage, double.double_shot_gap_seconds)
 
 
 ## The damage of one hit now, before per-target perks (Twin Strike).
@@ -276,7 +268,7 @@ func set_tool_tier(tier: int, quiet: bool = false) -> void:
 	for n in range(tool_tier + 1, tier + 1):
 		var step: ToolTier = hero.tier(n)
 		attack_damage += step.damage_bonus
-		attack_range *= step.companion_range_factor if _is_companion_role() else step.range_factor
+		attack_range *= _range_factor_of(step)
 	tool_tier = tier
 	_update_tool_light()
 	if not quiet:
@@ -284,20 +276,41 @@ func set_tool_tier(tier: int, quiet: bool = false) -> void:
 		Fx.burst(&"level_up", global_position)
 
 
+## A tier's range factor for this role (the companion reads
+## `companion_range_factor`).
+func _range_factor_of(step: ToolTier) -> float:
+	return step.companion_range_factor if _is_companion_role() else step.range_factor
+
+
 ## True if a tier the hero owns has `effect` (ToolTier.EFFECTS).
 func has_tool_effect(effect: StringName) -> bool:
+	return tool_effect_tier(effect) != null
+
+
+## The highest tier the hero owns that has `effect`, whose numbers the
+## effect uses; null when no owned tier has it.
+func tool_effect_tier(effect: StringName) -> ToolTier:
 	if hero == null:
-		return false
-	for n in range(1, tool_tier + 1):
+		return null
+	for n in range(tool_tier, 0, -1):
 		if hero.tier(n).effects.has(effect):
-			return true
-	return false
+			return hero.tier(n)
+	return null
 
 
-## How far the tool's night light reaches: a little further with a
-## `bright_light` tier (the Blaze Stick).
+## The tier that `recipe_id` makes on this hero's tool path (1-based),
+## or 0 if it is not one of this hero's tiers.
+func tier_of_recipe(recipe_id: StringName) -> int:
+	return hero.tier_of_recipe(recipe_id) if hero != null else 0
+
+
+## How far the tool's night light reaches: further with a `bright_light`
+## tier (the Blaze Stick); 0 without a light.
 func get_tool_light_range() -> float:
-	return TOOL_LIGHT_BRIGHT_RANGE if has_tool_effect(&"bright_light") else TOOL_LIGHT_RANGE
+	var light: ToolTier = tool_effect_tier(&"bright_light")
+	if light == null:
+		light = tool_effect_tier(&"night_light")
+	return light.light_range if light != null else 0.0
 
 
 ## True while the Ember Stick's personal light is lit.
@@ -310,12 +323,15 @@ func is_tool_light_on() -> bool:
 ## tool's on-hit effects (the Ember Stick's burn, the Blaze Stick's
 ## splash onto the mobs beside the target, and the Glow Sling's glow).
 func on_attack_hit(target: Node, _damage: int) -> void:
-	if has_tool_effect(&"glow_hit"):
-		GlowMark.light(target)
-	if has_tool_effect(&"burn"):
-		Burn.ignite(target)
-		if has_tool_effect(&"burn_splash") and target is Node3D:
-			Burn.splash(target as Node3D)
+	var glow: ToolTier = tool_effect_tier(&"glow_hit")
+	if glow != null:
+		GlowMark.light(target, glow)
+	var burn: ToolTier = tool_effect_tier(&"burn")
+	if burn != null:
+		Burn.ignite(target, burn)
+		var splash: ToolTier = tool_effect_tier(&"burn_splash")
+		if splash != null and target is Node3D:
+			Burn.splash(target as Node3D, splash.burn_splash_radius, burn)
 
 
 ## Reads reach and cooldown from the definition for this role: the
@@ -471,8 +487,7 @@ func load_state(data: Dictionary) -> void:
 func reset() -> void:
 	if tool_tier > 0 and hero != null:
 		for n in range(1, tool_tier + 1):
-			var step: ToolTier = hero.tier(n)
-			var factor: float = step.companion_range_factor if _is_companion_role() else step.range_factor
+			var factor: float = _range_factor_of(hero.tier(n))
 			if factor > 0.0:
 				attack_range /= factor
 		tool_tier = 0

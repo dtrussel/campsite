@@ -83,7 +83,7 @@ func _ready() -> void:
 	_finish()
 
 
-## Journal badges 01: winning Chapter 1 unlocks Chapter 2 on the title,
+## Winning Chapter 1 unlocks Chapter 2 on the title,
 ## and it stays unlocked after a restart (the profile read again from
 ## its file). A profile whose story.cfg import found Chapter 2 played
 ## opens with it unlocked. Hero select opens on the last hero picked,
@@ -155,7 +155,7 @@ func _run_chapter_lock_scenario() -> void:
 	Profile.delete()
 
 
-## Journal badges 02: surviving night 1 earns First Night once, with a
+## Surviving night 1 earns First Night once, with a
 ## toast, and it is still earned after a restart (the profile read again
 ## from its file). The totals counting badges need (Builder, Gremlin
 ## Catcher) carry across runs and restarts. Winning Chapter 1 with the
@@ -230,7 +230,7 @@ func _run_badges_scenario() -> void:
 	Profile.delete()
 
 
-## Journal badges 03: the title's Journal button opens the scrapbook,
+## The title's Journal button opens the scrapbook,
 ## whose Badges tab lists every badge: the earned ones in colour, the
 ## locked ones as silhouettes with how to earn them, as the profile has
 ## them. Close goes back to the title.
@@ -272,7 +272,7 @@ func _run_scrapbook_scenario() -> void:
 	Profile.delete()
 
 
-## Journal badges 06: a badge unlocks a starting perk. Without it hero
+## A badge unlocks a starting perk. Without it hero
 ## select offers none and a run starts with no card even if one is asked
 ## for. With Gatherer earned, hero select offers Quick Hands; the pick
 ## reaches the next run, which starts holding it (gathering is faster),
@@ -328,7 +328,7 @@ func _run_starting_perks_scenario() -> void:
 	Profile.delete()
 
 
-## Journal badges 05: a badge unlocks an outfit tint and a tent colour.
+## A badge unlocks an outfit tint and a tent colour.
 ## Hero select's outfit row will not pick a locked one; an unlocked one
 ## is kept in the profile (after a restart too) and the run dresses the
 ## hero (not the companion) and the tent in it.
@@ -380,7 +380,7 @@ func _run_cosmetic_tints_scenario() -> void:
 	Profile.delete()
 
 
-## Journal badges 04: a day chest at the map edge gives a page of Mum's
+## A day chest at the map edge gives a page of Mum's
 ## journal not yet found, and the scrapbook's Journal tab shows it. A
 ## run rolls at most one chest (half of them none); a continued run
 ## never brings a second one. Mum's dawn notes and some badges give
@@ -3000,7 +3000,7 @@ func _check_hero_attack(who: Hero) -> void:
 	_check(who.tool_tier == 1 and who.get_attack_damage() == damage + first.damage_bonus, "%s: the signature applies once" % label)
 
 
-## Tool tiers 01: Leo's tier path, as the player's hero and as the
+## Leo's tier path, as the player's hero and as the
 ## companion. The Ember Stick (tier 2) is offered only once the Sturdy
 ## Stick (tier 1) is owned, costs 2 Glow Shards, its hits burn 3 times,
 ## it lights Leo at night, the HUD's attack slot shows the tier, and the
@@ -3050,8 +3050,9 @@ func _run_tool_tiers_scenario() -> void:
 		var dealt: int = HeroHits.strike(leo, mob, leo.get_attack_damage())
 		var after_hit: int = mob.current_hp
 		_check(dealt > 0 and Burn.on(mob) != null, "Leo as %s: the Ember Stick's hit sets the mob burning" % role)
-		await _wait(Burn.SECONDS + 0.5)
-		_check(after_hit - mob.current_hp == Burn.TICKS * Burn.DAMAGE and Burn.on(mob) == null,
+		var ember_burn: ToolTier = leo.tool_effect_tier(&"burn")
+		await _wait(ember_burn.burn_seconds() + 0.5)
+		_check(after_hit - mob.current_hp == 3 and Burn.on(mob) == null,
 			"Leo as %s: the burn ticks 3 times (%d HP)" % [role, after_hit - mob.current_hp])
 		var burnt: int = mob.current_hp
 		await _wait(1.5)
@@ -3076,8 +3077,8 @@ func _run_tool_tiers_scenario() -> void:
 		HeroHits.strike(leo, target, leo.get_attack_damage())
 		_check(Burn.on(target) != null and Burn.on(beside) != null and Burn.on(away) == null and beside.current_hp == beside_hp,
 			"Leo as %s: the Blaze Stick's burn splashes onto the mob beside the target, not the one further off" % role)
-		await _wait(Burn.SECONDS + 0.5)
-		_check(beside_hp - beside.current_hp == Burn.TICKS * Burn.DAMAGE,
+		await _wait(ember_burn.burn_seconds() + 0.5)
+		_check(beside_hp - beside.current_hp == 3,
 			"Leo as %s: the splashed burn ticks 3 times (%d HP)" % [role, beside_hp - beside.current_hp])
 		for each in [target, beside, away]:
 			(each as Mob).free()
@@ -3088,7 +3089,7 @@ func _run_tool_tiers_scenario() -> void:
 		while not TimeManager.is_night():
 			TimeManager.skip_phase()
 		leo.call("_update_tool_light")
-		_check(leo.is_tool_light_on() and leo.get_tool_light_range() > Hero.TOOL_LIGHT_RANGE,
+		_check(leo.is_tool_light_on() and leo.get_tool_light_range() > leo.tool_effect_tier(&"night_light").light_range,
 			"Leo as %s: the Blaze Stick lights him at night, a little wider (%.1f m)" % [role, leo.get_tool_light_range()])
 		var torch: Torch = Torch.SCENE.instantiate() as Torch
 		get_tree().current_scene.add_child(torch)
@@ -3117,10 +3118,10 @@ func _run_tool_tiers_scenario() -> void:
 	GameManager.set_party(&"leo")
 
 
-## Tool tiers 02: Nela's Double Sling, as the player's hero and as the
+## Nela's Double Sling, as the player's hero and as the
 ## companion. It is offered only once the Slingshot (tier 1) is owned,
 ## costs 2 Glow Shards, and every third shot launches two pebbles.
-## Tool tiers 03: then the Glow Sling (tier 3, 4 Glow Shards), whose
+## Then the Glow Sling (tier 3, 4 Glow Shards), whose
 ## pebble pierces on to the mob behind its target and lights what it hits.
 func _run_double_sling_scenario() -> void:
 	print("smoke: --- double sling scenario ---")
@@ -3193,7 +3194,8 @@ func _run_double_sling_scenario() -> void:
 		_check(behind.current_hp < hp[1] and aside.current_hp == hp[2],
 			"Nela as %s: the pebble pierces on to the mob behind, not the one aside (%d, %d HP lost)"
 				% [role, hp[1] - behind.current_hp, hp[2] - aside.current_hp])
-		_check(await _wait_until(func() -> bool: return GlowMark.on(front) == null, GlowMark.SECONDS + 1.0),
+		_check(await _wait_until(func() -> bool: return GlowMark.on(front) == null,
+			nela.tool_effect_tier(&"glow_hit").glow_seconds + 1.0),
 			"Nela as %s: the glow fades" % role)
 		for each in [front, behind, aside]:
 			(each as Mob).free()
@@ -3294,7 +3296,7 @@ func _run_old_save_scenario() -> void:
 		"the Ember Heart torch comes back with its dawn left and its %.1f m ring" % float(torch_entry["radius"]))
 	# Saved again, every field of the old save is still there (tool tiers:
 	# a hero's `signature` flag is saved as its `tier`). Stats added since
-	# (journal badges 02) start fresh beside the old ones.
+	# start fresh beside the old ones.
 	var lost: Array[String] = []
 	for key in data.keys():
 		var expected: Variant = int(data["day"]) + 1 if key == "day" else data[key]
@@ -3528,7 +3530,7 @@ func _run_review_fixes_scenario() -> void:
 		"Continue on a level-3 save plays no level-up bark")
 
 
-## Endless mode 01: once the true ending is seen, the title offers
+## Once the true ending is seen, the title offers
 ## Endless: a Chapter 2 run with the Moon Lantern lit that keeps going
 ## past night 7 with no win and no Moon-Eater, and stays endless through
 ## save and Continue.
@@ -3588,7 +3590,7 @@ func _run_endless_scenario() -> void:
 	_check(GameManager.is_playing() and int(GameManager.stats[&"nights_survived"]) == 8,
 		"an endless run passes night 8 without a win")
 
-	# Endless ticket 02: past night 7 mobs grow tougher and the heavies
+	# Past night 7 mobs grow tougher and the heavies
 	# and thieves take a growing share of the wave.
 	var imp_hp: Array[int] = await _summoned_hp(spawner, [7, 9])
 	_check(imp_hp[1] > imp_hp[0], "an imp on endless night 9 has more HP than on night 7 (%d > %d)" % [imp_hp[1], imp_hp[0]])
@@ -3628,7 +3630,7 @@ func _run_endless_scenario() -> void:
 	StoryLibrary.forget_progress()
 
 
-## Endless mode 03: an endless loss keeps the best nights and the hero
+## An endless loss keeps the best nights and the hero
 ## in the profile (under "endless."), the end screen says "New record!"
 ## only when it is beaten, and the title's Endless button shows it.
 func _run_endless_record_scenario() -> void:

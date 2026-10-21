@@ -144,8 +144,8 @@ static func extra_targets(attacker: Node, first: Node3D, source: StringName) -> 
 		return out
 	var candidates: Array[Node3D] = []
 	for node in first.get_tree().get_nodes_in_group("mobs"):
-		var mob: Node3D = node as Node3D
-		if mob == null or mob == first or not is_instance_valid(mob) or int(mob.get("current_hp")) <= 0:
+		var mob: Mob = node as Mob
+		if mob == null or mob == first or not is_instance_valid(mob) or not mob.is_alive():
 			continue
 		if _flat(mob.global_position - first.global_position).length() <= reach:
 			candidates.append(mob)

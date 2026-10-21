@@ -284,6 +284,8 @@ func _validate_heroes(recipe_ids: Dictionary) -> void:
 			for effect in tier.effects:
 				if not ToolTier.EFFECTS.has(effect):
 					_fail("%s: tool tier %d has unknown effect '%s'" % [hero.resource_path, n, effect])
+			for problem in tier.problems():
+				_fail("%s: tool tier %d %s" % [hero.resource_path, n, problem])
 	for id in recipe_ids.keys():
 		var recipe: CraftingRecipe = load(recipe_ids[id]) as CraftingRecipe
 		if recipe != null and recipe.effect == CraftingRecipe.EFFECT_TOOL_TIER and not tier_recipes.has(id):
@@ -292,7 +294,7 @@ func _validate_heroes(recipe_ids: Dictionary) -> void:
 		_fail("the roster needs at least two heroes (a hero and a companion)")
 
 
-## Camp badges (journal badges 02): every badge has an icon, a name,
+## Camp badges: every badge has an icon, a name,
 ## how-to-earn text and a known condition (BadgeDefinition.problems),
 ## ids are unique, and Badges loaded them all.
 func _validate_badges() -> void:
@@ -312,13 +314,13 @@ func _validate_badges() -> void:
 		_fail("StartingPerks %s" % problem)
 	if badges.size() != Badges.definitions().size():
 		_fail("Badges loaded %d badges, %s has %d" % [Badges.definitions().size(), Badges.BADGES_DIR, badges.size()])
-	# Journal badges 05: every cosmetic tint is unlocked by a real badge.
+	# Every cosmetic tint is unlocked by a real badge.
 	for badge_id in Cosmetics.badges_named():
 		if not badge_ids.has(badge_id):
 			_fail("Cosmetics names unknown badge '%s'" % badge_id)
 
 
-## Journal badges 04: Mum's journal has 10-12 sound pages
+## Mum's journal has 10-12 sound pages
 ## (JournalPage.problems) with unique ids, and every note on a dawn
 ## card is one of them, so it is collected when the card plays.
 func _validate_journal() -> void:

@@ -761,8 +761,8 @@ func _spawn_model(path: String, position: Vector3, uniform_scale: float, yaw: fl
 	node.position = position
 	node.rotation.y = yaw
 	node.scale = Vector3.ONE * uniform_scale
-	# Rocks and hills keep their painted colours (TINT_ROCK / TINT_FOLIAGE
-	# were for KayKit's models, and Stylize now tints painted ones too).
+	# Rocks and hills keep their painted colours: a flat tint would wash
+	# out the hand-painted texture.
 	if (path.contains("tree_") or path.contains("pine_") or path.contains("bush")) and not path.contains("dead"):
 		node.set_meta(Stylize.FOLIAGE_META, true)
 	add_child(node)

@@ -26,6 +26,10 @@ damage_bonus = 0
 range_factor = 1.0
 companion_range_factor = 1.0
 effects = Array[StringName]([&"burn", &"night_light"])
+burn_damage = 1
+burn_tick_seconds = 1.0
+burn_ticks = 3
+light_range = 3.0
 
 [sub_resource type="Resource" id="tier_3"]
 script = ExtResource("5_tier")
@@ -36,6 +40,8 @@ damage_bonus = 0
 range_factor = 1.0
 companion_range_factor = 1.0
 effects = Array[StringName]([&"burn_splash", &"bright_light"])
+burn_splash_radius = 1.6
+light_range = 4.2
 
 [resource]
 script = ExtResource("1_def")

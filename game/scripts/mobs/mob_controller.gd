@@ -90,6 +90,11 @@ func _play_spawn_fx() -> void:
 		_visual.face_instantly(_base.global_position - global_position)
 
 
+## True while the mob still has HP left.
+func is_alive() -> bool:
+	return current_hp > 0
+
+
 func take_damage(amount: int, source: Node = null) -> void:
 	if amount <= 0 or state == State.DYING:
 		return

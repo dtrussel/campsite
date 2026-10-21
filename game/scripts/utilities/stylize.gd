@@ -38,10 +38,6 @@ const PAINTED_SHADER: Shader = preload("res://shaders/painted_prop.gdshader")
 const PROP_OUTLINE_COLOR: Color = Color(0.2, 0.12, 0.07)
 const PROP_OUTLINE_THICKNESS: float = 0.011
 
-## Shared tints so the world stays colour-consistent.
-const TINT_FOLIAGE: Color = Color(0.92, 0.78, 0.48)
-const TINT_ROCK: Color = Color(0.8, 0.76, 0.7)
-
 static var _cache: Dictionary = {}  # "<instance id>|<profile>" -> Material
 
 

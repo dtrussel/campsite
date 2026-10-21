@@ -14,10 +14,6 @@ const FLIGHT_SECONDS: float = 0.2
 const ARC_HEIGHT: float = 0.45
 const HAND_HEIGHT: float = 0.85
 const TARGET_HEIGHT: float = 0.6
-## How far past its target (flat metres, along its line) a piercing
-## pebble flies on, and how far off that line a mob may stand.
-const PIERCE_REACH: float = 3.0
-const PIERCE_WIDTH: float = 0.8
 
 static var _mesh: SphereMesh = null
 
@@ -99,17 +95,18 @@ func _land() -> void:
 		if not _is_bounce:
 			for next in HeroHits.extra_targets(shooter, _target, &"pebble"):
 				PebbleShot.bounce(shooter, global_position, next, _damage)
-			if shooter is Hero and (shooter as Hero).has_tool_effect(&"pierce"):
-				var behind: Node3D = pierce_target(_target, _to - _from)
+			var pierce: ToolTier = (shooter as Hero).tool_effect_tier(&"pierce") if shooter is Hero else null
+			if pierce != null:
+				var behind: Node3D = pierce_target(_target, _to - _from, pierce.pierce_reach, pierce.pierce_width)
 				if behind != null:
 					PebbleShot.bounce(shooter, global_position, behind, _damage)
 	queue_free()
 
 
 ## The mob a pebble flying along `direction` meets next after `hit`: the
-## nearest living mob ahead of `hit` along that line, within PIERCE_REACH
-## and no more than PIERCE_WIDTH off it. Null if there is none.
-static func pierce_target(hit: Node3D, direction: Vector3) -> Node3D:
+## nearest living mob ahead of `hit` along that line, within `reach`
+## and no more than `width` off it (flat metres). Null if there is none.
+static func pierce_target(hit: Node3D, direction: Vector3, reach: float, width: float) -> Node3D:
 	direction.y = 0.0
 	if hit == null or not is_instance_valid(hit) or not hit.is_inside_tree() or direction.length_squared() < 0.0001:
 		return null
@@ -117,13 +114,13 @@ static func pierce_target(hit: Node3D, direction: Vector3) -> Node3D:
 	var best: Node3D = null
 	var best_along: float = INF
 	for node in hit.get_tree().get_nodes_in_group("mobs"):
-		var mob: Node3D = node as Node3D
-		if mob == null or mob == hit or not is_instance_valid(mob) or int(mob.get("current_hp")) <= 0:
+		var mob: Mob = node as Mob
+		if mob == null or mob == hit or not is_instance_valid(mob) or not mob.is_alive():
 			continue
 		var offset: Vector3 = mob.global_position - hit.global_position
 		offset.y = 0.0
 		var along: float = offset.dot(direction)
-		if along <= 0.0 or along > PIERCE_REACH or (offset - direction * along).length() > PIERCE_WIDTH:
+		if along <= 0.0 or along > reach or (offset - direction * along).length() > width:
 			continue
 		if along < best_along:
 			best = mob

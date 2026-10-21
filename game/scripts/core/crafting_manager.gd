@@ -60,7 +60,7 @@ func is_offered(recipe: CraftingRecipe) -> bool:
 	if recipe.effect != CraftingRecipe.EFFECT_TOOL_TIER:
 		return true
 	var holder: Hero = _tier_owner(recipe.id)
-	return holder != null and holder.tool_tier >= holder.hero.tier_of_recipe(recipe.id) - 1
+	return holder != null and holder.tool_tier >= holder.tier_of_recipe(recipe.id) - 1
 
 
 func can_craft(recipe: CraftingRecipe) -> bool:
@@ -115,7 +115,7 @@ func _effect_possible(recipe: CraftingRecipe) -> bool:
 		CraftingRecipe.EFFECT_TOOL_TIER:
 			# A hero's next tool tier, whichever role the hero plays.
 			var holder: Hero = _tier_owner(recipe.id)
-			return holder != null and holder.tool_tier == holder.hero.tier_of_recipe(recipe.id) - 1
+			return holder != null and holder.tool_tier == holder.tier_of_recipe(recipe.id) - 1
 		&"trap_refill":
 			for trap in get_tree().get_nodes_in_group(SnapTrap.GROUP):
 				if (trap as SnapTrap).needs_refill():
@@ -138,7 +138,7 @@ func _apply_effect(recipe: CraftingRecipe) -> void:
 	match effect:
 		CraftingRecipe.EFFECT_TOOL_TIER:
 			var holder: Hero = _tier_owner(recipe.id)
-			holder.set_tool_tier(holder.hero.tier_of_recipe(recipe.id))
+			holder.set_tool_tier(holder.tier_of_recipe(recipe.id))
 			return
 		&"trap_refill":
 			for trap in get_tree().get_nodes_in_group(SnapTrap.GROUP):
