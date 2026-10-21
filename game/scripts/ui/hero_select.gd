@@ -55,8 +55,9 @@ func _ready() -> void:
 
 	var heroes: Array[HeroDefinition] = HeroRoster.all()
 	var start_index: int = 0
+	var last: StringName = GameManager.last_hero_pick()
 	for i in heroes.size():
-		if heroes[i].id == GameManager.hero_id:
+		if heroes[i].id == last:
 			start_index = i
 	select(start_index, false)
 	_start.grab_focus()

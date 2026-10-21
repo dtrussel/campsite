@@ -4,8 +4,14 @@ extends CanvasLayer
 ##
 ## Esc / P toggles pause during a run. Esc is shared with other
 ## overlays, so it first closes the crafting panel and leaves build
-## mode cancellation to BuildManager.
+## mode cancellation to BuildManager. Its settings end with Delete
+## profile (journal badges 01), which asks first and forgets the
+## player's progress (Profile), never the audio or look settings.
 
+## Opens the Delete profile confirmation.
+var delete_profile_button: Button = null
+## Asks before the profile is deleted.
+var delete_profile_confirm: ConfirmationDialog = null
 var _root: Control = null
 
 
@@ -38,6 +44,19 @@ func _ready() -> void:
 	column.add_child(_volume_row("Sounds", AudioManager.sfx_volume, AudioManager.set_sfx_volume))
 	column.add_child(_choice_row("Blur", PostFx.BLUR_NAMES, PostFx.blur_level(), PostFx.set_blur_level))
 	column.add_child(_toggle_row("Auto-fight", GameSettings.auto_attack(), GameSettings.set_auto_attack))
+	column.add_child(UiKit.divider(280))
+	delete_profile_button = HudWidgets.icon_button("close", "Delete profile", _ask_delete_profile,
+		Color(1.0, 0.45, 0.4), null, false, 44.0)
+	delete_profile_button.add_theme_font_size_override("font_size", 16)
+	delete_profile_button.tooltip_text = "Forget chapters won and the last hero. Sound and look settings stay."
+	column.add_child(delete_profile_button)
+	delete_profile_confirm = ConfirmationDialog.new()
+	delete_profile_confirm.title = "Delete profile?"
+	delete_profile_confirm.dialog_text = "This forgets the chapters you have won and locks Chapter 2 again.\nYour sound and look settings stay."
+	delete_profile_confirm.ok_button_text = "Delete"
+	delete_profile_confirm.cancel_button_text = "Keep"
+	delete_profile_confirm.confirmed.connect(_delete_profile)
+	_root.add_child(delete_profile_confirm)
 	_root.visible = false
 
 
@@ -141,6 +160,15 @@ func _show_controls() -> void:
 		return
 	get_tree().paused = false
 	overlay.open()
+
+
+func _ask_delete_profile() -> void:
+	delete_profile_confirm.popup_centered()
+
+
+func _delete_profile() -> void:
+	Profile.delete()
+	PlaytestLog.write("profile_deleted")
 
 
 func _restart() -> void:

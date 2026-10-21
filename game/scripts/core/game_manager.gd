@@ -36,8 +36,9 @@ var end_reason: String = ""
 var end_trigger: StringName = &""
 ## Per-run counters for the end screen and the playtest log.
 var stats: Dictionary = {}
-## The party: the played hero and the companion (HeroRoster ids). Kept
-## between runs so the hero select screen opens on the last pick.
+## The party: the played hero and the companion (HeroRoster ids). The
+## last hero picked is also kept in the profile (record_hero_pick), so
+## hero select opens on it after a restart too.
 var hero_id: StringName = &"leo"
 var companion_id: StringName = &"nela"
 ## Glow Shard drops (feature 036): kills since each mob type last
@@ -128,6 +129,7 @@ func intro_pages() -> Array:
 ## screen), then the run.
 func begin_chapter(hero: StringName, companion: StringName = &"") -> void:
 	set_party(hero, companion)
+	record_hero_pick(hero_id)
 	var key: String = "intro.c%d" % chapter()
 	var pages: Array = intro_pages()
 	if pages.is_empty():
@@ -138,6 +140,19 @@ func begin_chapter(hero: StringName, companion: StringName = &"") -> void:
 		StoryLibrary.mark_seen(key)
 		PlaytestLog.write("story_intro chapter=%d pages_seen=%d of %d" % [chapter(), book.page + 1, pages.size()])
 		start_run())
+
+
+## Keeps the hero picked on hero select in the profile, so hero select
+## opens on it next time, after a restart too.
+func record_hero_pick(hero: StringName) -> void:
+	Profile.set_value(Profile.LAST_HERO, String(hero))
+
+
+## The hero hero select opens on: the last pick kept in the profile,
+## else the current party's hero.
+func last_hero_pick() -> StringName:
+	var last: StringName = StringName(String(Profile.get_value(Profile.LAST_HERO, "")))
+	return last if HeroRoster.has_hero(last) else hero_id
 
 
 ## Title screen Play: pick the run length, then the hero.
@@ -281,6 +296,8 @@ func _end_run(won: bool, reason: String, trigger: StringName) -> void:
 		return
 	run_state = RunState.WON if won else RunState.LOST
 	end_reason = reason
+	if won:
+		Profile.record_chapter_won(chapter())
 	end_trigger = trigger
 	TimeManager.stop()
 	BuildManager.exit_build_mode()
