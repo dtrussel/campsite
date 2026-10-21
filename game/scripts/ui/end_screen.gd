@@ -8,8 +8,10 @@ extends CanvasLayer
 ## Feature 035: a win opens the chapter's ending storybook first and
 ## shows the stats after; a defeat says why, as a voiced story line.
 ## Feature 043: in Chapter 2, Mum walks into the camp before the book.
-## Endless mode 03: an endless run says how far it got, and "New
-## record!" when it beat the best.
+## An endless run says how far it got, and "New record!" when it beat
+## the best. Under the stats, the Camp Badges this run earned: the win
+## badges are awarded as the run ends, after the HUD is paused and
+## hidden under this screen, so this is where they are seen.
 
 var _root: Control = null
 var _title: Label = null
@@ -19,6 +21,9 @@ var _stats_row: HBoxContainer = null
 var _log_path: Label = null
 var _story: VBoxContainer = null
 var _record: Label = null
+var _badges_row: HBoxContainer = null
+## The badges earned since this screen's run began, in order.
+var _earned: Array[BadgeDefinition] = []
 
 
 func _ready() -> void:
@@ -57,6 +62,10 @@ func _ready() -> void:
 	_stats_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_stats_row.add_theme_constant_override("separation", 28)
 	column.add_child(_stats_row)
+	_badges_row = HBoxContainer.new()
+	_badges_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_badges_row.add_theme_constant_override("separation", 18)
+	column.add_child(_badges_row)
 	var buttons: HBoxContainer = HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	buttons.add_theme_constant_override("separation", 12)
@@ -70,7 +79,9 @@ func _ready() -> void:
 	_log_path.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_log_path)
 	_root.visible = false
+	add_to_group("end_screen")
 	GameManager.run_ended.connect(_on_run_ended)
+	Badges.badge_earned.connect(_on_badge_earned)
 
 
 func _on_run_ended(won: bool, _reason: String) -> void:
@@ -90,6 +101,27 @@ func _on_run_ended(won: bool, _reason: String) -> void:
 		_root.visible = true
 		if GameManager.chapter() == 2:
 			StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING))
+
+
+## The names of the badges this run earned, as the end screen lists them.
+func badges_text() -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	for badge in _earned:
+		out.append(badge.display_name)
+	return out
+
+
+func _on_badge_earned(badge: BadgeDefinition) -> void:
+	_earned.append(badge)
+	_show_badges()
+
+
+func _show_badges() -> void:
+	for child in _badges_row.get_children():
+		child.queue_free()
+	_badges_row.visible = not _earned.is_empty()
+	for badge in _earned:
+		_badges_row.add_child(HudWidgets.icon_count(badge.icon_texture(), "trophy", badge.display_name, 34.0))
 
 
 ## The line under the title on a defeat: why the run ended ("The dark
@@ -163,4 +195,5 @@ func _show_summary(won: bool) -> void:
 	if player != null:
 		_stats_row.add_child(HudWidgets.icon_count(GameManager.party_hero().portrait, "",
 			"Lv %d" % ProgressionManager.get_level(player)))
+	_show_badges()
 	_log_path.text = PlaytestLog.get_absolute_path()

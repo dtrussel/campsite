@@ -20,6 +20,9 @@ signal run_ended(won: bool, reason: String)
 ## A run stat was recorded or set; `amount` is how much it went up
 ## (Badges counts and checks on it).
 signal stat_recorded(stat: StringName, amount: int)
+## This run's DayChest was placed at the map edge (the HUD says so).
+## Typed Node3D: an autoload naming DayChest here makes a load cycle.
+signal day_chest_placed(chest: Node3D)
 
 enum RunState { MENU, PLAYING, WON, LOST }
 
@@ -384,7 +387,9 @@ func _on_day_started(day_number: int) -> void:
 	current_day = day_number
 	day_number_changed.emit(current_day)
 	if is_playing() and day_number == day_chest_day:
-		DayChest.place(get_tree(), Journal.next_chest_page())
+		var chest: DayChest = DayChest.place(get_tree(), Journal.next_chest_page())
+		if chest != null:
+			day_chest_placed.emit(chest)
 
 
 func _on_dawn_started(day_number: int) -> void:

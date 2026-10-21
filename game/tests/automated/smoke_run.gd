@@ -88,7 +88,7 @@ func _ready() -> void:
 ## its file). A profile whose story.cfg import found Chapter 2 played
 ## opens with it unlocked. Hero select opens on the last hero picked,
 ## after a restart too. Delete profile asks first, then relocks Chapter
-## 2 and leaves audio settings alone.
+## 2 and leaves audio and graphics settings alone.
 func _run_chapter_lock_scenario() -> void:
 	print("smoke: --- chapter lock scenario ---")
 	await _close_main()
@@ -115,6 +115,9 @@ func _run_chapter_lock_scenario() -> void:
 
 	# Delete profile, from the settings in the pause menu: it asks first.
 	var music: float = AudioManager.music_volume
+	var blur: int = PostFx.blur_level()
+	var strong_blur: int = PostFx.Blur.STRONG if blur != PostFx.Blur.STRONG else PostFx.Blur.OFF
+	PostFx.set_blur_level(strong_blur)
 	var menu: Node = (load("res://scenes/ui/PauseMenu.tscn") as PackedScene).instantiate()
 	add_child(menu)
 	await get_tree().process_frame
@@ -122,6 +125,9 @@ func _run_chapter_lock_scenario() -> void:
 	var confirm: ConfirmationDialog = menu.get("delete_profile_confirm") as ConfirmationDialog
 	_check(confirm != null and confirm.visible and Profile.is_chapter_unlocked(2),
 		"Delete profile asks first and deletes nothing yet")
+	var warning: String = confirm.dialog_text.to_lower() if confirm != null else ""
+	_check(warning.contains("all") and warning.contains("progress") and warning.contains("badges")
+		and warning.contains("journal"), "the confirmation says plainly it erases all progress (%s)" % warning)
 	confirm.canceled.emit()
 	_check(Profile.is_chapter_unlocked(2), "cancelling keeps the profile")
 	(menu.get("delete_profile_button") as Button).pressed.emit()
@@ -129,6 +135,8 @@ func _run_chapter_lock_scenario() -> void:
 	menu.queue_free()
 	await _check_title_chapter_2(false, "Delete profile relocks Chapter 2")
 	_check(is_equal_approx(AudioManager.music_volume, music), "Delete profile leaves the audio settings alone")
+	_check(PostFx.blur_level() == strong_blur, "Delete profile leaves the graphics settings alone")
+	PostFx.set_blur_level(blur)
 	_check(not Profile.has_value(Profile.LAST_HERO), "Delete profile forgets the last hero")
 
 	# A player the story.cfg import marked as having played Chapter 2.
@@ -210,6 +218,11 @@ func _run_badges_scenario() -> void:
 	await _skip_to_dawn(3)
 	_check(GameManager.run_state == GameManager.RunState.WON and Badges.has_badge(&"chapter_1"),
 		"winning Chapter 1 earns the Chapter 1 badge")
+	var end_screen: Node = get_tree().get_first_node_in_group("end_screen")
+	var listed: PackedStringArray = end_screen.call("badges_text") if end_screen != null else PackedStringArray()
+	var chapter_1_name: String = Badges.get_badge(&"chapter_1").display_name
+	_check(listed.has(chapter_1_name) and not listed.has(Badges.get_badge(&"first_night").display_name),
+		"the end screen lists the badges this run earned, the win's own among them (%s)" % ", ".join(listed))
 	_check(Badges.has_badge(&"fire_keeper") == (int(GameManager.stats[&"fire_low_pct"]) >= 50),
 		"Fire Keeper follows the fire's lowest HP (%d%%)" % GameManager.stats[&"fire_low_pct"])
 	_check(Badges.has_won_with(&"leo") and not Badges.has_badge(&"both_heroes"), "Both Heroes waits for a win as Nela")
@@ -3536,6 +3549,22 @@ func _run_endless_scenario() -> void:
 	var lantern: MoonLantern = MoonLantern.find(get_tree())
 	_check(GameManager.endless and GameManager.chapter() == 2 and lantern.is_full(),
 		"an endless run is Chapter 2 with the Moon Lantern lit (stage %d of %d)" % [lantern.stage, lantern.max_stage()])
+	# The lit lantern takes no shards: E beside it keeps them for Glow
+	# Lanterns and tool tiers.
+	var shards_at_start: int = ResourceManager.get_count(MoonLantern.SHARD_ID)
+	ResourceManager.add(MoonLantern.SHARD_ID, 6)
+	var shards_before: int = ResourceManager.get_count(MoonLantern.SHARD_ID)
+	var feeder: Node3D = get_tree().get_first_node_in_group("player") as Node3D
+	feeder.global_position = lantern.global_position + Vector3(1.0, 0, 0)
+	var fed: bool = feeder.call("try_feed_lantern")
+	var glow_lantern: BuildingDefinition = BuildManager.get_definition(&"glow_lantern")
+	var sling: CraftingRecipe = load("res://resources/recipes/glow_sling.tres") as CraftingRecipe
+	_check(not fed and not lantern.can_accept() and ResourceManager.get_count(MoonLantern.SHARD_ID) == shards_before
+		and shards_before >= int(glow_lantern.cost.get(MoonLantern.SHARD_ID, 0))
+		and shards_before >= int(sling.inputs.get(MoonLantern.SHARD_ID, 0)),
+		"in endless the lit Moon Lantern takes no Glow Shards; they stay for Glow Lanterns and tiers (%d kept)"
+		% ResourceManager.get_count(MoonLantern.SHARD_ID))
+	ResourceManager.spend(MoonLantern.SHARD_ID, ResourceManager.get_count(MoonLantern.SHARD_ID) - shards_at_start)
 	_check(not spawner.is_boss_night(7) and not spawner.build_wave(7).any(func(d: MobDefinition) -> bool: return d.is_boss),
 		"no Moon-Eater in an endless night 7's wave")
 	TimeManager.day_number = 5
@@ -3571,8 +3600,8 @@ func _run_endless_scenario() -> void:
 	# Dawn 8's autosave keeps the run endless through Continue.
 	var data: Dictionary = SaveManager.load_save()
 	_check(bool(data.get("endless", false)), "the autosave holds the endless flag")
-	var tip: String = str((await _title_buttons()).get("continue", ""))
-	_check(tip.ends_with("night 9"), "the title's Continue reads \"Night N\" in endless (%s)" % tip)
+	var caption: String = await _title_continue_caption()
+	_check(caption.to_lower().ends_with("night 9"), "the title's Continue shows \"Night N\" in endless (%s)" % caption)
 	GameManager.endless = false  # Continue takes it from the save
 	await _continue_from(data)
 	lantern = MoonLantern.find(get_tree())
@@ -3717,3 +3746,17 @@ func _title_buttons() -> Dictionary:
 	if game_camera != null and is_instance_valid(game_camera):
 		game_camera.make_current()
 	return found
+
+
+## The visible caption under the title screen's Continue button, or "".
+func _title_continue_caption() -> String:
+	var game_camera: Camera3D = get_viewport().get_camera_3d()
+	var title: TitleScreen = (load("res://scenes/ui/TitleScreen.tscn") as PackedScene).instantiate() as TitleScreen
+	add_child(title)
+	await get_tree().process_frame
+	var caption: Label = title.continue_caption()
+	var text: String = caption.text if caption != null and caption.is_visible_in_tree() else ""
+	title.free()
+	if game_camera != null and is_instance_valid(game_camera):
+		game_camera.make_current()
+	return text

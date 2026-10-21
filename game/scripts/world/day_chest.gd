@@ -3,7 +3,7 @@ extends Node3D
 
 ## DayChest
 ##
-## A small moonlit chest at the map edge (journal badges 04), where a
+## A small moonlit chest at the map edge, where a
 ## mob lane meets the trees. GameManager places at most one a run, on
 ## the run's `day_chest_day` (RunConfig rolls it: half the runs get
 ## one). Leo or Nela open it just by walking up to it, like a pickup,
@@ -13,6 +13,9 @@ extends Node3D
 ## path.
 ##
 ## The model is the Storage Crate's chest until the team's art arrives.
+
+## The chest was opened and its page found; the HUD names the page.
+signal opened(page: JournalPage)
 
 const MODEL: PackedScene = preload("res://assets/custom/storage_crate.glb")
 ## Where a chest can stand: just beside each lane, near the edge of the
@@ -35,7 +38,7 @@ var _visual: Node3D = null
 
 
 ## Places a chest holding `page` at one of SPOTS in the camp's world
-## (beside the campfire's parent), and says so on the HUD. Returns null
+## (beside the campfire's parent). Returns null
 ## (and places nothing) when there is no page left to find or no camp.
 static func place(tree: SceneTree, page: JournalPage) -> DayChest:
 	var fire: Node = tree.get_first_node_in_group("base_core")
@@ -48,9 +51,6 @@ static func place(tree: SceneTree, page: JournalPage) -> DayChest:
 	chest.global_position = Vector3(spot.x, 0.0, spot.y)
 	chest.look_at(Vector3.ZERO, Vector3.UP, true)  # its front to the camp
 	PlaytestLog.write("day_chest_placed page=%s day=%d" % [page.id, TimeManager.day_number])
-	var hud: Node = tree.get_first_node_in_group("hud")
-	if hud != null and hud.has_method("show_banner"):
-		hud.call("show_banner", "A chest by the trees!", UiKit.COLOR_MOON.lightened(0.4), "Find it before night")
 	return chest
 
 
@@ -92,8 +92,8 @@ func is_opened() -> bool:
 	return _opened
 
 
-## Opens the chest: its page is found, a toast names it, and the chest
-## fades away.
+## Opens the chest: its page is found, `opened` announces it, and the
+## chest fades away.
 func open() -> void:
 	if _gone:
 		return
@@ -103,9 +103,8 @@ func open() -> void:
 	Journal.find(page_id)
 	PlaytestLog.write("day_chest_opened page=%s" % page_id)
 	AudioManager.play_sfx(&"level_up")
-	var hud: Node = get_tree().get_first_node_in_group("hud")
-	if hud != null and hud.has_method("show_toast") and page != null:
-		hud.call("show_toast", "Mum's journal: %s!" % page.title, "crate", UiKit.COLOR_MOON.lightened(0.5))
+	if page != null:
+		opened.emit(page)
 	_vanish()
 
 

@@ -130,6 +130,8 @@ func _ready() -> void:
 	TimeManager.dawn_started.connect(_on_dawn_started)
 	TimeManager.day_started.connect(_on_day_started)
 	CraftingManager.crafted.connect(_on_crafted)
+	Badges.badge_earned.connect(_on_badge_earned)
+	GameManager.day_chest_placed.connect(_on_day_chest_placed)
 	_hook_world.call_deferred()
 	_refresh_tray()
 
@@ -548,6 +550,19 @@ func _build_toast_stack(root: Control) -> void:
 	_toast_stack.alignment = BoxContainer.ALIGNMENT_BEGIN
 	_anchor(_toast_stack, Control.PRESET_TOP_RIGHT, Vector2(-10, _TOAST_Y))
 	root.add_child(_toast_stack)
+
+
+func _on_badge_earned(badge: BadgeDefinition) -> void:
+	show_toast("Badge earned: %s!" % badge.display_name, badge.icon)
+
+
+func _on_day_chest_placed(chest: Node3D) -> void:
+	show_banner("A chest by the trees!", UiKit.COLOR_MOON.lightened(0.4), "Find it before night")
+	(chest as DayChest).opened.connect(_on_day_chest_opened)
+
+
+func _on_day_chest_opened(page: JournalPage) -> void:
+	show_toast("Mum's journal: %s!" % page.title, "crate", UiKit.COLOR_MOON.lightened(0.5))
 
 
 ## Shows a toast under the tray; the newest goes at the bottom. With

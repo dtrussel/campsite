@@ -48,11 +48,15 @@ func _ready() -> void:
 	delete_profile_button = HudWidgets.icon_button("close", "Delete profile", _ask_delete_profile,
 		Color(1.0, 0.45, 0.4), null, false, 44.0)
 	delete_profile_button.add_theme_font_size_override("font_size", 16)
-	delete_profile_button.tooltip_text = "Forget chapters won and the last hero. Sound and look settings stay."
+	delete_profile_button.tooltip_text = "Erase all progress: chapters, badges, journal pages, outfits and more. Sound and look settings stay."
 	column.add_child(delete_profile_button)
 	delete_profile_confirm = ConfirmationDialog.new()
 	delete_profile_confirm.title = "Delete profile?"
-	delete_profile_confirm.dialog_text = "This forgets the chapters you have won and locks Chapter 2 again.\nYour sound and look settings stay."
+	delete_profile_confirm.dialog_text = ("This erases all your progress, for good:\n"
+		+ "chapters won (Chapter 2 and Endless lock again), Camp Badges, journal pages,\n"
+		+ "outfits and tent colours, the starting perk, the endless record,\n"
+		+ "and the story seen (the intros play again).\n"
+		+ "Your sound and look settings stay.")
 	delete_profile_confirm.ok_button_text = "Delete"
 	delete_profile_confirm.cancel_button_text = "Keep"
 	delete_profile_confirm.confirmed.connect(_delete_profile)

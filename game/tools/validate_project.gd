@@ -40,6 +40,26 @@ func _validate_key_art() -> void:
 		screen.free()
 
 
+## The export presets tools/export_playtest.sh builds carry the
+## "playtest" feature tag, so playtest builds open every chapter.
+func _validate_export_presets() -> void:
+	var presets: ConfigFile = ConfigFile.new()
+	if presets.load("res://export_presets.cfg") != OK:
+		_fail("export_presets.cfg missing or unreadable")
+		return
+	var found: Dictionary = {}
+	for section in presets.get_sections():
+		if section.begins_with("preset.") and not section.ends_with(".options"):
+			var preset_name: String = String(presets.get_value(section, "name", ""))
+			found[preset_name] = true
+			var features: PackedStringArray = String(presets.get_value(section, "custom_features", "")).split(",", false)
+			if not "playtest" in features:
+				_fail("export preset '%s' lacks the playtest feature tag" % preset_name)
+	for needed in ["Windows Desktop", "Linux"]:
+		if not found.has(needed):
+			_fail("export preset '%s' (tools/export_playtest.sh) is missing" % needed)
+
+
 func _ready() -> void:
 	var files: PackedStringArray = PackedStringArray()
 	_collect("res://", files)
@@ -51,6 +71,7 @@ func _ready() -> void:
 			_fail("script does not compile: %s" % path)
 	_validate_data()
 	_validate_key_art()
+	_validate_export_presets()
 	_validate_profile()
 	_validate_story_import()
 	_validate_saving_systems()

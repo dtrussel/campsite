@@ -2,11 +2,12 @@ extends Node
 
 ## Badges
 ##
-## The Camp Badges (journal badges 02): checks every BadgeDefinition
+## The Camp Badges: checks every BadgeDefinition
 ## (res://resources/badges/) live, whenever GameManager records a stat
 ## during play, and again at the end of a run, for the win badges. An
 ## earned badge is kept in the profile ("badges.<id>") for good, is
-## earned only once, and is announced with a HUD toast.
+## earned only once, and is announced with badge_earned (the HUD shows
+## a toast, the end screen lists the run's badges).
 ##
 ## It also keeps what badges count across runs in the profile: the
 ## totals of the stats `total` badges count ("totals.<stat>", added to
@@ -101,9 +102,6 @@ func _run_stat(stat: StringName) -> int:
 func _award(badge: BadgeDefinition) -> void:
 	Profile.set_value(EARNED_PREFIX + String(badge.id), true)
 	PlaytestLog.write("badge_earned id=%s day=%d" % [badge.id, TimeManager.day_number])
-	var hud: Node = get_tree().get_first_node_in_group("hud")
-	if hud != null and hud.has_method("show_toast"):
-		hud.call("show_toast", "Badge earned: %s!" % badge.display_name, badge.icon)
 	badge_earned.emit(badge)
 
 

@@ -1,3 +1,4 @@
+class_name TitleScreen
 extends Control
 
 ## TitleScreen
@@ -23,6 +24,7 @@ var _controls_panel: Control = null
 ## The Play button of each chapter, by chapter number.
 var _chapter_buttons: Dictionary = {}
 var _journal_button: Button = null
+var _continue_caption: Label = null
 var _scrapbook: Scrapbook = null
 
 
@@ -77,11 +79,21 @@ func _ready() -> void:
 		var saved_hero: HeroDefinition = HeroRoster.get_hero(GameManager.party_of(save)["hero"])
 		var hero_name: String = saved_hero.display_name if saved_hero != null else "Leo"
 		var night: int = int(save["day"]) + 1
+		var caption: String = ""
 		if bool(save.get("endless", false)):
-			play.tooltip_text = "%s - Endless, night %d" % [hero_name, night]
+			caption = "Endless  -  Night %d" % night
 		else:
-			play.tooltip_text = "%s - night %d of %d" % [hero_name, night, int(save["nights_to_win"])]
-		buttons.add_child(play)
+			caption = "Night %d of %d" % [night, int(save["nights_to_win"])]
+		play.tooltip_text = "%s - %s" % [hero_name, caption]
+		var continue_slot: VBoxContainer = UiKit.vbox(2)
+		continue_slot.add_child(play)
+		_continue_caption = UiKit.label(caption, 15, UiKit.COLOR_GOLD_LIGHT)
+		_continue_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_continue_caption.add_theme_constant_override("outline_size", 6)
+		_continue_caption.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
+		continue_slot.add_child(_continue_caption)
+		buttons.add_child(continue_slot)
+		buttons.position.y -= 22.0  # room for the caption
 	var lengths: HBoxContainer = HBoxContainer.new()
 	lengths.alignment = BoxContainer.ALIGNMENT_CENTER
 	lengths.add_theme_constant_override("separation", 12)
@@ -162,6 +174,11 @@ func _ready() -> void:
 ## The Play button that starts chapter (1 or 2), or null.
 func chapter_button(chapter: int) -> Button:
 	return _chapter_buttons.get(chapter) as Button
+
+
+## The caption under Continue naming the saved run's next night, or null with no save.
+func continue_caption() -> Label:
+	return _continue_caption
 
 
 func journal_button() -> Button:

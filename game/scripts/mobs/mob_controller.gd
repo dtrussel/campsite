@@ -309,10 +309,12 @@ func _physics_process(delta: float) -> void:
 		_tick_thief(delta)
 		return
 
-	# Drop an attack target that has been destroyed.
-	if _attack_target != null and not is_instance_valid(_attack_target):
+	# Drop an attack target that has been destroyed. A freed object reads
+	# as null, so only is_instance_valid can tell.
+	if not is_instance_valid(_attack_target):
 		_attack_target = null
-		state = State.MOVING_TO_TARGET
+		if state == State.ATTACKING:
+			state = State.MOVING_TO_TARGET
 
 	_update_chase_target()
 
@@ -385,8 +387,13 @@ func _try_attack(target: Node) -> void:
 	_attack_cooldown_remaining = definition.attack_cooldown_seconds
 
 
-func _land_attack(target: Node) -> void:
-	if state == State.DYING or not is_instance_valid(target) or not target.has_method("take_damage"):
+## `target` is untyped: a telegraphed blow lands after a delay, and by
+## then the target may have been freed, which a typed parameter rejects.
+func _land_attack(target_or_freed: Variant) -> void:
+	if state == State.DYING or not is_instance_valid(target_or_freed):
+		return
+	var target: Node = target_or_freed as Node
+	if target == null or not target.has_method("take_damage"):
 		return
 	var delayed: bool = definition.attack_hit_delay > 0.0
 	if delayed:
@@ -464,8 +471,8 @@ func _torch_slow_factor() -> float:
 ## The nearest standing building a siege mob should tear down (traps
 ## are flat on the ground and ignored). Sticks with its current one.
 func _find_siege_target() -> Node3D:
-	var current: Building = _attack_target as Building
-	if current != null and is_instance_valid(current) and current.current_hp > 0 and current.collision_layer != 0:
+	var current: Building = _attack_target as Building if is_instance_valid(_attack_target) else null
+	if current != null and current.current_hp > 0 and current.collision_layer != 0:
 		return current
 	var best: Node3D = null
 	var best_d: float = INF
