@@ -64,6 +64,7 @@ clips = {
 reference_speed = 7.0
 step_distance = 1.1
 capsule_height = 1.2
+outfit_mesh = "Leo"
 tool_hidden_parts = PackedStringArray("Leo_Stick")
 hurt_sfx = &"player_hurt"
 stats = ExtResource("4_stats")

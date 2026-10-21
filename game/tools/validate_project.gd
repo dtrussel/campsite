@@ -290,6 +290,10 @@ func _validate_badges() -> void:
 		_fail("StartingPerks %s" % problem)
 	if badges.size() != Badges.definitions().size():
 		_fail("Badges loaded %d badges, %s has %d" % [Badges.definitions().size(), Badges.BADGES_DIR, badges.size()])
+	# Journal badges 05: every cosmetic tint is unlocked by a real badge.
+	for badge_id in Cosmetics.badges_named():
+		if not badge_ids.has(badge_id):
+			_fail("Cosmetics names unknown badge '%s'" % badge_id)
 
 
 ## Perk cards: every perk has an icon, a name, a line of text and a
