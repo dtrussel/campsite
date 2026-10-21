@@ -114,10 +114,6 @@ func _exit_tree() -> void:
 		_held_night = false
 
 
-func max_hp() -> int:
-	return definition.max_hp if definition != null else 1
-
-
 func hp_ratio() -> float:
 	return float(current_hp) / float(maxi(1, max_hp()))
 

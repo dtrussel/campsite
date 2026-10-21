@@ -3154,6 +3154,15 @@ func _run_endless_scenario() -> void:
 	_check(GameManager.is_playing() and int(GameManager.stats[&"nights_survived"]) == 8,
 		"an endless run passes night 8 without a win")
 
+	# Endless ticket 02: past night 7 mobs grow tougher and the heavies
+	# and thieves take a growing share of the wave.
+	var imp_hp: Array[int] = await _summoned_hp(spawner, [7, 9])
+	_check(imp_hp[1] > imp_hp[0], "an imp on endless night 9 has more HP than on night 7 (%d > %d)" % [imp_hp[1], imp_hp[0]])
+	var share_7: float = _heavy_sneak_share(spawner.build_wave(7), spawner)
+	var share_10: float = _heavy_sneak_share(spawner.build_wave(10), spawner)
+	_check(share_10 > share_7 + 0.1, "heavies and thieves make up more of endless night 10 than night 7 (%d%% > %d%%)"
+		% [roundi(share_10 * 100.0), roundi(share_7 * 100.0)])
+
 	# Dawn 8's autosave keeps the run endless through Continue.
 	var data: Dictionary = SaveManager.load_save()
 	_check(bool(data.get("endless", false)), "the autosave holds the endless flag")
@@ -3174,8 +3183,42 @@ func _run_endless_scenario() -> void:
 	_check(not GameManager.endless and not MoonLantern.find(get_tree()).is_full()
 		and (get_tree().get_first_node_in_group("mob_spawner") as MobSpawner).is_boss_night(7),
 		"a Chapter 2 run after endless has its dark lantern and its Moon-Eater")
+	var story_spawner: MobSpawner = get_tree().get_first_node_in_group("mob_spawner") as MobSpawner
+	var story_hp: Array[int] = await _summoned_hp(story_spawner, [7, 9])
+	var story_10: Array[MobDefinition] = story_spawner.build_wave(10)
+	_check(story_hp[1] == story_hp[0] and story_hp[0] == story_spawner.mob_definition.max_hp
+		and story_10.count(story_spawner.heavy_definition) == 9 and story_10.count(story_spawner.sneak_definition) == 8
+		and story_10.count(story_spawner.mob_definition) == 25,
+		"a story run's mobs keep their HP and its night 10 keeps 25 imps, 9 beasts, 8 gremlins")
 	GameManager.nights_to_win = 3
 	StoryLibrary.forget_progress()
+
+
+## Summons one imp on each of `nights` (the clock's day set to it) and
+## returns their HP, freeing them again.
+func _summoned_hp(spawner: MobSpawner, nights: Array) -> Array[int]:
+	var day: int = TimeManager.day_number
+	var hp: Array[int] = []
+	var got: Array[Mob] = []
+	var grab: Callable = func(mob: Node3D, _definition: MobDefinition) -> void: got.append(mob as Mob)
+	spawner.mob_spawned.connect(grab)
+	for night in nights:
+		TimeManager.day_number = int(night)
+		spawner.summon(spawner.mob_definition, 1)
+		hp.append(got.back().current_hp if not got.is_empty() and got.back() != null else -1)
+	spawner.mob_spawned.disconnect(grab)
+	TimeManager.day_number = day
+	for mob in got:
+		if mob != null:
+			mob.queue_free()
+	await get_tree().process_frame
+	return hp
+
+
+## The share of a wave that is beasts or gremlins (not imps).
+func _heavy_sneak_share(wave: Array[MobDefinition], spawner: MobSpawner) -> float:
+	var others: int = wave.size() - wave.count(spawner.mob_definition)
+	return float(others) / float(maxi(1, wave.size()))
 
 
 ## Skips the clock on to the next night; stops if the clock has stopped

@@ -12,6 +12,9 @@ extends Node3D
 ## Feature 038: Chapter 2's last night is the Moon-Eater with a small
 ## escort, its eyes watch from the treeline the nights before, and it
 ## summons imp packs through summon() (never past mob_cap).
+## Endless (ticket 02): each night past nights_to_win gives mobs
+## `endless_hp_per_night` more HP and turns one imp into a heavy and one
+## into a thief, so the tough ones take a growing share of the wave.
 
 signal wave_started(night_number: int, mob_count: int)
 signal wave_ended
@@ -39,6 +42,8 @@ signal mob_spawned(mob: Node3D, definition: MobDefinition)
 @export var boss_escort: int = 4
 @export var eyes_from_night: int = 5
 @export var boss_spawn_point: StringName = &"SpawnPointN"
+## Endless: extra HP per night past nights_to_win (0.1 = +10% each).
+@export var endless_hp_per_night: float = 0.1
 ## Summons never push the mobs on the field past this.
 @export var mob_cap: int = 14
 @export var spawn_interval_seconds: float = 5.5
@@ -128,25 +133,46 @@ func _boss_point() -> Vector3:
 	return point.global_position if point != null else _pick_spawn_position()
 
 
+## Imps on a night (in endless, less the ones turned into heavies and
+## thieves).
 func get_wave_size(night: int) -> int:
 	if wave_sizes.is_empty():
 		return 3
 	var index: int = night - 1
+	var imps: int
 	if index < wave_sizes.size():
-		return wave_sizes[max(0, index)]
-	return wave_sizes[wave_sizes.size() - 1] + per_night_extra * (index - wave_sizes.size() + 1)
+		imps = wave_sizes[max(0, index)]
+	else:
+		imps = wave_sizes[wave_sizes.size() - 1] + per_night_extra * (index - wave_sizes.size() + 1)
+	return maxi(0, imps - _endless_bonus(heavy_definition, night) - _endless_bonus(sneak_definition, night))
 
 
 func get_heavy_count(night: int) -> int:
 	if heavy_definition == null:
 		return 0
-	return _count_for(heavy_counts, heavy_per_night_extra, night)
+	return _count_for(heavy_counts, heavy_per_night_extra, night) + _endless_bonus(heavy_definition, night)
 
 
 func get_sneak_count(night: int) -> int:
 	if sneak_definition == null:
 		return 0
-	return _count_for(sneak_counts, sneak_per_night_extra, night)
+	return _count_for(sneak_counts, sneak_per_night_extra, night) + _endless_bonus(sneak_definition, night)
+
+
+## Nights past the story's last in an endless run (0 otherwise).
+func endless_nights_past(night: int) -> int:
+	return maxi(0, night - GameManager.nights_to_win) if GameManager.endless else 0
+
+
+## What a mob's HP is multiplied by on `night`: 1 in the story chapters.
+func hp_multiplier(night: int) -> float:
+	return 1.0 + endless_hp_per_night * endless_nights_past(night)
+
+
+## Imps turned into one `definition` each (heavy or thief) in endless:
+## one a night past the story, if that kind is set.
+func _endless_bonus(definition: MobDefinition, night: int) -> int:
+	return endless_nights_past(night) if definition != null else 0
 
 
 func _count_for(counts: PackedInt32Array, extra: int, night: int) -> int:
@@ -203,6 +229,8 @@ func _spawn_one(definition: MobDefinition) -> void:
 	if parent == null:
 		return
 	var instance: Node = definition.get_scene().instantiate()
+	if instance is Mob:
+		(instance as Mob).hp_multiplier = hp_multiplier(TimeManager.day_number)
 	var mob: Node3D = instance as Node3D
 	if mob == null:
 		instance.queue_free()
