@@ -307,9 +307,11 @@ func is_tool_light_on() -> bool:
 
 ## HeroHits.strike calls this for every hit the hero lands (a swing, a
 ## Big Swing extra, a pebble, a Ricochet bounce), after the damage: the
-## tool's on-hit effects (the Ember Stick's burn, and the Blaze Stick's
-## splash onto the mobs beside the target).
+## tool's on-hit effects (the Ember Stick's burn, the Blaze Stick's
+## splash onto the mobs beside the target, and the Glow Sling's glow).
 func on_attack_hit(target: Node, _damage: int) -> void:
+	if has_tool_effect(&"glow_hit"):
+		GlowMark.light(target)
 	if has_tool_effect(&"burn"):
 		Burn.ignite(target)
 		if has_tool_effect(&"burn_splash") and target is Node3D:

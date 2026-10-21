@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="HeroDefinition" load_steps=8 format=3 uid="uid://b0campsiteheronela"]
+[gd_resource type="Resource" script_class="HeroDefinition" load_steps=9 format=3 uid="uid://b0campsiteheronela"]
 
 [ext_resource type="Script" path="res://scripts/characters/hero_definition.gd" id="1_def"]
 [ext_resource type="Texture2D" path="res://assets/icons/portrait_nela.png" id="2_portrait"]
@@ -26,6 +26,16 @@ damage_bonus = 0
 range_factor = 1.0
 companion_range_factor = 1.0
 effects = Array[StringName]([&"double_shot"])
+
+[sub_resource type="Resource" id="tier_3"]
+script = ExtResource("5_tier")
+recipe = &"glow_sling"
+label = "Glow Sling"
+icon = "slingshot"
+damage_bonus = 0
+range_factor = 1.0
+companion_range_factor = 1.0
+effects = Array[StringName]([&"pierce", &"glow_hit"])
 
 [resource]
 script = ExtResource("1_def")
@@ -64,7 +74,7 @@ companion_attack_range = 2.0
 attack_cooldown = 0.75
 companion_attack_cooldown = 0.75
 ranged = true
-signature_tiers = Array[ExtResource("5_tier")]([SubResource("tier_1"), SubResource("tier_2")])
+signature_tiers = Array[ExtResource("5_tier")]([SubResource("tier_1"), SubResource("tier_2"), SubResource("tier_3")])
 rating_health = 2
 rating_power = 2
 rating_reach = 3

@@ -2710,6 +2710,8 @@ func _run_tool_tiers_scenario() -> void:
 ## Tool tiers 02: Nela's Double Sling, as the player's hero and as the
 ## companion. It is offered only once the Slingshot (tier 1) is owned,
 ## costs 2 Glow Shards, and every third shot launches two pebbles.
+## Tool tiers 03: then the Glow Sling (tier 3, 4 Glow Shards), whose
+## pebble pierces on to the mob behind its target and lights what it hits.
 func _run_double_sling_scenario() -> void:
 	print("smoke: --- double sling scenario ---")
 	for party_hero in [&"nela", &"leo"]:
@@ -2755,6 +2757,34 @@ func _run_double_sling_scenario() -> void:
 		_check(volleys == [1, 1, 2, 1, 1, 2], "Nela as %s: every third shot launches two pebbles (%s)" % [role, volleys])
 		await _wait(0.5)
 		mob.free()
+
+		# Tier 3, the Glow Sling: a pebble pierces on to the next mob in
+		# its line (not to one off to the side) and briefly lights its target.
+		var glow: CraftingRecipe = _recipe(&"glow_sling")
+		ResourceManager.add(&"glow_shards", 4)
+		shards = ResourceManager.get_count(&"glow_shards")
+		_check(glow != null and CraftingManager.is_offered(glow) and CraftingManager.craft(glow, null) and nela.tool_tier == 3
+			and ResourceManager.get_count(&"glow_shards") == shards - 4 and not CraftingManager.can_craft(glow),
+			"Nela as %s: the Glow Sling is tier 3 and spends 4 Glow Shards" % role)
+		var front: Mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 0))
+		var behind: Mob = _spawn_mob(beast_def, spot + Vector3(3.0, 0, 0))
+		var aside: Mob = _spawn_mob(beast_def, spot + Vector3(3.0, 0, 2.5))
+		for each in [front, behind, aside]:
+			(each as Mob).set_physics_process(false)
+		await get_tree().process_frame
+		var hp: Array[int] = [front.current_hp, behind.current_hp, aside.current_hp]
+		_check(_pebbles_from(nela, front) == 1, "Nela as %s: the Glow Sling's shot is one pebble" % role)
+		await _wait(PebbleShot.FLIGHT_SECONDS + 0.15)
+		_check(front.current_hp < hp[0] and GlowMark.on(front) != null,
+			"Nela as %s: the Glow Sling's pebble hits and lights its target" % role)
+		await _wait(PebbleShot.FLIGHT_SECONDS + 0.3)
+		_check(behind.current_hp < hp[1] and aside.current_hp == hp[2],
+			"Nela as %s: the pebble pierces on to the mob behind, not the one aside (%d, %d HP lost)"
+				% [role, hp[1] - behind.current_hp, hp[2] - aside.current_hp])
+		await _wait(GlowMark.SECONDS + 0.2)
+		_check(GlowMark.on(front) == null, "Nela as %s: the glow fades" % role)
+		for each in [front, behind, aside]:
+			(each as Mob).free()
 		table.queue_free()
 	GameManager.set_party(&"leo")
 

@@ -7,12 +7,17 @@ extends Node3D
 ## shooter's hand to the target and deals its damage on arrival. If the
 ## target died or left on the way, the pebble just lands. The damage goes
 ## through HeroHits.strike, and Ricochet (perk cards) bounces a hit on to
-## the next mob.
+## the next mob. With the Glow Sling's `pierce` tier the pebble flies on
+## through its target to the next mob in its line (pierce_target).
 
 const FLIGHT_SECONDS: float = 0.2
 const ARC_HEIGHT: float = 0.45
 const HAND_HEIGHT: float = 0.85
 const TARGET_HEIGHT: float = 0.6
+## How far past its target (flat metres, along its line) a piercing
+## pebble flies on, and how far off that line a mob may stand.
+const PIERCE_REACH: float = 3.0
+const PIERCE_WIDTH: float = 0.8
 
 static var _mesh: SphereMesh = null
 
@@ -21,7 +26,7 @@ var _target: Node3D = null
 var _damage: int = 0
 var _from: Vector3 = Vector3.ZERO
 var _to: Vector3 = Vector3.ZERO
-## A bounce (Ricochet) never bounces again.
+## A bounce (Ricochet) or a pierced pebble never bounces or pierces again.
 var _is_bounce: bool = false
 ## Seconds before the flight starts.
 var _delay: float = 0.0
@@ -94,4 +99,33 @@ func _land() -> void:
 		if not _is_bounce:
 			for next in HeroHits.extra_targets(shooter, _target, &"pebble"):
 				PebbleShot.bounce(shooter, global_position, next, _damage)
+			if shooter is Hero and (shooter as Hero).has_tool_effect(&"pierce"):
+				var behind: Node3D = pierce_target(_target, _to - _from)
+				if behind != null:
+					PebbleShot.bounce(shooter, global_position, behind, _damage)
 	queue_free()
+
+
+## The mob a pebble flying along `direction` meets next after `hit`: the
+## nearest living mob ahead of `hit` along that line, within PIERCE_REACH
+## and no more than PIERCE_WIDTH off it. Null if there is none.
+static func pierce_target(hit: Node3D, direction: Vector3) -> Node3D:
+	direction.y = 0.0
+	if hit == null or not is_instance_valid(hit) or not hit.is_inside_tree() or direction.length_squared() < 0.0001:
+		return null
+	direction = direction.normalized()
+	var best: Node3D = null
+	var best_along: float = INF
+	for node in hit.get_tree().get_nodes_in_group("mobs"):
+		var mob: Node3D = node as Node3D
+		if mob == null or mob == hit or not is_instance_valid(mob) or int(mob.get("current_hp")) <= 0:
+			continue
+		var offset: Vector3 = mob.global_position - hit.global_position
+		offset.y = 0.0
+		var along: float = offset.dot(direction)
+		if along <= 0.0 or along > PIERCE_REACH or (offset - direction * along).length() > PIERCE_WIDTH:
+			continue
+		if along < best_along:
+			best = mob
+			best_along = along
+	return best
