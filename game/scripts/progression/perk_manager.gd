@@ -78,7 +78,7 @@ func get_definition(id: StringName) -> PerkDefinition:
 ## player-only card. Empty when the pool is used up.
 func offer(character: Node, n: int = OFFER_SIZE) -> Array[PerkDefinition]:
 	var hero_id: StringName = _hero_id(character)
-	var as_companion: bool = character != null and character.is_in_group("companions")
+	var as_companion: bool = Party.role_of(character) == Party.COMPANION
 	var pool: Array[PerkDefinition] = []
 	for perk in _definitions:
 		if perk.is_for(hero_id, as_companion) and (perk.stacks or not has(character, perk.id)):
@@ -150,9 +150,10 @@ func top_up(character: Node) -> void:
 		return
 	var owed: int = ProgressionManager.get_level(character) - 1 - perks_of(character).size()
 	for i in owed:
-		if character.is_in_group("player"):
+		var role: StringName = Party.role_of(character)
+		if role == Party.PLAYER:
 			open_picker(character)
-		elif character.is_in_group("companions"):
+		elif role == Party.COMPANION:
 			if companion_pick(character) == null:
 				return
 
@@ -271,9 +272,10 @@ func _on_level_up(character: Node, _new_level: int) -> void:
 	if ProgressionManager.is_restoring or character == null:
 		return
 	HeroHits.cheer_up(character)  # before this level's card is taken
-	if character.is_in_group("player"):
+	var role: StringName = Party.role_of(character)
+	if role == Party.PLAYER:
 		open_picker(character)
-	elif character.is_in_group("companions"):
+	elif role == Party.COMPANION:
 		companion_pick(character)
 
 
