@@ -1,6 +1,6 @@
 # Hero core
 
-Status: ready-for-agent
+Status: done
 
 Split into tickets in `issues/` (01&ndash;05); the `Blocked by:` lines give the order. From the 2026-10-21 architecture review, candidate 1 (the shared hero core). Rough size: **L**. Blocked by: none. It blocks tool tiers.
 
@@ -133,3 +133,4 @@ For the player, nothing changes, except that the small drifts between the copies
 ## Comments
 
 - **2026-10-21, to-tickets:** split into tickets 01-05; the user approved the breakdown.
+- **2026-10-21, wrap-up:** done. Tickets 01-05 are in. Hero (`game/scripts/characters/hero.gd`) holds health, attack, progress, gathering and the shared queries; the two roles keep only their own behaviour; Party (`game/scripts/characters/party.gd`) replaces the hero group lookups in HeroHits and PerkManager. Two names differ from the text above: the gather signal is `gather_finished(node)`, and the player's hero is `Party.player_hero()`. Settled drifts: the 0.4 node-radius fallback, the 2.8 s signature float text, and the companion skipping a node the other hero is gathering. The architecture doc describes the result.

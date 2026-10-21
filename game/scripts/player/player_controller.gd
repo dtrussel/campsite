@@ -78,7 +78,6 @@ var _auto_scan_timer: float = 0.0
 ## The gather auto-attack interrupted, resumed once no mob is near.
 var _resume_node: ResourceNode = null
 var _agent: NavigationAgent3D = null
-var _hp_bar: HealthBar3D = null
 
 
 func _init() -> void:
@@ -109,9 +108,7 @@ func _ready() -> void:
 	_setup_progress()
 	auto_attack = GameSettings.auto_attack()
 	_agent = NavSteer.make_agent(self)
-	_hp_bar = HealthBar3D.attach(self, 2.45, "hero", 1.3)
-	health_changed.connect(func(hp: int, max_value: int) -> void: _hp_bar.set_value(hp, max_value))
-	_hp_bar.set_value.call_deferred(current_hp, max_hp)
+	_attach_health_bar(2.45, 1.3)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -123,9 +120,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("attack"):
 		_try_attack()
 	elif event.is_action_pressed("place_torch"):
-		_try_place_torch()
+		try_place_torch()
 	elif event.is_action_pressed("eat_berries"):
-		_try_eat_berries()
+		try_eat_berries()
 	elif event.is_action_pressed("use_bandage"):
 		try_use_bandage()
 
@@ -187,6 +184,22 @@ func command_build(target: Building) -> void:
 	_agent.target_position = target.global_position
 
 
+## True while the hero follows a pointer command of any kind.
+func has_command() -> bool:
+	return command != Command.NONE
+
+
+## True while the hero has a build command (walking to the site included).
+func is_building() -> bool:
+	return command == Command.BUILD
+
+
+## Hammer blows landed on build sites so far.
+func build_hits() -> int:
+	return _build_beat.hits
+
+
+## Drops the current command, and the gather it would go back to.
 func stop_commands() -> void:
 	_resume_node = null
 	_set_command(Command.NONE, null)
@@ -449,7 +462,8 @@ func _try_attack() -> void:
 	command_attack(target)
 
 
-func _try_place_torch() -> void:
+## Q: plant a torch from the stash in front of the hero.
+func try_place_torch() -> void:
 	if is_gathering():
 		return
 	if not ResourceManager.spend(TORCH_ITEM_ID, 1):
@@ -466,7 +480,7 @@ func _try_place_torch() -> void:
 
 
 ## R: eat a Berry Snack if there is one (+35 HP), else 2 berries (+15).
-func _try_eat_berries() -> void:
+func try_eat_berries() -> void:
 	if current_hp >= max_hp:
 		Fx.icon_popup(self, Fx.icon("snack" if ResourceManager.has(SNACK_ITEM_ID, 1) else "berries"), "", Color.WHITE, true)
 		return

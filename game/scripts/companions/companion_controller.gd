@@ -32,7 +32,6 @@ const REPAIR_REACH: float = 1.9
 var current_task: int = Task.IDLE
 
 @onready var _task_label: Label3D = $TaskLabel
-var _hp_bar: HealthBar3D = null
 
 var _player: Node3D = null
 var _base_core: Node3D = null
@@ -96,9 +95,7 @@ func _ready() -> void:
 	_read_attack_tuning()
 	_setup_progress()
 	TimeManager.dawn_started.connect(_on_dawn_started)
-	_hp_bar = HealthBar3D.attach(self, 2.2, "hero", 1.1)
-	health_changed.connect(func(hp: int, max_value: int) -> void: _hp_bar.set_value(hp, max_value))
-	_hp_bar.set_value.call_deferred(current_hp, max_hp)
+	_attach_health_bar(2.2, 1.1)
 
 
 # --- Health (the role's part; see Hero) ------------------------------
@@ -345,9 +342,6 @@ func _flat_direction(point: Vector3) -> Vector3:
 
 
 # --- Attack (the role's part; see Hero) ------------------------------
-
-func _is_companion_role() -> bool:
-	return true
 
 
 func _show_attack(target: Node3D) -> void:

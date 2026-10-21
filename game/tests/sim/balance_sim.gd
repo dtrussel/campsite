@@ -50,7 +50,7 @@ func _ready() -> void:
 			t += 0.1 * Engine.time_scale
 			if player_fights:
 				# An active player: chase the nearest mob, like a kid clicking it.
-				if int(player.get("command")) == 0:
+				if not bool(player.call("has_command")):
 					var nearest: Node3D = null
 					for mob in get_tree().get_nodes_in_group("mobs"):
 						if nearest == null or (mob as Node3D).global_position.distance_to(player.global_position) \

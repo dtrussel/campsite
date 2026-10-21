@@ -44,6 +44,8 @@ signal down_changed(is_down: bool)
 
 var current_hp: int = 0
 var _down: bool = false
+## The bar over the head; the role attaches it in `_ready`.
+var _hp_bar: HealthBar3D = null
 var _invulnerable_remaining: float = 0.0
 var _regen_accumulator: float = 0.0
 
@@ -56,6 +58,11 @@ func is_down() -> bool:
 ## True while the window after a hit ignores further hits.
 func is_invulnerable() -> bool:
 	return _invulnerable_remaining > 0.0
+
+
+## The health bar over the hero's head (null before `_ready`).
+func health_bar() -> HealthBar3D:
+	return _hp_bar
 
 
 ## Ends the invulnerability window now (tests and scripted hits).
@@ -108,6 +115,14 @@ func _tick_health(delta: float) -> void:
 		var whole: int = int(_regen_accumulator)
 		_regen_accumulator -= whole
 		heal(whole)
+
+
+## The role calls this once in `_ready`: a hero health bar at `height`,
+## kept in step with `health_changed`.
+func _attach_health_bar(height: float, width: float) -> void:
+	_hp_bar = HealthBar3D.attach(self, height, "hero", width)
+	health_changed.connect(func(hp: int, max_value: int) -> void: _hp_bar.set_value(hp, max_value))
+	_hp_bar.set_value.call_deferred(current_hp, max_hp)
 
 
 func _set_down(value: bool) -> void:
@@ -262,10 +277,12 @@ func _land_swing(target: Node3D, burst: StringName) -> void:
 		Fx.burst(burst, other.global_position + Vector3(0, 0.7, 0))
 
 
-## Role hook: true for the companion role (it reads the definition's
-## `companion_` attack fields).
+## True in the companion role (it reads the definition's `companion_`
+## attack fields). Asks Party, so it holds once the role group is joined:
+## the companion joins before it reads its tuning; the player's hero reads
+## its tuning in `_enter_tree`, where any answer but COMPANION is right.
 func _is_companion_role() -> bool:
-	return false
+	return Party.role_of(self) == Party.COMPANION
 
 
 ## Role hook: how the attack starts (the swing or shot animation).

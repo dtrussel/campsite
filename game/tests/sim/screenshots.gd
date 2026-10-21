@@ -152,16 +152,15 @@ func _ready() -> void:
 		cam_rig.set("_zoom_target", cam_rig.get("min_zoom"))
 		var post: Building = BuildManager.place_blueprint(BuildManager.get_definition(&"watch_post"),
 			Transform3D(Basis(), player.global_position + Vector3(2.2, 0, 0.6)))
-		var beat: BuildBeat = player.get("_build_beat") as BuildBeat
 		for i in 200:
 			if post.build_progress >= 0.45:
 				break
 			await _settle(0.05)
-		var hits: int = beat.hits
+		var hits: int = int(player.call("build_hits"))
 		for i in 300:
 			if post.build_progress < 0.4:
-				hits = beat.hits
-			elif beat.hits > hits or post.build_progress > 0.8:
+				hits = int(player.call("build_hits"))
+			elif int(player.call("build_hits")) > hits or post.build_progress > 0.8:
 				break
 			await _settle(0.02)
 		_shot("04b3_build_close")
@@ -175,9 +174,9 @@ func _ready() -> void:
 			if side.build_progress >= 0.1:
 				break
 			await _settle(0.05)
-		var side_hits: int = beat.hits
+		var side_hits: int = int(player.call("build_hits"))
 		for i in 100:
-			if beat.hits > side_hits:
+			if int(player.call("build_hits")) > side_hits:
 				break
 			await _settle(0.02)
 		_shot("04b5_hammer")
@@ -200,7 +199,7 @@ func _ready() -> void:
 		get_tree().current_scene.add_child(extra)
 		extra.global_position = spec[1]
 	player.global_position = Vector3(0.5, 0, 2.2)
-	get_tree().get_first_node_in_group("companions").call("set_task", 4)
+	get_tree().get_first_node_in_group("companions").call("set_task", Companion.Task.REPAIR)
 	await _settle(1.0)
 	_shot("04c_feature_017")
 	# Feature 019: the Crafting Table's own recipes, and a full stash.
@@ -217,7 +216,7 @@ func _ready() -> void:
 	_shot("04d_build_lantern")
 	BuildManager.exit_build_mode()
 	CraftingManager.craft(CraftingManager.get_recipes()[0], player)
-	player.call("_try_place_torch")
+	player.call("try_place_torch")
 	var fence: Node3D = BuildManager.get_definition(&"wooden_fence").get_scene().instantiate()
 	get_tree().current_scene.add_child(fence)
 	fence.global_position = Vector3(0, 0, -3)

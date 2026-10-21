@@ -157,7 +157,7 @@ func _run_win_scenario() -> void:
 	var torch_recipe: CraftingRecipe = _recipe(&"torch")
 	_check(CraftingManager.craft(torch_recipe, player), "crafted a torch")
 	_check(ResourceManager.get_count(&"torch") == 1, "torch in inventory")
-	player.call("_try_place_torch")
+	player.call("try_place_torch")
 	await get_tree().process_frame
 	_check(get_tree().get_nodes_in_group("torches").size() == 1, "torch planted")
 	_check(ResourceManager.get_count(&"torch") == 0, "torch consumed")
@@ -182,7 +182,7 @@ func _run_win_scenario() -> void:
 	var goal: Vector3 = Vector3(-6, 0, 10)
 	player.command_move(goal)
 	var t: float = 0.0
-	while int(player.get("command")) != 0 and t < 10.0:
+	while bool(player.call("has_command")) and t < 10.0:
 		await _wait(0.25)
 		t += 0.25
 	var moved: float = Vector2(player.global_position.x - goal.x, player.global_position.z - goal.z).length()
@@ -229,7 +229,7 @@ func _run_win_scenario() -> void:
 	_check(imp.current_hp < imp_hp, "watch post damaged a nearby imp (%d -> %d)" % [imp_hp, imp.current_hp])
 	imp.take_damage(999, player)
 
-	companion.call("set_task", 2)  # guard the campfire
+	companion.call("set_task", Companion.Task.GUARD_BASE)
 	for night in range(1, GameManager.nights_to_win + 1):
 		await _survive_night(night, player)
 		if night == 1:
@@ -481,13 +481,13 @@ func _check_feature_017(player: Node3D, companion: Node3D, fence: Building) -> v
 	# Nela's Repair task fixes the campfire.
 	var fire: BaseCore = _campfire()
 	fire.take_damage(30)
-	companion.call("set_task", 4)
+	companion.call("set_task", Companion.Task.REPAIR)
 	t = 0.0
 	while fire.get_missing_hp() > 0 and t < 15.0:
 		await _wait(0.25)
 		t += 0.25
 	_check(fire.get_missing_hp() == 0, "Nela repaired the campfire (%.1fs)" % t)
-	companion.call("set_task", 0)
+	companion.call("set_task", Companion.Task.IDLE)
 
 	# Feed the Fire only while the campfire is damaged.
 	var feed: CraftingRecipe = _recipe(&"feed_fire")
@@ -515,7 +515,7 @@ func _check_feature_017(player: Node3D, companion: Node3D, fence: Building) -> v
 	(player as Hero).clear_invulnerability()
 	player.take_damage(40)
 	var hp: int = player.current_hp
-	player.call("_try_eat_berries")
+	player.call("try_eat_berries")
 	# A level-up earlier in the run may have dealt Berry Belly (ticket 03).
 	var snack_heal: int = roundi(player.heal_per_snack * PerkManager.multiplier(player, &"snack_heal"))
 	_check(player.current_hp == mini(player.max_hp, hp + snack_heal) and ResourceManager.get_count(&"snack") == 0,
@@ -714,7 +714,7 @@ func _check_auto_attack(player: Node3D) -> void:
 	imp = _spawn_mob(imp_def, player.global_position + Vector3(0, 0, 2.0))
 	imp.set_physics_process(false)
 	await _wait(0.5)
-	_check(int(player.get("command")) == 2 and player.get("command_target") == imp, "a close imp interrupts the gather")
+	_check((player as Hero).is_attacking() and player.get("command_target") == imp, "a close imp interrupts the gather")
 	imp.take_damage(999, player)
 	t = 0.0
 	while not (player as Hero).is_gathering() and t < 4.0:
@@ -747,8 +747,7 @@ func _check_construction(player: Node3D, companion: Node3D) -> void:
 		"it shows as a blue ghost on a staked-out site, with less HP")
 	var clip_start: float = float(ghost_material.get_shader_parameter("clip_y")) if ghost_material != null else 0.0
 	var visual: CharacterVisual = player.get_node("Visual") as CharacterVisual
-	var beat: BuildBeat = player.get("_build_beat") as BuildBeat
-	var hits_before: int = beat.hits
+	var hits_before: int = int(player.call("build_hits"))
 	var t: float = 0.0
 	var hammered: bool = false
 	var hammer_out: bool = false
@@ -756,13 +755,13 @@ func _check_construction(player: Node3D, companion: Node3D) -> void:
 	while crate.is_blueprint() and t < 15.0:
 		await _wait(0.1)
 		t += 0.1
-		hammered = hammered or int(player.get("command")) == 6
+		hammered = hammered or bool(player.call("is_building"))
 		hammer_out = hammer_out or visual.tool_shown() == &"hammer"
 		if ghost_material != null and crate.is_blueprint():
 			clip_rose = clip_rose or float(ghost_material.get_shader_parameter("clip_y")) > clip_start + 0.2
 	_check(hammered and crate.is_built(), "the idle hero walks over and builds it (%.1fs for %.0fs of work)" % [t, crate_def.build_seconds])
-	_check(hammer_out and beat.hits > hits_before and clip_rose,
-		"with a hammer in hand (%d blows landed), the solid part rising inside the ghost" % (beat.hits - hits_before))
+	_check(hammer_out and int(player.call("build_hits")) > hits_before and clip_rose,
+		"with a hammer in hand (%d blows landed), the solid part rising inside the ghost" % (int(player.call("build_hits")) - hits_before))
 	await _wait(0.6)
 	_check(crate.get_node_or_null("Ghost") == null and crate.get_node_or_null("Site") == null and visual.tool_shown() == &""
 		and crate.current_hp == crate_def.max_hp, "built: ghost and site gone, hammer away, full HP")
@@ -772,7 +771,7 @@ func _check_construction(player: Node3D, companion: Node3D) -> void:
 	player.global_position = Vector3(-14, 0, -14)
 	player.set_physics_process(false)
 	var fence: Building = BuildManager.place_blueprint(BuildManager.get_definition(&"wooden_fence"), Transform3D(Basis(), companion.global_position + Vector3(0, 0, 2.5)))
-	companion.call("set_task", 4)
+	companion.call("set_task", Companion.Task.REPAIR)
 	var helper: CharacterVisual = companion.get_node("Visual") as CharacterVisual
 	var gear: Array[Node3D] = []
 	for part in helper.tool_hidden_parts:
@@ -791,7 +790,7 @@ func _check_construction(player: Node3D, companion: Node3D) -> void:
 				gear_away = gear_away and not node.visible
 	_check(is_instance_valid(fence) and fence.is_built(), "on Repair the companion builds blueprints too (%.1fs)" % t)
 	_check(helper_hammer and gear_away, "the companion builds with the mallet, %s put away" % ", ".join(helper.tool_hidden_parts))
-	companion.call("set_task", 0)
+	companion.call("set_task", Companion.Task.IDLE)
 	await _wait(0.3)
 	var gear_back: bool = helper.tool_shown() == &""
 	for node in gear:
@@ -821,17 +820,17 @@ func _check_companion_unstuck(companion: Node3D) -> void:
 	wall.global_position = fire.global_position + Vector3(0, 0, -6.5)
 	nav.call("_request_bake")  # rebake the nav mesh round it
 	await nav.baked
-	companion.call("set_task", 0)
+	companion.call("set_task", Companion.Task.IDLE)
 	companion.global_position = fire.global_position + Vector3(0.3, 0, -9.0)
 	await _wait(0.2)
-	companion.call("set_task", 2)
+	companion.call("set_task", Companion.Task.GUARD_BASE)
 	var t: float = 0.0
 	var radius: float = float(companion.get("guard_radius"))
 	while _flat(companion.global_position).distance_to(_flat(fire.global_position)) > radius + 0.3 and t < 12.0:
 		await _wait(0.25)
 		t += 0.25
 	_check(t < 12.0, "guarding from behind a wall, the companion walks round it (%.1fs, %d hops)" % [t, int(companion.get("unstuck_count"))])
-	companion.call("set_task", 0)
+	companion.call("set_task", Companion.Task.IDLE)
 	wall.queue_free()
 	await get_tree().process_frame
 	nav.call("_request_bake")  # and without it
@@ -1180,7 +1179,7 @@ func _run_bark_scenario() -> void:
 	await _wait(BarkDirector.REPLY_DELAY + 1.0)
 	_check(SpeechBubble.on(companion) != null and _bark_line(SpeechBubble.on(companion).text, &"thief", &"nela"),
 		"Nela replies")
-	_check(SpeechBubble.on(companion).position.y > float(companion.get("_hp_bar").position.y),
+	_check(SpeechBubble.on(companion).position.y > (companion as Hero).health_bar().position.y,
 		"the bubble sits above the health bar")
 	# Feature 046: a gremlin that gets away, and the first beast once a run.
 	director.clock += BarkDirector.GLOBAL_COOLDOWN + 1.0
@@ -1775,11 +1774,11 @@ func _run_perk_03_scenario() -> void:
 	player.set("max_hp", 500)
 	player.set("current_hp", 100)
 	ResourceManager.add(&"snack", 2)
-	player.call("_try_eat_berries")
+	player.call("try_eat_berries")
 	var plain_heal: int = int(player.get("current_hp")) - 100
 	_check(PerkManager.take(player, &"berry_belly"), "took Berry Belly")
 	player.set("current_hp", 100)
-	player.call("_try_eat_berries")
+	player.call("try_eat_berries")
 	var belly_heal: int = int(player.get("current_hp")) - 100
 	_check(plain_heal == int(player.get("heal_per_snack")) and belly_heal == roundi(plain_heal * 1.5),
 		"Berry Belly: a snack heals %d HP, not %d" % [belly_heal, plain_heal])
@@ -1822,7 +1821,7 @@ func _run_perk_03_scenario() -> void:
 ## Plants a torch with the hero's Q action and returns it.
 func _plant_torch(player: Node3D) -> Node3D:
 	var before: Array[Node] = get_tree().get_nodes_in_group("torches")
-	player.call("_try_place_torch")
+	player.call("try_place_torch")
 	for node in get_tree().get_nodes_in_group("torches"):
 		if not before.has(node):
 			player.global_position += Vector3(0, 0, 2.0)

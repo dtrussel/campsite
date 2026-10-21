@@ -146,11 +146,14 @@ game/scripts/save/save_manager.gd              # later
 
 game/scripts/game_loop/wave_controller.gd      # later
 
-game/scripts/player/player_controller.gd
-game/scripts/player/player_state_machine.gd    # later
+game/scripts/characters/hero.gd               # Hero: what both heroes do in either role
+game/scripts/characters/hero_hits.gd           # the perk math under every hero hit
+game/scripts/characters/party.gd               # Party: who plays which role
 
-game/scripts/companions/companion_controller.gd
-game/scripts/companions/companion_tasks.gd
+game/scripts/player/player_controller.gd       # the player's hero role (extends Hero)
+game/scripts/player/pointer_commands.gd
+
+game/scripts/companions/companion_controller.gd  # the companion role (Companion, extends Hero)
 
 game/scripts/mobs/mob_controller.gd
 game/scripts/mobs/mob_spawner.gd
@@ -176,6 +179,60 @@ game/scripts/ui/resource_panel.gd              # later
 
 game/scripts/utilities/math_utils.gd           # as needed
 ```
+
+### Heroes: the Hero module, the two roles and Party
+
+Leo and Nela are each played in one of two **roles** (see `GLOSSARY.md`).
+Everything a hero does whichever role it plays lives in one base class,
+`Hero` (`game/scripts/characters/hero.gd`, extends `CharacterBody3D`). The
+two role scripts extend it and keep only what differs. Outside code talks
+to a hero through the Hero interface, never through a role's private
+fields.
+
+- **Health:** `take_damage(amount, source)`, `heal(amount)`, `is_down()`,
+  `revive(hp)`, `max_hp` / `current_hp`, `is_invulnerable()`,
+  `clear_invulnerability()` and `health_bar()`. Regen and the
+  invulnerability window run inside. Signals: `health_changed(hp, max)`
+  and `down_changed(is_down)` (the only "downed" signal).
+- **Attack:** `attack(target)`, `get_attack_damage()`,
+  `get_attack_range()` (reach, after perks), `is_attack_ready()`,
+  `is_attacking()`, `get_attack_cooldown_ratio()`, `apply_signature()`
+  and the `attacked` signal. Hero owns the cooldown and the melee vs
+  pebble branch; the perk effects come from `HeroHits` underneath.
+  `tool_tier` and `on_attack_hit(target, damage)` are the (unused) slots
+  for tool tiers. The definition's `companion_` reach, cooldown and
+  signature factor are read for the companion role.
+- **Progress:** each role calls `_setup_progress()` once; on
+  ProgressionManager's raw `level_up`, Hero applies the stat bumps and
+  then emits `leveled(level)`. PerkManager listens to `leveled`
+  (`PerkManager.watch(hero)`), so the picker opens after the new HP shows,
+  whatever order the autoloads connected in.
+- **Gathering and queries:** `start_gather(node)`, `cancel_gather()`,
+  `is_gathering()`, `gather_target()`, the `gather_finished(node)` signal,
+  and `nearest_mob(within)`. The node-radius fallback is 0.4.
+- **Role hooks** (the role overrides them): `_show_hurt`,
+  `_on_down_changed`, `_show_attack`, `_swing`, `_show_level_up` and
+  `_on_gather_started`.
+
+**The player's hero** (`player_controller.gd`) adds input, the pointer
+commands (`command_move/attack/gather/campfire/repair/build`,
+`stop_commands()`, `has_command()`, `is_building()`), the hit feel (the
+wind-up, the x1.4 range re-check and the hit-stop), the build and repair
+ticks, auto-attack and the hero's actions (`try_place_torch()`,
+`try_eat_berries()`, `try_use_bandage()`, `try_feed_lantern()`). When it
+is down, GameManager ends the run.
+
+**The companion** (`Companion`, `companion_controller.gd`) adds the task
+AI (`set_task(Companion.Task.…)`), the repair and build ticks with its own
+constants, the stuck watchdog and the quick sparkle hit. When it is down,
+it revives at dawn.
+
+**Party** (`game/scripts/characters/party.gd`, static) answers who is who
+in the running camp: `Party.player_hero()`, `Party.companion()`,
+`Party.other(hero)`, `Party.heroes()` and `Party.role_of(hero)`
+(`Party.PLAYER`, `Party.COMPANION` or `&""`). Use it instead of the
+`"player"` / `"companions"` group names; the older group lookups move to
+it as they are touched.
 
 ### Style rules (see `coding-standards.md` for the full list)
 
@@ -305,6 +362,10 @@ Initial signal vocabulary (declared on the relevant autoload or scene):
 | `level_up`               | `ProgressionManager` | `(character: Node, new_level: int)`|
 | `perk_taken`             | `PerkManager`        | `(character: Node, perk: PerkDefinition)`|
 | `companion_task_changed` | `CompanionController`| `(companion: Node, task: int)`    |
+| `health_changed`         | `Hero`               | `(current_hp: int, max_hp: int)`  |
+| `down_changed`           | `Hero`               | `(is_down: bool)`                 |
+| `leveled`                | `Hero`               | `(level: int)`, after the stat bumps |
+| `gather_finished`        | `Hero`               | `(node: ResourceNode)`            |
 
 Signal names use snake_case and are documented in the script that emits
 them.
@@ -317,24 +378,18 @@ a node-based state machine framework yet.
 
 ### Player states
 
-```
-idle
-moving
-gathering
-building
-attacking
-```
+The player's hero has no state enum: it has a pointer **command**
+(`NONE`, `MOVE`, `ATTACK`, `GATHER`, `CAMPFIRE`, `REPAIR`, `BUILD`) and,
+apart from it, Hero's gathering and down flags. Outside code asks through
+`has_command()`, `is_attacking()`, `is_building()`, `is_gathering()` and
+`is_down()`, never by the command's number.
 
 ### Companion states
 
-```
-idle
-following
-gathering
-guarding
-repairing
-supporting
-```
+The companion's states are its tasks, `Companion.Task`: `IDLE`,
+`FOLLOW_PLAYER`, `GUARD_BASE`, `GATHER_NEAREST` and `REPAIR` (which builds
+blueprints too). Set them by name (`set_task(Companion.Task.GUARD_BASE)`),
+never by number.
 
 ### Mob states
 
