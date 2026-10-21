@@ -71,8 +71,10 @@ func _ready() -> void:
 	await _run_world_save_scenario()
 	await _run_review_fixes_scenario()
 	await _run_endless_scenario()
+	await _run_endless_record_scenario()
 	await _run_badges_scenario()
 	await _run_scrapbook_scenario()
+	await _run_starting_perks_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	Profile.delete()
@@ -252,6 +254,62 @@ func _run_scrapbook_scenario() -> void:
 	title.free()
 	if game_camera != null and is_instance_valid(game_camera):
 		game_camera.make_current()
+	Profile.delete()
+
+
+## Journal badges 06: a badge unlocks a starting perk. Without it hero
+## select offers none and a run starts with no card even if one is asked
+## for. With Gatherer earned, hero select offers Quick Hands; the pick
+## reaches the next run, which starts holding it (gathering is faster),
+## and it never takes the place of a level-up card, through Continue too.
+func _run_starting_perks_scenario() -> void:
+	print("smoke: --- starting perks scenario ---")
+	Profile.delete()
+	_check(StartingPerks.unlocked().is_empty(), "no starting perk is unlocked on a fresh profile")
+	var screen: Node = (load("res://scenes/ui/HeroSelect.tscn") as PackedScene).instantiate()
+	add_child(screen)
+	await get_tree().process_frame
+	var row: Control = screen.get("starting_perk_row") as Control
+	_check(row == null or not row.visible, "hero select offers no starting perk without the unlock")
+	screen.queue_free()
+	await get_tree().process_frame
+	var config: RunConfig = _config()
+	config.starting_perk = &"quick_hands"
+	await _start_fresh_run(config)
+	_check(PerkManager.perks_of(Party.player_hero()).is_empty(), "a locked starting perk is not given")
+
+	# Earn Gatherer: Quick Hands is offered and picked in hero select.
+	Profile.set_value(Badges.EARNED_PREFIX + "gatherer", true)
+	_check(StartingPerks.unlocked().has(&"quick_hands"), "Gatherer unlocks Quick Hands as a starting perk")
+	screen = (load("res://scenes/ui/HeroSelect.tscn") as PackedScene).instantiate()
+	add_child(screen)
+	await get_tree().process_frame
+	row = screen.get("starting_perk_row") as Control
+	_check(row != null and row.visible, "hero select shows the starting perk row once unlocked")
+	screen.call("pick_starting_perk", &"quick_hands")
+	screen.queue_free()
+	await get_tree().process_frame
+	Profile.reload()
+	config = _config(5.0)  # the level-up below opens the picker
+	_check(config.starting_perk == &"quick_hands", "the pick is kept for the next run, after a restart too")
+	await _start_fresh_run(config)
+	var player: Hero = Party.player_hero()
+	var tree_node: ResourceNode = _find_resource_node(&"wood")
+	_check(PerkManager.perks_of(player) == [&"quick_hands"] and PerkManager.perks_of(Party.companion()).is_empty()
+		and not PerkManager.is_picking(), "the run starts with the chosen perk, no picker")
+	_check(is_equal_approx(tree_node.gather_seconds_for(player), tree_node.gather_time_seconds * 0.7),
+		"the starting Quick Hands speeds up gathering")
+
+	# A level-up still deals its own card, even when saved with it owed.
+	ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"test")
+	_check(PerkManager.is_picking(), "the first level-up still opens the picker")
+	var data: Dictionary = SaveManager.parse(SaveManager.serialize(RunSession.snapshot()))
+	await _continue_from(data)
+	await get_tree().process_frame
+	player = Party.player_hero()
+	_check(PerkManager.perks_of(player).size() == 2 and PerkManager.has(player, &"quick_hands"),
+		"after Continue the starting perk is kept and the owed card is dealt (%s)" % [PerkManager.perks_of(player)])
+	StartingPerks.choose(&"")
 	Profile.delete()
 
 
@@ -3319,6 +3377,71 @@ func _run_endless_scenario() -> void:
 		"a story run's mobs keep their HP and its night 10 keeps 25 imps, 9 beasts, 8 gremlins")
 	GameManager.nights_to_win = 3
 	StoryLibrary.forget_progress()
+
+
+## Endless mode 03: an endless loss keeps the best nights and the hero
+## in the profile (under "endless."), the end screen says "New record!"
+## only when it is beaten, and the title's Endless button shows it.
+func _run_endless_record_scenario() -> void:
+	print("smoke: --- endless record scenario ---")
+	await _close_main()
+	Profile.forget("endless.")
+	StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING)
+	_check(not _endless_caption(await _title_buttons()).contains("Best:"), "no record on the Endless button before an endless run")
+
+	# Leo lasts to night 9 and the fire goes out.
+	GameManager.set_party(&"leo")
+	GameManager.nights_to_win = 7
+	GameManager.endless = true
+	await _start_fresh_run()
+	TimeManager.day_number = 8
+	_skip_to_night()  # night 8
+	TimeManager.skip_phase()  # dawn 8
+	_skip_to_night()  # day 9, then night 9
+	_check(GameManager.current_day == 9 and TimeManager.is_night(), "the endless run reaches night 9 (day %d)" % GameManager.current_day)
+	_campfire().take_damage(10000)
+	await get_tree().process_frame
+	var end_screen: Node = _main.get_node("EndScreen")
+	_check(GameManager.run_state == GameManager.RunState.LOST
+		and int(Profile.get_value(Profile.ENDLESS_BEST_NIGHTS, 0)) == 9
+		and String(Profile.get_value(Profile.ENDLESS_BEST_HERO, "")) == "leo",
+		"a loss on night 9 records 9 nights and Leo")
+	_check(String(end_screen.call("record_text")).contains("New record!"),
+		"the end screen says New record! (%s)" % end_screen.call("record_text"))
+	Profile.reload()  # as a restart reads it
+	_check(int(Profile.get_value(Profile.ENDLESS_BEST_NIGHTS, 0)) == 9 and String(Profile.get_value(Profile.ENDLESS_BEST_HERO, "")) == "leo",
+		"the record survives a restart")
+	var caption: String = _endless_caption(await _title_buttons())
+	_check(caption.contains("night 9") and caption.contains("Leo"), "the Endless button shows the record (%s)" % caption)
+
+	# A worse run, with Nela on night 1, keeps Leo's record.
+	GameManager.set_party(&"nela")
+	await _start_fresh_run()
+	_campfire().take_damage(10000)
+	await get_tree().process_frame
+	end_screen = _main.get_node("EndScreen")
+	_check(int(Profile.get_value(Profile.ENDLESS_BEST_NIGHTS, 0)) == 9 and String(Profile.get_value(Profile.ENDLESS_BEST_HERO, "")) == "leo",
+		"a worse run doesn't overwrite the record")
+	_check(not String(end_screen.call("record_text")).contains("New record!") and String(end_screen.call("record_text")).contains("night 9"),
+		"no New record! for a worse run; it shows the best (%s)" % end_screen.call("record_text"))
+
+	# A story run's loss is no endless record.
+	GameManager.endless = false
+	await _start_fresh_run()
+	_campfire().take_damage(10000)
+	await get_tree().process_frame
+	_check(String(_main.get_node("EndScreen").call("record_text")) == "", "a story run's end screen has no record line")
+	await _close_main()
+	GameManager.set_party(&"leo")
+	GameManager.nights_to_win = 3
+	Profile.forget("endless.")
+	StoryLibrary.forget_progress()
+
+
+## The record line under the title's Endless button, from
+## _title_buttons (the button's tooltip carries it).
+func _endless_caption(buttons: Dictionary) -> String:
+	return str(buttons.get("endless", ""))
 
 
 ## Summons one imp on each of `nights` (the clock's day set to it) and

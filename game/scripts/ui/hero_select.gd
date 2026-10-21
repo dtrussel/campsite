@@ -24,6 +24,10 @@ var _glows: Array[Panel] = []
 var _companion_portrait: TextureRect = null
 var _companion_name: Label = null
 var _start: Button = null
+## Journal badges 06: the starting perk row, or null when no badge has
+## unlocked a starting perk yet.
+var starting_perk_row: HBoxContainer = null
+var _starting_perk_buttons: Dictionary = {}  # StringName (&"" = none) -> Button
 
 
 func _ready() -> void:
@@ -52,6 +56,7 @@ func _ready() -> void:
 	_build_header()
 	_build_cards()
 	_build_footer()
+	_build_starting_perk_row()
 
 	var heroes: Array[HeroDefinition] = HeroRoster.all()
 	var start_index: int = 0
@@ -298,6 +303,63 @@ func _on_start() -> void:
 
 func _on_back() -> void:
 	GameManager.go_to_title()
+
+
+# --- Starting perk row (journal badges 06) -------------------------------------
+
+## Under the goal line: "Start with:" None or one of the perk cards a
+## badge has unlocked (StartingPerks). Left out while none is unlocked.
+func _build_starting_perk_row() -> void:
+	var perks: Array[StringName] = StartingPerks.unlocked()
+	if perks.is_empty():
+		return
+	starting_perk_row = HBoxContainer.new()
+	starting_perk_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	starting_perk_row.add_theme_constant_override("separation", 8)
+	_center_top(starting_perk_row, 126)
+	add_child(starting_perk_row)
+	var word: Label = UiKit.label("Start with:", 16, UiKit.COLOR_GOLD_LIGHT)
+	word.add_theme_font_override("font", Fx.bold_font())
+	word.add_theme_constant_override("outline_size", 6)
+	word.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	starting_perk_row.add_child(word)
+	var group: ButtonGroup = ButtonGroup.new()
+	starting_perk_row.add_child(_starting_perk_button(&"", "None", null, "Start with no perk card", group))
+	for id in perks:
+		var perk: PerkDefinition = PerkManager.get_definition(id)
+		var badge: BadgeDefinition = Badges.get_badge(StartingPerks.UNLOCKS[id])
+		var tip: String = "%s\nUnlocked by the %s badge" % [perk.description.format({"hero": "your hero", "companion": "your companion"}),
+			badge.display_name if badge != null else "?"]
+		starting_perk_row.add_child(_starting_perk_button(id, perk.display_name, perk.icon_texture(), tip, group))
+	pick_starting_perk(StartingPerks.chosen())
+
+
+func _starting_perk_button(id: StringName, caption: String, icon: Texture2D, tip: String, group: ButtonGroup) -> Button:
+	var button: Button = Button.new()
+	button.text = caption
+	button.icon = icon
+	button.expand_icon = true
+	button.toggle_mode = true
+	button.button_group = group
+	button.focus_mode = Control.FOCUS_NONE
+	button.custom_minimum_size = Vector2(0, 36)
+	button.tooltip_text = tip
+	button.add_theme_font_size_override("font_size", 15)
+	button.add_theme_constant_override("icon_max_width", 24)
+	button.pressed.connect(func() -> void:
+		AudioManager.play_sfx(&"ui_click")
+		pick_starting_perk(id))
+	_starting_perk_buttons[id] = button
+	return button
+
+
+## Picks the perk card the next run starts with (&"" for none); kept in
+## the profile. A perk that is not unlocked picks none.
+func pick_starting_perk(id: StringName) -> void:
+	StartingPerks.choose(id)
+	var chosen: StringName = StartingPerks.chosen()
+	for key in _starting_perk_buttons:
+		(_starting_perk_buttons[key] as Button).set_pressed_no_signal(key == chosen)
 
 
 func _center_top(control: Control, y: float) -> void:
