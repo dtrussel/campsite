@@ -72,6 +72,7 @@ func _ready() -> void:
 	await _run_review_fixes_scenario()
 	await _run_endless_scenario()
 	await _run_badges_scenario()
+	await _run_scrapbook_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	Profile.delete()
@@ -209,6 +210,48 @@ func _run_badges_scenario() -> void:
 		"Fire Keeper follows the fire's lowest HP (%d%%)" % GameManager.stats[&"fire_low_pct"])
 	_check(Badges.has_won_with(&"leo") and not Badges.has_badge(&"both_heroes"), "Both Heroes waits for a win as Nela")
 	Badges.badge_earned.disconnect(on_earned)
+	Profile.delete()
+
+
+## Journal badges 03: the title's Journal button opens the scrapbook,
+## whose Badges tab lists every badge: the earned ones in colour, the
+## locked ones as silhouettes with how to earn them, as the profile has
+## them. Close goes back to the title.
+func _run_scrapbook_scenario() -> void:
+	print("smoke: --- scrapbook scenario ---")
+	Profile.delete()
+	for id in [&"first_night", &"builder"]:
+		Profile.set_value(Badges.EARNED_PREFIX + String(id), true)
+	var game_camera: Camera3D = get_viewport().get_camera_3d()
+	var title: Control = (load("res://scenes/ui/TitleScreen.tscn") as PackedScene).instantiate()
+	add_child(title)
+	await get_tree().process_frame
+	var journal: Button = title.call("journal_button") as Button
+	_check(journal != null and not journal.disabled, "the title has a Journal button")
+	journal.pressed.emit()
+	await get_tree().process_frame
+	var book: Control = title.call("scrapbook") as Control
+	_check(book != null and book.is_visible_in_tree(), "the Journal button opens the scrapbook")
+	if book != null:
+		_check(book.call("current_tab") == "Badges", "the scrapbook opens on its Badges tab")
+		var shown: Dictionary = book.call("badge_states")
+		var all: Array[BadgeDefinition] = Badges.definitions()
+		_check(shown.size() == all.size() and all.size() >= 15,
+			"the Badges tab lists every badge (%d of %d)" % [shown.size(), all.size()])
+		var matches: bool = true
+		for badge in all:
+			matches = matches and shown.has(badge.id) and bool(shown[badge.id]) == Badges.has_badge(badge.id)
+		_check(matches and bool(shown.get(&"first_night")) and not bool(shown.get(&"chapter_1", true)),
+			"earned and locked badges match the profile")
+		var fire_keeper: BadgeDefinition = Badges.get_badge(&"fire_keeper")
+		var locked_text: String = book.call("badge_text", &"fire_keeper")
+		_check(locked_text.contains(fire_keeper.how_to_earn), "a locked badge says how to earn it")
+		(book.call("close_button") as Button).pressed.emit()
+		await get_tree().process_frame
+		_check(not is_instance_valid(book) or not book.is_visible_in_tree(), "Close leaves the scrapbook for the title")
+	title.free()
+	if game_camera != null and is_instance_valid(game_camera):
+		game_camera.make_current()
 	Profile.delete()
 
 

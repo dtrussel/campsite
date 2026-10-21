@@ -13,12 +13,16 @@ extends Control
 ## (journal badges 01, Profile.is_chapter_unlocked).
 ## Once the true ending has been seen, Endless ("How long can you
 ## last?") starts a Chapter 2 run with no last night.
+## Journal opens the scrapbook (journal badges 03) over the title.
 
 const BACKDROP: Script = preload("res://scripts/ui/title_backdrop.gd")
+const SCRAPBOOK_SCENE: PackedScene = preload("res://scenes/ui/Scrapbook.tscn")
 
 var _controls_panel: Control = null
 ## The Play button of each chapter, by chapter number.
 var _chapter_buttons: Dictionary = {}
+var _journal_button: Button = null
+var _scrapbook: Scrapbook = null
 
 
 func _ready() -> void:
@@ -115,6 +119,9 @@ func _ready() -> void:
 	var small: HBoxContainer = HBoxContainer.new()
 	small.alignment = BoxContainer.ALIGNMENT_CENTER
 	small.add_theme_constant_override("separation", 12)
+	_journal_button = HudWidgets.icon_button("trophy", "Journal", _on_journal, UiKit.COLOR_GOLD_LIGHT)
+	_journal_button.tooltip_text = "Your scrapbook: the Camp Badges you have earned, and how to earn the rest."
+	small.add_child(_journal_button)
 	small.add_child(HudWidgets.icon_button("help", "", _on_toggle_controls))
 	small.add_child(HudWidgets.icon_button("close", "", _on_quit, Color(1.0, 0.45, 0.4)))
 	buttons.add_child(small)
@@ -142,6 +149,29 @@ func _ready() -> void:
 ## The Play button that starts chapter (1 or 2), or null.
 func chapter_button(chapter: int) -> Button:
 	return _chapter_buttons.get(chapter) as Button
+
+
+func journal_button() -> Button:
+	return _journal_button
+
+
+## The open scrapbook, or null.
+func scrapbook() -> Scrapbook:
+	return _scrapbook if is_instance_valid(_scrapbook) else null
+
+
+func _on_journal() -> void:
+	if scrapbook() != null:
+		return
+	_scrapbook = SCRAPBOOK_SCENE.instantiate() as Scrapbook
+	_scrapbook.closed.connect(_on_scrapbook_closed)
+	add_child(_scrapbook)
+
+
+func _on_scrapbook_closed() -> void:
+	_scrapbook.queue_free()
+	_scrapbook = null
+	_journal_button.grab_focus()
 
 
 func _on_play(nights: int) -> void:
