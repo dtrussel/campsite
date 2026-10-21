@@ -267,14 +267,14 @@ art track in parallel.
 | 047 Story art | **Done.** The team's art brief came back: every storybook page has its own painting (12), with the Chapter 2 intro's lantern retouched cold. Nela has painted faces on her lines. The Moon Lantern is a model after its sheet (shards fill its glass, the crescent glows at the top). The Moon-Eater's ending leaves the little golem from its sheet, which curls up by the fire and by the title fire. Follow-up: pages lifted out of the text band, the kids' six faces each (the rest cut from the paintings), and Mum's notebook: a page and a sketch per note on the dawn cards, made from the team's art. |
 | 048 Little golem pass | **Done.** The little golem is rebuilt and measured against its sheet. It has a rounded plank face with deep-set amber eyes and a smile, a shingle bob with plank-slice ears, a shield-shaped trunk with the crescent glowing on its own, and long stone-and-plank arms that tuck in when it curls up. |
 | 039 Perk cards | **Done.** On each level-up the hero picks 1 of 3 wood plate cards (click or 1/2/3; the night slows to 10% and the first card is taken after 10 s). Ten cards: four shared (Quick Hands, Ember Heart, Berry Belly, Builder's Knack), two each for Leo (Big Swing, Stand Firm) and Nela (Ricochet, Eagle Eye), and two sibling cards (Twin Strike, Cheer Up). The companion takes a random card, shown on a toast. Perks are saved, and the flat HP per level is smaller (Leo +5 &rarr; +3, Nela +4 &rarr; +3). |
-| 040 Tool tiers | **Planned.** The signature crafts get tiers (Stick &rarr; Sturdy &rarr; Ember Stick, Slingshot &rarr; Double &rarr; Glow Sling). The upper tiers cost shards, which the lantern also needs. |
+| 040 Tool tiers | **Done.** Each hero's signature tool has three tiers, crafted at the table in order: Leo's Sturdy Stick (+2 attack) &rarr; Ember Stick (a burn and a small night light) &rarr; Blaze Stick (the burn splashes onto neighbours, a wider light); Nela's Slingshot (reach) &rarr; Double Sling (every 3rd shot fires two pebbles) &rarr; Glow Sling (pebbles pierce and light the target). Tiers 2 and 3 cost 2 and 4 Glow Shards, which the Moon Lantern also needs. The HUD attack slot shows a pip per tier. |
 | 041 Ranger's Journal and Camp Badges | **Planned.** A profile that persists between runs: badges for milestones, mum's journal pages (her notes already appear on the dawn cards since 046; the journal collects them), a scrapbook screen, and unlocks (Chapter 2 / 7 Nights after Chapter 1, cosmetics, starting perks). |
 | 042 Endless mode | **Planned, optional.** "How long can you last?", unlocked by the true ending, with a best-nights record. |
 
 Features 035&ndash;042 come from the mechanics brainstorm of 2026-10 (story
 and meta progression, adventure tone). The plans for 035&ndash;038 are archived in
 `docs/history/features/`. The specs for 039&ndash;042 are in
-`.scratch/` (`perk-cards`, `tool-tiers`, `journal-badges`, `endless-mode`); 039 is built. The order is story first (035&ndash;038), then
+`.scratch/` (`perk-cards`, `tool-tiers`, `journal-badges`, `endless-mode`); 039 and 040 are built. The order is story first (035&ndash;038), then
 choices (039&ndash;040), then meta (041&ndash;042). Ideas that were not
 chosen this time: fire fuel and burn-down, night omens, last stand and
 revive, a trader, well blessings and signpost chores.
