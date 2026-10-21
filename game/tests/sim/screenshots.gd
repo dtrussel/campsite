@@ -383,13 +383,13 @@ func _ready() -> void:
 	main.queue_free()
 	GameManager.nights_to_win = 3
 	# ...and after the true ending Mum sits by the title fire.
-	StoryLibrary.progress_path = "user://screenshot_story.cfg"
+	Profile.set_path("user://screenshot_profile.json")
 	StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING)
 	var home: Node = load("res://scenes/ui/TitleScreen.tscn").instantiate()
 	add_child(home)
 	await _settle(1.0)
 	_shot("12_title_mum_home")
-	StoryLibrary.forget_progress()
+	Profile.delete()
 	get_tree().quit(0)
 
 

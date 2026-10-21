@@ -17,6 +17,7 @@ extends Node
 const SKIP_DIRS: Array[String] = ["res://.godot", "res://addons"]
 ## The profile check's own file, never the player's profile.
 const TEST_PROFILE_PATH: String = "user://validate_profile.json"
+const TEST_OLD_STORY_PATH: String = "user://validate_story.cfg"
 
 var _errors: PackedStringArray = PackedStringArray()
 
@@ -51,6 +52,7 @@ func _ready() -> void:
 	_validate_data()
 	_validate_key_art()
 	_validate_profile()
+	_validate_story_import()
 	if _errors.is_empty():
 		print("validate_project: OK (%d files checked)" % files.size())
 		get_tree().quit(0)
@@ -496,3 +498,52 @@ func _validate_profile() -> void:
 		_fail("Profile: a corrupt file is not rewritten on the next write")
 	Profile.delete()
 	Profile.set_path(Profile.PROFILE_PATH)
+
+
+## Profile ticket 02: an old story.cfg is imported into a new profile
+## once. Its seen beats read as seen, a seen Chapter 2 intro or true
+## ending sets the Chapter 2 unlocked flag, and after delete the import
+## never runs again. Runs on its own files; the old file stays on disk.
+func _validate_story_import() -> void:
+	_import_old_story(["intro.c1"])
+	if not StoryLibrary.has_seen("intro.c1") or StoryLibrary.has_seen("intro.c2"):
+		_fail("Profile: the imported intro.c1 does not read as the only seen beat")
+	if Profile.has_value(Profile.CHAPTER_2_UNLOCKED):
+		_fail("Profile: a seen intro.c1 alone unlocks Chapter 2")
+	for seen in [["intro.c1", "intro.c2"], [StoryLibrary.TRUE_ENDING]]:
+		_import_old_story(seen)
+		for key in seen:
+			if not StoryLibrary.has_seen(key):
+				_fail("Profile: the imported %s does not read as seen" % key)
+		if not bool(Profile.get_value(Profile.CHAPTER_2_UNLOCKED, false)):
+			_fail("Profile: a seen %s does not unlock Chapter 2" % seen[-1])
+	Profile.delete()
+	Profile.set_path(TEST_PROFILE_PATH, TEST_OLD_STORY_PATH)  # as on the next launch
+	if StoryLibrary.has_seen(StoryLibrary.TRUE_ENDING) or Profile.has_value(Profile.CHAPTER_2_UNLOCKED):
+		_fail("Profile: the old story file is imported again after delete")
+	if not FileAccess.file_exists(TEST_OLD_STORY_PATH):
+		_fail("Profile: the import removed the old story file")
+	StoryLibrary.mark_seen("intro.c1")
+	StoryLibrary.forget_progress()
+	if StoryLibrary.has_seen("intro.c1"):
+		_fail("Profile: forget_progress leaves a beat seen")
+	_remove_user_file(TEST_PROFILE_PATH)
+	_remove_user_file(TEST_OLD_STORY_PATH)
+	Profile.set_path(Profile.PROFILE_PATH)
+
+
+## Prepares an old story.cfg with these beats seen and a profile that
+## has never been created, then loads the profile so it imports.
+func _import_old_story(seen: Array) -> void:
+	_remove_user_file(TEST_PROFILE_PATH)
+	_remove_user_file(TEST_OLD_STORY_PATH)
+	var old: ConfigFile = ConfigFile.new()
+	for key in seen:
+		old.set_value("seen", key, true)
+	old.save(TEST_OLD_STORY_PATH)
+	Profile.set_path(TEST_PROFILE_PATH, TEST_OLD_STORY_PATH)
+
+
+func _remove_user_file(path: String) -> void:
+	if FileAccess.file_exists(path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
