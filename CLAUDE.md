@@ -21,8 +21,8 @@ live in `docs/`, and work is tracked as local markdown issues in
 
 ## Workflow
 
-Matt Pocock's skills (`mattpocock-skills`) are enabled in
-`.claude/settings.json`.
+Matt Pocock's skills are vendored as project skills in `.claude/skills/`
+(update with `tools/sync_skills.sh`).
 
 - **Larger work:** align with `/grill-with-docs`, write it up with
   `/to-spec`, split it with `/to-tickets`, then build it with
@@ -33,6 +33,10 @@ Matt Pocock's skills (`mattpocock-skills`) are enabled in
   under `## Comments`. Keep `docs/` (design, roadmap, `art/README.md`)
   in sync when the work changes them.
 - **Small fixes:** these need no spec or ticket; a commit is enough.
+- **After a push:** start watching CI on the head commit in the
+  background (a background agent or command) and carry on with other
+  work meanwhile; don't report the work done until it is green. A
+  local green `tools/check.sh` does not cover the export.
 - **Features 000–048:** they are archived, read-only, in
   `docs/history/features/`.
 
