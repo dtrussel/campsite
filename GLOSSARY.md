@@ -23,7 +23,7 @@ The words this project uses for its own concepts. Use them in code, tickets and 
 ## Across runs
 
 - **Profile:** what a player keeps across runs, such as the story beats seen, chapters won, records and (later) badges. It is never deleted when a run ends. *Not* device settings (audio, look, auto-attack), which live apart.
-- **Record:** a best value kept in the profile, like the most nights survived in endless mode.
+- **Record:** a best value kept in the profile, like the furthest night an endless run reached.
 
 ## Building
 

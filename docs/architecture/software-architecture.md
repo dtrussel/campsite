@@ -557,6 +557,11 @@ on its own file, `user://profile.json`, which a run ending never deletes.
   rewritten on the next write.
 - **Story beats:** `StoryLibrary.has_seen` / `mark_seen` /
   `forget_progress` read and write `story.<beat>` keys.
+- **Endless record:** when an endless run ends, `GameManager` calls
+  `record_best("endless.best_nights", night)` and, on a new record,
+  writes the hero to `endless.best_hero`; `GameManager.new_record`
+  tells the end screen, and `endless_best_text()` is the line the title
+  and end screen show.
 - **The old `story.cfg`:** imported once, when a profile that has never
   been created loads. Seen beats are copied, and a seen `intro.c2` or
   `ending.c2` sets `chapters.c2.unlocked`. The import note survives
