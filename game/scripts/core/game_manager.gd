@@ -202,10 +202,14 @@ func record(stat: StringName, amount: int = 1) -> void:
 	stats[stat] = int(stats.get(stat, 0)) + amount
 
 
-## What RunSession.reset still resets outside the saving systems: build
-## mode (run lifecycle 04 retires this list).
-func reset_autoloads() -> void:
-	BuildManager.exit_build_mode()
+## The party a save was made with: {"hero", "companion"} as ids. Saves
+## from before feature 034 have no "party" and are Leo with Nela.
+static func party_of(data: Dictionary) -> Dictionary:
+	var party: Dictionary = data.get("party", {}) if data.get("party") is Dictionary else {}
+	return {
+		"hero": StringName(str(party.get("hero", "leo"))),
+		"companion": StringName(str(party.get("companion", "nela"))),
+	}
 
 
 ## Saving system (RunSession): the run fields. The run's stats, the
@@ -232,7 +236,7 @@ func load_state(data: Dictionary) -> void:
 	if data.has("nights_to_win"):
 		nights_to_win = int(data["nights_to_win"])
 	if data.get("party") is Dictionary:
-		var party: Dictionary = SaveManager.party_of(data)
+		var party: Dictionary = party_of(data)
 		set_party(party["hero"], party["companion"])
 	var saved_stats: Variant = data.get("stats", {})
 	if saved_stats is Dictionary:

@@ -10,6 +10,10 @@ signal day_started(day_number: int)
 signal sunset_warning(seconds_until_night: float)
 signal night_started(day_number: int)
 signal dawn_started(day_number: int)
+## Right after dawn_started, once every one of its handlers has run
+## (the run session's dawn autosave listens here, so it saves the camp
+## as the dawn left it).
+signal dawn_settled(day_number: int)
 signal phase_changed(new_phase: int)
 
 enum Phase { DAY, SUNSET, NIGHT, DAWN }
@@ -120,6 +124,7 @@ func _advance_phase() -> void:
 			current_phase = Phase.DAWN
 			remaining_seconds = dawn_seconds
 			dawn_started.emit(day_number)
+			dawn_settled.emit(day_number)
 		Phase.DAWN:
 			day_number += 1
 			current_phase = Phase.DAY

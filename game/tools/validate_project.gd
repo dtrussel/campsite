@@ -54,6 +54,7 @@ func _ready() -> void:
 	_validate_profile()
 	_validate_story_import()
 	_validate_saving_systems()
+	_validate_run_lifecycle_contract()
 	if _errors.is_empty():
 		print("validate_project: OK (%d files checked)" % files.size())
 		get_tree().quit(0)
@@ -623,3 +624,18 @@ func _validate_saving_systems() -> void:
 		system.reset()
 	hero.free()
 	sibling.free()
+
+
+## Run lifecycle 04: the old lifecycle is gone. The save manager only
+## handles the file, so it names no game system that holds run state,
+## and the game manager keeps no reset list of its own (the run
+## session resets every saving system).
+func _validate_run_lifecycle_contract() -> void:
+	var source: String = FileAccess.get_file_as_string("res://scripts/core/save_manager.gd")
+	for word in ["BaseCore", "Building", "Torch", "Hero", "Perk", "Party", "TimeManager", "GameManager", "get_first_node_in_group"]:
+		if source.contains(word):
+			_fail("save_manager.gd names %s; the save manager only handles the file" % word)
+	if GameManager.has_method("reset_autoloads"):
+		_fail("GameManager still has its own reset list (reset_autoloads)")
+	if SaveManager.has_method("snapshot"):
+		_fail("SaveManager still gathers the run itself; RunSession.snapshot does")

@@ -2,42 +2,31 @@ extends Node
 
 ## SaveManager
 ##
-## Autosave at dawn (feature 020). Every morning of a run in progress,
-## the camp is written to user://save.json; the title screen then
-## offers Continue, which rebuilds the camp and starts at the next
-## morning. Saves are versioned: a different version or a damaged file
-## is ignored (Continue is hidden), never half-loaded. A won or lost run
-## deletes its save, and a new run replaces it.
+## The save file itself (feature 020, run lifecycle spec): its path and
+## version, writing and reading it as JSON, the parse checks and delete.
+## It knows nothing of what is in a run: every part of the save is
+## written and read by its own saving system, and RunSession gathers
+## them (RunSession.snapshot), autosaves at dawn and deletes the save
+## when a run ends. What a save holds is listed in
+## docs/architecture/software-architecture.md.
 ##
-## Saved: run length and day, inventory, campfire (HP, hearth),
-## buildings (type, place, HP, construction progress), the party (which
-## hero is played, feature 034), both heroes' progress and upgrades, the
-## companion's task, run stats, the Moon Lantern's shards (feature 036;
-## older saves start it at 0, same VERSION), each hero's perk cards, the
-## Ember Heart torches still burning after the dawn (their dawns left and
-## radius) and what each blueprint was paid with (perk cards). Not saved:
-## resource nodes and pickups (they reset), plain torches (they burn out
-## at the dawn the save is made on).
-## Every part of the save is written and read by its own saving system
-## (run lifecycle 02 and 03): the autoloads (time, the run fields with
-## the shard pity counter, resources, progression, perks) and the world
-## (campfire, buildings, torches, the Moon Lantern, the heroes). The run
-## session gathers them; this file only holds the camp's presence check
-## (snapshot) and the file itself.
+## Saves are versioned: a different version or a damaged file is
+## ignored (Continue is hidden), never half-loaded.
 ## VERSION 2 (playtest 1, feature 044): four resources were cut and
 ## buildings carry their construction progress, so v1 saves are ignored.
+## Later additions (the party, the Moon Lantern's shards, perk cards,
+## torches, paid costs, the pity counter) kept VERSION 2: a save without
+## them still loads, each saving system filling in a fresh value.
 
+## A save was written; `day` is the day it was made on.
 signal saved(day: int)
 
 const SAVE_PATH: String = "user://save.json"
 const VERSION: int = 2
+## The keys every usable save has (parse rejects a save without one).
+const REQUIRED_KEYS: Array[String] = ["nights_to_win", "day", "inventory", "campfire", "buildings", "player", "sibling", "stats"]
 
 var _save_path: String = SAVE_PATH
-
-
-func _ready() -> void:
-	TimeManager.dawn_started.connect(_on_dawn_started)
-	GameManager.run_ended.connect(func(_won: bool, _reason: String) -> void: delete_save())
 
 
 ## Lets tests write somewhere else.
@@ -74,8 +63,8 @@ static func serialize(snapshot: Dictionary) -> String:
 	return JSON.stringify(data, "\t")
 
 
-## A snapshot from JSON text, or {} if it is damaged or from another
-## version.
+## A snapshot from JSON text, or {} if it is damaged, from another
+## version or missing one of REQUIRED_KEYS.
 static func parse(text: String) -> Dictionary:
 	var parsed: Variant = JSON.parse_string(text)
 	if not parsed is Dictionary:
@@ -83,25 +72,15 @@ static func parse(text: String) -> Dictionary:
 	var data: Dictionary = parsed
 	if int(data.get("version", -1)) != VERSION:
 		return {}
-	for key in ["nights_to_win", "day", "inventory", "campfire", "buildings", "player", "sibling", "stats"]:
+	for key in REQUIRED_KEYS:
 		if not data.has(key):
 			return {}
 	return data
 
 
-## The party a save was made with: {"hero", "companion"} as ids. Saves
-## from before feature 034 are Leo with Nela.
-static func party_of(data: Dictionary) -> Dictionary:
-	var party: Dictionary = data.get("party", {}) if data.get("party") is Dictionary else {}
-	return {
-		"hero": StringName(str(party.get("hero", "leo"))),
-		"companion": StringName(str(party.get("companion", "nela"))),
-	}
-
-
-## Writes the current camp now (the dawn autosave calls this).
-func save_now() -> bool:
-	var snapshot: Dictionary = RunSession.snapshot()
+## Writes `snapshot` (RunSession.snapshot) to the save file, replacing
+## any save there. False when it is empty or cannot be written.
+func write(snapshot: Dictionary) -> bool:
 	if snapshot.is_empty():
 		return false
 	var file: FileAccess = FileAccess.open(_save_path, FileAccess.WRITE)
@@ -110,30 +89,7 @@ func save_now() -> bool:
 		return false
 	file.store_string(serialize(snapshot))
 	file.close()
-	PlaytestLog.write("autosaved day=%d" % TimeManager.day_number)
-	saved.emit(TimeManager.day_number)
+	var day: int = int(snapshot.get("day", 0))
+	PlaytestLog.write("autosaved day=%d" % day)
+	saved.emit(day)
 	return true
-
-
-## The save's own part: just the version stamp while a camp is up, {}
-## when there is no camp to save. RunSession.snapshot adds every saving
-## system's keys; save through that.
-func snapshot() -> Dictionary:
-	var tree: SceneTree = get_tree()
-	var fire: BaseCore = tree.get_first_node_in_group("base_core") as BaseCore
-	var player: Node = tree.get_first_node_in_group("player")
-	var sibling: Node = tree.get_first_node_in_group("companions")
-	if fire == null or player == null or sibling == null:
-		return {}
-	return {"version": VERSION}
-
-
-func _on_dawn_started(_day: int) -> void:
-	# After every dawn handler (the win check, Nela waking up, torches
-	# burning out) has run.
-	_autosave.call_deferred()
-
-
-func _autosave() -> void:
-	if GameManager.is_playing():
-		save_now()

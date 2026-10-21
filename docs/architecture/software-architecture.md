@@ -67,11 +67,14 @@ guidelines, not enforced separations.
 
 ### 5. Persistence layer
 
-- Save / load logic in `game/scripts/save/`.
+- Every module that holds run state is a **saving system**: it saves,
+  loads and resets its own state. The **run session**
+  (`game/scripts/core/run_session.gd`) walks them; the save manager
+  (`game/scripts/core/save_manager.gd`) only handles the file.
 - Versioned save data with a schema version number.
-- Saves the game state layer plus a snapshot of placed buildings, *not*
-  raw scene references.
-- Reload reconstructs scenes from saved data and the data layer.
+- Saves plain data (ids, positions, HP, progress), *not* raw scene
+  references; spawned objects are rebuilt by their own module.
+- See section H for the interface and the restore order.
 
 ## B. Proposed autoloads
 
@@ -86,7 +89,8 @@ Each autoload is a single small node script registered in
 | `BuildManager`       | Handles build mode, placement validation, blueprint spawn and completion. |
 | `ProgressionManager` | Handles XP totals and level-up rules.                       |
 | `PerkManager`        | Perk cards: deals cards on level-up, opens the picker, answers perk hooks. |
-| `SaveManager`        | Serializes and deserializes save data.                      |
+| `SaveManager`        | The save file only: path, version, JSON read and write, parse checks, delete. |
+| `RunSession`         | One run's lifecycle: start, continue, reset, the dawn autosave, `restore_finished` (see H). |
 | `Profile`            | Keeps a player's progress across runs (see "Profile" under H). |
 
 ### Autoload contract
@@ -142,7 +146,8 @@ game/scripts/core/time_manager.gd
 game/scripts/core/resource_manager.gd          # later
 game/scripts/core/build_manager.gd             # later
 game/scripts/core/progression_manager.gd       # later
-game/scripts/save/save_manager.gd              # later
+game/scripts/core/save_manager.gd
+game/scripts/core/run_session.gd
 
 game/scripts/game_loop/wave_controller.gd      # later
 
@@ -413,19 +418,124 @@ Each transition is a single function call (`_change_state(NEW_STATE)`)
 that runs an exit hook for the old state, sets `current_state`, then runs
 an enter hook for the new state. No framework needed.
 
-## H. Save / load architecture (forward-looking)
+## H. Save / load architecture
 
-Not implemented in Phase 0. Planned shape:
+The run save (`user://save.json`) holds one run in progress. It is
+written at every dawn and offered as Continue on the title screen; a won
+or lost run deletes it, and a new run replaces it. Built by the run
+lifecycle spec (`.scratch/run-lifecycle/`).
 
-- A `SaveManager` autoload owns a versioned save schema.
-- Game state is captured into a plain `Dictionary` that can be turned into
-  JSON.
-- Placed buildings are saved as `(building_id, position, rotation, hp)`
-  tuples, not as scene references.
-- On load, the world is wiped and rebuilt from the dictionary using
-  `BuildingDefinition` lookups.
-- Player and companion state is saved similarly.
-- `schema_version` lets future versions migrate old saves.
+### Saving systems
+
+A **saving system** is any module that holds run state. It has three
+methods:
+
+- `save_state() -> Dictionary`: its own keys, at their place in the
+  save file;
+- `load_state(data: Dictionary)`: takes the whole save, reads its own
+  keys and tolerates missing ones (an older save gets fresh values);
+- `reset()`: back to a fresh run.
+
+The saving systems, and what each saves:
+
+| Saving system | Saves |
+|---------------|-------|
+| `TimeManager` | `"day"` |
+| `GameManager` (the run fields) | `"nights_to_win"`, `"party"`, `"stats"`, `"loot_misses"` (the shard pity counter) |
+| `ResourceManager` | `"inventory"` |
+| `ProgressionManager` | each hero's `"xp"` |
+| `PerkManager` | each hero's `"perks"`; the reset zeroes the perk clock and reshuffles the deal |
+| `CraftingManager` | nothing; the reset clears the craft in progress |
+| `BaseCore` (the campfire) | `"campfire"`: HP and hearth |
+| `BuildingSaves` | `"buildings"`: each building or blueprint's type, place, HP, construction progress and paid cost (`Building.save_entry` / `Building.rebuild`) |
+| `TorchSaves` | `"torches"`: the Ember Heart torches still burning, with their dawns left and radius (`Torch.save_entry` / `Torch.rebuild`) |
+| `MoonLantern` | `"lantern"`: its shards |
+| `Hero` (both heroes) | each hero's `"signature"` tool; the companion also saves its `"task"` |
+
+- **Hero entries are shared.** A hero's keys sit under `"player"` and
+  `"sibling"` (`Party.SAVE_KEYS`), and several systems write there.
+  `RunSession.merge_state` merges them key by key.
+- **Spawned objects are rebuilt by their own module.** Buildings,
+  blueprints and torches are listed by `BuildingSaves` / `TorchSaves`,
+  which own their legacy fallbacks: a missing `"paid"` in
+  `Building.rebuild`, and the old `"stick"` / `"slingshot"` signature
+  names in `Hero.LEGACY_SIGNATURE_KEYS`. The old party-less saves are
+  Leo with Nela (`GameManager.party_of`).
+- **Objects refresh themselves.** Each one refreshes its own HP bar after
+  it loads; nothing outside calls a private refresh or reads a meta.
+- **Not saved:** resource nodes and pickups (they reset), plain torches
+  (they burn out at the dawn the save is made on), trap snaps, build
+  mode.
+
+A new piece of run state is saved, loaded and reset in the module that
+owns it. If that module is not yet a saving system, add it to the
+session's list.
+
+### The run session and the run config
+
+`RunSession` (an autoload, last in the list) is the one entry point for
+a run's lifecycle:
+
+- `start(config, open_scene)`: resets every saving system, deletes any
+  save and opens the gameplay scene, which starts the clock at day 1.
+- `continue_from(data, config, open_scene)`: resets, then keeps `data`
+  (from `SaveManager.load_save` or `parse`) waiting for the gameplay
+  scene. The party and run length come from the save.
+- `reset(config)`: every saving system back to a fresh run. It also
+  leaves build mode, which is not run state, and applies the config's
+  seeds and auto-pick time.
+- `snapshot()`: the run as plain data, for the save file. It is `{}`
+  when there is no camp to save. `save_now()` writes it.
+- `restore_finished`: a continued run is fully back. The perk top-up
+  (dealing the cards a level-up still owes) listens here.
+  `is_restoring()` is true while the systems load, so replayed level-ups
+  skip the fanfare and deal no card.
+- **The dawn autosave:** the session saves on `TimeManager.dawn_settled`,
+  which fires right after every `dawn_started` handler has run (the win
+  check, the companion waking, torches burning out, the night's XP). It
+  also deletes the save when a run ends.
+
+A `RunConfig` (`game/scripts/core/run_config.gd`) is what a run starts
+from: the hero and companion, the chapter goal (`nights_to_win`), the
+seeds of the perk deal and the loot rolls, and the perk auto-pick time.
+`RunConfig.current()` gives a config for the next run, with fresh seeds.
+A test that passes the same config replays the same deals and drops.
+
+### The restore order
+
+`RunSession.saving_systems()` declares the order, and `restore_pending`
+(called by `GameManager.on_game_scene_ready` once the gameplay scene is
+up) loads each system in it:
+
+1. `TimeManager`, then `GameManager`'s run fields;
+2. `ResourceManager`;
+3. `ProgressionManager` (it replays the level-ups quietly);
+4. `PerkManager`, then `CraftingManager`;
+5. the world: the campfire, the buildings and blueprints, the torches,
+   the Moon Lantern;
+6. the heroes: the player's hero, then the companion.
+
+Then the clock starts at the morning after the saved day, and
+`restore_finished` follows once the scene's `run_started` has gone out.
+Nothing depends on the order of autoloads in the project file or on a
+deferred call happening to come last.
+
+### The save file
+
+`SaveManager` knows nothing of what is in a run. It holds:
+
+- the path (`set_save_path` lets tests write elsewhere) and `VERSION`
+  (2);
+- `serialize` and `write`, which stamp the version and write JSON;
+- `load_save` and `parse`, which reject a damaged file, another version
+  or one missing a required key; Continue is then hidden, never
+  half-loaded;
+- `delete_save`.
+
+The version changes only when an old save can no longer be read the old
+way. Keys added since version 2 are optional, so older saves still load.
+`game/tests/fixtures/save_v2_day1.json`, a save from before the run
+session, must continue with every field intact (smoke).
 
 ### Profile
 
@@ -502,7 +612,6 @@ Detailed plan in
 | `game/scripts/crafting/`      | Recipes and crafting flow.                      |
 | `game/scripts/progression/`   | XP, levels, character stats, perk cards.        |
 | `game/scripts/ui/`            | UI controllers.                                 |
-| `game/scripts/save/`          | Save / load.                                    |
 | `game/scripts/utilities/`     | Math, helpers, reusable bits.                   |
 | `game/resources/`             | Data-driven `.tres` content.                    |
 | `game/assets/placeholder/`    | Throwaway placeholder art / audio.              |

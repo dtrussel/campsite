@@ -1,6 +1,6 @@
 # Run lifecycle
 
-Status: ready-for-agent
+Status: done
 
 Split into tickets in `issues/` (01&ndash;04); the `Blocked by:` lines give the order. From the 2026-10-21 architecture review, candidate 2 (saving systems and a run session). Rough size: **L**. Blocked by: hero-core. It blocks endless mode and journal badges.
 
@@ -121,3 +121,4 @@ For the player, nothing changes except that the bugs above are fixed: the pity c
 ## Comments
 
 - **2026-10-21, to-tickets:** split into tickets 01-04; the user approved the breakdown.
+- **2026-10-21, done:** tickets 01-04 are built. Each saving system saves, loads and resets itself; `RunSession` owns start, continue, reset, the dawn autosave and `restore_finished`, from a `RunConfig`; `SaveManager` is the file only. The pity counter is saved, and the perk clock and deal, the loot rolls and the crafting state reset. The save stays at VERSION 2, and the old-format fixture still loads. The architecture doc (section H) describes the result.

@@ -1143,7 +1143,7 @@ func _run_hero_scenario() -> void:
 	_check(String(data["party"]["hero"]) == "nela" and String(data["party"]["companion"]) == "leo", "the save holds the party")
 	var legacy: Dictionary = data.duplicate(true)
 	legacy.erase("party")
-	_check(SaveManager.party_of(legacy)["hero"] == &"leo", "older saves without a party are Leo with Nela")
+	_check(GameManager.party_of(legacy)["hero"] == &"leo", "older saves without a party are Leo with Nela")
 	table.queue_free()
 	GameManager.set_party(&"leo")  # Continue takes the party from the save
 	await _continue_from(data)

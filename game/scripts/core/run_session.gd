@@ -23,8 +23,13 @@ extends Node
 ## state, which only resets), then the world objects, then the heroes.
 ## A hero's keys sit under "player" / "sibling" (Party.SAVE_KEYS), shared
 ## by several systems; snapshot merges them key by key (merge_state).
-## Build mode, not a saving system, is still left by
-## GameManager.reset_autoloads (run lifecycle 04 retires it).
+## Build mode is not run state, so it is not a saving system; reset
+## leaves it.
+##
+## The session also keeps the save file in step with the run: it
+## autosaves once every dawn handler has run (TimeManager.dawn_settled)
+## and deletes the save when a run is won or lost. SaveManager only
+## handles the file.
 
 ## A continued run is fully back: the save is applied and its follow-ups
 ## (the perk top-up) have run. Not emitted for a new run.
@@ -38,6 +43,11 @@ var config: RunConfig = null
 var _pending: Dictionary = {}
 ## True while restore_pending loads the saving systems.
 var _restoring: bool = false
+
+
+func _ready() -> void:
+	TimeManager.dawn_settled.connect(_on_dawn_settled)
+	GameManager.run_ended.connect(func(_won: bool, _reason: String) -> void: SaveManager.delete_save())
 
 
 ## Starts a new run from `run` (RunConfig.current() when null): resets
@@ -63,7 +73,7 @@ func continue_from(data: Dictionary, run: RunConfig = null, open_scene: bool = t
 	if data.is_empty():
 		return false
 	run = run if run != null else RunConfig.current()
-	var party: Dictionary = SaveManager.party_of(data)
+	var party: Dictionary = GameManager.party_of(data)
 	_use_party(run, party["hero"], party["companion"], int(data["nights_to_win"]))
 	get_tree().paused = false
 	reset(run)
@@ -78,7 +88,7 @@ func continue_from(data: Dictionary, run: RunConfig = null, open_scene: bool = t
 ## (fresh seeds when null). Keeps the party and run length.
 func reset(run: RunConfig = null) -> void:
 	config = run if run != null else RunConfig.current()
-	GameManager.reset_autoloads()
+	BuildManager.exit_build_mode()
 	for system in saving_systems():
 		system.reset()
 	PerkManager.auto_pick_seconds = config.perk_auto_pick_seconds
@@ -92,12 +102,15 @@ func saving_systems() -> Array:
 	return _autoload_systems() + _world_systems()
 
 
-## The run as plain data, for the save file: SaveManager's part, then
-## each saving system's own keys. {} when there is no camp to save.
+## The run as plain data, for the save file: the version stamp, then
+## each saving system's own keys. {} when there is no camp to save (no
+## campfire or a hero missing).
 func snapshot() -> Dictionary:
-	var data: Dictionary = SaveManager.snapshot()
-	if data.is_empty():
+	var tree: SceneTree = get_tree()
+	if tree.get_first_node_in_group("base_core") == null \
+			or Party.member(Party.PLAYER) == null or Party.member(Party.COMPANION) == null:
 		return {}
+	var data: Dictionary = {"version": SaveManager.VERSION}
 	for system in saving_systems():
 		merge_state(data, system.save_state())
 	return data
@@ -115,6 +128,12 @@ static func merge_state(into: Dictionary, part: Dictionary) -> void:
 			into[key] = value.duplicate(true)
 		else:
 			into[key] = value
+
+
+## Writes the run to the save file now (the dawn autosave calls this).
+## False when there is no camp to save or the file cannot be written.
+func save_now() -> bool:
+	return SaveManager.write(snapshot())
 
 
 ## Whether a save is being loaded right now: level-ups replayed from it
@@ -194,3 +213,10 @@ func _use_party(run: RunConfig, hero: StringName, companion: StringName, nights:
 
 func _finish_restore() -> void:
 	restore_finished.emit()
+
+
+func _on_dawn_settled(_day: int) -> void:
+	# Every dawn handler (the win check, the companion waking up, torches
+	# burning out, the night's XP) has run.
+	if GameManager.is_playing():
+		save_now()
