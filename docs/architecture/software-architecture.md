@@ -204,9 +204,14 @@ fields.
   `is_attacking()`, `get_attack_cooldown_ratio()`, `apply_signature()`
   and the `attacked` signal. Hero owns the cooldown and the melee vs
   pebble branch; the perk effects come from `HeroHits` underneath.
-  `tool_tier` and `on_attack_hit(target, damage)` are the (unused) slots
-  for tool tiers. The definition's `companion_` reach, cooldown and
-  signature factor are read for the companion role.
+  Tool tiers (040): `tool_tier` (read-only; `set_tool_tier(n)` raises
+  it and adds each new `ToolTier`'s damage bonus and range factor) and
+  `has_tool_effect(effect)`. `on_attack_hit(target, damage)` applies the
+  tier effects (`Burn`, `Burn.splash`, `GlowMark`); the Double Sling's
+  second pebble and the Glow Sling's pierce live in `_shoot()` and
+  `PebbleShot`. The definition's `companion_` reach and cooldown, and
+  each tier's `companion_range_factor`, are read for the companion
+  role.
 - **Progress:** each role calls `_setup_progress()` once; on
   ProgressionManager's raw `level_up`, Hero applies the stat bumps and
   then emits `leveled(level)`. PerkManager listens to `leveled`
@@ -451,7 +456,7 @@ The saving systems, and what each saves:
 | `BuildingSaves` | `"buildings"`: each building or blueprint's type, place, HP, construction progress and paid cost (`Building.save_entry` / `Building.rebuild`) |
 | `TorchSaves` | `"torches"`: the Ember Heart torches still burning, with their dawns left and radius (`Torch.save_entry` / `Torch.rebuild`) |
 | `MoonLantern` | `"lantern"`: its shards |
-| `Hero` (both heroes) | each hero's `"signature"` tool; the companion also saves its `"task"`. The reset restores the base stats, gets a downed hero up without `down_changed`, and registers it with ProgressionManager again |
+| `Hero` (both heroes) | each hero's tool `"tier"` (an int; an old `"signature": true` loads as tier 1); the companion also saves its `"task"`. The reset restores the base stats, gets a downed hero up without `down_changed`, and registers it with ProgressionManager again |
 
 - **Hero entries are shared.** A hero's keys sit under `"player"` and
   `"sibling"` (`Party.SAVE_KEYS`), and several systems write there.
@@ -568,6 +573,20 @@ on its own file, `user://profile.json`, which a run ending never deletes.
   `delete`, so it never runs twice; `story.cfg` stays on disk, unused.
 - **Not here:** device settings (audio, look, auto-attack) stay in
   `user://settings.cfg`, so deleting a profile never resets them.
+
+### Camp Badges
+
+Milestones the profile keeps for good (journal badges 02). Each is a
+`BadgeDefinition` `.tres` in `game/resources/badges/` (icon, name,
+how-to-earn text, and a condition: `run_stat`, `total`, `win` or
+`win_each_hero`). The `Badges` autoload (`game/scripts/meta/badges.gd`)
+checks them live on `GameManager.stat_recorded` during play and again
+on `run_ended`, keeps earned ones as `badges.<id>`, and shows a HUD
+toast once per badge. It also keeps what counting badges need across
+runs: `totals.<stat>` (added to as stats are recorded) and
+`heroes.won.<id>`. The run stats some badges need are
+`gremlins_caught`, `fire_low_pct` (the fire's lowest HP, in %) and
+`lantern_lit`.
 
 ## I. Testing strategy
 

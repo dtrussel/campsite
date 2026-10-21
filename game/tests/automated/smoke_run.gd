@@ -72,6 +72,7 @@ func _ready() -> void:
 	await _run_review_fixes_scenario()
 	await _run_endless_scenario()
 	await _run_endless_record_scenario()
+	await _run_badges_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	Profile.delete()
@@ -140,6 +141,83 @@ func _run_chapter_lock_scenario() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(imported_path))
 	Profile.set_path(TEST_PROFILE_PATH)
 	Profile.delete()
+
+
+## Journal badges 02: surviving night 1 earns First Night once, with a
+## toast, and it is still earned after a restart (the profile read again
+## from its file). The totals counting badges need (Builder, Gremlin
+## Catcher) carry across runs and restarts. Winning Chapter 1 with the
+## fire kept above half earns Chapter 1 and Fire Keeper.
+func _run_badges_scenario() -> void:
+	print("smoke: --- badges scenario ---")
+	Profile.delete()
+	var earned: Array[StringName] = []
+	var on_earned: Callable = func(badge: BadgeDefinition) -> void: earned.append(badge.id)
+	Badges.badge_earned.connect(on_earned)
+	var config: RunConfig = _config()
+	config.hero_id = &"leo"
+	config.companion_id = &"nela"
+	config.nights_to_win = 3
+	config.endless = false
+	await _start_fresh_run(config)
+	_check(not Badges.has_badge(&"first_night"), "First Night is not earned before a night is survived")
+	await _skip_to_dawn(1)
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	var toasted: bool = false
+	for toast in hud.call("toasts"):
+		toasted = toasted or (toast as HudToast).text().contains("First Night")
+	_check(Badges.has_badge(&"first_night") and toasted, "surviving night 1 earns First Night, with a toast")
+	await _skip_to_dawn(2)
+	_check(earned.count(&"first_night") == 1, "First Night is earned once, not again on night 2")
+
+	# The counting badges: a gremlin caught for real, then the rest.
+	var gremlin: MobDefinition = load("res://resources/mobs/mushroom_gremlin.tres") as MobDefinition
+	var player: Node3D = get_tree().get_first_node_in_group("player") as Node3D
+	var thief: Mob = _spawn_mob(gremlin, player.global_position + Vector3(6, 0, 0))
+	thief.take_damage(999, player)
+	_check(int(GameManager.stats[&"gremlins_caught"]) == 1 and Badges.total(&"gremlins_caught") == 1,
+		"catching a gremlin counts it, this run and in total")
+	GameManager.record(&"gremlins_caught", 5)
+	GameManager.record(&"built", 30)
+	_campfire().take_damage(_campfire().get_max_hp() / 4)
+	_check(int(GameManager.stats[&"fire_low_pct"]) <= 75, "the fire's lowest HP is kept (%d%%)" % GameManager.stats[&"fire_low_pct"])
+	_campfire().take_damage(10000)
+	await get_tree().process_frame
+	_check(GameManager.run_state == GameManager.RunState.LOST, "the first badges run is lost")
+	_check(not Badges.has_badge(&"builder") and not Badges.has_badge(&"gremlin_catcher") and not Badges.has_badge(&"chapter_1"),
+		"Builder, Gremlin Catcher and Chapter 1 are not earned yet")
+
+	# A restart, then a second run: the totals carry on.
+	Profile.reload()
+	_check(Badges.has_badge(&"first_night"), "First Night is still earned after a restart")
+	_check(Badges.total(&"built") == 30 and Badges.total(&"gremlins_caught") == 6,
+		"the totals survive a restart (built %d, gremlins %d)" % [Badges.total(&"built"), Badges.total(&"gremlins_caught")])
+	await _start_fresh_run(config)
+	_check(int(GameManager.stats[&"gremlins_caught"]) == 0 and int(GameManager.stats[&"fire_low_pct"]) == 100
+		and int(GameManager.stats[&"lantern_lit"]) == 0, "a new run starts its badge stats afresh")
+	GameManager.record(&"built", 19)
+	_check(not Badges.has_badge(&"builder"), "49 buildings in total is not yet Builder")
+	GameManager.record(&"built")
+	GameManager.record(&"gremlins_caught", 4)
+	_check(Badges.has_badge(&"builder") and Badges.has_badge(&"gremlin_catcher"),
+		"Builder and Gremlin Catcher are earned from totals across runs")
+	await _skip_to_dawn(1)
+	_check(earned.count(&"first_night") == 1, "First Night is not earned again in a later run")
+	await _skip_to_dawn(3)
+	_check(GameManager.run_state == GameManager.RunState.WON and Badges.has_badge(&"chapter_1"),
+		"winning Chapter 1 earns the Chapter 1 badge")
+	_check(Badges.has_badge(&"fire_keeper") == (int(GameManager.stats[&"fire_low_pct"]) >= 50),
+		"Fire Keeper follows the fire's lowest HP (%d%%)" % GameManager.stats[&"fire_low_pct"])
+	_check(Badges.has_won_with(&"leo") and not Badges.has_badge(&"both_heroes"), "Both Heroes waits for a win as Nela")
+	Badges.badge_earned.disconnect(on_earned)
+	Profile.delete()
+
+
+## Skips day, sunset and night phases until night `night` has dawned.
+func _skip_to_dawn(night: int) -> void:
+	while GameManager.is_playing() and int(GameManager.stats[&"nights_survived"]) < night:
+		TimeManager.skip_phase()
+		await get_tree().process_frame
 
 
 ## Opens the title screen and checks whether its Chapter 2 button can be
@@ -2882,7 +2960,8 @@ func _run_old_save_scenario() -> void:
 		and is_equal_approx(float(torch.get("radius")), float(torch_entry["radius"])),
 		"the Ember Heart torch comes back with its dawn left and its %.1f m ring" % float(torch_entry["radius"]))
 	# Saved again, every field of the old save is still there (tool tiers:
-	# a hero's `signature` flag is saved as its `tier`).
+	# a hero's `signature` flag is saved as its `tier`). Stats added since
+	# (journal badges 02) start fresh beside the old ones.
 	var lost: Array[String] = []
 	for key in data.keys():
 		var expected: Variant = int(data["day"]) + 1 if key == "day" else data[key]
@@ -2890,7 +2969,12 @@ func _run_old_save_scenario() -> void:
 			expected = (expected as Dictionary).duplicate(true)
 			expected["tier"] = 1.0 if bool(expected["signature"]) else 0.0  # JSON numbers are floats
 			expected.erase("signature")
-		if not again.has(key) or again[key] != expected:
+		var kept: Variant = again.get(key)
+		if key == "stats" and kept is Dictionary:
+			for stat in (data["stats"] as Dictionary).keys():
+				if (kept as Dictionary).get(stat) != data["stats"][stat]:
+					lost.append("stats.%s" % stat)
+		elif not again.has(key) or kept != expected:
 			lost.append(key)
 	_check(lost.is_empty(), "saving the continued run keeps every field of the old save (changed: %s)" % [lost])
 	for node in get_tree().get_nodes_in_group(Building.BUILDINGS_GROUP) + get_tree().get_nodes_in_group("torches"):
@@ -3155,6 +3239,15 @@ func _run_endless_scenario() -> void:
 	_check(GameManager.is_playing() and int(GameManager.stats[&"nights_survived"]) == 8,
 		"an endless run passes night 8 without a win")
 
+	# Endless ticket 02: past night 7 mobs grow tougher and the heavies
+	# and thieves take a growing share of the wave.
+	var imp_hp: Array[int] = await _summoned_hp(spawner, [7, 9])
+	_check(imp_hp[1] > imp_hp[0], "an imp on endless night 9 has more HP than on night 7 (%d > %d)" % [imp_hp[1], imp_hp[0]])
+	var share_7: float = _heavy_sneak_share(spawner.build_wave(7), spawner)
+	var share_10: float = _heavy_sneak_share(spawner.build_wave(10), spawner)
+	_check(share_10 > share_7 + 0.1, "heavies and thieves make up more of endless night 10 than night 7 (%d%% > %d%%)"
+		% [roundi(share_10 * 100.0), roundi(share_7 * 100.0)])
+
 	# Dawn 8's autosave keeps the run endless through Continue.
 	var data: Dictionary = SaveManager.load_save()
 	_check(bool(data.get("endless", false)), "the autosave holds the endless flag")
@@ -3175,6 +3268,13 @@ func _run_endless_scenario() -> void:
 	_check(not GameManager.endless and not MoonLantern.find(get_tree()).is_full()
 		and (get_tree().get_first_node_in_group("mob_spawner") as MobSpawner).is_boss_night(7),
 		"a Chapter 2 run after endless has its dark lantern and its Moon-Eater")
+	var story_spawner: MobSpawner = get_tree().get_first_node_in_group("mob_spawner") as MobSpawner
+	var story_hp: Array[int] = await _summoned_hp(story_spawner, [7, 9])
+	var story_10: Array[MobDefinition] = story_spawner.build_wave(10)
+	_check(story_hp[1] == story_hp[0] and story_hp[0] == story_spawner.mob_definition.max_hp
+		and story_10.count(story_spawner.heavy_definition) == 9 and story_10.count(story_spawner.sneak_definition) == 8
+		and story_10.count(story_spawner.mob_definition) == 25,
+		"a story run's mobs keep their HP and its night 10 keeps 25 imps, 9 beasts, 8 gremlins")
 	GameManager.nights_to_win = 3
 	StoryLibrary.forget_progress()
 
@@ -3242,6 +3342,34 @@ func _run_endless_record_scenario() -> void:
 ## _title_buttons (the button's tooltip carries it).
 func _endless_caption(buttons: Dictionary) -> String:
 	return str(buttons.get("endless", ""))
+
+
+## Summons one imp on each of `nights` (the clock's day set to it) and
+## returns their HP, freeing them again.
+func _summoned_hp(spawner: MobSpawner, nights: Array) -> Array[int]:
+	var day: int = TimeManager.day_number
+	var hp: Array[int] = []
+	var got: Array[Mob] = []
+	var grab: Callable = func(mob: Node3D, _definition: MobDefinition) -> void: got.append(mob as Mob)
+	spawner.mob_spawned.connect(grab)
+	for night in nights:
+		TimeManager.day_number = int(night)
+		spawner.summon(spawner.mob_definition, 1)
+		hp.append(got.back().current_hp if not got.is_empty() and got.back() != null else -1)
+	spawner.mob_spawned.disconnect(grab)
+	TimeManager.day_number = day
+	for mob in got:
+		if mob != null:
+			mob.queue_free()
+	await get_tree().process_frame
+	return hp
+
+
+## The share of a wave that is beasts or gremlins (not imps).
+func _heavy_sneak_share(wave: Array[MobDefinition], spawner: MobSpawner) -> float:
+	var others: int = wave.size() - wave.count(spawner.mob_definition)
+	return float(others) / float(maxi(1, wave.size()))
+
 
 ## Skips the clock on to the next night; stops if the clock has stopped
 ## (the run ended), so a check fails instead of the test hanging.

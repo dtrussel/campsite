@@ -36,6 +36,9 @@ const PICKUP_SCENE: PackedScene = preload("res://scenes/world/ItemPickup.tscn")
 @export var hp_bar_height: float = 1.75
 
 var current_hp: int = 0
+## Set by the spawner before the mob enters the tree: endless nights
+## past the story make mobs tougher (1 = the definition's HP).
+var hp_multiplier: float = 1.0
 var state: int = State.MOVING_TO_TARGET
 
 var _base: Node3D = null
@@ -61,7 +64,7 @@ var _hp_bar: HealthBar3D = null
 func _ready() -> void:
 	add_to_group("mobs")
 	if definition != null:
-		current_hp = definition.max_hp
+		current_hp = max_hp()
 	else:
 		push_warning("Mob '%s' has no definition" % name)
 		current_hp = 1
@@ -74,6 +77,11 @@ func _ready() -> void:
 		_spawn_remaining = minf(_visual.play_action(&"spawn", 1.6), 2.0)
 	# Deferred: the spawner positions us right after add_child.
 	_play_spawn_fx.call_deferred()
+
+
+## Full health: the definition's HP times hp_multiplier.
+func max_hp() -> int:
+	return maxi(1, roundi(definition.max_hp * hp_multiplier)) if definition != null else 1
 
 
 func _play_spawn_fx() -> void:
@@ -89,7 +97,7 @@ func take_damage(amount: int, source: Node = null) -> void:
 		_last_damage_source = source
 	current_hp = max(0, current_hp - amount)
 	if _hp_bar != null and definition != null:
-		_hp_bar.set_value(current_hp, definition.max_hp)
+		_hp_bar.set_value(current_hp, max_hp())
 	Fx.flash(self, Color(1, 1, 1, 0.8))
 	Fx.float_text(self, "-%d" % amount, Color(1, 0.95, 0.6), 1.2)
 	if _visual != null and current_hp > 0 and _spawn_remaining <= 0.0 and not _visual.is_in_action():
@@ -112,6 +120,8 @@ func _die() -> void:
 	collision_mask = 0
 	_award_kill_xp()
 	GameManager.record(&"kills")
+	if definition != null and definition.steals_resources:
+		GameManager.record(&"gremlins_caught")
 	_maybe_drop_loot()
 	defeated.emit(self)
 	if _hp_bar != null:

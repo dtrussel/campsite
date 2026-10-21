@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="BadgeDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/meta/badge_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"night_owl"
+display_name = "Night Owl"
+how_to_earn = "Survive 5 nights in one run."
+icon = "portrait_imp"
+condition = &"run_stat"
+stat = &"nights_survived"
+amount = 5
