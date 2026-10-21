@@ -56,6 +56,10 @@ var companion_id: StringName = &"nela"
 ## dropped, for the pity rule. Saved, and reset every run.
 var loot_misses: Dictionary = {}
 var loot_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+## The day this run's day chest appears (journal badges 04), or 0 for
+## none: from the run config, and saved, so a continued run never rolls
+## a second one.
+var day_chest_day: int = 0
 
 
 func _ready() -> void:
@@ -263,8 +267,9 @@ static func party_of(data: Dictionary) -> Dictionary:
 
 
 ## Saving system (RunSession): the run fields. The run's stats, the
-## chapter goal and endless flag, the party and the shard pity counter (kills since each
-## mob type last dropped; saves from before it start it empty).
+## chapter goal and endless flag, the party, the shard pity counter (kills since each
+## mob type last dropped; saves from before it start it empty) and the
+## day chest's day.
 func save_state() -> Dictionary:
 	var saved_stats: Dictionary = {}
 	for key in stats.keys():
@@ -278,6 +283,7 @@ func save_state() -> Dictionary:
 		"party": {"hero": String(hero_id), "companion": String(companion_id)},
 		"stats": saved_stats,
 		"loot_misses": misses,
+		"day_chest_day": day_chest_day,
 	}
 
 
@@ -297,6 +303,8 @@ func load_state(data: Dictionary) -> void:
 	if saved_stats is Dictionary:
 		for key in (saved_stats as Dictionary).keys():
 			stats[StringName(key)] = int(saved_stats[key])
+	# Saves from before the day chest have had their chance: none.
+	day_chest_day = int(data.get("day_chest_day", 0))
 	var misses: Variant = data.get("loot_misses", {})
 	if misses is Dictionary:
 		for id in (misses as Dictionary).keys():
@@ -375,6 +383,8 @@ func endless_best_text() -> String:
 func _on_day_started(day_number: int) -> void:
 	current_day = day_number
 	day_number_changed.emit(current_day)
+	if is_playing() and day_number == day_chest_day:
+		DayChest.place(get_tree(), Journal.next_chest_page())
 
 
 func _on_dawn_started(day_number: int) -> void:

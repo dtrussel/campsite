@@ -10,11 +10,12 @@ extends Control
 ## ones as dark silhouettes, each with how to earn it. Esc or Close
 ## emits `closed`; the opener frees it.
 ##
-## Journal badges 04 adds the Journal tab with `add_tab("Journal", page)`.
+## The Journal tab (journal badges 04) is Mum's journal, a JournalBook.
 
 signal closed
 
 const BADGES_TAB: String = "Badges"
+const JOURNAL_TAB: String = "Journal"
 const GRID_COLUMNS: int = 5
 const CARD_SIZE: Vector2 = Vector2(220, 160)
 const GAP: float = 12.0
@@ -77,6 +78,7 @@ func _ready() -> void:
 	column.add_child(_pages)
 
 	add_tab(BADGES_TAB, _build_badges())
+	add_tab(JOURNAL_TAB, JournalBook.new())
 	show_tab(BADGES_TAB)
 	_close.grab_focus()
 
@@ -112,6 +114,26 @@ func show_tab(tab_name: String) -> void:
 ## The tab on show.
 func current_tab() -> String:
 	return _current
+
+
+## The ids of the journal pages the Journal tab lists as found.
+func journal_pages() -> Array:
+	return (_tabs[JOURNAL_TAB][1] as JournalBook).journal_pages()
+
+
+## Opens journal page `id` on the Journal tab.
+func show_page(id: StringName) -> void:
+	(_tabs[JOURNAL_TAB][1] as JournalBook).show_page(id)
+
+
+## The words on the Journal tab's open page.
+func page_text() -> String:
+	return (_tabs[JOURNAL_TAB][1] as JournalBook).page_text()
+
+
+## Every word in the journal, found pages and blanks.
+func all_text() -> String:
+	return (_tabs[JOURNAL_TAB][1] as JournalBook).all_text()
 
 
 ## Every badge on the Badges tab, as {id: earned}.

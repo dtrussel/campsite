@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="JournalPage" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/story/journal_page.gd" id="1_page"]
+
+[resource]
+script = ExtResource("1_page")
+id = &"just_lonely"
+title = "Just lonely"
+found_in = &"dawn"
+note_id = "dawn.c2.n6.note"

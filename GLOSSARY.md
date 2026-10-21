@@ -25,6 +25,7 @@ The words this project uses for its own concepts. Use them in code, tickets and 
 
 - **Profile:** what a player keeps across runs, such as the story beats seen, chapters won, records and (later) badges. It is never deleted when a run ends. *Not* device settings (audio, look, auto-attack), which live apart.
 - **Badge (Camp Badge):** a Scout-style milestone kept in the profile, such as First Night or Builder. Earned once, for good.
+- **Journal page:** a page of Mum's journal, kept in the profile once found. Mum's dawn notes are pages; the rest come from a **day chest** (at most one a run, at the map edge) or a badge. Read in the scrapbook's Journal tab.
 - **Record:** a best value kept in the profile, like the furthest night an endless run reached.
 
 ## Building

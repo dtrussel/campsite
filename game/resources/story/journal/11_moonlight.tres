@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="JournalPage" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/story/journal_page.gd" id="1_page"]
+
+[resource]
+script = ExtResource("1_page")
+id = &"moonlight"
+title = "Moonlight"
+found_in = &"badge"
+badge = &"lantern_lighter"
+words = "With the lantern lit, the shadows go still.
+Like cats curled up by a warm fire."
+face = "proud"

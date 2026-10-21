@@ -131,6 +131,7 @@ func _validate_data() -> void:
 	_validate_hero_perks()
 	_validate_perk_problems()
 	_validate_badges()
+	_validate_journal()
 	_validate_audio()
 	_validate_story()
 
@@ -294,6 +295,36 @@ func _validate_badges() -> void:
 	for badge_id in Cosmetics.badges_named():
 		if not badge_ids.has(badge_id):
 			_fail("Cosmetics names unknown badge '%s'" % badge_id)
+
+
+## Journal badges 04: Mum's journal has 10-12 sound pages
+## (JournalPage.problems) with unique ids, and every note on a dawn
+## card is one of them, so it is collected when the card plays.
+func _validate_journal() -> void:
+	var page_ids: Dictionary = {}
+	var files: Array[Resource] = DefinitionLoader.load_all(Journal.PAGES_DIR)
+	for res in files:
+		var page: JournalPage = res as JournalPage
+		if page == null:
+			_fail("%s is not a JournalPage" % res.resource_path)
+			continue
+		_check_id(page.id, page.resource_path, page_ids)
+		for problem in page.problems():
+			_fail("%s %s" % [page.resource_path, problem])
+	if files.size() < 10 or files.size() > 12:
+		_fail("Mum's journal has %d pages in %s (10-12 planned)" % [files.size(), Journal.PAGES_DIR])
+	if files.size() != Journal.pages().size():
+		_fail("Journal loaded %d pages, %s has %d" % [Journal.pages().size(), Journal.PAGES_DIR, files.size()])
+	var chest_pages: int = 0
+	for page in Journal.pages():
+		chest_pages += 1 if page.found_in == &"chest" else 0
+	if chest_pages == 0:
+		_fail("no journal page is found in a day chest")
+	for res in StoryLibrary.all():
+		for line in (res as StoryBeat).lines:
+			var line_id: String = String((line as Dictionary).get("id", ""))
+			if String((line as Dictionary).get("speaker", "")) == "note" and Journal.page_for_note(line_id) == null:
+				_fail("Mum's note %s is on no journal page" % line_id)
 
 
 ## Perk cards: every perk has an icon, a name, a line of text and a

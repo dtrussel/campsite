@@ -26,9 +26,17 @@ func _ready() -> void:
 	Profile.delete()
 	for id in [&"first_night", &"night_owl", &"builder", &"chapter_1", &"torch_bearer", &"gatherer"]:
 		Profile.set_value(Badges.EARNED_PREFIX + String(id), true)
+	for page in [&"ranger_log", &"old_lantern", &"rangers_map", &"bits_of_moon", &"lost_things"]:
+		Journal.find(page)
 	(title.call("journal_button") as Button).pressed.emit()
 	await _settle(0.5)
 	_shot("01a_scrapbook_badges")
+	# Journal badges 04: the Journal tab, five pages found, one open.
+	var scrapbook: Node = title.call("scrapbook")
+	scrapbook.call("show_tab", "Journal")
+	scrapbook.call("show_page", &"lost_things")
+	await _settle(0.5)
+	_shot("01a_scrapbook_journal")
 	Profile.delete()
 	title.queue_free()
 	SaveManager.delete_save()

@@ -94,6 +94,7 @@ func reset(run: RunConfig = null) -> void:
 	PerkManager.auto_pick_seconds = config.perk_auto_pick_seconds
 	PerkManager.rng.seed = config.perk_seed
 	GameManager.loot_rng.seed = config.loot_seed
+	GameManager.day_chest_day = config.day_chest_day
 
 
 ## Every saving system, in the one declared restore order: the autoloads

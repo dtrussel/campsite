@@ -957,7 +957,9 @@ func _on_dawn_started(day_number: int) -> void:
 	show_banner("Good morning!", _PHASE_COLOR_DAWN)
 	# The winning dawn ends the run; its story is the ending book.
 	if GameManager.is_playing():
-		show_story(StoryLibrary.first(&"dawn", GameManager.chapter(), day_number), _lantern_hint())
+		var beat: StoryBeat = StoryLibrary.first(&"dawn", GameManager.chapter(), day_number)
+		show_story(beat, _lantern_hint())
+		Journal.find_notes_on(beat)  # Mum's note on the card is a journal page too
 
 
 func _on_crafted(recipe: CraftingRecipe, _crafter: Node) -> void:
