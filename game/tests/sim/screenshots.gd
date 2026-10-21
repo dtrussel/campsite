@@ -21,6 +21,15 @@ func _ready() -> void:
 	add_child(title)
 	await _settle(0.5)
 	_shot("01_title")
+	# Journal badges 03: the scrapbook's Badges tab, a few badges earned.
+	Profile.set_path("user://screenshot_profile.json")
+	Profile.delete()
+	for id in [&"first_night", &"night_owl", &"builder", &"chapter_1", &"torch_bearer", &"gatherer"]:
+		Profile.set_value(Badges.EARNED_PREFIX + String(id), true)
+	(title.call("journal_button") as Button).pressed.emit()
+	await _settle(0.5)
+	_shot("01a_scrapbook_badges")
+	Profile.delete()
 	title.queue_free()
 	SaveManager.delete_save()
 	# Features 029-030: the loading screens, one per painting.
