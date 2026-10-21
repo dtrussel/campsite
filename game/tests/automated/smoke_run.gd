@@ -54,6 +54,7 @@ func _ready() -> void:
 	await _run_perk_05_scenario()
 	await _run_perk_07_scenario()
 	await _run_perk_review_scenario()
+	await _run_hero_health_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	_finish()
@@ -507,7 +508,7 @@ func _check_feature_017(player: Node3D, companion: Node3D, fence: Building) -> v
 	# Berry Snack: crafted, then eaten first with R.
 	ResourceManager.add(&"berries", 3)
 	_check(CraftingManager.craft(_recipe(&"berry_snack"), player) and ResourceManager.get_count(&"snack") == 1, "cooked a berry snack")
-	player.set("_invulnerable_remaining", 0.0)
+	(player as Hero).clear_invulnerability()
 	player.take_damage(40)
 	var hp: int = player.current_hp
 	player.call("_try_eat_berries")
@@ -603,11 +604,11 @@ func _check_feature_019(player: Node3D, companion: Node3D) -> void:
 
 	# Bandage wakes a knocked-out Nela (X next to her).
 	_check(CraftingManager.craft(_recipe(&"bandage"), player) and ResourceManager.get_count(&"bandage") == 1, "made a bandage")
-	companion.set("_invulnerable_remaining", 0.0)
+	(companion as Hero).clear_invulnerability()
 	companion.take_damage(999)
-	_check(bool(companion.get("is_knocked_out")), "Nela knocked out")
+	_check((companion as Hero).is_down(), "Nela knocked out")
 	companion.global_position = player.global_position + Vector3(1.0, 0, 0)
-	_check(player.call("try_use_bandage") and not bool(companion.get("is_knocked_out")) and ResourceManager.get_count(&"bandage") == 0,
+	_check(player.call("try_use_bandage") and not (companion as Hero).is_down() and ResourceManager.get_count(&"bandage") == 0,
 		"bandage woke Nela up (%d HP)" % companion.get("current_hp"))
 
 	# Trap Refill restores a used trap.
@@ -1559,13 +1560,13 @@ func _check_perk_04_leo(leo: Node3D) -> void:
 	var taken: Array[int] = []
 	for offset in [Vector3(2.5, 0, 0), Vector3(9, 0, 0)]:
 		leo.global_position = fire.global_position + offset
-		leo.set("_invulnerable_remaining", 0.0)
+		(leo as Hero).clear_invulnerability()
 		var before: int = int(leo.get("current_hp"))
 		leo.call("take_damage", 8, null)
 		taken.append(before - int(leo.get("current_hp")))
 	_check(taken == [6, 8], "%s Leo, Stand Firm: 8 damage is 6 near the fire, 8 away (%s)" % [role, taken])
 	leo.set("current_hp", int(leo.get("max_hp")))
-	leo.set("_invulnerable_remaining", 0.0)
+	(leo as Hero).clear_invulnerability()
 
 
 func _check_perk_04_nela(nela: Node3D) -> void:
@@ -2146,3 +2147,70 @@ func _run_perk_review_scenario() -> void:
 	twin.stacks = stacked
 	PerkManager.restore(player, [])
 	await _perk_04_clear_mobs()
+
+
+## Hero core 01: Leo and Nela take hits, heal and go down the same way
+## in both roles, through the Hero interface. The companion revives at
+## dawn; the player's hero going down ends the run.
+func _run_hero_health_scenario() -> void:
+	print("smoke: --- hero health scenario ---")
+	for hero_id in [&"leo", &"nela"]:
+		GameManager.set_party(hero_id)
+		await _start_fresh_run()
+		var player: Hero = get_tree().get_first_node_in_group("player") as Hero
+		var companion: Hero = get_tree().get_first_node_in_group("companions") as Hero
+		_check(player != null and companion != null, "party %s: both roles are Heroes" % hero_id)
+		if player == null or companion == null:
+			continue
+		for who in [player, companion]:
+			_check_hero_health(who as Hero)
+		# The companion goes down, then gets back up at dawn.
+		var downs: Array[bool] = []
+		companion.down_changed.connect(func(is_down: bool) -> void: downs.append(is_down))
+		companion.clear_invulnerability()
+		companion.take_damage(9999)
+		var label: String = "%s as companion" % _hero_id(companion)
+		_check(companion.is_down() and companion.current_hp == 0 and downs == [true],
+			"%s: going down emits down_changed(true) (%s)" % [label, downs])
+		companion.clear_invulnerability()
+		companion.take_damage(5)
+		companion.heal(5)
+		_check(companion.current_hp == 0, "%s: no hits or heals while down" % label)
+		var t: int = 0
+		while companion.is_down() and t < 4:
+			TimeManager.skip_phase()
+			t += 1
+		_check(not companion.is_down() and companion.current_hp == companion.max_hp and downs == [true, false],
+			"%s: revives at dawn at full HP (%d/%d, %s)" % [label, companion.current_hp, companion.max_hp, downs])
+		# The player's hero going down ends the run.
+		var player_downs: Array[bool] = []
+		player.down_changed.connect(func(is_down: bool) -> void: player_downs.append(is_down))
+		player.clear_invulnerability()
+		player.take_damage(9999)
+		label = "%s as player" % _hero_id(player)
+		_check(player.is_down() and player_downs == [true], "%s: going down emits down_changed(true)" % label)
+		_check(GameManager.run_state == GameManager.RunState.LOST and GameManager.end_trigger == &"loss_hero",
+			"%s: being down ends the run (%s)" % [label, GameManager.end_reason])
+	GameManager.set_party(&"leo")
+
+
+## A hit lowers HP, the invulnerability window blocks a second one, and
+## a heal raises it again.
+func _check_hero_health(who: Hero) -> void:
+	var label: String = "%s as %s" % [_hero_id(who), "player" if who.is_in_group("player") else "companion"]
+	who.heal(who.max_hp)
+	who.clear_invulnerability()
+	var full: int = who.current_hp
+	who.take_damage(6)
+	var hit: int = who.current_hp
+	_check(hit < full and who.is_invulnerable(), "%s: a hit lowers HP (%d -> %d)" % [label, full, hit])
+	who.take_damage(6)
+	_check(who.current_hp == hit, "%s: the invulnerability window blocks a second hit" % label)
+	who.heal(3)
+	_check(who.current_hp == mini(who.max_hp, hit + 3), "%s: a heal raises HP (%d -> %d)" % [label, hit, who.current_hp])
+	_check(not who.is_down(), "%s: still up" % label)
+
+
+func _hero_id(who: Node) -> StringName:
+	var definition: HeroDefinition = who.get("hero") as HeroDefinition
+	return definition.id if definition != null else &"?"

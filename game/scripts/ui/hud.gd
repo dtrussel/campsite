@@ -659,7 +659,7 @@ func _hook_world() -> void:
 		_refresh_progress(_player)
 	if _companion != null:
 		_companion.health_changed.connect(func(hp: int, max_hp: int) -> void: _sibling_hp.set_values(hp, max_hp))
-		_companion.knocked_out_changed.connect(_on_companion_knocked_out)
+		(_companion as Hero).down_changed.connect(_on_companion_down_changed)
 		_sibling_hp.set_values(_companion.current_hp, _companion.max_hp)
 		_refresh_sibling()
 	var lantern: MoonLantern = MoonLantern.find(get_tree())
@@ -757,7 +757,7 @@ func _refresh_progress(character: Node) -> void:
 func _refresh_sibling() -> void:
 	if _companion == null or not is_instance_valid(_companion):
 		return
-	var knocked: bool = _companion.get("is_knocked_out") == true
+	var knocked: bool = _companion is Hero and (_companion as Hero).is_down()
 	var task: int = int(_companion.get("current_task"))
 	for i in range(_task_buttons.size()):
 		(_task_buttons[i] as Button).set_pressed_no_signal(i == task)
@@ -964,7 +964,7 @@ func _on_crafted(recipe: CraftingRecipe, _crafter: Node) -> void:
 		show_banner("Torch!  Q", Color(1, 0.75, 0.35))
 
 
-func _on_companion_knocked_out(is_down: bool) -> void:
+func _on_companion_down_changed(is_down: bool) -> void:
 	if is_down:
 		show_banner("Ouch!", Color(1, 0.6, 0.45))
 	_refresh_sibling()

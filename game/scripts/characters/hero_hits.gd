@@ -133,7 +133,7 @@ static func cheer_up_heal(other: Node) -> int:
 static func cheer_up(character: Node) -> void:
 	var copies: int = PerkManager.flag_count(character, CHEER_UP)
 	var other: Node3D = other_hero(character)
-	if copies == 0 or other == null or bool(other.get("is_knocked_out")) or not other.has_method("heal"):
+	if copies == 0 or other == null or (other is Hero and (other as Hero).is_down()) or not other.has_method("heal"):
 		return
 	var before: int = int(other.get("current_hp"))
 	other.call("heal", cheer_up_heal(other) * copies)

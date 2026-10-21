@@ -60,7 +60,7 @@ func _ready() -> void:
 						player.command_attack(nearest)
 		print("sim: night %d end t=%.0fs fire=%d/%d boy=%d/%d sib=%d ko=%s state=%d reason=%s" % [
 			night, t, fire.current_hp, fire.max_hp, player.current_hp, player.max_hp,
-			companion.current_hp, companion.is_knocked_out, GameManager.run_state, GameManager.end_reason])
+			companion.current_hp, companion.is_down(), GameManager.run_state, GameManager.end_reason])
 		print("sim: night %d perks boy=%s sib=%s" % [night, PerkManager.perks_of(player), PerkManager.perks_of(companion)])
 		if not GameManager.is_playing():
 			break

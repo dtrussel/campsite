@@ -253,7 +253,7 @@ func _update_range_ring() -> void:
 	if _range_ring == null or _player == null:
 		return
 	var attacking: bool = int(_player.get("command")) == 2  # Command.ATTACK
-	_range_ring.visible = (attacking or _hover_kind == Hover.MOB) and not bool(_player.get("is_knocked_out"))
+	_range_ring.visible = (attacking or _hover_kind == Hover.MOB) and not (_player is Hero and (_player as Hero).is_down())
 	# The reach can grow during a run (the Slingshot, Eagle Eye).
 	var grow: float = _player_reach() / float(_range_ring.get_meta(&"reach", 1.0))
 	_range_ring.scale = Vector3(grow, 0.05, grow)

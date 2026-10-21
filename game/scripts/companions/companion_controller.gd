@@ -1,12 +1,12 @@
 class_name Companion
-extends CharacterBody3D
+extends Hero
 
 ## Companion
 ##
 ## Task-driven AI used by family / pet companions. Always present in
 ## the world; the player assigns tasks via hotkeys (see HUD hint).
-## Mobs can hurt companions; at 0 HP a companion is knocked out
-## until the next dawn, then gets back up at full health.
+## Mobs can hurt companions (health lives in Hero); a downed companion
+## stays down until the next dawn, then gets back up at full health.
 ##
 ## Feature 034: the companion is a hero too (Nela, or Leo when the
 ## player plays Nela). Body, stats, speed, reach and fighting style come
@@ -17,8 +17,6 @@ extends CharacterBody3D
 ## sidesteps or finally hops her free when she is pressed against a prop.
 
 signal task_changed(new_task: int)
-signal health_changed(current_hp: int, max_hp: int)
-signal knocked_out_changed(is_knocked_out: bool)
 
 enum Task { IDLE, FOLLOW_PLAYER, GUARD_BASE, GATHER_NEAREST, REPAIR }
 
@@ -27,24 +25,13 @@ const REPAIR_TAP_SECONDS: float = 1.0
 const REPAIR_REACH: float = 1.9
 
 @export var definition: CompanionDefinition
-@export var stats: CharacterStatsDefinition
-## The companion hero; empty takes GameManager.party_companion().
-@export var hero: HeroDefinition
 @export var follow_distance: float = 2.5
 @export var guard_radius: float = 3.5
 @export var detection_radius: float = 6.0
-@export var max_hp: int = 40
-@export var regen_per_second: float = 1.0
-@export var hurt_invulnerability_seconds: float = 0.5
 
 var current_task: int = Task.IDLE
-var current_hp: int = 0
-var is_knocked_out: bool = false
-var _invulnerable_remaining: float = 0.0
-var _regen_accumulator: float = 0.0
 
 @onready var _task_label: Label3D = $TaskLabel
-@onready var _visual: CharacterVisual = $Visual
 var _hp_bar: HealthBar3D = null
 
 var _player: Node3D = null
@@ -80,8 +67,16 @@ var _detour_remaining: float = 0.0
 var unstuck_count: int = 0
 
 
+func _init() -> void:
+	# The companion's health tuning (Hero holds the fields).
+	max_hp = 40
+	regen_per_second = 1.0
+	hurt_invulnerability_seconds = 0.5
+
+
 func _enter_tree() -> void:
 	# Before the Visual child's _ready builds the model.
+	# An empty `hero` takes GameManager.party_companion().
 	if hero == null:
 		hero = GameManager.party_companion()
 	if hero == null or is_in_group(HeroRoster.group_for(hero.id)):
@@ -118,55 +113,26 @@ func _ready() -> void:
 	_hp_bar.set_value.call_deferred(current_hp, max_hp)
 
 
-func take_damage(amount: int, _source: Node = null) -> void:
-	if amount <= 0 or is_knocked_out or _invulnerable_remaining > 0.0:
-		return
-	_invulnerable_remaining = hurt_invulnerability_seconds
-	amount = HeroHits.damage_taken(self, amount)
-	current_hp = max(0, current_hp - amount)
-	health_changed.emit(current_hp, max_hp)
+# --- Health (the role's part; see Hero) ------------------------------
+
+func _show_hurt(amount: int) -> void:
 	Fx.flash(self)
 	Fx.float_text(self, "-%d" % amount, Color(1, 0.6, 0.4))
 	AudioManager.play_sfx(hero.hurt_sfx if hero != null else &"sibling_hurt", global_position)
-	if current_hp == 0:
-		_set_knocked_out(true)
-	elif not _visual.is_in_action():
-		_visual.play_action(&"hit", 1.4)
 
 
-func _set_knocked_out(value: bool) -> void:
-	if is_knocked_out == value:
-		return
-	is_knocked_out = value
-	if value:
+func _on_down_changed(down: bool) -> void:
+	if down:
 		_abort_active_gather()
-		velocity = Vector3.ZERO
-		_visual.play_final(&"death")
 		PlaytestLog.write("companion_knocked_out day=%d" % TimeManager.day_number)
-	else:
-		_visual.unlock(&"getup")
-		current_hp = max_hp
-		health_changed.emit(current_hp, max_hp)
-	knocked_out_changed.emit(is_knocked_out)
 	_update_task_label()
 
 
+## A downed companion gets back up at dawn, at full health.
 func _on_dawn_started(_day_number: int) -> void:
-	if is_knocked_out:
-		_set_knocked_out(false)
+	if is_down():
+		revive(max_hp)
 		Fx.burst(&"heal", global_position)
-
-
-func _tick_regen(delta: float) -> void:
-	if is_knocked_out or TimeManager.is_night() or current_hp >= max_hp:
-		_regen_accumulator = 0.0
-		return
-	_regen_accumulator += regen_per_second * delta
-	if _regen_accumulator >= 1.0:
-		var whole: int = int(_regen_accumulator)
-		_regen_accumulator -= whole
-		current_hp = min(max_hp, current_hp + whole)
-		health_changed.emit(current_hp, max_hp)
 
 
 func set_task(task: int) -> void:
@@ -194,25 +160,15 @@ func apply_signature() -> void:
 	Fx.burst(&"level_up", global_position)
 
 
-## Heals `amount` HP, up to max (Cheer Up). Not while knocked out.
-func heal(amount: int) -> void:
-	if amount <= 0 or is_knocked_out or current_hp >= max_hp:
-		return
-	current_hp = mini(max_hp, current_hp + amount)
-	health_changed.emit(current_hp, max_hp)
-
-
-## A bandage: +25 HP, or wakes the companion up (with 25 HP) when
-## knocked out. False when they do not need one.
+## A bandage: +25 HP, or gets a downed companion up (with 25 HP).
+## False when they do not need one.
 func apply_bandage() -> bool:
-	if is_knocked_out:
-		_set_knocked_out(false)
-		current_hp = mini(max_hp, BANDAGE_HEAL)
+	if is_down():
+		revive(BANDAGE_HEAL)
 	elif current_hp < max_hp:
-		current_hp = mini(max_hp, current_hp + BANDAGE_HEAL)
+		heal(BANDAGE_HEAL)
 	else:
 		return false
-	health_changed.emit(current_hp, max_hp)
 	Fx.float_text(self, "+%d HP" % BANDAGE_HEAL, Color(0.5, 1, 0.5))
 	Fx.burst(&"heal", global_position)
 	AudioManager.play_sfx(&"bandage", global_position)
@@ -233,9 +189,8 @@ func _physics_process(delta: float) -> void:
 	if definition == null:
 		return
 	_attack_cooldown_remaining = max(0.0, _attack_cooldown_remaining - delta)
-	_invulnerable_remaining = max(0.0, _invulnerable_remaining - delta)
-	_tick_regen(delta)
-	if is_knocked_out:
+	_tick_health(delta)
+	if is_down():
 		_build_beat.stop(_visual)
 		return
 	_tool_busy = false
@@ -547,4 +502,4 @@ func _refresh_world_refs() -> void:
 func _update_task_label() -> void:
 	if _task_label != null:
 		# The HUD task buttons show the task; the label only shows sleep.
-		_task_label.text = "Zzz" if is_knocked_out else ""
+		_task_label.text = "Zzz" if is_down() else ""
