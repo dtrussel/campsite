@@ -40,8 +40,12 @@ func _ready() -> void:
 	SaveManager.delete_save()
 	Profile.set_path(TEST_PROFILE_PATH)
 	Profile.delete()
+	# The smoke run plays a debug build, which unlocks every chapter.
+	Profile.unlock_all_chapters = false
 	await _run_story_scenario()
+	await _check_title_chapter_2(false, "the title locks Chapter 2 before Chapter 1 is won")
 	await _run_win_scenario()
+	await _run_chapter_lock_scenario()
 	await _run_loss_scenario()
 	await _run_continue_scenario()
 	await _run_blueprint_save_scenario()
@@ -68,6 +72,82 @@ func _ready() -> void:
 	StoryLibrary.forget_progress()
 	Profile.delete()
 	_finish()
+
+
+## Journal badges 01: winning Chapter 1 unlocks Chapter 2 on the title,
+## and it stays unlocked after a restart (the profile read again from
+## its file). A profile whose story.cfg import found Chapter 2 played
+## opens with it unlocked. Hero select opens on the last hero picked,
+## after a restart too. Delete profile asks first, then relocks Chapter
+## 2 and leaves audio settings alone.
+func _run_chapter_lock_scenario() -> void:
+	print("smoke: --- chapter lock scenario ---")
+	await _close_main()
+	await _check_title_chapter_2(true, "the title unlocks Chapter 2 once Chapter 1 is won")
+	Profile.reload()
+	await _check_title_chapter_2(true, "Chapter 2 stays unlocked after a restart")
+
+	# The last hero picked, kept in the profile.
+	var screen: Node = (load("res://scenes/ui/HeroSelect.tscn") as PackedScene).instantiate()
+	add_child(screen)
+	await get_tree().process_frame
+	screen.call("select", 1)
+	GameManager.record_hero_pick((screen.call("selected_hero") as HeroDefinition).id)
+	screen.queue_free()
+	GameManager.set_party(&"leo")  # what a fresh start would hold
+	Profile.reload()
+	screen = (load("res://scenes/ui/HeroSelect.tscn") as PackedScene).instantiate()
+	add_child(screen)
+	await get_tree().process_frame
+	_check((screen.call("selected_hero") as HeroDefinition).id == &"nela",
+		"hero select opens on the last hero picked (Nela), after a restart too")
+	screen.queue_free()
+	await get_tree().process_frame
+
+	# Delete profile, from the settings in the pause menu: it asks first.
+	var music: float = AudioManager.music_volume
+	var menu: Node = (load("res://scenes/ui/PauseMenu.tscn") as PackedScene).instantiate()
+	add_child(menu)
+	await get_tree().process_frame
+	(menu.get("delete_profile_button") as Button).pressed.emit()
+	var confirm: ConfirmationDialog = menu.get("delete_profile_confirm") as ConfirmationDialog
+	_check(confirm != null and confirm.visible and Profile.is_chapter_unlocked(2),
+		"Delete profile asks first and deletes nothing yet")
+	confirm.canceled.emit()
+	_check(Profile.is_chapter_unlocked(2), "cancelling keeps the profile")
+	(menu.get("delete_profile_button") as Button).pressed.emit()
+	confirm.confirmed.emit()
+	menu.queue_free()
+	await _check_title_chapter_2(false, "Delete profile relocks Chapter 2")
+	_check(is_equal_approx(AudioManager.music_volume, music), "Delete profile leaves the audio settings alone")
+	_check(not Profile.has_value(Profile.LAST_HERO), "Delete profile forgets the last hero")
+
+	# A player the story.cfg import marked as having played Chapter 2.
+	var old_story: String = "user://smoke_old_story.cfg"
+	var old: ConfigFile = ConfigFile.new()
+	old.set_value("seen", "intro.c2", true)
+	old.save(old_story)
+	var imported_path: String = "user://smoke_imported_profile.json"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(imported_path))
+	Profile.set_path(imported_path, old_story)
+	await _check_title_chapter_2(true, "an imported Chapter 2 player sees Chapter 2 unlocked on first launch")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(old_story))
+	Profile.delete()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(imported_path))
+	Profile.set_path(TEST_PROFILE_PATH)
+	Profile.delete()
+
+
+## Opens the title screen and checks whether its Chapter 2 button can be
+## pressed.
+func _check_title_chapter_2(unlocked: bool, label: String) -> void:
+	var title: Node = (load("res://scenes/ui/TitleScreen.tscn") as PackedScene).instantiate()
+	add_child(title)
+	await get_tree().process_frame
+	var button: Button = title.call("chapter_button", 2) as Button
+	_check(button != null and button.disabled != unlocked and Profile.is_chapter_unlocked(2) == unlocked, label)
+	title.queue_free()
+	await get_tree().process_frame
 
 
 ## Feature 045: a half-built blueprint survives Continue as a blueprint,

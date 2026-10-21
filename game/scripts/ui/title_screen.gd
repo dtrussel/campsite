@@ -9,11 +9,14 @@ extends Control
 ## nights, feature 035), then the hero select screen (feature 034);
 ## Continue (shown
 ## when there is an autosave) resumes the saved run, with its party, at
-## its next morning.
+## its next morning. Chapter 2 is locked until Chapter 1 is won
+## (journal badges 01, Profile.is_chapter_unlocked).
 
 const BACKDROP: Script = preload("res://scripts/ui/title_backdrop.gd")
 
 var _controls_panel: Control = null
+## The Play button of each chapter, by chapter number.
+var _chapter_buttons: Dictionary = {}
 
 
 func _ready() -> void:
@@ -82,7 +85,15 @@ func _ready() -> void:
 		start.add_theme_font_size_override("font_size", 21)
 		start.tooltip_text = "Survive %d nights, then choose your hero. The game saves every morning." % nights
 		slot.add_child(start)
-		var subtitle: Label = UiKit.label("Chapter %d  -  %d nights" % [chapter, nights], 15, UiKit.COLOR_GOLD_LIGHT)
+		_chapter_buttons[chapter] = start
+		var unlocked: bool = Profile.is_chapter_unlocked(chapter)
+		var caption: String = "Chapter %d  -  %d nights" % [chapter, nights]
+		if not unlocked:
+			start.disabled = true
+			start.focus_mode = Control.FOCUS_NONE
+			start.tooltip_text = "Win Chapter %d to unlock this chapter." % (chapter - 1)
+			caption = "Locked  -  win Chapter %d first" % (chapter - 1)
+		var subtitle: Label = UiKit.label(caption, 15, UiKit.COLOR_GOLD_LIGHT)
 		subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		subtitle.add_theme_constant_override("outline_size", 6)
 		subtitle.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
@@ -114,6 +125,11 @@ func _ready() -> void:
 	add_child(version)
 
 	play.grab_focus()
+
+
+## The Play button that starts chapter (1 or 2), or null.
+func chapter_button(chapter: int) -> Button:
+	return _chapter_buttons.get(chapter) as Button
 
 
 func _on_play(nights: int) -> void:
