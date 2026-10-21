@@ -63,6 +63,7 @@ func _ready() -> void:
 	await _run_old_save_scenario()
 	await _run_lifecycle_02_scenario()
 	await _run_world_save_scenario()
+	await _run_review_fixes_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	Profile.delete()
@@ -2460,12 +2461,18 @@ func _check_hero_attack(who: Hero) -> void:
 	await get_tree().process_frame
 	_check(who.is_attack_ready() and not who.is_attacking(), "%s: ready, and not attacking yet" % label)
 	_check(who.attack(mob) and not who.is_attack_ready(), "%s: an attack starts the cooldown" % label)
-	if as_companion:
-		_check(who.is_attacking(), "%s: attacking while the cooldown runs" % label)
+	_check(who.is_attacking(), "%s: attacking while the cooldown runs" % label)
 	await _wait(1.2)
 	_check(mob.current_hp < beast_def.max_hp, "%s: the attack lands (%d/%d HP)" % [label, mob.current_hp, beast_def.max_hp])
 	if not as_companion:
-		# The pointer commands ask the player's hero whether it is attacking.
+		# The pointer commands ask the player's hero whether it is attacking:
+		# an attack command counts too. The last target is freed (the
+		# cooldown is frozen with physics off), so only the command counts.
+		var gone: Mob = mob
+		mob = null
+		gone.free()
+		mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 0))
+		mob.set_physics_process(false)
 		(who as Node).call("command_attack", mob)
 		var attacking: bool = who.is_attacking()
 		(who as Node).call("stop_commands")
@@ -2737,3 +2744,47 @@ func _building_near(spot: Vector3) -> Building:
 		if building != null and not building.is_queued_for_deletion() and building.global_position.distance_to(spot) < 0.05:
 			return building
 	return null
+
+
+## Review fixes (hero core, run lifecycle): an in-place reset gives a
+## live camp's heroes their base stats back, registered with
+## progression again, and gets a downed hero up quietly; a restored
+## level-up plays no bark.
+func _run_review_fixes_scenario() -> void:
+	print("smoke: --- review fixes scenario ---")
+	GameManager.set_party(&"leo")
+	await _start_fresh_run(_config(5.0))  # keep the player's picker open
+	var player: Hero = Party.player_hero()
+	var companion: Hero = Party.companion()
+	for hero in [player, companion]:
+		(hero as Node).set_physics_process(false)
+	ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"test")
+	PerkManager.close_picker()
+	player.apply_signature()
+	var downs: Array = []
+	companion.down_changed.connect(func(is_down: bool) -> void: downs.append(is_down))
+	companion.clear_invulnerability()
+	companion.take_damage(companion.max_hp * 10)
+	_check(companion.is_down() and player.max_hp > player.stats.base_max_health, "the camp is levelled up, armed and has a downed companion")
+	RunSession.reset(_config())
+	_check(player.max_hp == player.stats.base_max_health and player.current_hp == player.max_hp
+		and player.attack_damage == player.stats.base_attack_damage and not player.has_signature
+		and is_equal_approx(player.get_attack_range(), player.hero.attack_range),
+		"an in-place reset gives the hero its base stats back (%d HP, %d damage)" % [player.max_hp, player.attack_damage])
+	ProgressionManager.award_xp(player, 3, &"test")
+	_check(ProgressionManager.get_level(player) == 1 and ProgressionManager.get_xp(player) == 3,
+		"after a reset the hero is registered with progression again (XP %d)" % ProgressionManager.get_xp(player))
+	_check(not companion.is_down() and companion.current_hp == companion.max_hp and downs == [true],
+		"a reset gets the downed companion up quietly (down_changed: %s)" % [downs])
+
+	# Continue on a level-3 save: the replayed level-ups play no bark.
+	await _start_fresh_run()
+	var stats: CharacterStatsDefinition = ProgressionManager.get_stats(Party.player_hero())
+	await _continue_with_xp(Party.PLAYER, stats.xp_threshold_for_level(3))
+	var spoke: bool = false
+	for hero in Party.heroes():
+		var bubble: SpeechBubble = SpeechBubble.on(hero)
+		if bubble != null and _bark_line(bubble.text, &"level_up", BarkDirector.speaker_id(hero)):
+			spoke = true
+	_check(ProgressionManager.get_level(Party.player_hero()) == 3 and not spoke,
+		"Continue on a level-3 save plays no level-up bark")

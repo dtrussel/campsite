@@ -158,10 +158,12 @@ func save_entry() -> Dictionary:
 
 
 ## Puts back the building `entry` (from save_entry) under `parent`, or
-## null when its type is gone. A blueprint gets its progress again (its
-## HP follows from it); saves from before perk cards have no "paid", so
-## its refund falls back to BuildManager.cost_of.
+## null when its type is gone or it has no position. A blueprint gets its
+## progress again (its HP follows from it); saves from before perk cards
+## have no "paid", so its refund falls back to BuildManager.cost_of.
 static func rebuild(entry: Dictionary, parent: Node) -> Building:
+	if not entry.get("pos") is Array:
+		return null
 	var definition: BuildingDefinition = BuildManager.get_definition(StringName(str(entry.get("id", ""))))
 	if definition == null or definition.get_scene() == null:
 		return null

@@ -94,3 +94,4 @@ Device settings (audio, look, auto-attack) stay where they are, so that deleting
   - **A spec decision settled in the code:** "delete removes the file" and "never import again after delete" pull against each other. Delete keeps only the import note (`profile.story_cfg_imported`), so after an import the profile file holds just that note.
   - **Docs:** `docs/architecture/software-architecture.md`, "Profile" under H.
   - **Next:** endless mode and journal badges add their keys (`endless.`, `badges.`, `chapters.`).
+- **2026-10-21, review fixes:** the unused `Profile.file_path()` is removed.

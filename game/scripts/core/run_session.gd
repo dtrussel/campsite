@@ -99,7 +99,7 @@ func reset(run: RunConfig = null) -> void:
 ## Every saving system, in the one declared restore order: the autoloads
 ## first, then the world (whose objects live in the gameplay scene).
 func saving_systems() -> Array:
-	return _autoload_systems() + _world_systems()
+	return autoload_systems() + _world_systems()
 
 
 ## The run as plain data, for the save file: the version stamp, then
@@ -144,11 +144,6 @@ func is_restoring() -> bool:
 	return _restoring
 
 
-## Whether continue_from left a save waiting for the gameplay scene.
-func has_pending() -> bool:
-	return not _pending.is_empty()
-
-
 ## Called by GameManager once the gameplay scene is ready. Applies the
 ## waiting save, if any: each saving system in order (the autoloads,
 ## then the world, then the heroes), then starts the clock at the morning
@@ -169,15 +164,10 @@ func restore_pending() -> bool:
 	return true
 
 
-## The autoload saving systems, in restore order (the validator checks
-## each one on its own).
-func autoload_systems() -> Array:
-	return _autoload_systems()
-
-
 ## Time and the run fields, resources, progression and perks, then the
-## crafting state: the autoloads that hold run state, in restore order.
-func _autoload_systems() -> Array:
+## crafting state: the autoloads that hold run state, in restore order
+## (the validator checks each one on its own).
+func autoload_systems() -> Array:
 	return [TimeManager, GameManager, ResourceManager, ProgressionManager, PerkManager, CraftingManager]
 
 
@@ -196,10 +186,7 @@ func _world_systems() -> Array:
 	var lantern: MoonLantern = MoonLantern.find(tree)
 	if lantern != null:
 		out.append(lantern)
-	for group in ["player", "companions"]:
-		var hero: Hero = tree.get_first_node_in_group(group) as Hero
-		if hero != null:
-			out.append(hero)
+	out.append_array(Party.heroes())
 	return out
 
 

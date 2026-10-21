@@ -51,11 +51,6 @@ func set_path(path: String, old_story_path: String = "") -> void:
 	reload()
 
 
-## The file the profile reads and writes.
-func file_path() -> String:
-	return _path
-
-
 ## Reads the profile again from its file; a missing or damaged file
 ## loads as empty.
 func reload() -> void:

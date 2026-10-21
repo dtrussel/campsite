@@ -387,7 +387,8 @@ The player's hero has no state enum: it has a pointer **command**
 (`NONE`, `MOVE`, `ATTACK`, `GATHER`, `CAMPFIRE`, `REPAIR`, `BUILD`) and,
 apart from it, Hero's gathering and down flags. Outside code asks through
 `has_command()`, `is_attacking()`, `is_building()`, `is_gathering()` and
-`is_down()`, never by the command's number.
+`is_down()`, never by the command's number. Its `is_attacking()` is
+Hero's (the cooldown after an attack) or an attack command.
 
 ### Companion states
 
@@ -450,7 +451,7 @@ The saving systems, and what each saves:
 | `BuildingSaves` | `"buildings"`: each building or blueprint's type, place, HP, construction progress and paid cost (`Building.save_entry` / `Building.rebuild`) |
 | `TorchSaves` | `"torches"`: the Ember Heart torches still burning, with their dawns left and radius (`Torch.save_entry` / `Torch.rebuild`) |
 | `MoonLantern` | `"lantern"`: its shards |
-| `Hero` (both heroes) | each hero's `"signature"` tool; the companion also saves its `"task"` |
+| `Hero` (both heroes) | each hero's `"signature"` tool; the companion also saves its `"task"`. The reset restores the base stats, gets a downed hero up without `down_changed`, and registers it with ProgressionManager again |
 
 - **Hero entries are shared.** A hero's keys sit under `"player"` and
   `"sibling"` (`Party.SAVE_KEYS`), and several systems write there.
@@ -460,7 +461,8 @@ The saving systems, and what each saves:
   which own their legacy fallbacks: a missing `"paid"` in
   `Building.rebuild`, and the old `"stick"` / `"slingshot"` signature
   names in `Hero.LEGACY_SIGNATURE_KEYS`. The old party-less saves are
-  Leo with Nela (`GameManager.party_of`).
+  Leo with Nela (`GameManager.party_of`). An entry missing its
+  position is skipped.
 - **Objects refresh themselves.** Each one refreshes its own HP bar after
   it loads; nothing outside calls a private refresh or reads a meta.
 - **Not saved:** resource nodes and pickups (they reset), plain torches
@@ -547,8 +549,7 @@ on its own file, `user://profile.json`, which a run ending never deletes.
 - **Interface:** `get_value(key, fallback)`, `set_value(key, value)`
   (saved at once), `has_value`, `record_best(key, value)` (true for a
   new record), `forget(prefix)`, `delete`, `reload`, and
-  `set_path(path, old_story_path)` / `file_path` so tests use their own
-  file.
+  `set_path(path, old_story_path)` so tests use their own file.
 - **Keys:** strings with a dotted owner prefix, such as `story.`,
   `chapters.`, `endless.` and `badges.`; values are JSON-friendly. A
   new kind of progress adds keys rather than a new store.

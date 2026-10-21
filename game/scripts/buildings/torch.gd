@@ -25,7 +25,8 @@ extends Node3D
 const EMBER_HEART: StringName = &"ember_heart"
 ## Every lit torch (and Glow Lantern aura); a torch leaves it as it goes out.
 const GROUP: StringName = &"torches"
-const SCENE_PATH: String = "res://scenes/buildings/Torch.tscn"
+## The torch scene (the player plants it; a save plants it again).
+const SCENE: PackedScene = preload("res://scenes/buildings/Torch.tscn")
 
 var _burn_timer: float = 0.0
 var _is_burning_out: bool = false
@@ -61,7 +62,7 @@ func save_entry() -> Dictionary:
 static func rebuild(entry: Dictionary, parent: Node) -> Torch:
 	if int(entry.get("dawns", 0)) <= 0 or not entry.get("pos") is Array:
 		return null
-	var torch: Torch = (load(SCENE_PATH) as PackedScene).instantiate() as Torch
+	var torch: Torch = SCENE.instantiate() as Torch
 	parent.add_child(torch)
 	var pos: Array = entry["pos"]
 	torch.global_position = Vector3(float(pos[0]), float(pos[1]), float(pos[2]))

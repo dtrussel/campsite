@@ -365,7 +365,10 @@ func load_state(data: Dictionary) -> void:
 		_load_entry(entry)
 
 
-## A fresh run's hero: no signature tool yet, full HP.
+## A fresh run's hero, set quietly (no `down_changed`): the base stats
+## (level-up bumps gone), no signature tool, up at full HP, and
+## registered with ProgressionManager again at level 1 (it runs after
+## ProgressionManager's reset). `health_changed` still updates the bars.
 func reset() -> void:
 	if has_signature and hero != null:
 		has_signature = false
@@ -373,11 +376,18 @@ func reset() -> void:
 		var factor: float = hero.companion_signature_range_factor if _is_companion_role() else hero.signature_range_factor
 		if factor > 0.0:
 			attack_range /= factor
+	if stats != null:
+		max_hp = stats.base_max_health
+		attack_damage = stats.base_attack_damage
+	current_hp = max_hp
+	_invulnerable_remaining = 0.0
+	_regen_accumulator = 0.0
 	if _down:
-		revive(max_hp)
-	else:
-		current_hp = max_hp
-		health_changed.emit(current_hp, max_hp)
+		_down = false
+		_visual.unlock()
+		_on_down_changed(false)
+	ProgressionManager.register_character(self, stats)
+	health_changed.emit(current_hp, max_hp)
 
 
 ## The role adds its own keys (the companion's task).

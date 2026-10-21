@@ -40,7 +40,7 @@ func _ready() -> void:
 	GameManager.run_started.connect(_on_run_started)
 	TimeManager.sunset_warning.connect(func(_seconds: float) -> void: bark(&"sunset"))
 	TimeManager.night_started.connect(func(_day: int) -> void: bark(&"night_start"))
-	ProgressionManager.level_up.connect(func(character: Node, _level: int) -> void: bark(&"level_up", character))
+	ProgressionManager.level_up.connect(_on_level_up)
 	get_tree().node_added.connect(_on_node_added)
 
 
@@ -258,6 +258,12 @@ func _on_health_changed(current_hp: int, max_hp: int, node: Node) -> void:
 	_hp_ratio[node] = ratio
 	if current_hp > 0 and ratio < LOW_HP_RATIO and before >= LOW_HP_RATIO:
 		bark(&"low_hp", node)
+
+
+# A save's level-ups are replayed quietly on Continue: no cheer.
+func _on_level_up(character: Node, _level: int) -> void:
+	if not RunSession.is_restoring():
+		bark(&"level_up", character)
 
 
 func _on_companion_down_changed(is_down: bool) -> void:

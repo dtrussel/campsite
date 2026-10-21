@@ -55,6 +55,7 @@ func _ready() -> void:
 	_validate_story_import()
 	_validate_saving_systems()
 	_validate_run_lifecycle_contract()
+	_validate_rebuild_missing_keys()
 	if _errors.is_empty():
 		print("validate_project: OK (%d files checked)" % files.size())
 		get_tree().quit(0)
@@ -635,7 +636,17 @@ func _validate_run_lifecycle_contract() -> void:
 	for word in ["BaseCore", "Building", "Torch", "Hero", "Perk", "Party", "TimeManager", "GameManager", "get_first_node_in_group"]:
 		if source.contains(word):
 			_fail("save_manager.gd names %s; the save manager only handles the file" % word)
-	if GameManager.has_method("reset_autoloads"):
-		_fail("GameManager still has its own reset list (reset_autoloads)")
+	for old in ["reset_autoloads", "_reset_autoloads"]:
+		if GameManager.has_method(old):
+			_fail("GameManager still has its own reset list (%s)" % old)
 	if SaveManager.has_method("snapshot"):
 		_fail("SaveManager still gathers the run itself; RunSession.snapshot does")
+
+
+## Review fixes: a saved building or torch entry with a missing key
+## (no position) is skipped on load, not an error.
+func _validate_rebuild_missing_keys() -> void:
+	if Building.rebuild({"id": "wooden_fence", "hp": 3}, self) != null:
+		_fail("Building.rebuild builds an entry with no position")
+	if Torch.rebuild({"dawns": 1}, self) != null:
+		_fail("Torch.rebuild builds an entry with no position")

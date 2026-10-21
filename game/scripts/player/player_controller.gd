@@ -29,7 +29,6 @@ signal command_changed(command: int, target: Node)
 
 enum Command { NONE, MOVE, ATTACK, GATHER, CAMPFIRE, REPAIR, BUILD }
 
-const TORCH_SCENE: PackedScene = preload("res://scenes/buildings/Torch.tscn")
 const TORCH_ITEM_ID: StringName = &"torch"
 const BERRY_ITEM_ID: StringName = &"berries"
 const BERRIES_PER_MEAL: int = 2
@@ -393,10 +392,11 @@ func _is_attackable(target: Variant) -> bool:
 
 # --- Attack (the role's part; see Hero) ------------------------------
 
-## The player's hero is attacking while it has an attack command,
-## walking to the target included (the pointer's range ring shows then).
+## The player's hero is attacking while its last attack's cooldown runs
+## (as any hero), and also while it has an attack command, walking to the
+## target included (the pointer's range ring shows then).
 func is_attacking() -> bool:
-	return command == Command.ATTACK
+	return super() or command == Command.ATTACK
 
 
 ## The hit feel: the swing lands after a wind-up, only if the target is
@@ -469,7 +469,7 @@ func try_place_torch() -> void:
 	if not ResourceManager.spend(TORCH_ITEM_ID, 1):
 		Fx.icon_popup(self, Fx.icon("torch"), "", Color.WHITE, true)
 		return
-	var torch: Node3D = TORCH_SCENE.instantiate() as Node3D
+	var torch: Node3D = Torch.SCENE.instantiate() as Node3D
 	get_tree().current_scene.add_child(torch)
 	torch.global_position = global_position + get_facing() * 1.0
 	if torch.has_method("kindle"):
