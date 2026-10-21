@@ -23,14 +23,18 @@ var _from: Vector3 = Vector3.ZERO
 var _to: Vector3 = Vector3.ZERO
 ## A bounce (Ricochet) never bounces again.
 var _is_bounce: bool = false
+## Seconds before the flight starts.
+var _delay: float = 0.0
 
 
-## Fires a pebble from `shooter` at `target`. Returns the pebble.
-static func fire(shooter: Node3D, target: Node3D, damage: int) -> PebbleShot:
+## Fires a pebble from `shooter` at `target`. Returns the pebble. A
+## `delay` holds it in the hand that long before it flies (the Double
+## Sling's second pebble).
+static func fire(shooter: Node3D, target: Node3D, damage: int, delay: float = 0.0) -> PebbleShot:
 	var facing: Vector3 = target.global_position - shooter.global_position
 	facing.y = 0.0
 	var from: Vector3 = shooter.global_position + Vector3(0, HAND_HEIGHT, 0) + facing.normalized() * 0.3
-	return _launch(shooter, from, target, damage, false)
+	return _launch(shooter, from, target, damage, false, delay)
 
 
 ## Bounces a pebble that hit at `from` on to `target` (Ricochet).
@@ -38,8 +42,9 @@ static func bounce(shooter: Node, from: Vector3, target: Node3D, damage: int) ->
 	return _launch(shooter, from, target, damage, true)
 
 
-static func _launch(shooter: Node, from: Vector3, target: Node3D, damage: int, is_bounce: bool) -> PebbleShot:
+static func _launch(shooter: Node, from: Vector3, target: Node3D, damage: int, is_bounce: bool, delay: float = 0.0) -> PebbleShot:
 	var shot: PebbleShot = PebbleShot.new()
+	shot._delay = delay
 	shot._shooter = shooter
 	shot._target = target
 	shot._damage = damage
@@ -67,6 +72,10 @@ func _ready() -> void:
 	stone.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(stone)
 	var tween: Tween = create_tween()
+	if _delay > 0.0:
+		stone.visible = false
+		tween.tween_interval(_delay)
+		tween.tween_callback(stone.show)
 	tween.tween_method(_fly, 0.0, 1.0, FLIGHT_SECONDS)
 	tween.tween_callback(_land)
 

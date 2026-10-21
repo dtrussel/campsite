@@ -65,6 +65,7 @@ func _ready() -> void:
 	await _run_hero_gather_scenario()
 	await _run_hero_attack_scenario()
 	await _run_tool_tiers_scenario()
+	await _run_double_sling_scenario()
 	await _run_old_save_scenario()
 	await _run_lifecycle_02_scenario()
 	await _run_world_save_scenario()
@@ -2679,6 +2680,73 @@ func _run_tool_tiers_scenario() -> void:
 		_check(leo.tool_tier == 1 and leo.get_attack_damage() == damage + 2 and not leo.has_tool_effect(&"burn"),
 			"Leo as %s: an old save with signature: true loads as tier 1" % role)
 	GameManager.set_party(&"leo")
+
+
+## Tool tiers 02: Nela's Double Sling, as the player's hero and as the
+## companion. It is offered only once the Slingshot (tier 1) is owned,
+## costs 2 Glow Shards, and every third shot launches two pebbles.
+func _run_double_sling_scenario() -> void:
+	print("smoke: --- double sling scenario ---")
+	for party_hero in [&"nela", &"leo"]:
+		GameManager.set_party(party_hero)
+		await _start_fresh_run()
+		var nela: Hero = HeroRoster.node_for(get_tree(), &"nela") as Hero
+		var role: String = "player" if party_hero == &"nela" else "companion"
+		for hero in Party.heroes():
+			(hero as Node).set_physics_process(false)
+		for building in get_tree().current_scene.find_children("*", "Building", true, false):
+			building.set_physics_process(false)
+		var table: Building = _spawn_building(&"crafting_table", nela.global_position + Vector3(4, 0, -4))
+		for item in [&"wood", &"scrap", &"clay"]:
+			ResourceManager.add(item, 10)
+		ResourceManager.add(&"glow_shards", 5)
+		var sling: CraftingRecipe = _recipe(&"slingshot")
+		var double: CraftingRecipe = _recipe(&"double_sling")
+		_check(double != null and not CraftingManager.is_offered(double) and not CraftingManager.can_craft(double),
+			"Nela as %s: the Double Sling is not offered before the Slingshot" % role)
+		if double == null:
+			table.queue_free()
+			continue
+		var beast_def: MobDefinition = load("res://resources/mobs/bramble_beast.tres") as MobDefinition
+		var spot: Vector3 = _campfire().global_position + Vector3(9, 0, 0)
+		nela.global_position = spot
+		var mob: Mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 0))
+		mob.set_physics_process(false)
+		await get_tree().process_frame
+
+		_check(CraftingManager.craft(sling, null) and nela.tool_tier == 1, "Nela as %s: the Slingshot is tier 1" % role)
+		var volleys: Array[int] = []
+		for i in 3:
+			volleys.append(_pebbles_from(nela, mob))
+		_check(volleys == [1, 1, 1], "Nela as %s: the Slingshot fires one pebble a shot (%s)" % [role, volleys])
+
+		var shards: int = ResourceManager.get_count(&"glow_shards")
+		_check(CraftingManager.is_offered(double) and CraftingManager.craft(double, null) and nela.tool_tier == 2
+			and ResourceManager.get_count(&"glow_shards") == shards - 2 and not CraftingManager.can_craft(double),
+			"Nela as %s: the Double Sling is tier 2 and spends 2 Glow Shards" % role)
+		volleys.clear()
+		for i in 6:
+			volleys.append(_pebbles_from(nela, mob))
+		_check(volleys == [1, 1, 2, 1, 1, 2], "Nela as %s: every third shot launches two pebbles (%s)" % [role, volleys])
+		await _wait(0.5)
+		mob.free()
+		table.queue_free()
+	GameManager.set_party(&"leo")
+
+
+## How many pebbles one attack by `shooter` at `target` launches.
+func _pebbles_from(shooter: Hero, target: Node3D) -> int:
+	var before: int = _pebble_count()
+	shooter.attack(target)
+	return _pebble_count() - before
+
+
+func _pebble_count() -> int:
+	var count: int = 0
+	for child in get_tree().current_scene.get_children():
+		if child is PebbleShot and not (child as Node).is_queued_for_deletion():
+			count += 1
+	return count
 
 
 ## Run lifecycle 01: a save written before the run session (VERSION 2,

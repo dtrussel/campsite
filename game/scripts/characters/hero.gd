@@ -181,10 +181,18 @@ var has_signature: bool:
 	get:
 		return tool_tier > 0
 
+## With a `double_shot` tier (the Double Sling), every this-many-th shot
+## fires a second pebble.
+const DOUBLE_SHOT_EVERY: int = 3
+## The second pebble of a double shot leaves this long after the first.
+const DOUBLE_SHOT_GAP_SECONDS: float = 0.08
+
 ## The small personal light an owned `night_light` tier gives at night.
 var _tool_light: OmniLight3D = null
 
 var _attack_cooldown_remaining: float = 0.0
+## Pebbles shot this run, for the Double Sling's every-third double.
+var _shot_count: int = 0
 ## What the last attack was aimed at (for `is_attacking`).
 var _attack_target: Node3D = null
 
@@ -201,10 +209,21 @@ func attack(target: Node3D) -> bool:
 	_show_attack(target)
 	attacked.emit(target)
 	if hero != null and hero.ranged:
-		PebbleShot.fire(self, target, get_attack_damage())
+		_shoot(target)
 	else:
 		_swing(target)
 	return true
+
+
+## Fires a pebble at `target`; with the Double Sling every third shot
+## fires a second one too (launched now, so it counts with its shot,
+## and flying a moment after the first).
+func _shoot(target: Node3D) -> void:
+	_shot_count += 1
+	var damage: int = get_attack_damage()
+	PebbleShot.fire(self, target, damage)
+	if has_tool_effect(&"double_shot") and _shot_count % DOUBLE_SHOT_EVERY == 0:
+		PebbleShot.fire(self, target, damage, DOUBLE_SHOT_GAP_SECONDS)
 
 
 ## The damage of one hit now, before per-target perks (Twin Strike).
@@ -444,6 +463,7 @@ func reset() -> void:
 				attack_range /= factor
 		tool_tier = 0
 		_update_tool_light()
+	_shot_count = 0
 	if stats != null:
 		max_hp = stats.base_max_health
 		attack_damage = stats.base_attack_damage

@@ -16,7 +16,8 @@ extends Resource
 ## What an owned tier can add to the hero's hits and body:
 ##   &"burn"        - each hit sets the mob burning (Burn: 1 damage/s, 3 s)
 ##   &"night_light" - a small personal light at night (not near a torch)
-const EFFECTS: Array[StringName] = [&"burn", &"night_light"]
+##   &"double_shot" - every third shot fires two pebbles (Hero.DOUBLE_SHOT_EVERY)
+const EFFECTS: Array[StringName] = [&"burn", &"night_light", &"double_shot"]
 
 ## The CraftingRecipe id that makes this tier.
 @export var recipe: StringName = &""
