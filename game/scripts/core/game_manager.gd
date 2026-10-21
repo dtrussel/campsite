@@ -66,7 +66,9 @@ func _run_selftest() -> void:
 	var recipes: int = CraftingManager.get_recipes().size()
 	var scene: PackedScene = load(GAME_SCENE) as PackedScene
 	var instance: Node = scene.instantiate() if scene != null else null
-	var ok: bool = items >= 11 and buildings >= 2 and recipes >= 1 and instance != null
+	# Floors, not exact counts: the six gathered resources (Playtest 1),
+	# the camp's first buildings and a recipe.
+	var ok: bool = items >= 6 and buildings >= 2 and recipes >= 1 and instance != null
 	print("selftest: items=%d buildings=%d recipes=%d main_scene=%s -> %s" % [
 		items, buildings, recipes, instance != null, "OK" if ok else "FAILED"
 	])
