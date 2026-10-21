@@ -11,6 +11,11 @@ extends Control
 ## are more heroes. Start begins the run; Back returns to the title.
 ##
 ## Keys: Left / Right (or A / D) pick, Enter starts, Esc goes back.
+##
+## The outfit row (journal badges 05) under the goal shows the badge
+## cosmetics (Cosmetics): the picked hero's outfit tints and the tent
+## colours. A locked one is shown dimmed, says which badge unlocks it
+## and can't be picked; a pick is kept in the profile straight away.
 
 const STAGE: Script = preload("res://scripts/ui/hero_stage.gd")
 const CARD_SIZE: Vector2 = Vector2(320, 200)
@@ -50,6 +55,7 @@ func _ready() -> void:
 	add_child(shade)
 
 	_build_header()
+	_build_outfit_row()
 	_build_cards()
 	_build_footer()
 
@@ -267,6 +273,88 @@ func select(index: int, cheer: bool = true) -> void:
 	_companion_portrait.texture = companion.portrait
 	_companion_name.text = companion.display_name
 	_stage.call("select", selected, cheer)
+	_refresh_outfit_row()
+
+
+# --- Outfit row (journal badges 05) ----------------------------------------
+
+var _outfit_buttons: Dictionary = {}  # outfit id -> Button
+var _tent_buttons: Dictionary = {}  # tent id -> Button
+
+
+## The swatch for outfit `id` (tests).
+func outfit_button(id: StringName) -> Button:
+	return _outfit_buttons.get(id)
+
+
+## The swatch for tent colour `id` (tests).
+func tent_button(id: StringName) -> Button:
+	return _tent_buttons.get(id)
+
+
+func _build_outfit_row() -> void:
+	var plate: PanelContainer = PanelContainer.new()
+	var canvas: StyleBox = UiKit.art_style("canvas", 6)
+	canvas.content_margin_left = 16
+	canvas.content_margin_right = 16
+	plate.add_theme_stylebox_override("panel", canvas)
+	_center_top(plate, 128)
+	add_child(plate)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	plate.add_child(row)
+	_outfit_buttons = _swatches(row, "Outfit", Cosmetics.OUTFITS, func(id: StringName) -> void:
+		if Cosmetics.choose_outfit(selected_hero().id, id):
+			_stage.call("set_outfit_tint", selected, Cosmetics.outfit_tint(selected_hero().id))
+		_refresh_outfit_row())
+	var gap: Control = Control.new()
+	gap.custom_minimum_size = Vector2(18, 0)
+	row.add_child(gap)
+	_tent_buttons = _swatches(row, "Tent", Cosmetics.TENTS, func(id: StringName) -> void:
+		Cosmetics.choose_tent(id)
+		_refresh_outfit_row())
+
+
+func _swatches(row: HBoxContainer, word: String, entries: Array[Dictionary], pick: Callable) -> Dictionary:
+	var label: Label = UiKit.label(word, 14, Color(0.4, 0.27, 0.16))
+	label.add_theme_font_override("font", Fx.bold_font())
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(label)
+	var buttons: Dictionary = {}
+	for entry in entries:
+		var id: StringName = entry["id"]
+		var swatch: Button = Button.new()
+		swatch.custom_minimum_size = Vector2(28, 28)
+		swatch.focus_mode = Control.FOCUS_NONE
+		swatch.pressed.connect(func() -> void:
+			AudioManager.play_sfx(&"ui_click")
+			pick.call(id))
+		row.add_child(swatch)
+		buttons[id] = swatch
+	return buttons
+
+
+## Marks the picked swatches and locks the ones whose badge isn't earned.
+func _refresh_outfit_row() -> void:
+	if _outfit_buttons.is_empty():
+		return
+	var hero: StringName = selected_hero().id
+	for entry in Cosmetics.OUTFITS:
+		_style_swatch(_outfit_buttons[entry["id"]], entry, entry["id"] == Cosmetics.outfit_id(hero))
+	for entry in Cosmetics.TENTS:
+		_style_swatch(_tent_buttons[entry["id"]], entry, entry["id"] == Cosmetics.tent_id())
+
+
+func _style_swatch(swatch: Button, entry: Dictionary, picked: bool) -> void:
+	var unlocked: bool = Cosmetics.is_unlocked(entry)
+	# The tint over a mid cloth tone, so white reads as the painted look.
+	var color: Color = Color(0.86, 0.72, 0.52) * (entry["color"] as Color)
+	var border: Color = SELECT_COLOR if picked else UiKit.COLOR_BRASS_DARK
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		swatch.add_theme_stylebox_override(state, UiKit.flat_style(color, border, 3 if picked else 2, 14))
+	swatch.disabled = not unlocked
+	swatch.modulate = Color.WHITE if unlocked else Color(1, 1, 1, 0.35)
+	swatch.tooltip_text = entry["name"] if unlocked else "%s - %s" % [entry["name"], Cosmetics.unlock_hint(entry)]
 
 
 func selected_hero() -> HeroDefinition:

@@ -23,8 +23,9 @@ const OUTLINE_SHADER: Shader = preload("res://shaders/outline.gdshader")
 ## a softer, wrap-lit, matte finish instead of the KayKit treatment.
 const PAINTED_SUFFIX: String = "_painted"
 ## Optional Color metadata on a mesh or any ancestor (up to a few
-## levels) that multiplies the albedo, e.g. to warm up KayKit's teal
-## trees or grey its white rocks.
+## levels) that multiplies the albedo: KayKit and painted materials
+## alike (not glowing ones nor swaying foliage). The badge cosmetics
+## (Cosmetics: hero outfits, tent colours) tint through it.
 const TINT_META: StringName = &"style_tint"
 ## Meta on a model (or any ancestor) whose painted meshes sway in the
 ## wind: trees, pines and bushes (feature 024).
@@ -77,7 +78,7 @@ static func apply_mesh(mesh: MeshInstance3D, profile: String) -> void:
 		if not _cache.has(key):
 			var made: Material
 			if base.resource_name.ends_with(PAINTED_SUFFIX) or base.emission_enabled:
-				made = _make_painted(base, profile)
+				made = _make_painted(base, profile, tint)
 			else:
 				var kaykit: StandardMaterial3D = _make(base, profile, is_eye)
 				kaykit.albedo_color *= tint
@@ -124,7 +125,7 @@ static func _find_tint(node: Node) -> Color:
 ## readable at night, plus the shared painted finish
 ## (painted_common.gdshaderinc). Everything gets a thin ink line: warm
 ## brown on props, darker on heroes, heavy purple on imps.
-static func _make_painted(base: StandardMaterial3D, profile: String) -> Material:
+static func _make_painted(base: StandardMaterial3D, profile: String, tint: Color = Color.WHITE) -> Material:
 	if base.emission_enabled:
 		# Glowing bits (imp eyes, wand star, lantern glass): keep them bright at night.
 		var glow: StandardMaterial3D = base.duplicate() as StandardMaterial3D
@@ -134,7 +135,7 @@ static func _make_painted(base: StandardMaterial3D, profile: String) -> Material
 	var material: ShaderMaterial = ShaderMaterial.new()
 	material.shader = PAINTED_SHADER
 	material.set_shader_parameter("albedo_texture", base.albedo_texture)
-	material.set_shader_parameter("albedo_color", base.albedo_color)
+	material.set_shader_parameter("albedo_color", base.albedo_color * tint)
 	var character: bool = profile in ["hero", "shadow"]
 	material.set_shader_parameter("rim_amount", 0.35 if character else 0.15)
 	if character:

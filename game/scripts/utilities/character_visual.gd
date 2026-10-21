@@ -50,6 +50,10 @@ const TOOL_SCALE: float = 1.9
 @export var prop_attachment: String = ""
 @export var prop_transform: Transform3D = Transform3D.IDENTITY
 @export_enum("hero", "shadow") var style: String = "hero"
+## The model's outfit mesh (the body and clothes, "Leo") and the badge
+## cosmetic tint it wears (Cosmetics; white is the painted look).
+@export var outfit_mesh: String = ""
+@export var outfit_tint: Color = Color.WHITE
 ## Logical state -> clip name. Missing states fall back to "idle".
 ## An optional &"walk" clip is blended between idle and move by speed.
 @export var clips: Dictionary = {
@@ -101,6 +105,23 @@ var _tool_key: StringName = &""
 var steps_puffed: int = 0
 
 
+## Dresses the outfit mesh in `color` now (hero select's preview).
+func set_outfit_tint(color: Color) -> void:
+	outfit_tint = color
+	var mesh: MeshInstance3D = _tag_outfit()
+	if mesh != null:
+		Stylize.apply_mesh(mesh, style)
+
+
+func _tag_outfit() -> MeshInstance3D:
+	if model == null or outfit_mesh == "":
+		return null
+	var mesh: MeshInstance3D = model.find_child(outfit_mesh, true, false) as MeshInstance3D
+	if mesh != null:
+		mesh.set_meta(Stylize.TINT_META, outfit_tint)
+	return mesh
+
+
 func _ready() -> void:
 	if model_scene == null:
 		return
@@ -121,6 +142,7 @@ func _ready() -> void:
 			var prop: Node3D = prop_scene.instantiate() as Node3D
 			prop.transform = prop_transform
 			attachment.add_child(prop)
+	_tag_outfit()
 	Stylize.apply(model, style)
 	_player = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if _player != null:

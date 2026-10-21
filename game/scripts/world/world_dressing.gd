@@ -399,6 +399,10 @@ func _build_haunted_edges() -> void:
 
 func _build_camp() -> void:
 	var tent: Node3D = _spawn_model("custom/tent.glb", Vector3(-3.4, 0, -2.7), 1.25, deg_to_rad(125.0))
+	if tent != null:
+		# The badge-unlocked tent colour (Cosmetics), styled a frame later.
+		tent.set_meta(Stylize.TINT_META, Cosmetics.tent_tint())
+		tent.add_to_group(&"tent")
 	_add_blocker(tent, Vector3(2.8, 2.0, 2.4))
 	var logs: Node3D = _spawn_model("custom/woodpile.glb", Vector3(3.0, 0, -2.5), 1.0, deg_to_rad(-25.0))
 	_add_blocker(logs, Vector3(1.3, 0.8, 0.8))
@@ -757,10 +761,8 @@ func _spawn_model(path: String, position: Vector3, uniform_scale: float, yaw: fl
 	node.position = position
 	node.rotation.y = yaw
 	node.scale = Vector3.ONE * uniform_scale
-	if path.contains("hill") or path.contains("mountain"):
-		node.set_meta(Stylize.TINT_META, Stylize.TINT_FOLIAGE)
-	elif path.contains("rock"):
-		node.set_meta(Stylize.TINT_META, Stylize.TINT_ROCK)
+	# Rocks and hills keep their painted colours (TINT_ROCK / TINT_FOLIAGE
+	# were for KayKit's models, and Stylize now tints painted ones too).
 	if (path.contains("tree_") or path.contains("pine_") or path.contains("bush")) and not path.contains("dead"):
 		node.set_meta(Stylize.FOLIAGE_META, true)
 	add_child(node)
