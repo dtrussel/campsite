@@ -149,6 +149,12 @@ class AbilitySlot extends Control:
 			if value != highlight:
 				highlight = value
 				queue_redraw()
+	## Small ember dots along the bottom edge (the attack slot's tool tier).
+	var pips: int = 0:
+		set(value):
+			if value != pips:
+				pips = value
+				queue_redraw()
 	var _font: Font = null
 	var _frame: StyleBox = null
 
@@ -192,6 +198,10 @@ class AbilitySlot extends Control:
 			draw_style_box(tab, key_rect)
 			draw_string(_font, Vector2(key_rect.position.x + 5, key_rect.position.y + 12.5), key_text,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UiKit.COLOR_INK)
+		for i in range(pips):
+			var pip: Vector2 = Vector2(8.0 + 8.0 * i, size.y - 7.0)
+			draw_circle(pip, 3.6, UiKit.COLOR_INK)
+			draw_circle(pip, 2.5, UiKit.COLOR_EMBER)
 		if count_text != "":
 			var text_size: Vector2 = _font.get_string_size(count_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15)
 			var pos: Vector2 = Vector2(size.x - text_size.x - 4, size.y - 5)

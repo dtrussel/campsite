@@ -40,8 +40,12 @@ func _ready() -> void:
 	SaveManager.delete_save()
 	Profile.set_path(TEST_PROFILE_PATH)
 	Profile.delete()
+	# The smoke run plays a debug build, which unlocks every chapter.
+	Profile.unlock_all_chapters = false
 	await _run_story_scenario()
+	await _check_title_chapter_2(false, "the title locks Chapter 2 before Chapter 1 is won")
 	await _run_win_scenario()
+	await _run_chapter_lock_scenario()
 	await _run_loss_scenario()
 	await _run_continue_scenario()
 	await _run_blueprint_save_scenario()
@@ -60,6 +64,8 @@ func _ready() -> void:
 	await _run_hero_progress_scenario()
 	await _run_hero_gather_scenario()
 	await _run_hero_attack_scenario()
+	await _run_tool_tiers_scenario()
+	await _run_double_sling_scenario()
 	await _run_old_save_scenario()
 	await _run_lifecycle_02_scenario()
 	await _run_world_save_scenario()
@@ -69,6 +75,82 @@ func _ready() -> void:
 	StoryLibrary.forget_progress()
 	Profile.delete()
 	_finish()
+
+
+## Journal badges 01: winning Chapter 1 unlocks Chapter 2 on the title,
+## and it stays unlocked after a restart (the profile read again from
+## its file). A profile whose story.cfg import found Chapter 2 played
+## opens with it unlocked. Hero select opens on the last hero picked,
+## after a restart too. Delete profile asks first, then relocks Chapter
+## 2 and leaves audio settings alone.
+func _run_chapter_lock_scenario() -> void:
+	print("smoke: --- chapter lock scenario ---")
+	await _close_main()
+	await _check_title_chapter_2(true, "the title unlocks Chapter 2 once Chapter 1 is won")
+	Profile.reload()
+	await _check_title_chapter_2(true, "Chapter 2 stays unlocked after a restart")
+
+	# The last hero picked, kept in the profile.
+	var screen: Node = (load("res://scenes/ui/HeroSelect.tscn") as PackedScene).instantiate()
+	add_child(screen)
+	await get_tree().process_frame
+	screen.call("select", 1)
+	GameManager.record_hero_pick((screen.call("selected_hero") as HeroDefinition).id)
+	screen.queue_free()
+	GameManager.set_party(&"leo")  # what a fresh start would hold
+	Profile.reload()
+	screen = (load("res://scenes/ui/HeroSelect.tscn") as PackedScene).instantiate()
+	add_child(screen)
+	await get_tree().process_frame
+	_check((screen.call("selected_hero") as HeroDefinition).id == &"nela",
+		"hero select opens on the last hero picked (Nela), after a restart too")
+	screen.queue_free()
+	await get_tree().process_frame
+
+	# Delete profile, from the settings in the pause menu: it asks first.
+	var music: float = AudioManager.music_volume
+	var menu: Node = (load("res://scenes/ui/PauseMenu.tscn") as PackedScene).instantiate()
+	add_child(menu)
+	await get_tree().process_frame
+	(menu.get("delete_profile_button") as Button).pressed.emit()
+	var confirm: ConfirmationDialog = menu.get("delete_profile_confirm") as ConfirmationDialog
+	_check(confirm != null and confirm.visible and Profile.is_chapter_unlocked(2),
+		"Delete profile asks first and deletes nothing yet")
+	confirm.canceled.emit()
+	_check(Profile.is_chapter_unlocked(2), "cancelling keeps the profile")
+	(menu.get("delete_profile_button") as Button).pressed.emit()
+	confirm.confirmed.emit()
+	menu.queue_free()
+	await _check_title_chapter_2(false, "Delete profile relocks Chapter 2")
+	_check(is_equal_approx(AudioManager.music_volume, music), "Delete profile leaves the audio settings alone")
+	_check(not Profile.has_value(Profile.LAST_HERO), "Delete profile forgets the last hero")
+
+	# A player the story.cfg import marked as having played Chapter 2.
+	var old_story: String = "user://smoke_old_story.cfg"
+	var old: ConfigFile = ConfigFile.new()
+	old.set_value("seen", "intro.c2", true)
+	old.save(old_story)
+	var imported_path: String = "user://smoke_imported_profile.json"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(imported_path))
+	Profile.set_path(imported_path, old_story)
+	await _check_title_chapter_2(true, "an imported Chapter 2 player sees Chapter 2 unlocked on first launch")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(old_story))
+	Profile.delete()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(imported_path))
+	Profile.set_path(TEST_PROFILE_PATH)
+	Profile.delete()
+
+
+## Opens the title screen and checks whether its Chapter 2 button can be
+## pressed.
+func _check_title_chapter_2(unlocked: bool, label: String) -> void:
+	var title: Node = (load("res://scenes/ui/TitleScreen.tscn") as PackedScene).instantiate()
+	add_child(title)
+	await get_tree().process_frame
+	var button: Button = title.call("chapter_button", 2) as Button
+	_check(button != null and button.disabled != unlocked and Profile.is_chapter_unlocked(2) == unlocked, label)
+	title.queue_free()
+	await get_tree().process_frame
 
 
 ## Feature 045: a half-built blueprint survives Continue as a blueprint,
@@ -1076,7 +1158,7 @@ func _run_continue_scenario() -> void:
 	_check(fire.has_hearth == bool(data["campfire"]["hearth"]) and fire.current_hp == int(data["campfire"]["hp"]),
 		"campfire restored (%d HP, hearth %s)" % [fire.current_hp, fire.has_hearth])
 	var player: Node = get_tree().get_first_node_in_group("player")
-	_check(ProgressionManager.get_xp(player) == int(data["player"]["xp"]) and bool(player.get("has_signature")) == bool(data["player"]["signature"]),
+	_check(ProgressionManager.get_xp(player) == int(data["player"]["xp"]) and int(player.get("tool_tier")) == int(data["player"]["tier"]),
 		"Leo's progress restored (level %d)" % ProgressionManager.get_level(player))
 	_check(int(GameManager.stats[&"nights_survived"]) == 1, "stats restored (1 night survived)")
 
@@ -1143,7 +1225,7 @@ func _run_hero_scenario() -> void:
 	var table: Building = _spawn_building(&"crafting_table", Vector3(5, 0, -6))
 	var reach: float = (player as Hero).get_attack_range()
 	_check(CraftingManager.craft(_recipe(&"slingshot"), player)
-		and is_equal_approx((player as Hero).get_attack_range(), reach * nela.signature_range_factor), "the slingshot goes to Nela (the player)")
+		and is_equal_approx((player as Hero).get_attack_range(), reach * nela.tier(1).range_factor), "the slingshot goes to Nela (the player)")
 	var damage: int = (companion as Hero).get_attack_damage()
 	_check(CraftingManager.craft(_recipe(&"sturdy_stick"), player)
 		and (companion as Hero).get_attack_damage() == damage + 2, "the sturdy stick goes to Leo (the companion)")
@@ -2498,13 +2580,228 @@ func _check_hero_attack(who: Hero) -> void:
 	await _perk_04_clear_mobs()
 
 	# The signature tool: its damage bonus and its range factor, by role.
-	var factor: float = definition.companion_signature_range_factor if as_companion else definition.signature_range_factor
+	var first: ToolTier = definition.tier(1)
+	var factor: float = first.companion_range_factor if as_companion else first.range_factor
 	who.apply_signature()
-	_check(who.has_signature and who.get_attack_damage() == damage + definition.signature_damage_bonus
+	_check(who.has_signature and who.tool_tier == 1 and who.get_attack_damage() == damage + first.damage_bonus
 		and is_equal_approx(who.get_attack_range(), reach * factor),
-		"%s: the %s makes damage %d and reach %.2f" % [label, definition.signature_label, who.get_attack_damage(), who.get_attack_range()])
+		"%s: the %s makes damage %d and reach %.2f" % [label, first.label, who.get_attack_damage(), who.get_attack_range()])
 	who.apply_signature()
-	_check(who.get_attack_damage() == damage + definition.signature_damage_bonus, "%s: the signature applies once" % label)
+	_check(who.tool_tier == 1 and who.get_attack_damage() == damage + first.damage_bonus, "%s: the signature applies once" % label)
+
+
+## Tool tiers 01: Leo's tier path, as the player's hero and as the
+## companion. The Ember Stick (tier 2) is offered only once the Sturdy
+## Stick (tier 1) is owned, costs 2 Glow Shards, its hits burn 3 times,
+## it lights Leo at night, the HUD's attack slot shows the tier, and the
+## save keeps the tier (old `signature: true` saves load as tier 1).
+func _run_tool_tiers_scenario() -> void:
+	print("smoke: --- tool tiers scenario ---")
+	for party_hero in [&"leo", &"nela"]:
+		GameManager.set_party(party_hero)
+		await _start_fresh_run()
+		var leo: Hero = HeroRoster.node_for(get_tree(), &"leo") as Hero
+		var role: String = "player" if party_hero == &"leo" else "companion"
+		for hero in Party.heroes():
+			(hero as Node).set_physics_process(false)
+		for building in get_tree().current_scene.find_children("*", "Building", true, false):
+			building.set_physics_process(false)
+		var table: Building = _spawn_building(&"crafting_table", leo.global_position + Vector3(4, 0, -4))
+		for item in [&"wood", &"scrap", &"clay"]:
+			ResourceManager.add(item, 10)
+		ResourceManager.add(&"glow_shards", 5)
+		var sturdy: CraftingRecipe = _recipe(&"sturdy_stick")
+		var ember: CraftingRecipe = _recipe(&"ember_stick")
+		_check(ember != null and not CraftingManager.is_offered(ember) and not CraftingManager.can_craft(ember)
+			and CraftingManager.is_offered(sturdy), "Leo as %s: the Ember Stick is not offered before the Sturdy Stick" % role)
+		var damage: int = leo.get_attack_damage()
+		_check(CraftingManager.craft(sturdy, null) and leo.tool_tier == 1 and leo.get_attack_damage() == damage + 2,
+			"Leo as %s: the Sturdy Stick is tier 1 (+2 damage)" % role)
+		_check(CraftingManager.is_offered(ember) and CraftingManager.can_craft(ember) and not CraftingManager.can_craft(sturdy),
+			"Leo as %s: now the Ember Stick is offered, and the Sturdy Stick is done" % role)
+		var shards: int = ResourceManager.get_count(&"glow_shards")
+		_check(CraftingManager.craft(ember, null) and leo.tool_tier == 2 and ResourceManager.get_count(&"glow_shards") == shards - 2
+			and leo.get_attack_damage() == damage + 2 and not CraftingManager.can_craft(ember),
+			"Leo as %s: the Ember Stick is tier 2 and spends 2 Glow Shards (%d left)" % [role, ResourceManager.get_count(&"glow_shards")])
+		if party_hero == &"leo":
+			await get_tree().process_frame
+			var hud: Node = get_tree().get_first_node_in_group("hud")
+			var slots: Dictionary = hud.get("_slots") if hud != null else {}
+			var slot: HudWidgets.AbilitySlot = slots.get(&"attack") as HudWidgets.AbilitySlot
+			_check(slot != null and slot.pips == 2, "the HUD's attack slot shows tier pips (%d)" % (slot.pips if slot != null else -1))
+
+		# A hit burns: 1 damage a second, 3 ticks, then it is out.
+		var beast_def: MobDefinition = load("res://resources/mobs/bramble_beast.tres") as MobDefinition
+		var spot: Vector3 = _campfire().global_position + Vector3(9, 0, 0)
+		leo.global_position = spot
+		var mob: Mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 0))
+		mob.set_physics_process(false)
+		await get_tree().process_frame
+		var dealt: int = HeroHits.strike(leo, mob, leo.get_attack_damage())
+		var after_hit: int = mob.current_hp
+		_check(dealt > 0 and Burn.on(mob) != null, "Leo as %s: the Ember Stick's hit sets the mob burning" % role)
+		await _wait(Burn.SECONDS + 0.5)
+		_check(after_hit - mob.current_hp == Burn.TICKS * Burn.DAMAGE and Burn.on(mob) == null,
+			"Leo as %s: the burn ticks 3 times (%d HP)" % [role, after_hit - mob.current_hp])
+		var burnt: int = mob.current_hp
+		await _wait(1.5)
+		_check(mob.current_hp == burnt, "Leo as %s: and then it is out" % role)
+		mob.free()
+
+		# Tier 3, the Blaze Stick: a hit's burn splashes onto a mob right
+		# next to the target, but not onto one further away.
+		var blaze: CraftingRecipe = _recipe(&"blaze_stick")
+		ResourceManager.add(&"glow_shards", 4)
+		shards = ResourceManager.get_count(&"glow_shards")
+		_check(blaze != null and CraftingManager.is_offered(blaze) and CraftingManager.craft(blaze, null) and leo.tool_tier == 3
+			and ResourceManager.get_count(&"glow_shards") == shards - 4 and leo.get_attack_damage() == damage + 2,
+			"Leo as %s: the Blaze Stick is tier 3 and spends 4 Glow Shards" % role)
+		var target: Mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 0))
+		var beside: Mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 1.0))
+		var away: Mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 4.0))
+		for each in [target, beside, away]:
+			(each as Mob).set_physics_process(false)
+		await get_tree().process_frame
+		var beside_hp: int = beside.current_hp
+		HeroHits.strike(leo, target, leo.get_attack_damage())
+		_check(Burn.on(target) != null and Burn.on(beside) != null and Burn.on(away) == null and beside.current_hp == beside_hp,
+			"Leo as %s: the Blaze Stick's burn splashes onto the mob beside the target, not the one further off" % role)
+		await _wait(Burn.SECONDS + 0.5)
+		_check(beside_hp - beside.current_hp == Burn.TICKS * Burn.DAMAGE,
+			"Leo as %s: the splashed burn ticks 3 times (%d HP)" % [role, beside_hp - beside.current_hp])
+		for each in [target, beside, away]:
+			(each as Mob).free()
+
+		# The personal light: off by day, on at night, not inside a torch.
+		leo.call("_update_tool_light")
+		_check(not leo.is_tool_light_on(), "Leo as %s: no tool light by day" % role)
+		while not TimeManager.is_night():
+			TimeManager.skip_phase()
+		leo.call("_update_tool_light")
+		_check(leo.is_tool_light_on() and leo.get_tool_light_range() > Hero.TOOL_LIGHT_RANGE,
+			"Leo as %s: the Blaze Stick lights him at night, a little wider (%.1f m)" % [role, leo.get_tool_light_range()])
+		var torch: Torch = Torch.SCENE.instantiate() as Torch
+		get_tree().current_scene.add_child(torch)
+		torch.global_position = leo.global_position
+		await get_tree().process_frame
+		leo.call("_update_tool_light")
+		_check(not leo.is_tool_light_on(), "Leo as %s: the light doesn't stack with a torch" % role)
+		torch.queue_free()
+		table.queue_free()
+
+		# The save holds the tier; Continue brings Leo back at tier 2.
+		var data: Dictionary = SaveManager.parse(SaveManager.serialize(RunSession.snapshot()))
+		var key: String = leo.save_key()
+		_check(int((data[key] as Dictionary).get("tier", -1)) == 3, "Leo as %s: the save holds tier 3" % role)
+		await _continue_from(data)
+		leo = HeroRoster.node_for(get_tree(), &"leo") as Hero
+		_check(leo.tool_tier == 3 and leo.get_attack_damage() == damage + 2 and leo.has_tool_effect(&"burn_splash"),
+			"Leo as %s: Continue brings back the Blaze Stick" % role)
+		# An old save: `signature: true` and no tier is tier 1.
+		(data[key] as Dictionary).erase("tier")
+		(data[key] as Dictionary)["signature"] = true
+		await _continue_from(data)
+		leo = HeroRoster.node_for(get_tree(), &"leo") as Hero
+		_check(leo.tool_tier == 1 and leo.get_attack_damage() == damage + 2 and not leo.has_tool_effect(&"burn"),
+			"Leo as %s: an old save with signature: true loads as tier 1" % role)
+	GameManager.set_party(&"leo")
+
+
+## Tool tiers 02: Nela's Double Sling, as the player's hero and as the
+## companion. It is offered only once the Slingshot (tier 1) is owned,
+## costs 2 Glow Shards, and every third shot launches two pebbles.
+## Tool tiers 03: then the Glow Sling (tier 3, 4 Glow Shards), whose
+## pebble pierces on to the mob behind its target and lights what it hits.
+func _run_double_sling_scenario() -> void:
+	print("smoke: --- double sling scenario ---")
+	for party_hero in [&"nela", &"leo"]:
+		GameManager.set_party(party_hero)
+		await _start_fresh_run()
+		var nela: Hero = HeroRoster.node_for(get_tree(), &"nela") as Hero
+		var role: String = "player" if party_hero == &"nela" else "companion"
+		for hero in Party.heroes():
+			(hero as Node).set_physics_process(false)
+		for building in get_tree().current_scene.find_children("*", "Building", true, false):
+			building.set_physics_process(false)
+		var table: Building = _spawn_building(&"crafting_table", nela.global_position + Vector3(4, 0, -4))
+		for item in [&"wood", &"scrap", &"clay"]:
+			ResourceManager.add(item, 10)
+		ResourceManager.add(&"glow_shards", 5)
+		var sling: CraftingRecipe = _recipe(&"slingshot")
+		var double: CraftingRecipe = _recipe(&"double_sling")
+		_check(double != null and not CraftingManager.is_offered(double) and not CraftingManager.can_craft(double),
+			"Nela as %s: the Double Sling is not offered before the Slingshot" % role)
+		if double == null:
+			table.queue_free()
+			continue
+		var beast_def: MobDefinition = load("res://resources/mobs/bramble_beast.tres") as MobDefinition
+		var spot: Vector3 = _campfire().global_position + Vector3(9, 0, 0)
+		nela.global_position = spot
+		var mob: Mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 0))
+		mob.set_physics_process(false)
+		await get_tree().process_frame
+
+		_check(CraftingManager.craft(sling, null) and nela.tool_tier == 1, "Nela as %s: the Slingshot is tier 1" % role)
+		var volleys: Array[int] = []
+		for i in 3:
+			volleys.append(_pebbles_from(nela, mob))
+		_check(volleys == [1, 1, 1], "Nela as %s: the Slingshot fires one pebble a shot (%s)" % [role, volleys])
+
+		var shards: int = ResourceManager.get_count(&"glow_shards")
+		_check(CraftingManager.is_offered(double) and CraftingManager.craft(double, null) and nela.tool_tier == 2
+			and ResourceManager.get_count(&"glow_shards") == shards - 2 and not CraftingManager.can_craft(double),
+			"Nela as %s: the Double Sling is tier 2 and spends 2 Glow Shards" % role)
+		volleys.clear()
+		for i in 6:
+			volleys.append(_pebbles_from(nela, mob))
+		_check(volleys == [1, 1, 2, 1, 1, 2], "Nela as %s: every third shot launches two pebbles (%s)" % [role, volleys])
+		await _wait(0.5)
+		mob.free()
+
+		# Tier 3, the Glow Sling: a pebble pierces on to the next mob in
+		# its line (not to one off to the side) and briefly lights its target.
+		var glow: CraftingRecipe = _recipe(&"glow_sling")
+		ResourceManager.add(&"glow_shards", 4)
+		shards = ResourceManager.get_count(&"glow_shards")
+		_check(glow != null and CraftingManager.is_offered(glow) and CraftingManager.craft(glow, null) and nela.tool_tier == 3
+			and ResourceManager.get_count(&"glow_shards") == shards - 4 and not CraftingManager.can_craft(glow),
+			"Nela as %s: the Glow Sling is tier 3 and spends 4 Glow Shards" % role)
+		var front: Mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 0))
+		var behind: Mob = _spawn_mob(beast_def, spot + Vector3(3.0, 0, 0))
+		var aside: Mob = _spawn_mob(beast_def, spot + Vector3(3.0, 0, 2.5))
+		for each in [front, behind, aside]:
+			(each as Mob).set_physics_process(false)
+		await get_tree().process_frame
+		var hp: Array[int] = [front.current_hp, behind.current_hp, aside.current_hp]
+		_check(_pebbles_from(nela, front) == 1, "Nela as %s: the Glow Sling's shot is one pebble" % role)
+		await _wait(PebbleShot.FLIGHT_SECONDS + 0.15)
+		_check(front.current_hp < hp[0] and GlowMark.on(front) != null,
+			"Nela as %s: the Glow Sling's pebble hits and lights its target" % role)
+		await _wait(PebbleShot.FLIGHT_SECONDS + 0.3)
+		_check(behind.current_hp < hp[1] and aside.current_hp == hp[2],
+			"Nela as %s: the pebble pierces on to the mob behind, not the one aside (%d, %d HP lost)"
+				% [role, hp[1] - behind.current_hp, hp[2] - aside.current_hp])
+		await _wait(GlowMark.SECONDS + 0.2)
+		_check(GlowMark.on(front) == null, "Nela as %s: the glow fades" % role)
+		for each in [front, behind, aside]:
+			(each as Mob).free()
+		table.queue_free()
+	GameManager.set_party(&"leo")
+
+
+## How many pebbles one attack by `shooter` at `target` launches.
+func _pebbles_from(shooter: Hero, target: Node3D) -> int:
+	var before: int = _pebble_count()
+	shooter.attack(target)
+	return _pebble_count() - before
+
+
+func _pebble_count() -> int:
+	var count: int = 0
+	for child in get_tree().current_scene.get_children():
+		if child is PebbleShot and not (child as Node).is_queued_for_deletion():
+			count += 1
+	return count
 
 
 ## Run lifecycle 01: a save written before the run session (VERSION 2,
@@ -2564,7 +2861,7 @@ func _run_old_save_scenario() -> void:
 		"the half-built watch post comes back as a blueprint at 50%")
 	_check(GameManager.hero_id == &"leo" and GameManager.companion_id == &"nela"
 		and player.is_in_group(HeroRoster.group_for(&"leo")), "the party comes back: Leo plays, Nela tags along")
-	_check(ProgressionManager.get_xp(player) == int(data["player"]["xp"]) and player.has_signature
+	_check(ProgressionManager.get_xp(player) == int(data["player"]["xp"]) and player.tool_tier == 1
 		and PerkManager.perks_of(player) == [&"ember_heart"], "Leo's XP, sturdy stick and Ember Heart come back")
 	_check(ProgressionManager.get_xp(companion) == int(data["sibling"]["xp"]) and not companion.has_signature
 		and PerkManager.perks_of(companion) == [&"quick_hands"]
@@ -2583,10 +2880,15 @@ func _run_old_save_scenario() -> void:
 	_check(torch != null and int(torch.get("dawns_to_burn")) == int(torch_entry["dawns"])
 		and is_equal_approx(float(torch.get("radius")), float(torch_entry["radius"])),
 		"the Ember Heart torch comes back with its dawn left and its %.1f m ring" % float(torch_entry["radius"]))
-	# Saved again, every field of the old save is still there.
+	# Saved again, every field of the old save is still there (tool tiers:
+	# a hero's `signature` flag is saved as its `tier`).
 	var lost: Array[String] = []
 	for key in data.keys():
 		var expected: Variant = int(data["day"]) + 1 if key == "day" else data[key]
+		if expected is Dictionary and (expected as Dictionary).has("signature"):
+			expected = (expected as Dictionary).duplicate(true)
+			expected["tier"] = 1.0 if bool(expected["signature"]) else 0.0  # JSON numbers are floats
+			expected.erase("signature")
 		if not again.has(key) or again[key] != expected:
 			lost.append(key)
 	_check(lost.is_empty(), "saving the continued run keeps every field of the old save (changed: %s)" % [lost])
@@ -2698,12 +3000,12 @@ func _run_world_save_scenario() -> void:
 	var player_damage: int = player.attack_damage
 	var companion_damage: int = companion.attack_damage
 	var data: Dictionary = SaveManager.parse(SaveManager.serialize(RunSession.snapshot()))
-	_check(not data.is_empty() and (data["player"] as Dictionary).has("xp") and (data["player"] as Dictionary).has("signature")
-		and (data["sibling"] as Dictionary).has("task"), "the save keeps each hero's entry whole (xp, signature, task)")
+	_check(not data.is_empty() and (data["player"] as Dictionary).has("xp") and int((data["player"] as Dictionary).get("tier", -1)) == 1
+		and (data["sibling"] as Dictionary).has("task"), "the save keeps each hero's entry whole (xp, tool tier, task)")
 	var legacy: Dictionary = data.duplicate(true)
 	for entry in legacy["buildings"]:
 		(entry as Dictionary).erase("paid")
-	(legacy["player"] as Dictionary).erase("signature")
+	(legacy["player"] as Dictionary).erase("tier")
 	(legacy["player"] as Dictionary)["stick"] = true
 	await _continue_from(data)
 	player = get_tree().get_first_node_in_group("player") as Hero
@@ -2746,7 +3048,7 @@ func _run_world_save_scenario() -> void:
 	loaded_unstarted = _building_near(base + Vector3(5, 0, -6))
 	wood_before = ResourceManager.get_count(&"wood")
 	var price: int = int(BuildManager.cost_of(fence_def).get(&"wood", 0))
-	_check(player.has_signature and loaded_unstarted != null and BuildManager.remove_blueprint(loaded_unstarted)
+	_check(player.tool_tier == 1 and loaded_unstarted != null and BuildManager.remove_blueprint(loaded_unstarted)
 		and ResourceManager.get_count(&"wood") - wood_before == price,
 		"an older save: the stick counts as the signature tool, and the refund is today's price (%d Wood)" % price)
 	await _start_fresh_run()

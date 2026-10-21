@@ -132,12 +132,13 @@ func _process(_delta: float) -> void:
 			_refresh()  # the campfire's HP can change while it is open
 
 
-## Shows the current station's recipes (campfire or table) and enables
+## Shows the current station's recipes (campfire or table) that are on
+## offer (a tool tier once the tier before it is owned) and enables
 ## the ones that can be made right now.
 func _refresh() -> void:
 	for row in _rows:
 		var recipe: CraftingRecipe = row["recipe"]
-		(row["row"] as Control).visible = recipe.station == _station
+		(row["row"] as Control).visible = recipe.station == _station and CraftingManager.is_offered(recipe)
 		(row["button"] as Button).disabled = not CraftingManager.can_craft(recipe)
 	_header_icon.texture = Fx.icon("table" if _station == CraftingRecipe.STATION_TABLE else "campfire")
 	_table_hint.visible = _station == CraftingRecipe.STATION_CAMPFIRE and not CraftingManager.has_table()

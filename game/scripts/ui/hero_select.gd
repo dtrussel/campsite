@@ -55,8 +55,9 @@ func _ready() -> void:
 
 	var heroes: Array[HeroDefinition] = HeroRoster.all()
 	var start_index: int = 0
+	var last: StringName = GameManager.last_hero_pick()
 	for i in heroes.size():
-		if heroes[i].id == GameManager.hero_id:
+		if heroes[i].id == last:
 			start_index = i
 	select(start_index, false)
 	_start.grab_focus()
@@ -172,7 +173,8 @@ func _card(hero: HeroDefinition, index: int) -> Button:
 	var signature: HBoxContainer = HBoxContainer.new()
 	signature.add_theme_constant_override("separation", 6)
 	signature.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var icon_path: String = "res://assets/icons/%s.png" % hero.signature_icon
+	var first: ToolTier = hero.tier(1)
+	var icon_path: String = "res://assets/icons/%s.png" % (first.icon if first != null else "")
 	if ResourceLoader.exists(icon_path):
 		var icon: TextureRect = TextureRect.new()
 		icon.texture = load(icon_path) as Texture2D
@@ -180,7 +182,7 @@ func _card(hero: HeroDefinition, index: int) -> Button:
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		signature.add_child(icon)
-	var craft: Label = UiKit.label("Craft: %s" % hero.signature_label, 14, UiKit.COLOR_GOLD_LIGHT)
+	var craft: Label = UiKit.label("Craft: %s" % (first.label if first != null else "-"), 14, UiKit.COLOR_GOLD_LIGHT)
 	craft.add_theme_font_override("font", Fx.bold_font())
 	signature.add_child(craft)
 	signature.tooltip_text = "Signature craft at the Crafting Table"

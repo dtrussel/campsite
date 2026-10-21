@@ -150,7 +150,8 @@ func _on_down_changed(_is_down: bool) -> void:
 
 
 # --- Attack --------------------------------------------------------------
-# Attacking a target, reach, readiness, damage and the signature tool.
+# Attacking a target, reach, readiness, damage and the signature tool's
+# tiers (tool tiers): their bonuses, the burn and the night light.
 # The module owns the cooldown and the melee vs pebble branch; HeroHits
 # stays the perk math underneath (every hit goes through its strike()).
 # The role adds the feel: `_show_attack` (the swing animation) and
@@ -170,14 +171,31 @@ signal attacked(target: Node3D)
 ## Seconds between attacks, from the definition by role.
 @export var attack_cooldown_seconds: float = 0.65
 
-## Tool tiers: the tier of the hero's tool (0: none yet). Unused until
-## the tool tiers feature.
+## The tier of the hero's signature tool (0: none yet), made at the
+## Crafting Table one tier at a time, per run. Read-only outside: raise
+## it with `set_tool_tier`. Save and crafting read it by name.
 var tool_tier: int = 0
-## The hero's signature tool (Leo's Sturdy Stick, Nela's Slingshot) from
-## the Crafting Table, once per run. Save and crafting read it by name.
-var has_signature: bool = false
+## True once the hero owns tier 1 of their signature tool (Leo's Sturdy
+## Stick, Nela's Slingshot).
+var has_signature: bool:
+	get:
+		return tool_tier > 0
+
+## With a `double_shot` tier (the Double Sling), every this-many-th shot
+## fires a second pebble.
+const DOUBLE_SHOT_EVERY: int = 3
+## The second pebble of a double shot leaves this long after the first.
+const DOUBLE_SHOT_GAP_SECONDS: float = 0.08
+## The night light's reach in metres, and with a `bright_light` tier.
+const TOOL_LIGHT_RANGE: float = 3.0
+const TOOL_LIGHT_BRIGHT_RANGE: float = 4.2
+
+## The small personal light an owned `night_light` tier gives at night.
+var _tool_light: OmniLight3D = null
 
 var _attack_cooldown_remaining: float = 0.0
+## Pebbles shot this run, for the Double Sling's every-third double.
+var _shot_count: int = 0
 ## What the last attack was aimed at (for `is_attacking`).
 var _attack_target: Node3D = null
 
@@ -194,10 +212,21 @@ func attack(target: Node3D) -> bool:
 	_show_attack(target)
 	attacked.emit(target)
 	if hero != null and hero.ranged:
-		PebbleShot.fire(self, target, get_attack_damage())
+		_shoot(target)
 	else:
 		_swing(target)
 	return true
+
+
+## Fires a pebble at `target`; with the Double Sling every third shot
+## fires a second one too (launched now, so it counts with its shot,
+## and flying a moment after the first).
+func _shoot(target: Node3D) -> void:
+	_shot_count += 1
+	var damage: int = get_attack_damage()
+	PebbleShot.fire(self, target, damage)
+	if has_tool_effect(&"double_shot") and _shot_count % DOUBLE_SHOT_EVERY == 0:
+		PebbleShot.fire(self, target, damage, DOUBLE_SHOT_GAP_SECONDS)
 
 
 ## The damage of one hit now, before per-target perks (Twin Strike).
@@ -228,24 +257,65 @@ func is_attacking() -> bool:
 	return _attack_cooldown_remaining > 0.0 and is_instance_valid(_attack_target)
 
 
-## Applies the signature tool, once per run: the definition's damage
-## bonus, and its range factor for this role (the companion reads
-## `companion_signature_range_factor`).
+## Gives the hero tier 1 of their signature tool (see `set_tool_tier`).
 func apply_signature() -> void:
-	if has_signature or hero == null:
+	set_tool_tier(1)
+
+
+## Raises the signature tool to `tier`, adding each new tier's damage
+## bonus and its range factor for this role (the companion reads
+## `companion_range_factor`). A tier the hero already owns, or one past
+## the hero's last, changes nothing. `quiet` skips the float text (a
+## save being restored).
+func set_tool_tier(tier: int, quiet: bool = false) -> void:
+	if hero == null:
 		return
-	has_signature = true
-	attack_damage += hero.signature_damage_bonus
-	attack_range *= hero.companion_signature_range_factor if _is_companion_role() else hero.signature_range_factor
-	Fx.float_text(self, "%s!" % hero.signature_label.to_upper(), Color(1.0, 0.85, 0.4), 2.8)
-	Fx.burst(&"level_up", global_position)
+	tier = mini(tier, hero.tier_count())
+	if tier <= tool_tier:
+		return
+	for n in range(tool_tier + 1, tier + 1):
+		var step: ToolTier = hero.tier(n)
+		attack_damage += step.damage_bonus
+		attack_range *= step.companion_range_factor if _is_companion_role() else step.range_factor
+	tool_tier = tier
+	_update_tool_light()
+	if not quiet:
+		Fx.float_text(self, "%s!" % hero.tier(tier).label.to_upper(), Color(1.0, 0.85, 0.4), 2.8)
+		Fx.burst(&"level_up", global_position)
 
 
-## Tool tiers: HeroHits.strike calls this for every hit the hero lands
-## (a swing, a Big Swing extra, a pebble, a Ricochet bounce), after the
-## damage. Empty until the tool tiers feature (burn, double shot, pierce).
-func on_attack_hit(_target: Node, _damage: int) -> void:
-	pass
+## True if a tier the hero owns has `effect` (ToolTier.EFFECTS).
+func has_tool_effect(effect: StringName) -> bool:
+	if hero == null:
+		return false
+	for n in range(1, tool_tier + 1):
+		if hero.tier(n).effects.has(effect):
+			return true
+	return false
+
+
+## How far the tool's night light reaches: a little further with a
+## `bright_light` tier (the Blaze Stick).
+func get_tool_light_range() -> float:
+	return TOOL_LIGHT_BRIGHT_RANGE if has_tool_effect(&"bright_light") else TOOL_LIGHT_RANGE
+
+
+## True while the Ember Stick's personal light is lit.
+func is_tool_light_on() -> bool:
+	return _tool_light != null and _tool_light.visible
+
+
+## HeroHits.strike calls this for every hit the hero lands (a swing, a
+## Big Swing extra, a pebble, a Ricochet bounce), after the damage: the
+## tool's on-hit effects (the Ember Stick's burn, the Blaze Stick's
+## splash onto the mobs beside the target, and the Glow Sling's glow).
+func on_attack_hit(target: Node, _damage: int) -> void:
+	if has_tool_effect(&"glow_hit"):
+		GlowMark.light(target)
+	if has_tool_effect(&"burn"):
+		Burn.ignite(target)
+		if has_tool_effect(&"burn_splash") and target is Node3D:
+			Burn.splash(target as Node3D)
 
 
 ## Reads reach and cooldown from the definition for this role: the
@@ -261,9 +331,36 @@ func _read_attack_tuning() -> void:
 		attack_cooldown_seconds = hero.attack_cooldown
 
 
-## The role calls this every physics frame: it runs the attack cooldown.
+## The role calls this every physics frame: it runs the attack cooldown
+## and the tool's night light.
 func _tick_attack(delta: float) -> void:
 	_attack_cooldown_remaining = maxf(0.0, _attack_cooldown_remaining - delta)
+	_update_tool_light()
+
+
+## The night light is on at night while the hero is up, with a
+## `night_light` tier, and not inside a torch's light (it doesn't stack).
+func _update_tool_light() -> void:
+	var lit: bool = has_tool_effect(&"night_light") and TimeManager.is_night() and not _down and not _near_torch()
+	if lit and _tool_light == null:
+		_tool_light = OmniLight3D.new()
+		_tool_light.name = "ToolLight"
+		_tool_light.light_color = Color(1.0, 0.62, 0.3)
+		_tool_light.light_energy = 1.2
+		_tool_light.position = Vector3(0, 1.1, 0)
+		add_child(_tool_light)
+	if _tool_light != null:
+		_tool_light.visible = lit
+		_tool_light.omni_range = get_tool_light_range()
+
+
+func _near_torch() -> bool:
+	if not is_inside_tree():
+		return false
+	for torch in get_tree().get_nodes_in_group(Torch.GROUP):
+		if (torch as Torch).affects(global_position):
+			return true
+	return false
 
 
 ## Lands a melee hit on `target`, and on Big Swing's extra mobs, each
@@ -344,6 +441,8 @@ func _show_level_up(_level: int, _quiet: bool) -> void:
 
 ## Saves from before feature 034 name the signature tool by the role's
 ## old hero: Leo's stick (the player) and Nela's slingshot (the sibling).
+## Saves from before tool tiers hold `signature: true`. Both load as
+## tier 1; today's saves hold the tier as `tier`.
 const LEGACY_SIGNATURE_KEYS: Dictionary = {"player": "stick", "sibling": "slingshot"}
 
 
@@ -366,16 +465,19 @@ func load_state(data: Dictionary) -> void:
 
 
 ## A fresh run's hero, set quietly (no `down_changed`): the base stats
-## (level-up bumps gone), no signature tool, up at full HP, and
+## (level-up bumps gone), no signature tool tier, up at full HP, and
 ## registered with ProgressionManager again at level 1 (it runs after
 ## ProgressionManager's reset). `health_changed` still updates the bars.
 func reset() -> void:
-	if has_signature and hero != null:
-		has_signature = false
-		attack_damage -= hero.signature_damage_bonus
-		var factor: float = hero.companion_signature_range_factor if _is_companion_role() else hero.signature_range_factor
-		if factor > 0.0:
-			attack_range /= factor
+	if tool_tier > 0 and hero != null:
+		for n in range(1, tool_tier + 1):
+			var step: ToolTier = hero.tier(n)
+			var factor: float = step.companion_range_factor if _is_companion_role() else step.range_factor
+			if factor > 0.0:
+				attack_range /= factor
+		tool_tier = 0
+		_update_tool_light()
+	_shot_count = 0
 	if stats != null:
 		max_hp = stats.base_max_health
 		attack_damage = stats.base_attack_damage
@@ -392,14 +494,14 @@ func reset() -> void:
 
 ## The role adds its own keys (the companion's task).
 func _save_entry() -> Dictionary:
-	return {"signature": has_signature}
+	return {"tier": tool_tier}
 
 
 ## The role reads its own keys after calling this.
 func _load_entry(entry: Dictionary) -> void:
 	var legacy: String = LEGACY_SIGNATURE_KEYS.get(save_key(), "")
-	if bool(entry.get("signature", entry.get(legacy, false))):
-		apply_signature()
+	var tier: int = int(entry.get("tier", 1 if bool(entry.get("signature", entry.get(legacy, false))) else 0))
+	set_tool_tier(tier, RunSession.is_restoring())
 
 
 # --- Gathering and shared queries ----------------------------------------

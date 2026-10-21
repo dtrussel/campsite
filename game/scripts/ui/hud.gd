@@ -697,6 +697,7 @@ func _refresh_slots() -> void:
 		return
 	var cooldown: float = (_player as Hero).get_attack_cooldown_ratio() if _player is Hero else 0.0
 	(_slots[&"attack"] as HudWidgets.AbilitySlot).set_state(true, "", cooldown)
+	(_slots[&"attack"] as HudWidgets.AbilitySlot).pips = (_player as Hero).tool_tier if _player is Hero else 0
 	(_slots[&"gather"] as HudWidgets.AbilitySlot).set_state(true)
 	var torches: int = ResourceManager.get_count(&"torch")
 	(_slots[&"torch"] as HudWidgets.AbilitySlot).set_state(torches > 0, str(torches) if torches > 0 else "")

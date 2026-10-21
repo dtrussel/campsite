@@ -11,7 +11,7 @@ inputs = {
 &"wood": 3,
 &"scrap": 2
 }
-effect = &"slingshot"
+effect = &"tool_tier"
 station = &"table"
 icon_name = "slingshot"
 xp_reward = 8

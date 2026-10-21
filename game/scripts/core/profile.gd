@@ -26,8 +26,11 @@ const PROFILE_PATH: String = "user://profile.json"
 const OLD_STORY_PATH: String = "user://story.cfg"
 ## The prefix StoryLibrary keeps seen beats under ("story.intro.c1").
 const STORY_PREFIX: String = "story."
-## True once the player has won Chapter 1 (for the chapter lock).
+## True once the player has won Chapter 1 (for the chapter lock), or
+## the story.cfg import found Chapter 2 played.
 const CHAPTER_2_UNLOCKED: String = "chapters.c2.unlocked"
+## The hero last picked on hero select (a HeroRoster id).
+const LAST_HERO: String = "heroes.last"
 ## Kept through delete, so the old story file is imported only once and
 ## deleting a profile really starts the player over.
 const OLD_STORY_IMPORTED: String = "profile.story_cfg_imported"
@@ -36,6 +39,10 @@ const _OLD_CHAPTER_2_BEATS: Array[String] = ["intro.c2", "ending.c2"]
 var _path: String = PROFILE_PATH
 var _old_story_path: String = ""
 var _data: Dictionary = {}
+## Debug builds (the editor, a debug export) and builds exported with
+## the "playtest" feature tag open every chapter. Tests clear it to see
+## the lock as a player does.
+var unlock_all_chapters: bool = OS.is_debug_build() or OS.has_feature("playtest")
 
 
 func _ready() -> void:
@@ -84,6 +91,28 @@ func record_best(key: String, value: float) -> bool:
 		return false
 	set_value(key, value)
 	return true
+
+
+## The key that says chapter was won ("chapters.c1.won").
+static func chapter_won_key(chapter: int) -> String:
+	return "chapters.c%d.won" % chapter
+
+
+## Whether the title lets the player start chapter: Chapter 1 always,
+## Chapter 2 once Chapter 1 is won (or the story.cfg import found it
+## played), and every chapter in debug and playtest builds.
+func is_chapter_unlocked(chapter: int) -> bool:
+	if chapter <= 1 or unlock_all_chapters:
+		return true
+	return chapter == 2 and bool(get_value(CHAPTER_2_UNLOCKED, false))
+
+
+## Records a chapter won; winning Chapter 1 unlocks Chapter 2.
+func record_chapter_won(chapter: int) -> void:
+	set_value(chapter_won_key(chapter), true)
+	if chapter == 1 and not get_value(CHAPTER_2_UNLOCKED, false):
+		set_value(CHAPTER_2_UNLOCKED, true)
+		PlaytestLog.write("chapter_unlocked chapter=2")
 
 
 ## Removes every key that starts with prefix ("story.") and saves.
