@@ -24,7 +24,6 @@ var _failures: int = 0
 var _night1_save: Dictionary = {}
 
 const TEST_SAVE_PATH: String = "user://smoke_save.json"
-const TEST_STORY_PATH: String = "user://smoke_story.cfg"
 const TEST_PROFILE_PATH: String = "user://smoke_profile.json"
 
 
@@ -37,8 +36,6 @@ func _ready() -> void:
 	# Never touch a real player's autosave.
 	SaveManager.set_save_path(TEST_SAVE_PATH)
 	SaveManager.delete_save()
-	StoryLibrary.progress_path = TEST_STORY_PATH
-	StoryLibrary.forget_progress()
 	Profile.set_path(TEST_PROFILE_PATH)
 	Profile.delete()
 	await _run_story_scenario()
@@ -59,6 +56,7 @@ func _ready() -> void:
 	await _run_perk_review_scenario()
 	await _run_hero_health_scenario()
 	await _run_hero_progress_scenario()
+	await _run_hero_gather_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	Profile.delete()
@@ -711,19 +709,18 @@ func _check_auto_attack(player: Node3D) -> void:
 	var bush: ResourceNode = _find_resource_node(&"berries")
 	player.global_position = bush.global_position + Vector3(1.2, 0, 0)
 	await _wait(0.1)
-	player.call("_begin_gather_on", bush)
-	_check(int(player.get("_state")) == 2, "gathering a bush")
+	_check((player as Hero).start_gather(bush) and (player as Hero).is_gathering(), "gathering a bush")
 	imp = _spawn_mob(imp_def, player.global_position + Vector3(0, 0, 2.0))
 	imp.set_physics_process(false)
 	await _wait(0.5)
 	_check(int(player.get("command")) == 2 and player.get("command_target") == imp, "a close imp interrupts the gather")
 	imp.take_damage(999, player)
 	t = 0.0
-	while int(player.get("_state")) != 2 and t < 4.0:
+	while not (player as Hero).is_gathering() and t < 4.0:
 		await _wait(0.1)
 		t += 0.1
-	_check(int(player.get("_state")) == 2 and player.get("_active_node") == bush, "then the hero goes back to the bush (%.1fs)" % t)
-	player.call("_cancel_active_gather")
+	_check((player as Hero).gather_target() == bush, "then the hero goes back to the bush (%.1fs)" % t)
+	(player as Hero).cancel_gather()
 	player.set("auto_attack", false)
 
 
@@ -1631,9 +1628,9 @@ func _perk_04_clear_mobs() -> void:
 
 ## True if `hero` would pick `mob` as a target at its current reach.
 func _perk_04_finds(hero: Node3D, mob: Mob, reach: float) -> bool:
-	if hero.is_in_group("player"):
-		return hero.call("_find_nearest_mob_in_range") == mob
-	return hero.call("_find_nearest_mob", reach) == mob
+	# The player's hero targets a little past its reach (Space, 1.2x).
+	var within: float = reach * 1.2 if Party.role_of(hero) == Party.PLAYER else reach
+	return (hero as Hero).nearest_mob(within) == mob
 ## Perk cards 06: the companion takes a random card by itself, with a
 ## toast, never the picker; its own pool's rules hold.
 func _run_perk_06_scenario() -> void:
@@ -1943,12 +1940,12 @@ func _run_perk_05_scenario() -> void:
 		companion.set_physics_process(false)
 		for building in get_tree().current_scene.find_children("*", "Building", true, false):
 			building.set_physics_process(false)
-		_check(HeroHits.other_hero(player) == companion and HeroHits.other_hero(companion) == player,
+		_check(Party.other(player) == companion and Party.other(companion) == player,
 			"party %s: each hero's other hero is their sibling" % hero_id)
 		for who in [player, companion]:
-			await _check_perk_05_twin_strike(who, HeroHits.other_hero(who))
+			await _check_perk_05_twin_strike(who, Party.other(who))
 		for who in [player, companion]:
-			_check_perk_05_cheer_up(who, HeroHits.other_hero(who))
+			_check_perk_05_cheer_up(who, Party.other(who))
 	GameManager.set_party(&"leo")
 
 
@@ -2286,3 +2283,107 @@ func _check_hero_level_up(who: Hero) -> void:
 	else:
 		_check(PerkManager.perks_of(who).size() == 1,
 			"%s: the companion picks a card by itself" % label)
+
+
+## Hero core 04: both heroes gather, cancel and finish through the Hero
+## interface in each role; the companion's gather task never sticks on
+## a resource; Party names the right heroes after a hero swap.
+func _run_hero_gather_scenario() -> void:
+	print("smoke: --- hero gather scenario ---")
+	for hero_id in [&"leo", &"nela"]:
+		GameManager.set_party(hero_id)
+		await _start_fresh_run()
+		var player: Hero = get_tree().get_first_node_in_group("player") as Hero
+		var companion: Companion = get_tree().get_first_node_in_group("companions") as Companion
+		_check(player != null and companion != null, "party %s: both roles are Heroes" % hero_id)
+		if player == null or companion == null:
+			continue
+		_check_party(hero_id, player, companion)
+		player.set("auto_attack", false)
+		companion.set_task(Companion.Task.IDLE)
+		for who in [player, companion]:
+			await _check_hero_gather(who as Hero)
+		await _check_companion_gather_task(companion)
+	GameManager.set_party(&"leo")
+
+
+## Party: the player's hero, the companion, each one's other hero, both
+## heroes and their roles, for the party just started.
+func _check_party(hero_id: StringName, player: Hero, companion: Hero) -> void:
+	_check(Party.player_hero() == player and _hero_id(Party.player_hero()) == hero_id,
+		"party %s: Party.player_hero() is %s" % [hero_id, hero_id])
+	_check(Party.companion() == companion and _hero_id(Party.companion()) == GameManager.companion_id,
+		"party %s: Party.companion() is %s" % [hero_id, GameManager.companion_id])
+	_check(Party.other(player) == companion and Party.other(companion) == player and Party.other(null) == null,
+		"party %s: each hero's other hero is their sibling" % hero_id)
+	var both: Array[Hero] = Party.heroes()
+	_check(both.size() == 2 and both[0] == player and both[1] == companion, "party %s: Party.heroes() is both, player first" % hero_id)
+	_check(Party.role_of(player) == Party.PLAYER and Party.role_of(companion) == Party.COMPANION
+		and Party.role_of(_campfire()) == &"", "party %s: Party.role_of() names each role" % hero_id)
+
+
+## Start, cancel, start again and finish on a berry bush.
+func _check_hero_gather(who: Hero) -> void:
+	var label: String = "%s as %s" % [_hero_id(who), Party.role_of(who)]
+	var bush: ResourceNode = _find_resource_node(&"berries")
+	if bush == null:
+		_fail("%s: no berry bush to gather" % label)
+		return
+	who.global_position = bush.global_position + Vector3(1.2, 0, 0)
+	await _wait(0.1)
+	var finished: Array[ResourceNode] = []
+	var on_finished: Callable = func(node: ResourceNode) -> void: finished.append(node)
+	who.gather_finished.connect(on_finished)
+	_check(who.start_gather(bush) and who.is_gathering() and who.gather_target() == bush,
+		"%s: starts gathering a bush" % label)
+	who.cancel_gather()
+	_check(not who.is_gathering() and who.gather_target() == null, "%s: cancels the gather" % label)
+	await _wait(bush.gather_seconds_for(who) + 0.3)
+	_check(finished.is_empty(), "%s: a cancelled gather never finishes" % label)
+	var berries: int = ResourceManager.get_count(&"berries")
+	_check(who.start_gather(bush), "%s: the bush is free again after the cancel" % label)
+	var t: float = 0.0
+	while finished.is_empty() and t < bush.gather_seconds_for(who) + 2.0:
+		await _wait(0.1)
+		t += 0.1
+	_check(finished == [bush] and not who.is_gathering() and ResourceManager.get_count(&"berries") > berries,
+		"%s: the gather finishes and pays out (%.1fs)" % [label, t])
+	who.gather_finished.disconnect(on_finished)
+
+
+## On the gather task the companion gathers, finishes, and goes on to
+## gather again instead of standing stuck at the old node; a task change
+## cancels.
+func _check_companion_gather_task(companion: Companion) -> void:
+	var label: String = "%s as companion" % _hero_id(companion)
+	var finished: Array[ResourceNode] = []
+	var on_finished: Callable = func(node: ResourceNode) -> void: finished.append(node)
+	companion.gather_finished.connect(on_finished)
+	# The player's hero is on the bush right by her: she goes elsewhere.
+	var player: Hero = Party.player_hero()
+	var bush: ResourceNode = _find_resource_node(&"berries")
+	player.global_position = bush.global_position + Vector3(1.2, 0, 0)
+	companion.global_position = bush.global_position + Vector3(-1.2, 0, 0)
+	await _wait(0.1)
+	_check(player.start_gather(bush), "%s: the player's hero gathers the bush next to her" % label)
+	companion.set_task(Companion.Task.GATHER_NEAREST)
+	var t: float = 0.0
+	while not companion.is_gathering() and t < 10.0:
+		await _wait(0.2)
+		t += 0.2
+	_check(companion.is_gathering() and companion.gather_target() != bush,
+		"%s: the gather task skips the bush the other hero is on (%.1fs)" % [label, t])
+	player.cancel_gather()
+	t = 0.0
+	while finished.size() < 2 and t < 30.0:
+		await _wait(0.2)
+		t += 0.2
+	_check(finished.size() >= 2, "%s: the gather task finishes a node and goes on gathering (%d in %.1fs)" % [label, finished.size(), t])
+	t = 0.0
+	while not companion.is_gathering() and t < 10.0:
+		await _wait(0.2)
+		t += 0.2
+	_check(companion.is_gathering(), "%s: and keeps gathering" % label)
+	companion.set_task(Companion.Task.IDLE)
+	_check(not companion.is_gathering(), "%s: a task change cancels the gather" % label)
+	companion.gather_finished.disconnect(on_finished)

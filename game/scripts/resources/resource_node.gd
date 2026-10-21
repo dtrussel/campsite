@@ -104,6 +104,11 @@ func gather_seconds_for(actor: Node) -> float:
 	return gather_time_seconds * PerkManager.multiplier(actor, &"gather_time")
 
 
+## True while someone other than `actor` is gathering here.
+func is_taken_by_other(actor: Node) -> bool:
+	return _active_gather_actor != null and _active_gather_actor != actor
+
+
 func cancel_gather(actor: Node) -> void:
 	if _active_gather_actor != actor:
 		return

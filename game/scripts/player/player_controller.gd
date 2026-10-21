@@ -28,7 +28,6 @@ extends Hero
 signal command_changed(command: int, target: Node)
 signal attacked(target: Node)
 
-enum PlayerState { IDLE, MOVING, GATHERING }
 enum Command { NONE, MOVE, ATTACK, GATHER, CAMPFIRE, REPAIR, BUILD }
 
 const TORCH_SCENE: PackedScene = preload("res://scenes/buildings/Torch.tscn")
@@ -73,8 +72,6 @@ const AUTO_ATTACK_SCAN_SECONDS: float = 0.2
 var command: int = Command.NONE
 var command_target: Node3D = null
 
-var _state: int = PlayerState.IDLE
-var _active_node: ResourceNode = null
 var _attack_cooldown_remaining: float = 0.0
 var _move_goal: Vector3 = Vector3.ZERO
 var _repath_timer: float = 0.0
@@ -147,7 +144,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func command_move(point: Vector3) -> void:
 	if not _can_command():
 		return
-	_cancel_active_gather()
+	cancel_gather()
 	_resume_node = null
 	_set_command(Command.MOVE, null)
 	_move_goal = Vector3(point.x, global_position.y, point.z)
@@ -157,7 +154,7 @@ func command_move(point: Vector3) -> void:
 func command_attack(target: Node3D) -> void:
 	if not _can_command() or target == null:
 		return
-	_cancel_active_gather()
+	cancel_gather()
 	_resume_node = null
 	_set_command(Command.ATTACK, target)
 	_repath_timer = 0.0
@@ -166,7 +163,7 @@ func command_attack(target: Node3D) -> void:
 func command_gather(node: ResourceNode) -> void:
 	if not _can_command() or node == null or not node.is_gatherable:
 		return
-	_cancel_active_gather()
+	cancel_gather()
 	_resume_node = null
 	_set_command(Command.GATHER, node)
 	_agent.target_position = node.global_position
@@ -175,7 +172,7 @@ func command_gather(node: ResourceNode) -> void:
 func command_campfire(base: Node3D) -> void:
 	if not _can_command() or base == null:
 		return
-	_cancel_active_gather()
+	cancel_gather()
 	_set_command(Command.CAMPFIRE, base)
 	_agent.target_position = base.global_position
 
@@ -183,7 +180,7 @@ func command_campfire(base: Node3D) -> void:
 func command_repair(target: Node3D) -> void:
 	if not _can_command() or not Repair.needs_repair(target):
 		return
-	_cancel_active_gather()
+	cancel_gather()
 	_set_command(Command.REPAIR, target)
 	_repair_timer = 0.0
 	_agent.target_position = target.global_position
@@ -193,7 +190,7 @@ func command_repair(target: Node3D) -> void:
 func command_build(target: Building) -> void:
 	if not _can_command() or target == null or not target.is_blueprint():
 		return
-	_cancel_active_gather()
+	cancel_gather()
 	_resume_node = null
 	_set_command(Command.BUILD, target)
 	_agent.target_position = target.global_position
@@ -232,7 +229,7 @@ func _show_hurt(amount: int) -> void:
 func _on_down_changed(down: bool) -> void:
 	if not down:
 		return
-	_cancel_active_gather()
+	cancel_gather()
 	_set_command(Command.NONE, null)
 	PlaytestLog.write("player_knocked_out day=%d" % TimeManager.day_number)
 
@@ -257,16 +254,16 @@ func _physics_process(delta: float) -> void:
 		# Keyboard movement overrides (and cancels) pointer commands.
 		if command != Command.NONE:
 			_set_command(Command.NONE, null)
-		_cancel_active_gather()
+		cancel_gather()
 		_resume_node = null
 		_auto_scan_timer = 1.0  # walking by hand: leave the mobs to the player
 		desired = Vector3(input_dir.x, 0.0, input_dir.y).normalized() * move_speed
-	elif _state == PlayerState.GATHERING:
+	elif is_gathering():
 		desired = Vector3.ZERO
-		if _active_node != null and is_instance_valid(_active_node):
-			_visual.face(_active_node.global_position - global_position, delta)
-			if not _visual.is_in_action():
-				_visual.play_action(_active_node.gather_animation, 1.5)
+		var node: ResourceNode = gather_target()
+		_visual.face(node.global_position - global_position, delta)
+		if not _visual.is_in_action():
+			_visual.play_action(node.gather_animation, 1.5)
 	else:
 		desired = _tick_command(delta)
 	if not _tool_busy:
@@ -281,8 +278,6 @@ func _physics_process(delta: float) -> void:
 	global_position.z = clampf(global_position.z, -play_area_half_extent, play_area_half_extent)
 
 	var planar_speed: float = Vector2(velocity.x, velocity.z).length()
-	if _state != PlayerState.GATHERING:
-		_state = PlayerState.MOVING if planar_speed > 0.2 else PlayerState.IDLE
 	_visual.set_locomotion(planar_speed)
 	if planar_speed > 0.2 and not _visual.is_in_action():
 		_visual.face(velocity, delta)
@@ -317,7 +312,7 @@ func _tick_command(delta: float) -> Vector3:
 				return Vector3.ZERO
 			if _flat_distance(node.global_position) <= GATHER_REACH + _node_radius(node):
 				_set_command(Command.NONE, null)
-				_begin_gather_on(node)
+				start_gather(node)
 				return Vector3.ZERO
 			return _path_velocity(node.global_position)
 		Command.CAMPFIRE:
@@ -392,22 +387,6 @@ func _can_command() -> bool:
 	return not is_down()
 
 
-func _flat_distance(point: Vector3) -> float:
-	return Vector2(point.x - global_position.x, point.z - global_position.z).length()
-
-
-func _node_radius(node: Node3D) -> float:
-	var shape: CollisionShape3D = node.get_node_or_null("Collision") as CollisionShape3D
-	if shape != null and shape.shape is CylinderShape3D:
-		return (shape.shape as CylinderShape3D).radius
-	if shape != null and shape.shape is SphereShape3D:
-		return (shape.shape as SphereShape3D).radius
-	if shape != null and shape.shape is BoxShape3D:
-		var box: Vector3 = (shape.shape as BoxShape3D).size
-		return maxf(box.x, box.z) * 0.5
-	return 0.4
-
-
 ## Untyped: auto-attack can leave a freed mob here, which a typed
 ## argument would reject.
 func _is_attackable(target: Variant) -> bool:
@@ -444,64 +423,39 @@ func try_feed_lantern() -> bool:
 	var lantern: MoonLantern = MoonLantern.find(get_tree())
 	if lantern == null or not lantern.in_reach(global_position) or not lantern.can_accept():
 		return false
-	_cancel_active_gather()
+	cancel_gather()
 	_visual.face_instantly(lantern.global_position - global_position)
 	lantern.deliver(self)
 	return true
 
 
 func _try_begin_gather() -> void:
-	if _state == PlayerState.GATHERING or _interactor == null:
+	if is_gathering() or _interactor == null:
 		return
 	var node: ResourceNode = _interactor.get_closest()
 	if node == null:
 		return
 	_set_command(Command.NONE, null)
-	_begin_gather_on(node)
+	start_gather(node)
 
 
-func _begin_gather_on(node: ResourceNode) -> void:
-	if not node.begin_gather(self):
-		return
-	_active_node = node
-	if not node.gathered.is_connected(_on_node_gathered):
-		node.gathered.connect(_on_node_gathered)
-	_state = PlayerState.GATHERING
+## The player's look of a gather: stop and face the node, then chop or pick.
+func _on_gather_started(node: ResourceNode) -> void:
 	velocity = Vector3.ZERO
 	_visual.face_instantly(node.global_position - global_position)
 	_visual.play_action(node.gather_animation, 1.5)
 
 
-func _cancel_active_gather() -> void:
-	if _active_node != null:
-		if is_instance_valid(_active_node):
-			if _active_node.gathered.is_connected(_on_node_gathered):
-				_active_node.gathered.disconnect(_on_node_gathered)
-			_active_node.cancel_gather(self)
-		_active_node = null
-	if _state == PlayerState.GATHERING:
-		_state = PlayerState.IDLE
-
-
-func _on_node_gathered(actor: Node, _id: StringName, _amount: int) -> void:
-	if actor != self:
-		return
-	if _active_node != null and _active_node.gathered.is_connected(_on_node_gathered):
-		_active_node.gathered.disconnect(_on_node_gathered)
-	_active_node = null
-	_state = PlayerState.IDLE
-
-
 func _on_interactor_exited(node: ResourceNode) -> void:
-	if node == _active_node:
-		_cancel_active_gather()
+	if node == gather_target():
+		cancel_gather()
 
 
 ## Space: swing at the nearest imp in range (keyboard shortcut).
 func _try_attack() -> void:
-	if _state == PlayerState.GATHERING or _attack_cooldown_remaining > 0.0:
+	if is_gathering() or _attack_cooldown_remaining > 0.0:
 		return
-	var target: Node3D = _find_nearest_mob_in_range()
+	var target: Node3D = nearest_mob(get_attack_range() * 1.2)
 	if target == null:
 		# Swing anyway so the key feels responsive.
 		_attack_cooldown_remaining = attack_cooldown_seconds
@@ -512,7 +466,7 @@ func _try_attack() -> void:
 
 
 func _try_place_torch() -> void:
-	if _state == PlayerState.GATHERING:
+	if is_gathering():
 		return
 	if not ResourceManager.spend(TORCH_ITEM_ID, 1):
 		Fx.icon_popup(self, Fx.icon("torch"), "", Color.WHITE, true)
@@ -593,9 +547,9 @@ func _tick_auto() -> void:
 		return
 	if command != Command.NONE:
 		return
-	var target: Node3D = _find_nearest_mob_in_range(auto_attack_radius()) if auto_attack else null
+	var target: Node3D = nearest_mob(auto_attack_radius()) if auto_attack else null
 	if target != null:
-		var interrupted: ResourceNode = _active_node if _state == PlayerState.GATHERING else _resume_node
+		var interrupted: ResourceNode = gather_target() if is_gathering() else _resume_node
 		command_attack(target)
 		_resume_node = interrupted
 	elif _resume_node != null:
@@ -603,23 +557,8 @@ func _tick_auto() -> void:
 		_resume_node = null
 		if is_instance_valid(node) and node.is_gatherable:
 			command_gather(node)
-	elif _state != PlayerState.GATHERING:
+	elif not is_gathering():
 		var site: Building = BuildManager.next_blueprint()
 		if site != null:
 			command_build(site)
 
-
-func _find_nearest_mob_in_range(radius: float = -1.0) -> Node3D:
-	var best: Node3D = null
-	if radius < 0.0:
-		radius = get_attack_range() * 1.2
-	var best_d_sq: float = radius * radius
-	for node in get_tree().get_nodes_in_group("mobs"):
-		var n3d: Node3D = node as Node3D
-		if n3d == null or not is_instance_valid(n3d):
-			continue
-		var d_sq: float = n3d.global_position.distance_squared_to(global_position)
-		if d_sq < best_d_sq:
-			best_d_sq = d_sq
-			best = n3d
-	return best

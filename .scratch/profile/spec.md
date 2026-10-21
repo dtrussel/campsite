@@ -1,6 +1,6 @@
 # Profile
 
-Status: ready-for-agent
+Status: done
 
 Split into tickets in `issues/` (01&ndash;02); the `Blocked by:` lines give the order. From the 2026-10-21 architecture review, candidate 3 (one profile for everything kept across runs). Rough size: **S–M**. Blocked by: none. It blocks endless mode and journal badges.
 
@@ -89,3 +89,8 @@ Device settings (audio, look, auto-attack) stay where they are, so that deleting
 ## Comments
 
 - **2026-10-21, to-tickets:** split into tickets 01-02; the user approved the breakdown.
+- **2026-10-21, implement:** done (tickets 01-02).
+  - **What exists:** the `Profile` autoload on `user://profile.json`. Story beats read and write `story.<beat>` keys through it. The old `story.cfg` is imported once and sets `chapters.c2.unlocked` for a seen Chapter 2 intro or true ending.
+  - **A spec decision settled in the code:** "delete removes the file" and "never import again after delete" pull against each other. Delete keeps only the import note (`profile.story_cfg_imported`), so after an import the profile file holds just that note.
+  - **Docs:** `docs/architecture/software-architecture.md`, "Profile" under H.
+  - **Next:** endless mode and journal badges add their keys (`endless.`, `badges.`, `chapters.`).

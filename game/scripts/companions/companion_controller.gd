@@ -38,7 +38,6 @@ var _player: Node3D = null
 var _base_core: Node3D = null
 var _attack_cooldown_remaining: float = 0.0
 var _current_attack_damage: int = 0
-var _active_resource_node: Node = null   # ResourceNode currently being gathered
 var _repair_timer: float = 0.0
 ## The hammering rhythm while building or repairing (feature 045).
 var _build_beat: BuildBeat = BuildBeat.new()
@@ -117,7 +116,7 @@ func _show_hurt(amount: int) -> void:
 
 func _on_down_changed(down: bool) -> void:
 	if down:
-		_abort_active_gather()
+		cancel_gather()
 		PlaytestLog.write("companion_knocked_out day=%d" % TimeManager.day_number)
 	_update_task_label()
 
@@ -132,7 +131,7 @@ func _on_dawn_started(_day_number: int) -> void:
 func set_task(task: int) -> void:
 	if task == current_task:
 		return
-	_abort_active_gather()
+	cancel_gather()
 	current_task = task
 	task_changed.emit(current_task)
 	_update_task_label()
@@ -210,8 +209,8 @@ func _physics_process(delta: float) -> void:
 	_visual.set_locomotion(planar_speed)
 	if planar_speed > 0.2 and not _visual.is_in_action():
 		_visual.face(velocity, delta)
-	elif _active_resource_node != null and is_instance_valid(_active_resource_node):
-		_visual.face((_active_resource_node as Node3D).global_position - global_position, delta)
+	elif is_gathering():
+		_visual.face(gather_target().global_position - global_position, delta)
 		if not _visual.is_in_action():
 			_visual.play_action(&"gather", 1.3)
 
@@ -232,7 +231,7 @@ func _tick_guard_base() -> void:
 		_stop()
 		return
 	# First priority: kill nearby mobs.
-	var mob: Node3D = _find_nearest_mob(get_attack_range())
+	var mob: Node3D = nearest_mob(get_attack_range())
 	if mob != null:
 		_stop()
 		if _attack_cooldown_remaining <= 0.0:
@@ -243,7 +242,7 @@ func _tick_guard_base() -> void:
 		_walk_to(_base_core.global_position)
 		return
 	# Approach the nearest detected mob if any.
-	var detected: Node3D = _find_nearest_mob(detection_radius)
+	var detected: Node3D = nearest_mob(detection_radius)
 	if detected != null:
 		_walk_to(detected.global_position)
 	else:
@@ -255,19 +254,19 @@ func _tick_gather_nearest() -> void:
 	# Timer drives completion. The node calls ResourceManager.add()
 	# itself and emits "gathered" — we just need to wait, then look
 	# for the next nearest.
-	if _active_resource_node != null and is_instance_valid(_active_resource_node):
+	if is_gathering():
 		# Stand still while gathering.
 		_stop()
 		return
 
-	var target: Node3D = _find_nearest_resource_node()
+	var target: ResourceNode = _find_nearest_resource_node()
 	if target == null:
 		_stop()
 		return
 	# Begin gathering when adjacent.
 	if _flat_distance(target.global_position) < 1.8:
 		_stop()
-		_begin_gather_on(target)
+		start_gather(target)
 		return
 	_walk_to(target.global_position)
 
@@ -278,7 +277,7 @@ func _tick_gather_nearest() -> void:
 ## the companion guards the camp instead.
 func _tick_repair(delta: float) -> void:
 	_repair_timer = maxf(0.0, _repair_timer - delta)
-	var mob: Node3D = _find_nearest_mob(get_attack_range())
+	var mob: Node3D = nearest_mob(get_attack_range())
 	var site: Building = BuildManager.next_blueprint() if mob == null else null
 	if site != null:
 		if site.distance_to_footprint(global_position) > REPAIR_REACH - 0.6:
@@ -295,7 +294,7 @@ func _tick_repair(delta: float) -> void:
 	if mob != null or target == null or not ResourceManager.has(Repair.WOOD_ID, Repair.WOOD_PER_TAP):
 		_tick_guard_base()
 		return
-	if _flat_distance(target.global_position) > REPAIR_REACH + _target_radius(target):
+	if _flat_distance(target.global_position) > REPAIR_REACH + _node_radius(target):
 		_walk_to(target.global_position)
 		return
 	_stop()
@@ -366,54 +365,6 @@ func _flat_direction(point: Vector3) -> Vector3:
 	return to.normalized() if to.length() > 0.001 else Vector3.FORWARD
 
 
-func _flat_distance(point: Vector3) -> float:
-	return Vector2(point.x - global_position.x, point.z - global_position.z).length()
-
-
-func _target_radius(node: Node3D) -> float:
-	var shape: CollisionShape3D = node.get_node_or_null("Collision") as CollisionShape3D
-	if shape == null:
-		return 0.5
-	if shape.shape is BoxShape3D:
-		var box: Vector3 = (shape.shape as BoxShape3D).size
-		return maxf(box.x, box.z) * 0.5
-	if shape.shape is SphereShape3D:
-		return (shape.shape as SphereShape3D).radius
-	if shape.shape is CylinderShape3D:
-		return (shape.shape as CylinderShape3D).radius
-	return 0.5
-
-
-func _begin_gather_on(node: Node) -> void:
-	if not node.has_method("begin_gather"):
-		return
-	if not node.begin_gather(self):
-		return
-	_active_resource_node = node
-	if node.has_signal("gathered") and not node.gathered.is_connected(_on_resource_gathered):
-		node.gathered.connect(_on_resource_gathered)
-
-
-func _abort_active_gather() -> void:
-	if _active_resource_node == null:
-		return
-	if is_instance_valid(_active_resource_node):
-		if _active_resource_node.gathered.is_connected(_on_resource_gathered):
-			_active_resource_node.gathered.disconnect(_on_resource_gathered)
-		if _active_resource_node.has_method("cancel_gather"):
-			_active_resource_node.cancel_gather(self)
-	_active_resource_node = null
-
-
-func _on_resource_gathered(actor: Node, _id: StringName, _amount: int) -> void:
-	if actor != self:
-		return
-	if _active_resource_node != null and is_instance_valid(_active_resource_node):
-		if _active_resource_node.gathered.is_connected(_on_resource_gathered):
-			_active_resource_node.gathered.disconnect(_on_resource_gathered)
-	_active_resource_node = null
-
-
 func _attack_mob(mob: Node3D) -> void:
 	if not mob.has_method("take_damage"):
 		return
@@ -444,42 +395,32 @@ func _show_level_up(level: int, quiet: bool) -> void:
 		Fx.float_text(self, "LEVEL UP!", Color(1.0, 0.85, 0.4), 2.7)
 
 
-func _find_nearest_mob(within: float) -> Node3D:
-	var best: Node3D = null
-	var best_d_sq: float = within * within
-	for node in get_tree().get_nodes_in_group("mobs"):
-		if node == null or not is_instance_valid(node):
-			continue
-		var n3d: Node3D = node as Node3D
-		if n3d == null:
-			continue
-		var d_sq: float = n3d.global_position.distance_squared_to(global_position)
-		if d_sq < best_d_sq:
-			best_d_sq = d_sq
-			best = n3d
-	return best
-
-
-func _find_nearest_resource_node() -> Node3D:
+func _find_nearest_resource_node() -> ResourceNode:
 	# Resource nodes are on collision_layer 3 (1+2). Walk the scene
 	# tree once; this is a prototype with few nodes, so no spatial
 	# index needed.
-	var best: Node3D = null
+	var best: ResourceNode = null
 	var best_d_sq: float = INF
 	var stack: Array = [get_tree().current_scene]
 	while not stack.is_empty():
 		var node: Node = stack.pop_back()
 		if node == null:
 			continue
-		if node is ResourceNode and (node as ResourceNode).is_gatherable and not (node as ResourceNode).is_stash_full():
-			var n3d: Node3D = node as Node3D
-			var d_sq: float = n3d.global_position.distance_squared_to(global_position)
+		if node is ResourceNode and _can_gather(node as ResourceNode):
+			var resource_node: ResourceNode = node as ResourceNode
+			var d_sq: float = resource_node.global_position.distance_squared_to(global_position)
 			if d_sq < best_d_sq:
 				best_d_sq = d_sq
-				best = n3d
+				best = resource_node
 		for child in node.get_children():
 			stack.append(child)
 	return best
+
+
+## A node worth walking to: gatherable, with room in the stash, and not
+## being gathered by the other hero (she would stand there waiting).
+func _can_gather(node: ResourceNode) -> bool:
+	return node.is_gatherable and not node.is_stash_full() and not node.is_taken_by_other(self)
 
 
 func _refresh_world_refs() -> void:

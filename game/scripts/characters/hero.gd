@@ -185,4 +185,101 @@ func _show_level_up(_level: int, _quiet: bool) -> void:
 
 
 # --- Gathering and shared queries ----------------------------------------
-# hero-core 04: gathering, nearest mob, node radius and flat distance.
+# One gather path for both roles: start on a resource node, cancel, ask
+# whether it is running, and hear when it finished. The node's own timer
+# runs the gather; the role decides how it looks (`_on_gather_started`).
+
+## The hero finished gathering `node` (the node paid out).
+signal gather_finished(node: ResourceNode)
+
+var _gather_node: ResourceNode = null
+
+
+## Starts gathering `node` now (the hero should be next to it). Any other
+## gather is cancelled first. False if the node won't have the hero: it
+## is depleted, someone else is on it, or the stash is full.
+func start_gather(node: ResourceNode) -> bool:
+	if node == null or not is_instance_valid(node) or _down:
+		return false
+	if node == gather_target():
+		return true
+	cancel_gather()
+	if not node.begin_gather(self):
+		return false
+	_gather_node = node
+	if not node.gathered.is_connected(_on_gather_node_gathered):
+		node.gathered.connect(_on_gather_node_gathered)
+	_on_gather_started(node)
+	return true
+
+
+## Stops the current gather, if any; the node gives nothing for it.
+func cancel_gather() -> void:
+	var node: ResourceNode = _gather_node
+	_gather_node = null
+	if node == null or not is_instance_valid(node):
+		return
+	if node.gathered.is_connected(_on_gather_node_gathered):
+		node.gathered.disconnect(_on_gather_node_gathered)
+	node.cancel_gather(self)
+
+
+## True while a gather runs on a node that still exists.
+func is_gathering() -> bool:
+	return _gather_node != null and is_instance_valid(_gather_node)
+
+
+## The node being gathered, or null.
+func gather_target() -> ResourceNode:
+	return _gather_node if is_gathering() else null
+
+
+func _on_gather_node_gathered(actor: Node, _id: StringName, _amount: int) -> void:
+	if actor != self:
+		return
+	var node: ResourceNode = _gather_node
+	if is_instance_valid(node) and node.gathered.is_connected(_on_gather_node_gathered):
+		node.gathered.disconnect(_on_gather_node_gathered)
+	_gather_node = null
+	gather_finished.emit(node)
+
+
+## Role hook: how starting a gather on `node` looks.
+func _on_gather_started(_node: ResourceNode) -> void:
+	pass
+
+
+## The nearest mob within `within` metres (straight-line), or null.
+func nearest_mob(within: float) -> Node3D:
+	var best: Node3D = null
+	var best_d_sq: float = within * within
+	for node in get_tree().get_nodes_in_group("mobs"):
+		var mob: Node3D = node as Node3D
+		if mob == null or not is_instance_valid(mob):
+			continue
+		var d_sq: float = mob.global_position.distance_squared_to(global_position)
+		if d_sq < best_d_sq:
+			best_d_sq = d_sq
+			best = mob
+	return best
+
+
+## Distance to `point` on the ground plane (height ignored).
+func _flat_distance(point: Vector3) -> float:
+	return Vector2(point.x - global_position.x, point.z - global_position.z).length()
+
+
+## How far `node`'s collision reaches out from its centre, for "close
+## enough to gather, repair or use". Settled drift (hero-core): a node
+## without a cylinder, sphere or box shape counts as 0.4 m, the player's
+## old value (the companion used 0.5).
+static func _node_radius(node: Node3D) -> float:
+	var shape: CollisionShape3D = node.get_node_or_null("Collision") as CollisionShape3D
+	if shape != null and shape.shape is CylinderShape3D:
+		return (shape.shape as CylinderShape3D).radius
+	if shape != null and shape.shape is SphereShape3D:
+		return (shape.shape as SphereShape3D).radius
+	if shape != null and shape.shape is BoxShape3D:
+		var box: Vector3 = (shape.shape as BoxShape3D).size
+		return maxf(box.x, box.z) * 0.5
+	return 0.4

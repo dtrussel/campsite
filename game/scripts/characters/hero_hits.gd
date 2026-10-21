@@ -17,7 +17,7 @@ extends RefCounted
 ## damage multiplier goes (Twin Strike, ticket 05).
 ##
 ## The sibling cards (ticket 05) need "the other hero": the companion for
-## the player, the player for the companion (other_hero()). "A mob the
+## the player, the player for the companion (Party.other()). "A mob the
 ## other hero is hitting" means one the other hero struck within
 ## TWIN_STRIKE_SECONDS of game time. strike() stamps each hero hit on the
 ## mob (the HIT_META meta: hero instance id -> game seconds); the mob's
@@ -44,7 +44,7 @@ static func damage_factor(attacker: Node, target: Node) -> float:
 	if attacker == null or target == null:
 		return factor
 	factor *= _flag_factor(attacker, TWIN_STRIKE,
-		func() -> bool: return is_hitting(other_hero(attacker), target))
+		func() -> bool: return is_hitting(Party.other(attacker), target))
 	return factor
 
 
@@ -83,24 +83,6 @@ static func game_seconds() -> float:
 	return PerkManager.clock
 
 
-## The other sibling: the companion for the player, the player for the
-## companion. Null if `character` is neither, or the other is gone.
-static func other_hero(character: Node) -> Node3D:
-	if character == null or not character.is_inside_tree():
-		return null
-	var group: StringName
-	if character.is_in_group("player"):
-		group = &"companions"
-	elif character.is_in_group("companions"):
-		group = &"player"
-	else:
-		return null
-	for node in character.get_tree().get_nodes_in_group(group):
-		if node != character and node.get("hero") is HeroDefinition:
-			return node as Node3D
-	return null
-
-
 ## True if `hero` struck `target` within TWIN_STRIKE_SECONDS.
 static func is_hitting(hero: Node, target: Node) -> bool:
 	if hero == null or target == null or not target.has_meta(HIT_META):
@@ -132,12 +114,12 @@ static func cheer_up_heal(other: Node) -> int:
 ## per copy). Knocked-out heroes stay down.
 static func cheer_up(character: Node) -> void:
 	var copies: int = PerkManager.flag_count(character, CHEER_UP)
-	var other: Node3D = other_hero(character)
-	if copies == 0 or other == null or (other is Hero and (other as Hero).is_down()) or not other.has_method("heal"):
+	var other: Hero = Party.other(character)
+	if copies == 0 or other == null or other.is_down():
 		return
-	var before: int = int(other.get("current_hp"))
-	other.call("heal", cheer_up_heal(other) * copies)
-	var gained: int = int(other.get("current_hp")) - before
+	var before: int = other.current_hp
+	other.heal(cheer_up_heal(other) * copies)
+	var gained: int = other.current_hp - before
 	if gained > 0:
 		Fx.float_text(other, "+%d HP" % gained, Color(0.5, 1, 0.5))
 		Fx.burst(&"heal", other.global_position)

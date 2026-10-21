@@ -77,7 +77,7 @@ func get_definition(id: StringName) -> PerkDefinition:
 ## player-only card. Empty when the pool is used up.
 func offer(character: Node, n: int = OFFER_SIZE) -> Array[PerkDefinition]:
 	var hero_id: StringName = _hero_id(character)
-	var as_companion: bool = character != null and character.is_in_group("companions")
+	var as_companion: bool = Party.role_of(character) == Party.COMPANION
 	var pool: Array[PerkDefinition] = []
 	for perk in _definitions:
 		if perk.is_for(hero_id, as_companion) and (perk.stacks or not has(character, perk.id)):
@@ -149,9 +149,10 @@ func top_up(character: Node) -> void:
 		return
 	var owed: int = ProgressionManager.get_level(character) - 1 - perks_of(character).size()
 	for i in owed:
-		if character.is_in_group("player"):
+		var role: StringName = Party.role_of(character)
+		if role == Party.PLAYER:
 			open_picker(character)
-		elif character.is_in_group("companions"):
+		elif role == Party.COMPANION:
 			if companion_pick(character) == null:
 				return
 
@@ -270,17 +271,21 @@ func _on_picker_closed(perk: PerkDefinition, character: Node) -> void:
 ## `Hero._setup_progress`. `leveled` fires after the stat bumps, so the
 ## picker opens with the new HP already shown.
 func watch(hero: Hero) -> void:
-	if hero != null and not hero.leveled.is_connected(_on_leveled):
-		hero.leveled.connect(_on_leveled.bind(hero))
+	if hero == null:
+		return
+	var react: Callable = _on_leveled.bind(hero)
+	if not hero.leveled.is_connected(react):
+		hero.leveled.connect(react)
 
 
 func _on_leveled(_new_level: int, character: Node) -> void:
 	if ProgressionManager.is_restoring or not is_instance_valid(character):
 		return
 	HeroHits.cheer_up(character)  # before this level's card is taken
-	if character.is_in_group("player"):
+	var role: StringName = Party.role_of(character)
+	if role == Party.PLAYER:
 		open_picker(character)
-	elif character.is_in_group("companions"):
+	elif role == Party.COMPANION:
 		companion_pick(character)
 
 
