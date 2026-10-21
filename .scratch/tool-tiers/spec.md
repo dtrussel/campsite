@@ -15,7 +15,8 @@ Turn the one-off signature crafts into a small upgrade path, and give Glow Shard
 - **Leo:**
   - Stick;
   - **Sturdy Stick** (today, +2 damage);
-  - **Ember Stick** (hits leave a short burn: 1 damage/s for 3 s, and the stick gives a small personal light at night, with no mob slow).
+  - **Ember Stick** (hits leave a short burn: 1 damage/s for 3 s, and the stick gives a small personal light at night, with no mob slow);
+  - **Blaze Stick** (the burn also splashes onto mobs right next to the target, and the light grows a little; decided 2026-10-21).
 - **Nela:**
   - Slingshot (today, more reach);
   - **Double Sling** (every 3rd shot fires two pebbles);
