@@ -1,3 +1,4 @@
+class_name Torch
 extends Node3D
 
 ## Torch
@@ -10,7 +11,7 @@ extends Node3D
 ## The Ember Heart perk (perk cards, ticket 03): a torch its holder
 ## plants lasts one more dawn and its radius, ring and light grow by the
 ## perk's `value`. See kindle(). Such a torch outlives the dawn autosave,
-## so SaveManager keeps it (its place, dawns left and radius).
+## so the save keeps it (save_entry / rebuild, listed by TorchSaves).
 
 @export var radius: float = 3.5
 @export var slow_factor: float = 0.45
@@ -22,6 +23,9 @@ extends Node3D
 @export var dawns_to_burn: int = 1
 
 const EMBER_HEART: StringName = &"ember_heart"
+## Every lit torch (and Glow Lantern aura); a torch leaves it as it goes out.
+const GROUP: StringName = &"torches"
+const SCENE_PATH: String = "res://scenes/buildings/Torch.tscn"
 
 var _burn_timer: float = 0.0
 var _is_burning_out: bool = false
@@ -32,7 +36,7 @@ func _ready() -> void:
 	if owner != null and owner.has_meta(&"build_ghost"):
 		set_physics_process(false)
 		return
-	add_to_group("torches")
+	add_to_group(GROUP)
 	if burns_out_at_dawn:
 		TimeManager.dawn_started.connect(_on_dawn_started)
 
@@ -44,6 +48,26 @@ func kindle(placer: Node) -> void:
 	var perk: PerkDefinition = PerkManager.get_definition(EMBER_HEART)
 	dawns_to_burn += 1
 	set_radius(radius * (perk.value if perk != null else 1.0))
+
+
+## The torch's line in the save file: its place, dawns left and radius.
+func save_entry() -> Dictionary:
+	var p: Vector3 = global_position
+	return {"pos": [p.x, p.y, p.z], "dawns": dawns_to_burn, "radius": radius}
+
+
+## Plants the torch `entry` (from save_entry) again under `parent`, or
+## null when it had no dawns left.
+static func rebuild(entry: Dictionary, parent: Node) -> Torch:
+	if int(entry.get("dawns", 0)) <= 0 or not entry.get("pos") is Array:
+		return null
+	var torch: Torch = (load(SCENE_PATH) as PackedScene).instantiate() as Torch
+	parent.add_child(torch)
+	var pos: Array = entry["pos"]
+	torch.global_position = Vector3(float(pos[0]), float(pos[1]), float(pos[2]))
+	torch.dawns_to_burn = int(entry["dawns"])
+	torch.set_radius(float(entry.get("radius", torch.radius)))
+	return torch
 
 
 ## Sets the reach, and scales the ring and the fire's light to match.
@@ -92,7 +116,7 @@ func snuff() -> void:
 	if _is_burning_out:
 		return
 	_is_burning_out = true
-	remove_from_group("torches")
+	remove_from_group(GROUP)
 	var tween: Tween = create_tween()
 	tween.tween_property(self, "scale", Vector3(0.2, 0.2, 0.2), 1.0)
 	tween.tween_callback(queue_free)

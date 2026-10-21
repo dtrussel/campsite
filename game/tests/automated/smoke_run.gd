@@ -61,6 +61,7 @@ func _ready() -> void:
 	await _run_hero_gather_scenario()
 	await _run_hero_attack_scenario()
 	await _run_old_save_scenario()
+	await _run_world_save_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	Profile.delete()
@@ -2100,7 +2101,7 @@ func _run_perk_review_scenario() -> void:
 	for node in get_tree().get_nodes_in_group(Building.BLUEPRINT_GROUP):
 		if not before.has(node):
 			blueprint = node as Building
-	_check(blueprint != null and int((blueprint.get_meta(&"paid_cost", {}) as Dictionary).get(&"wood", 0)) == full_wood - 1,
+	_check(blueprint != null and int(blueprint.paid_cost().get(&"wood", 0)) == full_wood - 1,
 		"the blueprint records the %d Wood paid" % (full_wood - 1))
 	ResourceManager.add(&"torch", 1)
 	var torch: Node3D = _plant_torch(player)
@@ -2547,3 +2548,117 @@ func _run_old_save_scenario() -> void:
 	_check(lost.is_empty(), "saving the continued run keeps every field of the old save (changed: %s)" % [lost])
 	for node in get_tree().get_nodes_in_group(Building.BUILDINGS_GROUP) + get_tree().get_nodes_in_group("torches"):
 		node.queue_free()
+
+
+## Run lifecycle 03: the world saves itself. The campfire, a built
+## fence, a half-built watch post, a paid-for blueprint, an Ember Heart
+## torch, the Moon Lantern and both heroes go through save and Continue;
+## each comes back as it was, HP bars included, and a save without a
+## blueprint's paid cost (before perk cards) refunds today's price.
+func _run_world_save_scenario() -> void:
+	print("smoke: --- world save scenario ---")
+	await _start_fresh_run()
+	var player: Hero = get_tree().get_first_node_in_group("player") as Hero
+	var companion: Companion = get_tree().get_first_node_in_group("companions") as Companion
+	for hero in [player, companion]:
+		(hero as Node).set_physics_process(false)  # nobody hammers or wanders
+	var fire: BaseCore = _campfire()
+	fire.build_hearth()
+	fire.take_damage(60)
+	var fence_def: BuildingDefinition = BuildManager.get_definition(&"wooden_fence")
+	var post_def: BuildingDefinition = BuildManager.get_definition(&"watch_post")
+	var base: Vector3 = fire.global_position
+	var fence: Building = BuildManager.place_blueprint(fence_def, Transform3D(Basis(Vector3.UP, 0.3), base + Vector3(7, 0, 3)))
+	fence.complete_construction(player)
+	fence.take_damage(5)
+	var post: Building = BuildManager.place_blueprint(post_def, Transform3D(Basis(), base + Vector3(-6, 0, 5)), {&"wood": 2, &"stone": 1})
+	post.add_build_progress(post_def.build_seconds * 0.25)
+	var paid: Dictionary = {&"wood": 1}
+	var unstarted: Building = BuildManager.place_blueprint(fence_def, Transform3D(Basis(), base + Vector3(5, 0, -6)), paid)
+	PerkManager.restore(player, [&"ember_heart"])
+	ResourceManager.add(&"torch", 1)
+	var torch: Node3D = _plant_torch(player)
+	var lantern: MoonLantern = MoonLantern.find(get_tree())
+	ResourceManager.add(&"glow_shards", 2)
+	lantern.deliver(player)
+	player.apply_signature()
+	companion.set_task(Companion.Task.GUARD_BASE)
+	await get_tree().process_frame
+	if torch == null:
+		_check(false, "planted an Ember Heart torch")
+		return
+	var torch_spot: Vector3 = torch.global_position
+	var torch_dawns: int = int(torch.get("dawns_to_burn"))
+	var torch_radius: float = float(torch.get("radius"))
+	var fire_hp: int = fire.current_hp
+	var fence_hp: int = fence.current_hp
+	var post_hp: int = post.current_hp
+	var post_progress: float = post.build_progress
+	var shards: int = lantern.shards
+	var player_damage: int = player.attack_damage
+	var companion_damage: int = companion.attack_damage
+	var data: Dictionary = SaveManager.parse(SaveManager.serialize(RunSession.snapshot()))
+	_check(not data.is_empty() and (data["player"] as Dictionary).has("xp") and (data["player"] as Dictionary).has("signature")
+		and (data["sibling"] as Dictionary).has("task"), "the save keeps each hero's entry whole (xp, signature, task)")
+	var legacy: Dictionary = data.duplicate(true)
+	for entry in legacy["buildings"]:
+		(entry as Dictionary).erase("paid")
+	(legacy["player"] as Dictionary).erase("signature")
+	(legacy["player"] as Dictionary)["stick"] = true
+	await _continue_from(data)
+	player = get_tree().get_first_node_in_group("player") as Hero
+	companion = get_tree().get_first_node_in_group("companions") as Companion
+	for hero in [player, companion]:
+		(hero as Node).set_physics_process(false)
+	fire = _campfire()
+	var bar: HealthBar3D = fire.health_bar()
+	_check(fire.has_hearth and fire.current_hp == fire_hp and bar != null and bar.maximum() == fire.max_hp
+		and is_equal_approx(bar.fill(), float(fire_hp) / float(fire.max_hp)),
+		"the campfire comes back with its hearth at %d HP, and its bar shows it at once" % fire.current_hp)
+	var loaded_fence: Building = _building_near(base + Vector3(7, 0, 3))
+	var loaded_post: Building = _building_near(base + Vector3(-6, 0, 5))
+	var loaded_unstarted: Building = _building_near(base + Vector3(5, 0, -6))
+	_check(loaded_fence != null and loaded_fence.is_built() and loaded_fence.current_hp == fence_hp
+		and absf(loaded_fence.global_rotation.y - 0.3) < 0.01 and loaded_fence.health_bar() != null
+		and is_equal_approx(loaded_fence.health_bar().fill(), float(fence_hp) / float(loaded_fence.get_max_hp())),
+		"the built fence comes back at %d HP, its bar showing it at once" % fence_hp)
+	_check(loaded_post != null and loaded_post.is_blueprint() and is_equal_approx(loaded_post.build_progress, post_progress)
+		and loaded_post.current_hp == post_hp and loaded_post.paid_cost() == {&"wood": 2, &"stone": 1},
+		"the half-built watch post comes back at %d%% with what was paid for it" % roundi(post_progress * 100.0))
+	var wood_before: int = ResourceManager.get_count(&"wood")
+	_check(loaded_unstarted != null and BuildManager.remove_blueprint(loaded_unstarted)
+		and ResourceManager.get_count(&"wood") - wood_before == 1, "an unstarted blueprint taken back refunds what was paid (1 Wood)")
+	var loaded_torch: Node3D = null
+	for node in get_tree().get_nodes_in_group("torches"):
+		if (node as Node3D).global_position.distance_to(torch_spot) < 0.01:
+			loaded_torch = node as Node3D
+	_check(loaded_torch != null and int(loaded_torch.get("dawns_to_burn")) == torch_dawns
+		and is_equal_approx(float(loaded_torch.get("radius")), torch_radius),
+		"the Ember Heart torch comes back with its %d dawns left" % torch_dawns)
+	_check(MoonLantern.find(get_tree()).shards == shards, "the Moon Lantern keeps its %d shards" % shards)
+	_check(player.has_signature and player.attack_damage == player_damage and not companion.has_signature
+		and companion.attack_damage == companion_damage and companion.current_task == Companion.Task.GUARD_BASE,
+		"the heroes come back with their signature tools, damage and task")
+
+	# A save from before perk cards: no paid cost, the old signature name.
+	await _continue_from(legacy)
+	player = get_tree().get_first_node_in_group("player") as Hero
+	loaded_unstarted = _building_near(base + Vector3(5, 0, -6))
+	wood_before = ResourceManager.get_count(&"wood")
+	var price: int = int(BuildManager.cost_of(fence_def).get(&"wood", 0))
+	_check(player.has_signature and loaded_unstarted != null and BuildManager.remove_blueprint(loaded_unstarted)
+		and ResourceManager.get_count(&"wood") - wood_before == price,
+		"an older save: the stick counts as the signature tool, and the refund is today's price (%d Wood)" % price)
+	await _start_fresh_run()
+	_check(get_tree().get_nodes_in_group(Building.BUILDINGS_GROUP).filter(
+		func(node: Node) -> bool: return not node.is_queued_for_deletion()).is_empty(),
+		"a new run starts with no buildings")
+
+
+## The building standing within 0.05 m of `spot`, or null.
+func _building_near(spot: Vector3) -> Building:
+	for node in get_tree().get_nodes_in_group(Building.BUILDINGS_GROUP):
+		var building: Building = node as Building
+		if building != null and not building.is_queued_for_deletion() and building.global_position.distance_to(spot) < 0.05:
+			return building
+	return null

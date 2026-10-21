@@ -11,7 +11,10 @@ extends Node
 ##
 ## A saving system is anything that holds run state. It has:
 ##   save_state() -> Dictionary  its own keys, at their place in the save
-##                               file (the session merges them);
+##                               file (the session merges them, and two
+##                               systems may share an entry: a hero's
+##                               signature and its XP both sit under
+##                               "player");
 ##   load_state(data: Dictionary)  takes the whole save, reads its own
 ##                               keys and tolerates missing ones;
 ##   reset()                     back to a fresh run.
@@ -92,7 +95,7 @@ func snapshot() -> Dictionary:
 	if data.is_empty():
 		return {}
 	for system in saving_systems():
-		data.merge(system.save_state(), true)
+		_merge_entry(data, system.save_state())
 	return data
 
 
@@ -130,9 +133,34 @@ func _autoload_systems() -> Array:
 
 ## The world objects (campfire, buildings and blueprints, torches, the
 ## Moon Lantern), then the heroes, from the gameplay scene, in restore
-## order. Empty when there is no gameplay scene.
+## order. Buildings and torches are listed by their own module; the
+## rest are the objects themselves, left out when the scene has none.
 func _world_systems() -> Array:
-	return []
+	var tree: SceneTree = get_tree()
+	var out: Array = []
+	var fire: BaseCore = tree.get_first_node_in_group("base_core") as BaseCore
+	if fire != null:
+		out.append(fire)
+	out.append(BuildingSaves.new(tree))
+	out.append(TorchSaves.new(tree))
+	var lantern: MoonLantern = MoonLantern.find(tree)
+	if lantern != null:
+		out.append(lantern)
+	for group in ["player", "companions"]:
+		var hero: Hero = tree.get_first_node_in_group(group) as Hero
+		if hero != null:
+			out.append(hero)
+	return out
+
+
+## Merges `state` into `data`; an entry both hold as a Dictionary (a
+## hero's) gets the keys of both.
+static func _merge_entry(data: Dictionary, state: Dictionary) -> void:
+	for key in state.keys():
+		if data.get(key) is Dictionary and state[key] is Dictionary:
+			(data[key] as Dictionary).merge(state[key], true)
+		else:
+			data[key] = state[key]
 
 
 func _use_party(run: RunConfig, hero: StringName, companion: StringName, nights: int) -> void:

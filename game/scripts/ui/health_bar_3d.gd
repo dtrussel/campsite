@@ -78,6 +78,16 @@ func set_value(current: int, maximum: int) -> void:
 	visible = not (hide_when_full and current >= maximum)
 
 
+## The share of the bar filled (0..1), as last set.
+func fill() -> float:
+	return _fill
+
+
+## The maximum the bar was last set against.
+func maximum() -> int:
+	return _max
+
+
 func set_level(level: int) -> void:
 	if _level_label != null:
 		_level_label.text = str(level)

@@ -129,6 +129,23 @@ func set_task(task: int) -> void:
 	_update_task_label()
 
 
+func _save_entry() -> Dictionary:
+	var entry: Dictionary = super()
+	entry["task"] = current_task
+	return entry
+
+
+func _load_entry(entry: Dictionary) -> void:
+	super(entry)
+	set_task(int(entry.get("task", Task.IDLE)))
+
+
+## A fresh run's companion also starts idle.
+func reset() -> void:
+	super()
+	set_task(Task.IDLE)
+
+
 ## A bandage: +25 HP, or gets a downed companion up (with 25 HP).
 ## False when they do not need one.
 func apply_bandage() -> bool:
