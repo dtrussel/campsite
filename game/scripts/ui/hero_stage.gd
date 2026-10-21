@@ -31,6 +31,8 @@ func _ready() -> void:
 		visual.model_scale = hero.model_scale
 		visual.clips = hero.clips.duplicate()
 		visual.style = "hero"
+		visual.outfit_mesh = hero.outfit_mesh
+		visual.outfit_tint = Cosmetics.outfit_tint(hero.id)
 		visual.lean = false
 		visual.position = Vector3(_slot_x(i, heroes.size()), 0, ROW_Z)
 		add_child(visual)
@@ -72,6 +74,12 @@ func select(index: int, cheer: bool = true) -> void:
 	_glow.position = spot + Vector3(0, 1.4, 0.9)
 	if cheer:
 		_visuals[_selected].play_action(&"cheer", 1.0)
+
+
+## Dresses hero `index` in outfit `color` (hero select's outfit row).
+func set_outfit_tint(index: int, color: Color) -> void:
+	if index >= 0 and index < _visuals.size():
+		_visuals[index].set_outfit_tint(color)
 
 
 func _process(delta: float) -> void:

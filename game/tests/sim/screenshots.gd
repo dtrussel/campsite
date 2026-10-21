@@ -21,6 +21,15 @@ func _ready() -> void:
 	add_child(title)
 	await _settle(0.5)
 	_shot("01_title")
+	# Journal badges 03: the scrapbook's Badges tab, a few badges earned.
+	Profile.set_path("user://screenshot_profile.json")
+	Profile.delete()
+	for id in [&"first_night", &"night_owl", &"builder", &"chapter_1", &"torch_bearer", &"gatherer"]:
+		Profile.set_value(Badges.EARNED_PREFIX + String(id), true)
+	(title.call("journal_button") as Button).pressed.emit()
+	await _settle(0.5)
+	_shot("01a_scrapbook_badges")
+	Profile.delete()
 	title.queue_free()
 	SaveManager.delete_save()
 	# Features 029-030: the loading screens, one per painting.
@@ -403,6 +412,33 @@ func _ready() -> void:
 	add_child(home)
 	await _settle(1.0)
 	_shot("12_title_mum_home")
+	home.queue_free()
+	# Endless mode 03: the Endless button with its record...
+	Profile.set_value(Profile.ENDLESS_BEST_NIGHTS, 12)
+	Profile.set_value(Profile.ENDLESS_BEST_HERO, "nela")
+	var endless_title: Node = load("res://scenes/ui/TitleScreen.tscn").instantiate()
+	add_child(endless_title)
+	await _settle(1.0)
+	_shot("15_title_endless_record")
+	endless_title.queue_free()
+	# ...and an endless run that beats it: "New record!".
+	GameManager.nights_to_win = 7
+	GameManager.endless = true
+	GameManager.set_party(&"leo")
+	var endless_main: Node = load("res://scenes/main/Main.tscn").instantiate()
+	add_child(endless_main)
+	await _settle(0.5)
+	get_tree().get_first_node_in_group("controls_overlay").close()
+	await _settle(0.5)
+	TimeManager.day_number = 14
+	GameManager.current_day = 14
+	GameManager.stats[&"nights_survived"] = 13
+	_campfire_out()
+	await _settle(0.8)
+	_shot("15b_end_screen_new_record")
+	endless_main.queue_free()
+	GameManager.endless = false
+	GameManager.nights_to_win = 3
 	Profile.delete()
 	get_tree().quit(0)
 

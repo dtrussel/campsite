@@ -28,6 +28,9 @@ extends Resource
 @export var hurt_sfx: StringName = &"player_hurt"
 ## Model parts put away while a hand tool (the build hammer) is out.
 @export var tool_hidden_parts: PackedStringArray = PackedStringArray()
+## The model's body-and-clothes mesh, which the badge outfit tints
+## colour (Cosmetics).
+@export var outfit_mesh: String = ""
 
 @export_group("Combat")
 @export var stats: CharacterStatsDefinition

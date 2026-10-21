@@ -20,8 +20,6 @@ const CHARACTERS: Dictionary = {
 	"leo": "hero", "nela": "hero", "mum": "hero",
 	"shadow_imp": "shadow", "bramble_beast": "shadow", "mushroom_gremlin": "shadow",
 }
-const TINT_ROCK: Array[String] = ["rock_"]
-const TINT_FOLIAGE: Array[String] = ["hill_", "mountain_"]
 
 var _camera: Camera3D = null
 var _stage: Node3D = null
@@ -110,12 +108,6 @@ func _render(model: String, out_dir: String) -> void:
 		push_warning("model_gallery: missing %s" % model)
 		return
 	var node: Node3D = scene.instantiate() as Node3D
-	for prefix in TINT_ROCK:
-		if model.begins_with(prefix):
-			node.set_meta(Stylize.TINT_META, Stylize.TINT_ROCK)
-	for prefix in TINT_FOLIAGE:
-		if model.begins_with(prefix):
-			node.set_meta(Stylize.TINT_META, Stylize.TINT_FOLIAGE)
 	if (model.contains("tree_") or model.contains("pine_") or model.contains("bush") or model.begins_with("mushrooms")) \
 			and not model.contains("dead"):
 		node.set_meta(Stylize.FOLIAGE_META, true)
