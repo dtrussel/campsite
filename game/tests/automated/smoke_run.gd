@@ -70,6 +70,7 @@ func _ready() -> void:
 	await _run_lifecycle_02_scenario()
 	await _run_world_save_scenario()
 	await _run_review_fixes_scenario()
+	await _run_endless_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	Profile.delete()
@@ -1370,8 +1371,7 @@ func _run_boss_scenario() -> void:
 
 	# Night 5: its eyes at the treeline, gone at dawn.
 	TimeManager.day_number = 5
-	while not TimeManager.is_night():
-		TimeManager.skip_phase()
+	_skip_to_night()
 	await get_tree().process_frame
 	_check(get_tree().get_nodes_in_group("moon_eater_eyes").size() == 1, "night 5: its eyes watch from the treeline")
 	TimeManager.skip_phase()
@@ -3108,3 +3108,99 @@ func _run_review_fixes_scenario() -> void:
 			spoke = true
 	_check(ProgressionManager.get_level(Party.player_hero()) == 3 and not spoke,
 		"Continue on a level-3 save plays no level-up bark")
+
+
+## Endless mode 01: once the true ending is seen, the title offers
+## Endless: a Chapter 2 run with the Moon Lantern lit that keeps going
+## past night 7 with no win and no Moon-Eater, and stays endless through
+## save and Continue.
+func _run_endless_scenario() -> void:
+	print("smoke: --- endless scenario ---")
+	await _close_main()
+	StoryLibrary.forget_progress()
+	_check(not (await _title_buttons()).has("endless"), "no Endless button before the true ending")
+	StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING)
+	_check((await _title_buttons()).has("endless"), "the true ending unlocks the Endless button")
+
+	# An endless run: Chapter 2, the lantern lit, no Moon-Eater, no win.
+	GameManager.set_party(&"leo")
+	GameManager.nights_to_win = 7
+	GameManager.endless = true  # as the title's Endless button sets it
+	await _start_fresh_run()
+	var spawner: MobSpawner = get_tree().get_first_node_in_group("mob_spawner") as MobSpawner
+	var lantern: MoonLantern = MoonLantern.find(get_tree())
+	_check(GameManager.endless and GameManager.chapter() == 2 and lantern.is_full(),
+		"an endless run is Chapter 2 with the Moon Lantern lit (stage %d of %d)" % [lantern.stage, lantern.max_stage()])
+	_check(not spawner.is_boss_night(7) and not spawner.build_wave(7).any(func(d: MobDefinition) -> bool: return d.is_boss),
+		"no Moon-Eater in an endless night 7's wave")
+	TimeManager.day_number = 5
+	while not TimeManager.is_night():
+		TimeManager.skip_phase()
+	await get_tree().process_frame
+	_check(get_tree().get_nodes_in_group("moon_eater_eyes").is_empty(), "no eyes watch in endless")
+	TimeManager.day_number = 7
+	TimeManager.skip_phase()  # dawn 7
+	_check(GameManager.is_playing(), "dawn 7 is no win in endless")
+	_skip_to_night()  # night 8
+	# The boss scenario's calmed golem still sits on the test root, so
+	# watch what the spawner sends: the Moon-Eater would come first.
+	var spawned: Array = []
+	spawner.mob_spawned.connect(func(_mob: Node3D, definition: MobDefinition) -> void: spawned.append(definition))
+	await _wait(spawner.initial_delay_seconds + 1.0)
+	_check(TimeManager.day_number == 8 and not spawned.is_empty() and not spawned.any(func(d: MobDefinition) -> bool: return d.is_boss),
+		"night 8 comes, and no Moon-Eater rises (%d mobs so far)" % spawned.size())
+	TimeManager.skip_phase()  # dawn 8
+	await get_tree().process_frame
+	_check(GameManager.is_playing() and int(GameManager.stats[&"nights_survived"]) == 8,
+		"an endless run passes night 8 without a win")
+
+	# Dawn 8's autosave keeps the run endless through Continue.
+	var data: Dictionary = SaveManager.load_save()
+	_check(bool(data.get("endless", false)), "the autosave holds the endless flag")
+	var tip: String = str((await _title_buttons()).get("continue", ""))
+	_check(tip.ends_with("night 9"), "the title's Continue reads \"Night N\" in endless (%s)" % tip)
+	GameManager.endless = false  # Continue takes it from the save
+	await _continue_from(data)
+	lantern = MoonLantern.find(get_tree())
+	spawner = get_tree().get_first_node_in_group("mob_spawner") as MobSpawner
+	_check(GameManager.endless and TimeManager.day_number == 9 and lantern.is_full() and not spawner.is_boss_night(7),
+		"Continue keeps the run endless, at day 9 with the lantern lit")
+	await _start_fresh_run()
+	_check(GameManager.endless, "Again after an endless run is endless too")
+
+	# A chapter run after it is a story run again.
+	GameManager.endless = false  # as the title's chapter buttons set it
+	await _start_fresh_run()
+	_check(not GameManager.endless and not MoonLantern.find(get_tree()).is_full()
+		and (get_tree().get_first_node_in_group("mob_spawner") as MobSpawner).is_boss_night(7),
+		"a Chapter 2 run after endless has its dark lantern and its Moon-Eater")
+	GameManager.nights_to_win = 3
+	StoryLibrary.forget_progress()
+
+
+## Skips the clock on to the next night; stops if the clock has stopped
+## (the run ended), so a check fails instead of the test hanging.
+func _skip_to_night() -> void:
+	for i in 4:
+		if TimeManager.is_night() or not TimeManager.is_running:
+			return
+		TimeManager.skip_phase()
+
+
+## Opens the title screen and returns its captioned buttons, as
+## {lower-case caption: tooltip}. The screen is gone again by the time
+## this returns.
+func _title_buttons() -> Dictionary:
+	var game_camera: Camera3D = get_viewport().get_camera_3d()
+	var title: Control = (load("res://scenes/ui/TitleScreen.tscn") as PackedScene).instantiate()
+	add_child(title)
+	await get_tree().process_frame
+	var found: Dictionary = {}
+	for node in title.find_children("*", "Button", true, false):
+		var caption: String = (node as Button).text.strip_edges().to_lower()
+		if caption != "":
+			found[caption] = (node as Button).tooltip_text
+	title.free()
+	if game_camera != null and is_instance_valid(game_camera):
+		game_camera.make_current()
+	return found

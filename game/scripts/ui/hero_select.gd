@@ -85,7 +85,9 @@ func _build_header() -> void:
 	heading.add_theme_constant_override("outline_size", 9)
 	ribbon_plate.add_child(heading)
 
-	var goal: Label = UiKit.label("Survive %d nights by the campfire" % GameManager.nights_to_win, 18, UiKit.COLOR_GOLD_LIGHT)
+	var goal_text: String = "Endless: how long can you last by the campfire?" if GameManager.endless \
+		else "Survive %d nights by the campfire" % GameManager.nights_to_win
+	var goal: Label = UiKit.label(goal_text, 18, UiKit.COLOR_GOLD_LIGHT)
 	goal.add_theme_font_override("font", Fx.bold_font())
 	goal.add_theme_constant_override("outline_size", 6)
 	goal.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)

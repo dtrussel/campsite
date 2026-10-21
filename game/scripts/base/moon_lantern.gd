@@ -16,7 +16,9 @@ extends Node3D
 ## inside its glass, the core glows and the carved crescent lights up.
 ##
 ## A saving system (run lifecycle 03): its shards go in the save file
-## under "lantern" (saves from before feature 036 start it dark).
+## under "lantern" (saves from before feature 036 start it dark). An
+## endless run starts with it fully lit, so its shards go to Glow
+## Lanterns.
 
 signal stage_changed(stage: int, max_stage: int)
 signal shards_delivered(amount: int)
@@ -69,6 +71,7 @@ static func find(tree: SceneTree) -> MoonLantern:
 func _ready() -> void:
 	add_to_group(GROUP)
 	_build_model()
+	shards = _fresh_shards()
 	_refresh(false)
 
 
@@ -180,9 +183,13 @@ func load_state(data: Dictionary) -> void:
 	restore(int((saved as Dictionary).get("shards", 0)) if saved is Dictionary else 0)
 
 
-## A fresh run's lantern: dark.
+## A fresh run's lantern: dark, or fully lit in endless.
 func reset() -> void:
-	restore(0)
+	restore(_fresh_shards())
+
+
+func _fresh_shards() -> int:
+	return shards_for_max() if GameManager.endless else 0
 
 
 ## Loses `count` stages of light (the Moon-Eater swallowed them,

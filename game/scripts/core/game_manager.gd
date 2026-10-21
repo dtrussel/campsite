@@ -26,6 +26,11 @@ const HERO_SELECT_SCENE: String = "res://scenes/ui/HeroSelect.tscn"
 
 ## Surviving this many nights wins the run.
 @export var nights_to_win: int = 3
+## Endless mode (unlocked by the true ending): a Chapter 2 run
+## (nights_to_win stays 7, so chapter() and the moon rows still read
+## right) that has no win and no Moon-Eater. Kept between runs like the
+## run length; the chapter buttons clear it.
+var endless: bool = false
 
 var current_day: int = 1
 var is_camp_destroyed: bool = false
@@ -120,8 +125,10 @@ func chapter() -> int:
 
 
 ## The intro pages a new game opens with. Every new game plays them
-## (Esc skips); Continue and Restart never do.
+## (Esc skips); Continue, Restart and endless runs never do.
 func intro_pages() -> Array:
+	if endless:
+		return []  # endless comes after the story: straight to the camp
 	return StoryLibrary.find(&"intro", chapter())
 
 
@@ -155,9 +162,11 @@ func last_hero_pick() -> StringName:
 	return last if HeroRoster.has_hero(last) else hero_id
 
 
-## Title screen Play: pick the run length, then the hero.
-func open_hero_select(nights: int) -> void:
+## Title screen Play: pick the run length (or Endless, as Chapter 2),
+## then the hero.
+func open_hero_select(nights: int, endless_run: bool = false) -> void:
 	nights_to_win = nights
+	endless = endless_run
 	get_tree().paused = false
 	get_tree().change_scene_to_file(HERO_SELECT_SCENE)
 
@@ -230,7 +239,7 @@ static func party_of(data: Dictionary) -> Dictionary:
 
 
 ## Saving system (RunSession): the run fields. The run's stats, the
-## chapter goal, the party and the shard pity counter (kills since each
+## chapter goal and endless flag, the party and the shard pity counter (kills since each
 ## mob type last dropped; saves from before it start it empty).
 func save_state() -> Dictionary:
 	var saved_stats: Dictionary = {}
@@ -241,6 +250,7 @@ func save_state() -> Dictionary:
 		misses[String(id)] = int(loot_misses[id])
 	return {
 		"nights_to_win": nights_to_win,
+		"endless": endless,
 		"party": {"hero": String(hero_id), "companion": String(companion_id)},
 		"stats": saved_stats,
 		"loot_misses": misses,
@@ -248,10 +258,14 @@ func save_state() -> Dictionary:
 
 
 ## Saving system: takes the run fields back over a fresh run. Missing
-## keys keep the fresh values (and the current party and run length).
+## keys keep the fresh values (and the current party, run length and
+## endless flag; saves from before endless mode are story runs, as
+## RunSession.continue_from sets them).
 func load_state(data: Dictionary) -> void:
 	if data.has("nights_to_win"):
 		nights_to_win = int(data["nights_to_win"])
+	if data.has("endless"):
+		endless = bool(data["endless"])
 	if data.get("party") is Dictionary:
 		var party: Dictionary = party_of(data)
 		set_party(party["hero"], party["companion"])
@@ -265,9 +279,9 @@ func load_state(data: Dictionary) -> void:
 			loot_misses[StringName(id)] = int(misses[id])
 
 
-## Saving system: a fresh run's fields. Keeps the party and run length
-## (the next run starts from them); the loot rolls are reshuffled, and
-## RunSession then seeds them from the run config.
+## Saving system: a fresh run's fields. Keeps the party, run length and
+## endless flag (the next run starts from them); the loot rolls are
+## reshuffled, and RunSession then seeds them from the run config.
 func reset() -> void:
 	current_day = 1
 	is_camp_destroyed = false
@@ -317,7 +331,7 @@ func _on_dawn_started(day_number: int) -> void:
 		return
 	stats[&"nights_survived"] = day_number
 	PlaytestLog.write("night_survived night=%d" % day_number)
-	if day_number >= nights_to_win:
+	if day_number >= nights_to_win and not endless:
 		if int(stats.get(&"boss_calmed", 0)) > 0:
 			_end_run(true, "You calmed the Moon-Eater!", &"win")
 		else:
