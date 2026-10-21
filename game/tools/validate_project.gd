@@ -286,6 +286,8 @@ func _validate_badges() -> void:
 			_fail("%s %s" % [badge.resource_path, problem])
 	if badges.size() < 12:
 		_fail("only %d badges in %s (about 15 planned)" % [badges.size(), Badges.BADGES_DIR])
+	for problem in StartingPerks.problems():
+		_fail("StartingPerks %s" % problem)
 	if badges.size() != Badges.definitions().size():
 		_fail("Badges loaded %d badges, %s has %d" % [Badges.definitions().size(), Badges.BADGES_DIR, badges.size()])
 

@@ -210,8 +210,17 @@ func on_game_scene_ready() -> void:
 		PlaytestLog.write("run_continued nights_to_win=%d day=%d" % [nights_to_win, TimeManager.day_number])
 	else:
 		TimeManager.start_run()
+		_give_starting_perk()
 		PlaytestLog.write("run_started nights_to_win=%d" % nights_to_win)
 	run_started.emit()
+
+
+## A new run's starting perk (journal badges 06): the run config's,
+## if a badge has unlocked it.
+func _give_starting_perk() -> void:
+	var perk: StringName = RunSession.config.starting_perk if RunSession.config != null else &""
+	if perk != &"" and StartingPerks.is_unlocked(perk):
+		PerkManager.take_starting(Party.player_hero(), perk)
 
 
 ## Whether this kill drops the mob's loot: its drop chance, with a

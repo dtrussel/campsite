@@ -28,6 +28,9 @@ var loot_seed: int = randi()
 ## Real seconds the perk picker waits before it auto-picks; 0 (or less)
 ## skips the picker and takes the first card at once.
 var perk_auto_pick_seconds: float = DEFAULT_AUTO_PICK_SECONDS
+## A perk card the played hero starts the run with (journal badges 06),
+## or &"" for none. Given only if a badge has unlocked it.
+var starting_perk: StringName = &""
 
 
 ## A config for the next run: the party, run length and endless flag
@@ -39,4 +42,5 @@ static func current() -> RunConfig:
 	config.companion_id = GameManager.companion_id
 	config.nights_to_win = GameManager.nights_to_win
 	config.endless = GameManager.endless
+	config.starting_perk = StartingPerks.chosen()
 	return config

@@ -44,6 +44,9 @@ var _pending: Dictionary = {}  # Node -> int
 var clock: float = 0.0
 ## The heroes a loaded save may owe cards, dealt on restore_finished.
 var _owed: Array[Node] = []
+## The card each character started the run with (journal badges 06),
+## which is not a level-up's card.
+var _starting: Dictionary = {}  # Node -> StringName
 
 
 func _ready() -> void:
@@ -108,6 +111,20 @@ func take(character: Node, id: StringName) -> bool:
 	return true
 
 
+## Gives `character` the perk `id` as the card it starts the run with
+## (StartingPerks): held like any other, but owed to no level-up.
+func take_starting(character: Node, id: StringName) -> bool:
+	if not take(character, id):
+		return false
+	_starting[character] = id
+	return true
+
+
+## The card `character` started the run with, or &"" for none.
+func starting_perk_of(character: Node) -> StringName:
+	return _starting.get(character, &"")
+
+
 func has(character: Node, id: StringName) -> bool:
 	return _taken.has(character) and (_taken[character] as Array).has(id)
 
@@ -137,6 +154,8 @@ func restore(character: Node, ids: Array) -> void:
 		var perk: PerkDefinition = get_definition(StringName(str(raw)))
 		if perk != null and (perk.stacks or not list.has(perk.id)):
 			list.append(perk.id)
+	if not list.has(starting_perk_of(character)):
+		_starting.erase(character)
 	perks_changed.emit()
 
 
@@ -149,7 +168,8 @@ func restore(character: Node, ids: Array) -> void:
 func top_up(character: Node) -> void:
 	if character == null or not is_instance_valid(character):
 		return
-	var owed: int = ProgressionManager.get_level(character) - 1 - perks_of(character).size()
+	var level_cards: int = perks_of(character).size() - (1 if starting_perk_of(character) != &"" else 0)
+	var owed: int = ProgressionManager.get_level(character) - 1 - level_cards
 	for i in owed:
 		var role: StringName = Party.role_of(character)
 		if role == Party.PLAYER:
@@ -167,6 +187,7 @@ func reset() -> void:
 	_taken.clear()
 	_pending.clear()
 	_owed.clear()
+	_starting.clear()
 	clock = 0.0
 	rng.randomize()
 	perks_changed.emit()
@@ -181,6 +202,8 @@ func save_state() -> Dictionary:
 		if hero != null:
 			var ids: Array = perks_of(hero).map(func(id: StringName) -> String: return String(id))
 			out[Party.SAVE_KEYS[role]] = {"perks": ids}
+			if starting_perk_of(hero) != &"":
+				out[Party.SAVE_KEYS[role]]["starting_perk"] = String(starting_perk_of(hero))
 	return out
 
 
@@ -198,6 +221,11 @@ func load_state(data: Dictionary) -> void:
 		var entry: Dictionary = saved if saved is Dictionary else {}
 		var ids: Variant = entry.get("perks", [])
 		restore(hero, ids if ids is Array else [])
+		var starting: StringName = StringName(str(entry.get("starting_perk", "")))
+		if starting != &"" and has(hero, starting):
+			_starting[hero] = starting
+		else:
+			_starting.erase(hero)
 		if entry.has("perks"):
 			_owed.append(hero)
 	if not _owed.is_empty() and not RunSession.restore_finished.is_connected(_deal_owed):
@@ -370,5 +398,6 @@ func _deal_owed() -> void:
 func _on_character_exiting(character: Node) -> void:
 	_owed.erase(character)
 	_taken.erase(character)
+	_starting.erase(character)
 	_pending.erase(character)
 	perks_changed.emit()
