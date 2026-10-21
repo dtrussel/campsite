@@ -58,6 +58,7 @@ func _ready() -> void:
 	await _run_perk_07_scenario()
 	await _run_perk_review_scenario()
 	await _run_hero_health_scenario()
+	await _run_hero_attack_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	Profile.delete()
@@ -1121,7 +1122,7 @@ func _run_hero_scenario() -> void:
 	var imp: Mob = _spawn_mob(spawner.get("mob_definition"), player.global_position + Vector3(3.5, 0, 0))
 	await get_tree().process_frame
 	var imp_hp: int = imp.current_hp
-	player.call("_perform_attack", imp)
+	(player as Hero).attack(imp)
 	_check(imp.current_hp == imp_hp, "the pebble has not landed yet")
 	await _wait(PebbleShot.FLIGHT_SECONDS + 0.2)
 	_check(not is_instance_valid(imp) or imp.current_hp < imp_hp, "Nela's pebble hit the imp 3.5 m away")
@@ -1132,12 +1133,12 @@ func _run_hero_scenario() -> void:
 	for item in [&"wood", &"scrap"]:
 		ResourceManager.add(item, 10)
 	var table: Building = _spawn_building(&"crafting_table", Vector3(5, 0, -6))
-	var reach: float = float(player.get("attack_range"))
+	var reach: float = (player as Hero).get_attack_range()
 	_check(CraftingManager.craft(_recipe(&"slingshot"), player)
-		and is_equal_approx(float(player.get("attack_range")), reach * nela.signature_range_factor), "the slingshot goes to Nela (the player)")
-	var damage: int = int(companion.get("_current_attack_damage"))
+		and is_equal_approx((player as Hero).get_attack_range(), reach * nela.signature_range_factor), "the slingshot goes to Nela (the player)")
+	var damage: int = (companion as Hero).get_attack_damage()
 	_check(CraftingManager.craft(_recipe(&"sturdy_stick"), player)
-		and int(companion.get("_current_attack_damage")) == damage + 2, "the sturdy stick goes to Leo (the companion)")
+		and (companion as Hero).get_attack_damage() == damage + 2, "the sturdy stick goes to Leo (the companion)")
 
 	# The save remembers the party; Continue plays Nela again.
 	var data: Dictionary = SaveManager.snapshot()
@@ -1609,13 +1610,10 @@ func _check_perk_04_nela(nela: Node3D) -> void:
 	await _perk_04_clear_mobs()
 
 
-## One attack from `hero` on `mob`, through its controller, then waits
-## for the swing or the pebble (and any bounce) to land.
+## One attack from `hero` on `mob`, through the Hero interface, then
+## waits for the swing or the pebble (and any bounce) to land.
 func _perk_04_swing(hero: Node3D, mob: Mob) -> void:
-	if hero.is_in_group("player"):
-		hero.call("_perform_attack", mob)
-	else:
-		hero.call("_attack_mob", mob)
+	(hero as Hero).attack(mob)
 	await _wait(1.2)
 
 
@@ -2218,3 +2216,69 @@ func _check_hero_health(who: Hero) -> void:
 func _hero_id(who: Node) -> StringName:
 	var definition: HeroDefinition = who.get("hero") as HeroDefinition
 	return definition.id if definition != null else &"?"
+
+
+## Hero core 02: Leo and Nela attack the same way in both roles, through
+## the Hero interface: damage and reach come from the definition (by
+## role), an attack starts the cooldown and lands, and the signature
+## tool changes damage and reach.
+func _run_hero_attack_scenario() -> void:
+	print("smoke: --- hero attack scenario ---")
+	for hero_id in [&"leo", &"nela"]:
+		GameManager.set_party(hero_id)
+		await _start_fresh_run()
+		var player: Hero = get_tree().get_first_node_in_group("player") as Hero
+		var companion: Hero = get_tree().get_first_node_in_group("companions") as Hero
+		if player == null or companion == null:
+			_fail("party %s: both roles are Heroes" % hero_id)
+			continue
+		# Hold both still (the test attacks for them), and stop the watch
+		# post shooting the staged mob.
+		player.set_physics_process(false)
+		companion.set_physics_process(false)
+		for building in get_tree().current_scene.find_children("*", "Building", true, false):
+			building.set_physics_process(false)
+		for who in [player, companion]:
+			await _check_hero_attack(who as Hero)
+	GameManager.set_party(&"leo")
+
+
+func _check_hero_attack(who: Hero) -> void:
+	var as_companion: bool = who.is_in_group("companions")
+	var label: String = "%s as %s" % [_hero_id(who), "companion" if as_companion else "player"]
+	var definition: HeroDefinition = who.hero
+	var reach: float = definition.companion_attack_range if as_companion else definition.attack_range
+	var damage: int = definition.stats.base_attack_damage
+	_check(who.get_attack_damage() == damage and is_equal_approx(who.get_attack_range(), reach),
+		"%s: damage %d and reach %.2f match the definition (%d, %.2f)" % [label, who.get_attack_damage(), who.get_attack_range(), damage, reach])
+	_check(who.tool_tier == 0, "%s: no tool tier yet" % label)
+
+	# One attack: the cooldown starts and the hit lands.
+	var spot: Vector3 = _campfire().global_position + Vector3(9, 0, 0)
+	who.global_position = spot
+	var beast_def: MobDefinition = load("res://resources/mobs/bramble_beast.tres") as MobDefinition
+	var mob: Mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 0))
+	mob.set_physics_process(false)
+	await get_tree().process_frame
+	_check(who.is_attack_ready() and not who.is_attacking(), "%s: ready, and not attacking yet" % label)
+	_check(who.attack(mob) and not who.is_attack_ready(), "%s: an attack starts the cooldown" % label)
+	if as_companion:
+		_check(who.is_attacking(), "%s: attacking while the cooldown runs" % label)
+	await _wait(1.2)
+	_check(mob.current_hp < beast_def.max_hp, "%s: the attack lands (%d/%d HP)" % [label, mob.current_hp, beast_def.max_hp])
+	if not as_companion:
+		# The pointer commands ask the player's hero whether it is attacking.
+		(who as Node).call("command_attack", mob)
+		var attacking: bool = who.is_attacking()
+		(who as Node).call("stop_commands")
+		_check(attacking and not who.is_attacking(), "%s: an attack command is attacking, until stopped" % label)
+	await _perk_04_clear_mobs()
+
+	# The signature tool: its damage bonus and its range factor, by role.
+	var factor: float = definition.companion_signature_range_factor if as_companion else definition.signature_range_factor
+	who.apply_signature()
+	_check(who.has_signature and who.get_attack_damage() == damage + definition.signature_damage_bonus
+		and is_equal_approx(who.get_attack_range(), reach * factor),
+		"%s: the %s makes damage %d and reach %.2f" % [label, definition.signature_label, who.get_attack_damage(), who.get_attack_range()])
+	who.apply_signature()
+	_check(who.get_attack_damage() == damage + definition.signature_damage_bonus, "%s: the signature applies once" % label)

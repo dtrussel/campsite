@@ -36,19 +36,12 @@ var _hp_bar: HealthBar3D = null
 
 var _player: Node3D = null
 var _base_core: Node3D = null
-var _attack_cooldown_remaining: float = 0.0
-var _current_attack_damage: int = 0
 var _active_resource_node: Node = null   # ResourceNode currently being gathered
 var _repair_timer: float = 0.0
 ## The hammering rhythm while building or repairing (feature 045).
 var _build_beat: BuildBeat = BuildBeat.new()
 var _tool_busy: bool = false
-## Crafting Table upgrade (features 019, 034): the hero's signature
-## (Nela's Slingshot doubles her reach; Leo's Sturdy Stick adds damage).
-var has_signature: bool = false
 var move_speed: float = 4.8
-var _attack_range: float = 2.0
-var _attack_cooldown: float = 0.6
 
 const BANDAGE_HEAL: int = 25
 ## Re-path when the walk goal moves this far.
@@ -72,6 +65,9 @@ func _init() -> void:
 	max_hp = 40
 	regen_per_second = 1.0
 	hurt_invulnerability_seconds = 0.5
+	# The companion's attack defaults (the definitions overwrite them).
+	attack_damage = 0
+	attack_cooldown_seconds = 0.6
 
 
 func _enter_tree() -> void:
@@ -91,17 +87,16 @@ func _ready() -> void:
 	_agent = NavSteer.make_agent(self)
 	_refresh_world_refs()
 	_update_task_label()
-	_current_attack_damage = definition.attack_damage if definition != null else 0
+	attack_damage = definition.attack_damage if definition != null else 0
 	if definition != null:
 		move_speed = definition.move_speed
-		_attack_range = definition.attack_range
-		_attack_cooldown = definition.attack_cooldown_seconds
+		attack_range = definition.attack_range
+		attack_cooldown_seconds = definition.attack_cooldown_seconds
 	if hero != null:
 		move_speed = hero.companion_move_speed
-		_attack_range = hero.companion_attack_range
-		_attack_cooldown = hero.companion_attack_cooldown
+	_read_attack_tuning()
 	if stats != null:
-		_current_attack_damage = stats.base_attack_damage
+		attack_damage = stats.base_attack_damage
 		max_hp = stats.base_max_health
 	current_hp = max_hp
 	ProgressionManager.register_character(self, stats)
@@ -144,22 +139,6 @@ func set_task(task: int) -> void:
 	_update_task_label()
 
 
-## The reach of an attack now, after perks (Eagle Eye).
-func get_attack_range() -> float:
-	return _attack_range * PerkManager.multiplier(self, &"attack_range")
-
-
-## The hero's signature upgrade (see HeroDefinition), once per run.
-func apply_signature() -> void:
-	if has_signature or hero == null:
-		return
-	has_signature = true
-	_current_attack_damage += hero.signature_damage_bonus
-	_attack_range *= hero.companion_signature_range_factor
-	Fx.float_text(self, "%s!" % hero.signature_label.to_upper(), Color(1.0, 0.85, 0.4), 2.7)
-	Fx.burst(&"level_up", global_position)
-
-
 ## A bandage: +25 HP, or gets a downed companion up (with 25 HP).
 ## False when they do not need one.
 func apply_bandage() -> bool:
@@ -188,7 +167,7 @@ func get_task_name() -> String:
 func _physics_process(delta: float) -> void:
 	if definition == null:
 		return
-	_attack_cooldown_remaining = max(0.0, _attack_cooldown_remaining - delta)
+	_tick_attack(delta)
 	_tick_health(delta)
 	if is_down():
 		_build_beat.stop(_visual)
@@ -241,8 +220,8 @@ func _tick_guard_base() -> void:
 	var mob: Node3D = _find_nearest_mob(get_attack_range())
 	if mob != null:
 		_stop()
-		if _attack_cooldown_remaining <= 0.0:
-			_attack_mob(mob)
+		if is_attack_ready():
+			attack(mob)
 		return
 	# Second: move into guard radius if outside.
 	if _flat_distance(_base_core.global_position) > guard_radius:
@@ -420,28 +399,26 @@ func _on_resource_gathered(actor: Node, _id: StringName, _amount: int) -> void:
 	_active_resource_node = null
 
 
-func _attack_mob(mob: Node3D) -> void:
-	if not mob.has_method("take_damage"):
-		return
-	_visual.face_instantly(mob.global_position - global_position)
+# --- Attack (the role's part; see Hero) ------------------------------
+
+func _is_companion_role() -> bool:
+	return true
+
+
+func _show_attack(target: Node3D) -> void:
+	_visual.face_instantly(target.global_position - global_position)
 	_visual.play_action(&"attack", 1.45)
-	_attack_cooldown_remaining = _attack_cooldown
-	if hero != null and hero.ranged:
-		PebbleShot.fire(self, mob, _current_attack_damage)
-		return
-	# Big Swing: the swing carries on to the next mob.
-	var extra: Array[Node3D] = HeroHits.extra_targets(self, mob, &"melee")
-	HeroHits.strike(self, mob, _current_attack_damage)
-	Fx.burst(&"sparkle", mob.global_position + Vector3(0, 0.7, 0))
-	for other in extra:
-		HeroHits.strike(self, other, _current_attack_damage)
-		Fx.burst(&"sparkle", other.global_position + Vector3(0, 0.7, 0))
+
+
+## The companion's quick hit: it lands at once, with a sparkle.
+func _swing(target: Node3D) -> void:
+	_land_swing(target, &"sparkle")
 
 
 func _on_level_up(character: Node, _new_level: int) -> void:
 	if character != self or stats == null:
 		return
-	_current_attack_damage += stats.attack_damage_per_level
+	attack_damage += stats.attack_damage_per_level
 	_hp_bar.set_level(_new_level)
 	max_hp += stats.max_health_per_level
 	current_hp = min(max_hp, current_hp + stats.max_health_per_level)

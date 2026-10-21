@@ -73,6 +73,8 @@ static func strike(attacker: Node, target: Node, base: int) -> int:
 	var amount: int = damage_against(attacker, target, base)
 	target.take_damage(amount, attacker)
 	_stamp_hit(attacker, target)
+	if is_instance_valid(attacker) and attacker is Hero:
+		(attacker as Hero).on_attack_hit(target, amount)
 	return amount
 
 
