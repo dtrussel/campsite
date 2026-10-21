@@ -10,7 +10,7 @@ extends StaticBody3D
 ## any building scene.
 ##
 ## Playtest 1 (feature 044): construction. BuildManager places a
-## building as a *blueprint* (meta `blueprint` before it enters the
+## building as a *blueprint* (start_as_blueprint() before it enters the
 ## tree): a see-through blue ghost of the finished shape on a staked-out
 ## site with a pile of materials (feature 045), and a progress bar. It
 ## does nothing yet. The hero (and the companion on its Repair task)
@@ -18,6 +18,10 @@ extends StaticBody3D
 ## building rises inside the ghost from the bottom up while the pile
 ## shrinks, and complete_construction() then switches it on with a pop.
 ## Subclasses switch themselves on in _on_built(), not _ready().
+##
+## Saving (run lifecycle 03): save_entry() is a building's line in the
+## save file and rebuild() puts one back, with the legacy fallbacks;
+## BuildingSaves lists them for the run session.
 
 ## Every placed building (not build-mode ghosts); the autosave lists them.
 const BUILDINGS_GROUP: StringName = &"buildings"
@@ -80,6 +84,13 @@ var _model_bottom: float = 0.0
 var _model_top: float = 1.0
 ## Direct children switched off while a blueprint (lights, auras, rings).
 var _parked: Array[Node3D] = []
+## Set by start_as_blueprint() before the building enters the tree.
+var _starts_as_blueprint: bool = false
+var _start_progress: float = 0.0
+## What was paid for the blueprint (refunded when it is taken back), if
+## that is known.
+var _paid_cost: Dictionary = {}
+var _has_paid_cost: bool = false
 
 
 func _ready() -> void:
@@ -95,10 +106,83 @@ func _ready() -> void:
 	_hp_bar = HealthBar3D.attach(self, hp_label_height, "structure", 1.1)
 	_hp_bar.hide_when_full = true
 	_refresh_hp_label.call_deferred()
-	if has_meta(&"blueprint"):
-		_enter_blueprint(float(get_meta(&"blueprint_progress", 0.0)))
+	if _starts_as_blueprint:
+		_enter_blueprint(_start_progress)
 	else:
 		_on_built()
+
+
+## Makes the building start as a blueprint `progress` (0..1) built, paid
+## for with `paid` (a cost Dictionary; null when unknown, and a refund
+## then falls back to BuildManager.cost_of). Call before it enters the
+## tree.
+func start_as_blueprint(progress: float = 0.0, paid: Variant = null) -> void:
+	_starts_as_blueprint = true
+	_start_progress = progress
+	_has_paid_cost = paid is Dictionary
+	_paid_cost = (paid as Dictionary).duplicate() if paid is Dictionary else {}
+
+
+## Whether the blueprint knows what was paid for it.
+func has_paid_cost() -> bool:
+	return _has_paid_cost
+
+
+## What was paid for the blueprint ({} when unknown: see has_paid_cost).
+func paid_cost() -> Dictionary:
+	return _paid_cost.duplicate()
+
+
+## The HP bar over the building (null for a build-mode ghost).
+func health_bar() -> HealthBar3D:
+	return _hp_bar
+
+
+## The building's line in the save file: id, place, HP and construction
+## progress, and what a blueprint was paid with (when known).
+func save_entry() -> Dictionary:
+	var p: Vector3 = global_position
+	var entry: Dictionary = {
+		"id": String(definition.id),
+		"pos": [p.x, p.y, p.z],
+		"yaw": global_rotation.y,
+		"hp": current_hp,
+		"progress": build_progress,
+	}
+	if is_blueprint() and _has_paid_cost:
+		var paid: Dictionary = {}
+		for id in _paid_cost.keys():
+			paid[String(id)] = int(_paid_cost[id])
+		entry["paid"] = paid
+	return entry
+
+
+## Puts back the building `entry` (from save_entry) under `parent`, or
+## null when its type is gone. A blueprint gets its progress again (its
+## HP follows from it); saves from before perk cards have no "paid", so
+## its refund falls back to BuildManager.cost_of.
+static func rebuild(entry: Dictionary, parent: Node) -> Building:
+	var definition: BuildingDefinition = BuildManager.get_definition(StringName(str(entry.get("id", ""))))
+	if definition == null or definition.get_scene() == null:
+		return null
+	var building: Building = definition.get_scene().instantiate() as Building
+	var progress: float = float(entry.get("progress", 1.0))
+	if progress < 1.0:
+		var paid: Variant = null
+		if entry.get("paid") is Dictionary:
+			var cost: Dictionary = {}
+			for id in (entry["paid"] as Dictionary).keys():
+				cost[StringName(id)] = int(entry["paid"][id])
+			paid = cost
+		building.start_as_blueprint(progress, paid)
+	parent.add_child(building)
+	var pos: Array = entry["pos"]
+	building.global_position = Vector3(float(pos[0]), float(pos[1]), float(pos[2]))
+	building.global_rotation.y = float(entry.get("yaw", 0.0))
+	if progress >= 1.0:
+		building.current_hp = clampi(int(entry.get("hp", definition.max_hp)), 1, definition.max_hp)
+		building._refresh_hp_label()
+	return building
 
 
 ## Switches the building on (also right away for a building that was
@@ -135,10 +219,10 @@ func add_build_progress(seconds: float, builder: Node = null) -> bool:
 
 ## Finishes a blueprint at once (the builder gets the build XP).
 func complete_construction(builder: Node = null) -> void:
-	if not has_meta(&"blueprint") and _parked.is_empty() and is_built():
+	if not _starts_as_blueprint and _parked.is_empty() and is_built():
 		return
 	build_progress = 1.0
-	remove_meta(&"blueprint")
+	_starts_as_blueprint = false
 	remove_from_group(BLUEPRINT_GROUP)
 	current_hp = maxi(1, get_max_hp() - _construction_damage)
 	_construction_damage = 0

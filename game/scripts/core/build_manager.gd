@@ -29,9 +29,6 @@ const GROUND_GROUP: StringName = &"ground"
 const BUILD_XP_REWARD: int = 5
 const WOOD_ID: StringName = &"wood"
 const BUILDERS_KNACK: StringName = &"builders_knack"
-## The meta on a placed blueprint: the cost paid for it (a Dictionary),
-## refunded when it is taken back.
-const PAID_COST_META: StringName = &"paid_cost"
 
 var _definitions: Array[BuildingDefinition] = []
 var _by_id: Dictionary = {}                  # StringName -> BuildingDefinition
@@ -210,19 +207,20 @@ func _try_confirm() -> void:
 	var cost: Dictionary = cost_of(_active_definition)
 	if get_tree().current_scene == null or not ResourceManager.spend_costs(cost):
 		return
-	var placed: Building = place_blueprint(_active_definition, _ghost.global_transform if _ghost != null else Transform3D.IDENTITY)
-	# Refund what was paid, even if the perks change before it is taken
-	# back (the save keeps it too).
-	placed.set_meta(PAID_COST_META, cost)
+	# It refunds what was paid, even if the perks change before it is
+	# taken back (the save keeps it too).
+	place_blueprint(_active_definition, _ghost.global_transform if _ghost != null else Transform3D.IDENTITY, cost)
 	# Force a validity re-eval so the ghost flips to red if the cost can
 	# no longer be afforded after spending.
 	_update_validity(_compute_validity(), true)
 
 
-## Puts down a paid-for blueprint of `definition` at `where`.
-func place_blueprint(definition: BuildingDefinition, where: Transform3D) -> Building:
+## Puts down a paid-for blueprint of `definition` at `where`. `paid` is
+## the cost Dictionary paid for it, refunded if it is taken back; null
+## refunds cost_of at that time.
+func place_blueprint(definition: BuildingDefinition, where: Transform3D, paid: Variant = null) -> Building:
 	var building: Building = definition.get_scene().instantiate() as Building
-	building.set_meta(&"blueprint", true)
+	building.start_as_blueprint(0.0, paid)
 	get_tree().current_scene.add_child(building)
 	building.global_transform = where
 	building_placed.emit(building)
@@ -236,7 +234,7 @@ func remove_blueprint(building: Building) -> bool:
 	if building == null or not building.is_blueprint() or building.build_progress > 0.0:
 		return false
 	if building.definition != null:
-		var paid: Dictionary = building.get_meta(PAID_COST_META, cost_of(building.definition))
+		var paid: Dictionary = building.paid_cost() if building.has_paid_cost() else cost_of(building.definition)
 		for id in paid.keys():
 			ResourceManager.add(StringName(id), int(paid[id]))
 	Fx.burst(&"dust", building.global_position)

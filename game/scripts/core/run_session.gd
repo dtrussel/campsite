@@ -11,7 +11,10 @@ extends Node
 ##
 ## A saving system is anything that holds run state. It has:
 ##   save_state() -> Dictionary  its own keys, at their place in the save
-##                               file (the session merges them);
+##                               file (the session merges them, and two
+##                               systems may share an entry: a hero's
+##                               signature and its XP both sit under
+##                               "player");
 ##   load_state(data: Dictionary)  takes the whole save, reads its own
 ##                               keys and tolerates missing ones;
 ##   reset()                     back to a fresh run.
@@ -20,9 +23,8 @@ extends Node
 ## state, which only resets), then the world objects, then the heroes.
 ## A hero's keys sit under "player" / "sibling" (Party.SAVE_KEYS), shared
 ## by several systems; snapshot merges them key by key (merge_state).
-## What is not a saving system yet is still reset by
-## GameManager.reset_autoloads and saved by SaveManager.snapshot / apply
-## (ticket 03 moves the world over).
+## Build mode, not a saving system, is still left by
+## GameManager.reset_autoloads (run lifecycle 04 retires it).
 
 ## A continued run is fully back: the save is applied and its follow-ups
 ## (the perk top-up) have run. Not emitted for a new run.
@@ -129,8 +131,8 @@ func has_pending() -> bool:
 
 
 ## Called by GameManager once the gameplay scene is ready. Applies the
-## waiting save, if any: each saving system in order, then
-## SaveManager.apply for the rest, then starts the clock at the morning
+## waiting save, if any: each saving system in order (the autoloads,
+## then the world, then the heroes), then starts the clock at the morning
 ## after the saved day. restore_finished follows (deferred, once the
 ## scene's run_started has gone out); its listeners are the follow-ups,
 ## such as the perk top-up. False for a new run (nothing waiting).
@@ -142,9 +144,6 @@ func restore_pending() -> bool:
 	_restoring = true
 	for system in saving_systems():
 		system.load_state(data)
-	# What is not a saving system yet (it comes last in the order: the
-	# world, then the heroes).
-	SaveManager.apply(data)
 	_restoring = false
 	TimeManager.start_run(TimeManager.day_number + 1)  # the saved day, loaded
 	_finish_restore.call_deferred()
@@ -165,9 +164,24 @@ func _autoload_systems() -> Array:
 
 ## The world objects (campfire, buildings and blueprints, torches, the
 ## Moon Lantern), then the heroes, from the gameplay scene, in restore
-## order. Empty when there is no gameplay scene.
+## order. Buildings and torches are listed by their own module; the
+## rest are the objects themselves, left out when the scene has none.
 func _world_systems() -> Array:
-	return []
+	var tree: SceneTree = get_tree()
+	var out: Array = []
+	var fire: BaseCore = tree.get_first_node_in_group("base_core") as BaseCore
+	if fire != null:
+		out.append(fire)
+	out.append(BuildingSaves.new(tree))
+	out.append(TorchSaves.new(tree))
+	var lantern: MoonLantern = MoonLantern.find(tree)
+	if lantern != null:
+		out.append(lantern)
+	for group in ["player", "companions"]:
+		var hero: Hero = tree.get_first_node_in_group(group) as Hero
+		if hero != null:
+			out.append(hero)
+	return out
 
 
 func _use_party(run: RunConfig, hero: StringName, companion: StringName, nights: int) -> void:

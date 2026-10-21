@@ -336,6 +336,62 @@ func _show_level_up(_level: int, _quiet: bool) -> void:
 	pass
 
 
+# --- Saving --------------------------------------------------------------
+# A saving system (run lifecycle 03). The hero's entry in the save file
+# is "player" for the player's hero and "sibling" for the companion
+# (their names before feature 034). The hero writes its own part of it;
+# ProgressionManager and PerkManager write its XP and perks there too.
+
+## Saves from before feature 034 name the signature tool by the role's
+## old hero: Leo's stick (the player) and Nela's slingshot (the sibling).
+const LEGACY_SIGNATURE_KEYS: Dictionary = {"player": "stick", "sibling": "slingshot"}
+
+
+## The key of this hero's entry in the save file, by role.
+func save_key() -> String:
+	return "sibling" if _is_companion_role() else "player"
+
+
+## {save_key(): the hero's own part of its entry}.
+func save_state() -> Dictionary:
+	return {save_key(): _save_entry()}
+
+
+## Takes back the hero's own part of its saved entry (missing keys keep
+## a fresh hero's values).
+func load_state(data: Dictionary) -> void:
+	var entry: Variant = data.get(save_key(), {})
+	if entry is Dictionary:
+		_load_entry(entry)
+
+
+## A fresh run's hero: no signature tool yet, full HP.
+func reset() -> void:
+	if has_signature and hero != null:
+		has_signature = false
+		attack_damage -= hero.signature_damage_bonus
+		var factor: float = hero.companion_signature_range_factor if _is_companion_role() else hero.signature_range_factor
+		if factor > 0.0:
+			attack_range /= factor
+	if _down:
+		revive(max_hp)
+	else:
+		current_hp = max_hp
+		health_changed.emit(current_hp, max_hp)
+
+
+## The role adds its own keys (the companion's task).
+func _save_entry() -> Dictionary:
+	return {"signature": has_signature}
+
+
+## The role reads its own keys after calling this.
+func _load_entry(entry: Dictionary) -> void:
+	var legacy: String = LEGACY_SIGNATURE_KEYS.get(save_key(), "")
+	if bool(entry.get("signature", entry.get(legacy, false))):
+		apply_signature()
+
+
 # --- Gathering and shared queries ----------------------------------------
 # One gather path for both roles: start on a resource node, cancel, ask
 # whether it is running, and hear when it finished. The node's own timer

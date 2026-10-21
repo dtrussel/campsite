@@ -14,6 +14,9 @@ extends Node3D
 ## per stage). The model is the team's sheet built in Blender
 ## (feature 047, art/props/camp.py moon_lantern): the shards stack up
 ## inside its glass, the core glows and the carved crescent lights up.
+##
+## A saving system (run lifecycle 03): its shards go in the save file
+## under "lantern" (saves from before feature 036 start it dark).
 
 signal stage_changed(stage: int, max_stage: int)
 signal shards_delivered(amount: int)
@@ -164,6 +167,22 @@ func deliver(from: Node3D = null) -> int:
 func restore(delivered: int) -> void:
 	shards = clampi(delivered, 0, shards_for_max())
 	_refresh(false)
+
+
+## {"lantern": {"shards"}} for the save file.
+func save_state() -> Dictionary:
+	return {"lantern": {"shards": shards}}
+
+
+## Lights the lantern to the saved shards, without any fanfare.
+func load_state(data: Dictionary) -> void:
+	var saved: Variant = data.get("lantern", {})
+	restore(int((saved as Dictionary).get("shards", 0)) if saved is Dictionary else 0)
+
+
+## A fresh run's lantern: dark.
+func reset() -> void:
+	restore(0)
 
 
 ## Loses `count` stages of light (the Moon-Eater swallowed them,

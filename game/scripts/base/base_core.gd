@@ -7,6 +7,9 @@ extends StaticBody3D
 ## reaches zero, the campsite is considered lost. Phase 0 left the
 ## campfire as a visual-only object; this script wires up health and
 ## the matching signals.
+##
+## A saving system (run lifecycle 03): its HP and hearth go in the save
+## file under "campfire".
 
 signal damaged(new_hp: int)
 signal repaired(new_hp: int)
@@ -52,6 +55,42 @@ func take_damage(amount: int, _source: Node = null) -> void:
 func _refresh_hp_label() -> void:
 	if _hp_bar != null:
 		_hp_bar.set_value(current_hp, max_hp)
+
+
+## The HP bar over the campfire.
+func health_bar() -> HealthBar3D:
+	return _hp_bar
+
+
+## {"campfire": {"hp", "hearth"}} for the save file.
+func save_state() -> Dictionary:
+	return {"campfire": {"hp": current_hp, "hearth": has_hearth}}
+
+
+## Lays the saved hearth and sets the saved HP (at least 1), its bar
+## showing it at once. A save without a campfire leaves it as it is.
+func load_state(data: Dictionary) -> void:
+	var saved: Variant = data.get("campfire")
+	if not saved is Dictionary:
+		return
+	if bool((saved as Dictionary).get("hearth", false)):
+		build_hearth()
+	current_hp = clampi(int((saved as Dictionary).get("hp", max_hp)), 1, max_hp)
+	_refresh_hp_label()
+
+
+## A fresh campfire: no hearth, full HP, lit.
+func reset() -> void:
+	if has_hearth:
+		has_hearth = false
+		max_hp -= hearth_bonus_hp
+		var ring: Node = get_node_or_null("HearthRing")
+		if ring != null:
+			ring.queue_free()
+	current_hp = max_hp
+	is_destroyed = false
+	_last_logged_quarter = 4
+	_refresh_hp_label()
 
 
 func _log_quarters() -> void:
