@@ -66,7 +66,7 @@ story ([spec](../../.scratch/endless-mode/spec.md)).
 - **The nights never end:** dawn 7 is no win, and there is no Moon-Eater
   and no eyes at the treeline. It ends only when the campfire goes out
   or the hero is knocked out. Autosave and Continue work as in the
-  chapters; the title's Continue reads "Hero - Endless, night N".
+  chapters; the title shows "Endless - Night N" under Continue.
 - **Shards:** the Moon Lantern starts lit, so Glow Shards go to Glow
   Lanterns and tool tiers.
 - **Tougher nights:** wave sizes keep growing past their lists as in the
@@ -104,7 +104,9 @@ player is never far behind.
 - **Last hero:** hero select opens on the hero picked last time, after
   a restart too.
 - **Camp Badges:** 15 Scout-style milestones, earned once and kept for
-  good, announced with a small "Badge earned: X!" toast:
+  good, announced with a small "Badge earned: X!" toast. The end screen
+  lists the badges the run earned, so the win badges, earned as the run
+  ends, are seen there:
 
   | Badge | How to earn |
   |---|---|
@@ -155,8 +157,9 @@ player is never far behind.
   Quick Hands (Gatherer), Builder's Knack (Builder), Ember Heart
   (Torch Bearer). The row is hidden until one is unlocked.
 - **Delete profile:** under the pause menu's settings, it asks for
-  confirmation, then forgets badges, pages, unlocks, records, picks
-  and the story beats seen (Chapter 2 locks again). Audio, look and
+  confirmation, saying plainly that it erases all progress, then
+  forgets badges, pages, unlocks, records, picks and the story beats
+  seen (Chapter 2 and Endless lock again, the intros play again). Audio, look and
   auto-attack settings are kept, and so is the run save.
 
 ![The title with Chapter 2 locked](screenshots/journal-title-chapter2-locked.png)
@@ -442,6 +445,9 @@ craft, and owned tiers add up: tier 3 keeps tier 2's effect.
 | Nela | 1 | Slingshot | Reach &times;1.6 (&times;2.0 as the companion). |
 | Nela | 2 | Double Sling | Every 3rd shot fires a second pebble at the same target. |
 | Nela | 3 | Glow Sling | A pebble pierces on to the next mob in its line (within 3 m) and lights the target for 1.5 s. |
+
+These numbers are each tier's `ToolTier` fields in `leo.tres` and
+`nela.tres`.
 
 - **The shard trade-off.** Tiers 2 and 3 cost 6 Glow Shards between
   them, per hero, and every shard spent there is one the Moon Lantern

@@ -52,3 +52,5 @@ None.
 - **2026-10-21, architecture review:** now blocked by profile and run-lifecycle (the user chose to do the refactors first). The record moves from `story.cfg` to the profile; ticket 01 carries the new `Blocked by:` and ticket 03 says where the record goes.
 
 - **2026-10-21, done:** all three tickets are done and merged into the integration branch. Smoke covers the endless run past night 8, the HP scaling and the record surviving a restart (`_run_endless_record_scenario`); `tools/check.sh` passes. Hand play: `.scratch/hand-play-backlog/issues/08-endless-run-length.md`.
+
+- **2026-10-21, code review:** the title now shows the night under Continue ("Endless - Night 9"), as this spec asks, not only in the tooltip. The smoke checks that a lit endless Moon Lantern takes no Glow Shards, so they stay for Glow Lanterns and tool tiers. The record moved out of `GameManager` into `EndlessRecord` (`submit`, `best_text`). Kept as they are: endless skipping the intro, and the endless flag being read in several places.

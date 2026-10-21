@@ -92,7 +92,7 @@ Each autoload is a single small node script registered in
 | `SaveManager`        | The save file only: path, version, JSON read and write, parse checks, delete. |
 | `RunSession`         | One run's lifecycle: start, continue, reset, the dawn autosave, `restore_finished` (see H). |
 | `Profile`            | Keeps a player's progress across runs (see "Profile" under H). |
-| `Badges`             | Camp Badges: checks them live and at a run's end, keeps them in the profile, toasts (see "Camp Badges" under H). |
+| `Badges`             | Camp Badges: checks them live and at a run's end, keeps them in the profile, announces them with `badge_earned` (see "Camp Badges" under H). |
 
 ### Autoload contract
 
@@ -207,10 +207,16 @@ fields.
   pebble branch; the perk effects come from `HeroHits` underneath.
   Tool tiers (040): `tool_tier` (read-only; `set_tool_tier(n)` raises
   it and adds each new `ToolTier`'s damage bonus and range factor) and
-  `has_tool_effect(effect)`. `on_attack_hit(target, damage)` applies the
-  tier effects (`Burn`, `Burn.splash`, `GlowMark`); the Double Sling's
-  second pebble and the Glow Sling's pierce live in `_shoot()` and
-  `PebbleShot`. The definition's `companion_` reach and cooldown, and
+  `has_tool_effect(effect)`; `tool_effect_tier(effect)` is the highest
+  owned tier with that effect, whose numbers the effect reads (burn
+  damage, ticks and tick, splash radius, light range, double-shot
+  rhythm, pierce reach and width, glow time, reach and brightness are
+  `ToolTier` exports, set in `leo.tres` / `nela.tres` and checked by the
+  validator). `on_attack_hit(target, damage)` applies the tier effects
+  (`Burn.ignite(mob, tier)`, `Burn.splash`, `GlowMark.light(mob, tier)`);
+  the Double Sling's second pebble and the Glow Sling's pierce live in
+  `_shoot()` and `PebbleShot`. `tier_of_recipe(id)` tells CraftingManager
+  which tier a recipe makes. The definition's `companion_` reach and cooldown, and
   each tier's `companion_range_factor`, are read for the companion
   role.
 - **Progress:** each role calls `_setup_progress()` once; on
@@ -564,19 +570,23 @@ on its own file, `user://profile.json`, which a run ending never deletes.
 - **Story beats:** `StoryLibrary.has_seen` / `mark_seen` /
   `forget_progress` read and write `story.<beat>` keys.
 - **Endless record:** when an endless run ends, `GameManager` calls
-  `record_best("endless.best_nights", night)` and, on a new record,
-  writes the hero to `endless.best_hero`; `GameManager.new_record`
-  tells the end screen, and `endless_best_text()` is the line the title
-  and end screen show.
+  `EndlessRecord.submit(night, hero)` (`game/scripts/meta/endless_record.gd`),
+  which uses `record_best("endless.best_nights", night)` and, on a new
+  record, writes the hero to `endless.best_hero`; `GameManager.new_record`
+  tells the end screen, and `EndlessRecord.best_text()` is the line the
+  title and end screen show.
 - **Chapters and the last hero:** `record_chapter_won(chapter)` (from
   `GameManager._end_run`) writes `chapters.c<n>.won`; winning Chapter 1
   sets `chapters.c2.unlocked`, which `is_chapter_unlocked(2)` reads for
   the title's lock. `unlock_all_chapters` (debug builds, the `playtest`
-  feature tag) opens every chapter; tests clear it. `GameManager`
+  feature tag that both export presets carry; the validator checks it)
+  opens every chapter; tests clear it. `GameManager`
   keeps the hero picked in `begin_chapter` (`record_hero_pick`), and
   hero select opens on `GameManager.last_hero_pick()`.
 - **Delete profile:** the pause menu's Delete profile button asks
-  through a ConfirmationDialog, then calls `delete()`.
+  through a ConfirmationDialog that says plainly it erases all progress
+  (chapters, badges, journal pages, cosmetics, the starting perk, the
+  endless record, the story seen), then calls `delete()`.
 - **The old `story.cfg`:** imported once, when a profile that has never
   been created loads. Seen beats are copied, and a seen `intro.c2` or
   `ending.c2` sets `chapters.c2.unlocked`. The import note survives
@@ -586,13 +596,15 @@ on its own file, `user://profile.json`, which a run ending never deletes.
 
 ### Camp Badges
 
-Milestones the profile keeps for good (journal badges 02). Each is a
+Milestones the profile keeps for good. Each is a
 `BadgeDefinition` `.tres` in `game/resources/badges/` (icon, name,
 how-to-earn text, and a condition: `run_stat`, `total`, `win` or
 `win_each_hero`). The `Badges` autoload (`game/scripts/meta/badges.gd`)
 checks them live on `GameManager.stat_recorded` during play and again
-on `run_ended`, keeps earned ones as `badges.<id>`, and shows a HUD
-toast once per badge. It also keeps what counting badges need across
+on `run_ended`, keeps earned ones as `badges.<id>`, and emits
+`badge_earned` once per badge. The HUD toasts it; the end screen lists
+the badges the run earned, since the win badges come after the run has
+ended and the paused HUD sits under the end screen. It also keeps what counting badges need across
 runs: `totals.<stat>` (added to as stats are recorded) and
 `heroes.won.<id>`. The run stats some badges need are
 `gremlins_caught`, `fire_low_pct` (the fire's lowest HP, in %) and
@@ -600,7 +612,7 @@ runs: `totals.<stat>` (added to as stats are recorded) and
 
 ### Journal, scrapbook and unlocks
 
-What the profile unlocks (journal badges 03&ndash;06). Each is a small
+What the profile unlocks. Each is a small
 static class over profile keys, with no autoload and no run state, so
 Delete profile resets it and a run never saves it.
 
@@ -612,10 +624,12 @@ Delete profile resets it and a run never saves it.
   `journal.<id>`: dawn pages are found when the HUD plays their card
   (`find_notes_on`), a badge page reads as found while its badge is
   earned, and `next_chest_page()` is what a day chest holds.
-- **The day chest:** `RunConfig` rolls `day_chest_day` (50%, else 0).
-  `GameManager` holds and saves it, so Continue never rolls again; on
-  that day `DayChest.place` (`game/scripts/world/day_chest.gd`) puts it
-  beside a lane at the map edge. It reuses the Storage Crate model
+- **The day chest:** `RunConfig` rolls `day_chest_day`
+  (`GameManager.day_chest_chance`, 50%, else 0). `GameManager` holds
+  and saves it, so Continue never rolls again; on that day
+  `DayChest.place` (`game/scripts/world/day_chest.gd`) puts it beside a
+  lane at the map edge and `GameManager.day_chest_placed` tells the HUD,
+  which shows the banner and toasts the page on `DayChest.opened`. It reuses the Storage Crate model
   until there's art.
 - **The scrapbook:** `Scrapbook` (`game/scripts/ui/scrapbook.gd`,
   `scenes/ui/Scrapbook.tscn`), an overlay the title adds over itself;
@@ -627,11 +641,14 @@ Delete profile resets it and a run never saves it.
   pick whose badge is gone reads as the default. The tint goes through
   `Stylize`'s `style_tint`, on the hero's outfit mesh only
   (`HeroDefinition.outfit_mesh`, via `CharacterVisual`) and on the node
-  in group `tent`.
+  in group `tent`. Hero select shows the swatches as an `OutfitRow`
+  (`game/scripts/ui/outfit_row.gd`).
 - **Starting perks:** `StartingPerks`
   (`game/scripts/meta/starting_perks.gd`) lists the shared perk cards
   a run may start with and their badges, and keeps the pick as
-  `perks.starting`. `RunConfig.starting_perk` carries it; `GameManager`
+  `perks.starting`; hero select's `StartingPerkRow`
+  (`game/scripts/ui/starting_perk_row.gd`) picks it.
+  `RunConfig.starting_perk` carries it; `GameManager`
   hands it to `PerkManager.take_starting` when a new run's scene is
   ready (never on Continue), and the run save keeps it with the hero's
   perks.
