@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 
-From the 2026-10-21 architecture review, candidate 2 (saving systems and a run session). Rough size: **L**. Blocked by: hero-core. It blocks endless mode and journal badges.
+Split into tickets in `issues/` (01&ndash;04); the `Blocked by:` lines give the order. From the 2026-10-21 architecture review, candidate 2 (saving systems and a run session). Rough size: **L**. Blocked by: hero-core. It blocks endless mode and journal badges.
 
 ## Problem Statement
 
@@ -119,3 +119,5 @@ For the player, nothing changes except that the bugs above are fixed: the pity c
 - The architecture review report: https://claude.ai/artifact/V3mStF5e7Qv6ypXTjwzWCg (private to the project owner).
 
 ## Comments
+
+- **2026-10-21, to-tickets:** split into tickets 01-04; the user approved the breakdown.

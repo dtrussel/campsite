@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 
-From the 2026-10-21 architecture review, candidate 3 (one profile for everything kept across runs). Rough size: **S–M**. Blocked by: none. It blocks endless mode and journal badges.
+Split into tickets in `issues/` (01&ndash;02); the `Blocked by:` lines give the order. From the 2026-10-21 architecture review, candidate 3 (one profile for everything kept across runs). Rough size: **S–M**. Blocked by: none. It blocks endless mode and journal badges.
 
 ## Problem Statement
 
@@ -20,7 +20,7 @@ One **profile** keeps a player's progress across runs:
 - **Where:** a single file, separate from the run save. A run ending never deletes it.
 - **What it can do:** read a value with a default, write a value, record a best value (saying whether it is a new record), and delete everything.
 - **Bad files:** a missing or corrupt file loads as an empty profile.
-- **The old story file:** it is imported into the profile once. That covers the story beats the player has seen, and the Chapter 1 win that unlocks Chapter 2 for players who already have it.
+- **The old story file:** it is imported into the profile once. That covers the story beats the player has seen, and, for players who have already started or finished Chapter 2, a flag that keeps Chapter 2 unlocked.
 - **Who uses it:** story beats read and write through the profile from then on. Endless mode and journal badges each just add their keys.
 
 Device settings (audio, look, auto-attack) stay where they are, so that deleting a profile never resets the player's settings.
@@ -55,7 +55,7 @@ Device settings (audio, look, auto-attack) stay where they are, so that deleting
 - **Storage:** a JSON file in the user folder, separate from the run save. A run ending never deletes it. A missing or unreadable file loads as empty and is rewritten on the next write.
 - **The one-time import:**
   - **When it runs:** on first load, if the profile has never been created and the old story file exists.
-  - **What it copies:** every seen beat, plus a Chapter 1 win flag when the story file shows one.
+  - **What it copies:** every seen beat. The story file never recorded a Chapter 1 win, so a seen Chapter 2 intro or true ending stands in for it and sets a Chapter 2 unlocked flag (decided 2026-10-21).
   - **Marking it done:** the profile records that the import ran.
   - **The old story file:** it is left on disk, unused, so that a downgrade still works.
 - **Story beats** read and write through the profile. The story module's has-seen, mark-seen and forget-progress keep their names, so their callers don't change.
@@ -70,7 +70,7 @@ Device settings (audio, look, auto-attack) stay where they are, so that deleting
   - record best returns true then false;
   - a corrupt file loads as empty;
   - delete empties the profile;
-  - an old story file with seen beats and a Chapter 1 win imports once, and doesn't import again after delete.
+  - an old story file with seen beats (and a seen Chapter 2 intro) imports once and sets the Chapter 2 unlocked flag, and doesn't import again after delete.
 - **Smoke:** the existing story scenarios (intro and endings seen once) still pass, now on a temporary profile path.
 - **Prior art:** the story module already has a swappable progress path for tests; the profile takes over that seam. The validate tool's existing data checks show the style.
 
@@ -87,3 +87,5 @@ Device settings (audio, look, auto-attack) stay where they are, so that deleting
 - The architecture review report: https://claude.ai/artifact/V3mStF5e7Qv6ypXTjwzWCg (private to the project owner).
 
 ## Comments
+
+- **2026-10-21, to-tickets:** split into tickets 01-02; the user approved the breakdown.

@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 
-From the 2026-10-21 architecture review, candidate 1 (the shared hero core). Rough size: **L**. Blocked by: none. It blocks tool tiers.
+Split into tickets in `issues/` (01&ndash;05); the `Blocked by:` lines give the order. From the 2026-10-21 architecture review, candidate 1 (the shared hero core). Rough size: **L**. Blocked by: none. It blocks tool tiers.
 
 ## Problem Statement
 
@@ -131,3 +131,5 @@ For the player, nothing changes, except that the small drifts between the copies
 - The run-lifecycle spec builds on this one: each hero saves and loads itself through the Hero interface.
 
 ## Comments
+
+- **2026-10-21, to-tickets:** split into tickets 01-05; the user approved the breakdown.

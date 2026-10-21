@@ -61,7 +61,7 @@ Give players a reason to play again: a persistent profile that remembers achieve
 - **From the 2026-10 brainstorm.** The user chose story (B) and choices / meta (C), with an **adventure** tone (see `docs/design/story.md`), and asked for the roadmap first. This folder is a plan only: nothing is built yet.
 - **The profile is separate from the run save** and never deleted by a run ending. Deleting it is a Settings button that asks for confirmation.
 - **Unlocks are mostly sideways** (cosmetics, story, modes) or small starting perks, so a new player isn't far behind.
-- **Chapter 2 unlock for existing players** (decided 2026-10-20): when the profile is first created, Chapter 2 is unlocked if `story.cfg` shows a Chapter 1 win, or in playtest and debug builds. New players get the lock.
+- **Chapter 2 unlock for existing players** (decided 2026-10-20): when the profile is first created, Chapter 2 is unlocked if the imported `story.cfg` shows Chapter 2 was already started or finished (`intro.c2` or `ending.c2` seen; `story.cfg` never recorded a Chapter 1 win, corrected 2026-10-21), or in playtest and debug builds. New players get the lock.
 - **Cosmetics are tints only** (decided 2026-10-20). Hats and capes are a follow-up once there's art.
 - **`story.cfg` merges into the profile** (decided 2026-10-20), with a one-time import, so the profile is the single place progress lives. Since 2026-10-21 the store and the import are built by the profile spec; this spec adds its keys and the UI.
 
