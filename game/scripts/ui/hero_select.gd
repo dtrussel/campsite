@@ -12,10 +12,8 @@ extends Control
 ##
 ## Keys: Left / Right (or A / D) pick, Enter starts, Esc goes back.
 ##
-## The outfit row (journal badges 05) under the goal shows the badge
-## cosmetics (Cosmetics): the picked hero's outfit tints and the tent
-## colours. A locked one is shown dimmed, says which badge unlocks it
-## and can't be picked; a pick is kept in the profile straight away.
+## Under the goal, the badge cosmetics (OutfitRow) and, once a badge
+## has unlocked one, the starting perk pick (StartingPerkRow).
 
 const STAGE: Script = preload("res://scripts/ui/hero_stage.gd")
 const CARD_SIZE: Vector2 = Vector2(320, 200)
@@ -29,10 +27,10 @@ var _glows: Array[Panel] = []
 var _companion_portrait: TextureRect = null
 var _companion_name: Label = null
 var _start: Button = null
-## Journal badges 06: the starting perk row, or null when no badge has
-## unlocked a starting perk yet.
-var starting_perk_row: HBoxContainer = null
-var _starting_perk_buttons: Dictionary = {}  # StringName (&"" = none) -> Button
+var _outfit_row: OutfitRow = null
+## The starting perk row, or null when no badge has unlocked a starting
+## perk yet.
+var starting_perk_row: StartingPerkRow = null
 
 
 func _ready() -> void:
@@ -278,88 +276,25 @@ func select(index: int, cheer: bool = true) -> void:
 	_companion_portrait.texture = companion.portrait
 	_companion_name.text = companion.display_name
 	_stage.call("select", selected, cheer)
-	_refresh_outfit_row()
-
-
-# --- Outfit row (journal badges 05) ----------------------------------------
-
-var _outfit_buttons: Dictionary = {}  # outfit id -> Button
-var _tent_buttons: Dictionary = {}  # tent id -> Button
+	_outfit_row.set_hero(heroes[selected].id)
 
 
 ## The swatch for outfit `id` (tests).
 func outfit_button(id: StringName) -> Button:
-	return _outfit_buttons.get(id)
+	return _outfit_row.outfit_button(id)
 
 
 ## The swatch for tent colour `id` (tests).
 func tent_button(id: StringName) -> Button:
-	return _tent_buttons.get(id)
+	return _outfit_row.tent_button(id)
 
 
 func _build_outfit_row() -> void:
-	var plate: PanelContainer = PanelContainer.new()
-	var canvas: StyleBox = UiKit.art_style("canvas", 6)
-	canvas.content_margin_left = 16
-	canvas.content_margin_right = 16
-	plate.add_theme_stylebox_override("panel", canvas)
-	_center_top(plate, 128)
-	add_child(plate)
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	plate.add_child(row)
-	_outfit_buttons = _swatches(row, "Outfit", Cosmetics.OUTFITS, func(id: StringName) -> void:
-		if Cosmetics.choose_outfit(selected_hero().id, id):
-			_stage.call("set_outfit_tint", selected, Cosmetics.outfit_tint(selected_hero().id))
-		_refresh_outfit_row())
-	var gap: Control = Control.new()
-	gap.custom_minimum_size = Vector2(18, 0)
-	row.add_child(gap)
-	_tent_buttons = _swatches(row, "Tent", Cosmetics.TENTS, func(id: StringName) -> void:
-		Cosmetics.choose_tent(id)
-		_refresh_outfit_row())
-
-
-func _swatches(row: HBoxContainer, word: String, entries: Array[Dictionary], pick: Callable) -> Dictionary:
-	var label: Label = UiKit.label(word, 14, Color(0.4, 0.27, 0.16))
-	label.add_theme_font_override("font", Fx.bold_font())
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(label)
-	var buttons: Dictionary = {}
-	for entry in entries:
-		var id: StringName = entry["id"]
-		var swatch: Button = Button.new()
-		swatch.custom_minimum_size = Vector2(28, 28)
-		swatch.focus_mode = Control.FOCUS_NONE
-		swatch.pressed.connect(func() -> void:
-			AudioManager.play_sfx(&"ui_click")
-			pick.call(id))
-		row.add_child(swatch)
-		buttons[id] = swatch
-	return buttons
-
-
-## Marks the picked swatches and locks the ones whose badge isn't earned.
-func _refresh_outfit_row() -> void:
-	if _outfit_buttons.is_empty():
-		return
-	var hero: StringName = selected_hero().id
-	for entry in Cosmetics.OUTFITS:
-		_style_swatch(_outfit_buttons[entry["id"]], entry, entry["id"] == Cosmetics.outfit_id(hero))
-	for entry in Cosmetics.TENTS:
-		_style_swatch(_tent_buttons[entry["id"]], entry, entry["id"] == Cosmetics.tent_id())
-
-
-func _style_swatch(swatch: Button, entry: Dictionary, picked: bool) -> void:
-	var unlocked: bool = Cosmetics.is_unlocked(entry)
-	# The tint over a mid cloth tone, so white reads as the painted look.
-	var color: Color = Color(0.86, 0.72, 0.52) * (entry["color"] as Color)
-	var border: Color = SELECT_COLOR if picked else UiKit.COLOR_BRASS_DARK
-	for state in ["normal", "hover", "pressed", "disabled"]:
-		swatch.add_theme_stylebox_override(state, UiKit.flat_style(color, border, 3 if picked else 2, 14))
-	swatch.disabled = not unlocked
-	swatch.modulate = Color.WHITE if unlocked else Color(1, 1, 1, 0.35)
-	swatch.tooltip_text = entry["name"] if unlocked else "%s - %s" % [entry["name"], Cosmetics.unlock_hint(entry)]
+	_outfit_row = OutfitRow.new()
+	_center_top(_outfit_row, 128)
+	add_child(_outfit_row)
+	_outfit_row.outfit_picked.connect(func(hero_id: StringName) -> void:
+		_stage.call("set_outfit_tint", selected, Cosmetics.outfit_tint(hero_id)))
 
 
 func selected_hero() -> HeroDefinition:
@@ -393,61 +328,20 @@ func _on_back() -> void:
 	GameManager.go_to_title()
 
 
-# --- Starting perk row (journal badges 06) -------------------------------------
-
-## Under the outfit row: "Start with:" None or one of the perk cards a
-## badge has unlocked (StartingPerks). Left out while none is unlocked.
 func _build_starting_perk_row() -> void:
-	var perks: Array[StringName] = StartingPerks.unlocked()
-	if perks.is_empty():
+	if not StartingPerkRow.is_wanted():
 		return
-	starting_perk_row = HBoxContainer.new()
-	starting_perk_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	starting_perk_row.add_theme_constant_override("separation", 8)
+	starting_perk_row = StartingPerkRow.new()
 	_center_top(starting_perk_row, 178)
 	add_child(starting_perk_row)
-	var word: Label = UiKit.label("Start with:", 16, UiKit.COLOR_GOLD_LIGHT)
-	word.add_theme_font_override("font", Fx.bold_font())
-	word.add_theme_constant_override("outline_size", 6)
-	word.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	starting_perk_row.add_child(word)
-	var group: ButtonGroup = ButtonGroup.new()
-	starting_perk_row.add_child(_starting_perk_button(&"", "None", null, "Start with no perk card", group))
-	for id in perks:
-		var perk: PerkDefinition = PerkManager.get_definition(id)
-		var badge: BadgeDefinition = Badges.get_badge(StartingPerks.UNLOCKS[id])
-		var tip: String = "%s\nUnlocked by the %s badge" % [perk.description.format({"hero": "your hero", "companion": "your companion"}),
-			badge.display_name if badge != null else "?"]
-		starting_perk_row.add_child(_starting_perk_button(id, perk.display_name, perk.icon_texture(), tip, group))
-	pick_starting_perk(StartingPerks.chosen())
 
 
-func _starting_perk_button(id: StringName, caption: String, icon: Texture2D, tip: String, group: ButtonGroup) -> Button:
-	var button: Button = Button.new()
-	button.text = caption
-	button.icon = icon
-	button.expand_icon = true
-	button.toggle_mode = true
-	button.button_group = group
-	button.focus_mode = Control.FOCUS_NONE
-	button.custom_minimum_size = Vector2(0, 36)
-	button.tooltip_text = tip
-	button.add_theme_font_size_override("font_size", 15)
-	button.add_theme_constant_override("icon_max_width", 24)
-	button.pressed.connect(func() -> void:
-		AudioManager.play_sfx(&"ui_click")
-		pick_starting_perk(id))
-	_starting_perk_buttons[id] = button
-	return button
-
-
-## Picks the perk card the next run starts with (&"" for none); kept in
-## the profile. A perk that is not unlocked picks none.
+## Picks the perk card the next run starts with (&"" for none).
 func pick_starting_perk(id: StringName) -> void:
-	StartingPerks.choose(id)
-	var chosen: StringName = StartingPerks.chosen()
-	for key in _starting_perk_buttons:
-		(_starting_perk_buttons[key] as Button).set_pressed_no_signal(key == chosen)
+	if starting_perk_row != null:
+		starting_perk_row.pick(id)
+	else:
+		StartingPerks.choose(id)
 
 
 func _center_top(control: Control, y: float) -> void:

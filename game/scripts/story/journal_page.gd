@@ -3,7 +3,7 @@ extends Resource
 
 ## JournalPage
 ##
-## One page of Mum's journal (journal badges 04, story layers 3-4 of
+## One page of Mum's journal (story layers 3-4 of
 ## docs/design/story.md): a short note in her ranger's voice that the
 ## kids find and keep in the profile for good. Stored as a .tres under
 ## res://resources/story/journal/ (the file order is the journal's

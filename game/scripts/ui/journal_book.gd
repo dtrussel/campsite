@@ -3,7 +3,7 @@ extends Control
 
 ## JournalBook
 ##
-## The scrapbook's Journal tab (journal badges 04): Mum's journal as an
+## The scrapbook's Journal tab: Mum's journal as an
 ## open book. The left page lists every page by number, the found ones
 ## by title and the rest as blanks; the right page shows the chosen one,
 ## her words in quotes with her face and her sketch, as on a dawn card.

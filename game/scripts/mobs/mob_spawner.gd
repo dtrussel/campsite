@@ -12,7 +12,7 @@ extends Node3D
 ## Feature 038: Chapter 2's last night is the Moon-Eater with a small
 ## escort, its eyes watch from the treeline the nights before, and it
 ## summons imp packs through summon() (never past mob_cap).
-## Endless (ticket 02): each night past nights_to_win gives mobs
+## Endless: each night past nights_to_win gives mobs
 ## `endless_hp_per_night` more HP and turns one imp into a heavy and one
 ## into a thief, so the tough ones take a growing share of the wave.
 

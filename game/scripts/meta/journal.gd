@@ -3,7 +3,7 @@ extends RefCounted
 
 ## Journal
 ##
-## Mum's journal (journal badges 04): the JournalPage files under
+## Mum's journal: the JournalPage files under
 ## res://resources/story/journal/ and which of them the player has
 ## found, kept in the profile for good ("journal.<page id>"). A page is
 ## found when its dawn card plays (Mum's dawn notes, 046), when a day

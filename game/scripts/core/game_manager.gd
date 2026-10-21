@@ -32,6 +32,8 @@ const HERO_SELECT_SCENE: String = "res://scenes/ui/HeroSelect.tscn"
 
 ## Surviving this many nights wins the run.
 @export var nights_to_win: int = 3
+## The chance a run rolls a day chest (RunConfig.roll_day_chest).
+@export_range(0.0, 1.0) var day_chest_chance: float = 0.5
 ## Endless mode (unlocked by the true ending): a Chapter 2 run
 ## (nights_to_win stays 7, so chapter() and the moon rows still read
 ## right) that has no win and no Moon-Eater. Kept between runs like the
@@ -46,7 +48,7 @@ var end_reason: String = ""
 ## &"loss_hero".
 var end_trigger: StringName = &""
 ## True when the run that just ended beat the endless record, so the
-## end screen says "New record!" (endless mode 03).
+## end screen says "New record!".
 var new_record: bool = false
 ## Per-run counters for the end screen and the playtest log.
 var stats: Dictionary = {}
@@ -59,7 +61,7 @@ var companion_id: StringName = &"nela"
 ## dropped, for the pity rule. Saved, and reset every run.
 var loot_misses: Dictionary = {}
 var loot_rng: RandomNumberGenerator = RandomNumberGenerator.new()
-## The day this run's day chest appears (journal badges 04), or 0 for
+## The day this run's day chest appears, or 0 for
 ## none: from the run config, and saved, so a continued run never rolls
 ## a second one.
 var day_chest_day: int = 0
@@ -225,7 +227,7 @@ func on_game_scene_ready() -> void:
 	run_started.emit()
 
 
-## A new run's starting perk (journal badges 06): the run config's,
+## A new run's starting perk: the run config's,
 ## if a badge has unlocked it.
 func _give_starting_perk() -> void:
 	var perk: StringName = RunSession.config.starting_perk if RunSession.config != null else &""
@@ -354,7 +356,7 @@ func _end_run(won: bool, reason: String, trigger: StringName) -> void:
 	if won:
 		Profile.record_chapter_won(chapter())
 	if endless:
-		_record_endless()
+		new_record = EndlessRecord.submit(current_day, hero_id)
 	end_trigger = trigger
 	TimeManager.stop()
 	BuildManager.exit_build_mode()
@@ -362,25 +364,6 @@ func _end_run(won: bool, reason: String, trigger: StringName) -> void:
 	run_ended.emit(won, reason)
 	# Freeze the world behind the end screen.
 	get_tree().paused = true
-
-
-## An endless run is over: keeps the night it ended on, and its hero,
-## as the record when it beats the best so far.
-func _record_endless() -> void:
-	new_record = Profile.record_best(Profile.ENDLESS_BEST_NIGHTS, current_day)
-	if new_record:
-		Profile.set_value(Profile.ENDLESS_BEST_HERO, String(hero_id))
-		PlaytestLog.write("endless_record nights=%d hero=%s" % [current_day, hero_id])
-
-
-## The endless record as the title and end screen show it ("Best: night
-## 9 - Leo"), or "" when there is none yet.
-func endless_best_text() -> String:
-	var nights: int = int(Profile.get_value(Profile.ENDLESS_BEST_NIGHTS, 0))
-	if nights <= 0:
-		return ""
-	var hero: HeroDefinition = HeroRoster.get_hero(StringName(String(Profile.get_value(Profile.ENDLESS_BEST_HERO, ""))))
-	return "Best: night %d - %s" % [nights, hero.display_name if hero != null else "?"]
 
 
 func _on_day_started(day_number: int) -> void:

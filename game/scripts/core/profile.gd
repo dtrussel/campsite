@@ -31,7 +31,7 @@ const STORY_PREFIX: String = "story."
 const CHAPTER_2_UNLOCKED: String = "chapters.c2.unlocked"
 ## The hero last picked on hero select (a HeroRoster id).
 const LAST_HERO: String = "heroes.last"
-## Endless mode's record (endless mode 03): the most nights an endless
+## Endless mode's record: the most nights an endless
 ## run lasted (the night it ended on), and the hero who did it.
 const ENDLESS_BEST_NIGHTS: String = "endless.best_nights"
 const ENDLESS_BEST_HERO: String = "endless.best_hero"

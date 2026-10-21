@@ -3,7 +3,7 @@ extends RefCounted
 
 ## Cosmetics
 ##
-## Badge-unlocked looks (journal badges 05): hero outfit tints and tent
+## Badge-unlocked looks: hero outfit tints and tent
 ## colours. Tints only: the colour multiplies the painted texture
 ## through the Stylize tint hook (Stylize.TINT_META), so no new art is
 ## needed. Hats and capes are a follow-up once there is art.

@@ -21,7 +21,7 @@ func _ready() -> void:
 	add_child(title)
 	await _settle(0.5)
 	_shot("01_title")
-	# Journal badges 03: the scrapbook's Badges tab, a few badges earned.
+	# The scrapbook's Badges tab, a few badges earned.
 	Profile.set_path("user://screenshot_profile.json")
 	Profile.delete()
 	for id in [&"first_night", &"night_owl", &"builder", &"chapter_1", &"torch_bearer", &"gatherer"]:
@@ -31,7 +31,7 @@ func _ready() -> void:
 	(title.call("journal_button") as Button).pressed.emit()
 	await _settle(0.5)
 	_shot("01a_scrapbook_badges")
-	# Journal badges 04: the Journal tab, five pages found, one open.
+	# The Journal tab, five pages found, one open.
 	var scrapbook: Node = title.call("scrapbook")
 	scrapbook.call("show_tab", "Journal")
 	scrapbook.call("show_page", &"lost_things")
@@ -39,7 +39,7 @@ func _ready() -> void:
 	_shot("01a_scrapbook_journal")
 	Profile.delete()
 	title.queue_free()
-	# Journal badges 07: the title with Chapter 2 locked (a new player in
+	# The title with Chapter 2 locked (a new player in
 	# a release build), then unlocked once Chapter 1 is won.
 	var debug_unlock: bool = Profile.unlock_all_chapters
 	Profile.unlock_all_chapters = false
@@ -244,7 +244,7 @@ func _ready() -> void:
 	await _settle(0.3)
 	_shot("04e_table_recipes")
 	get_tree().get_first_node_in_group("crafting_panel").close()
-	# Tool tiers (040): Leo owns the Ember Stick, so the Blaze Stick
+	# Leo owns the Ember Stick, so the Blaze Stick
 	# (tier 3) is offered; then the HUD attack slot's three tier pips.
 	(player as Hero).set_tool_tier(2, true)
 	for item in [&"scrap", &"clay", &"glow_shards"]:
@@ -438,7 +438,7 @@ func _ready() -> void:
 	await _settle(1.0)
 	_shot("12_title_mum_home")
 	home.queue_free()
-	# Endless mode 03: the Endless button with its record...
+	# The Endless button with its record...
 	Profile.set_value(Profile.ENDLESS_BEST_NIGHTS, 12)
 	Profile.set_value(Profile.ENDLESS_BEST_HERO, "nela")
 	var endless_title: Node = load("res://scenes/ui/TitleScreen.tscn").instantiate()

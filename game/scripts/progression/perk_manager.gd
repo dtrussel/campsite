@@ -44,7 +44,7 @@ var _pending: Dictionary = {}  # Node -> int
 var clock: float = 0.0
 ## The heroes a loaded save may owe cards, dealt on restore_finished.
 var _owed: Array[Node] = []
-## The card each character started the run with (journal badges 06),
+## The card each character started the run with,
 ## which is not a level-up's card.
 var _starting: Dictionary = {}  # Node -> StringName
 

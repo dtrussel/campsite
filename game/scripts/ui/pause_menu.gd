@@ -5,7 +5,7 @@ extends CanvasLayer
 ## Esc / P toggles pause during a run. Esc is shared with other
 ## overlays, so it first closes the crafting panel and leaves build
 ## mode cancellation to BuildManager. Its settings end with Delete
-## profile (journal badges 01), which asks first and forgets the
+## profile, which asks first and forgets the
 ## player's progress (Profile), never the audio or look settings.
 
 ## Opens the Delete profile confirmation.

@@ -3,7 +3,7 @@ extends RefCounted
 
 ## StartingPerks
 ##
-## Starting perks (journal badges 06): a Camp Badge unlocks a perk card
+## Starting perks: a Camp Badge unlocks a perk card
 ## that a run can start with already taken. Hero select offers the
 ## unlocked ones; the pick is kept in the profile, RunConfig.current()
 ## reads it, and GameManager gives it to the played hero when a new run

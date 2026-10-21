@@ -3,15 +3,16 @@ extends Control
 
 ## Scrapbook
 ##
-## The Ranger's scrapbook (journal badges 03), opened from the title's
+## The Ranger's scrapbook, opened from the title's
 ## Journal button. A walnut plate with a row of tabs; each tab is one
 ## page of content. The Badges tab is a grid of every Camp Badge in
 ## scrapbook order (Badges.definitions()): earned ones in colour, locked
 ## ones as dark silhouettes, each with how to earn it. Esc or Close
 ## emits `closed`; the opener frees it.
 ##
-## The Journal tab (journal badges 04) is Mum's journal, a JournalBook.
+## The Journal tab is Mum's journal, a JournalBook.
 
+## The close button or Esc was pressed; the opener frees the scrapbook.
 signal closed
 
 const BADGES_TAB: String = "Badges"

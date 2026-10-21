@@ -151,7 +151,7 @@ func record_text() -> String:
 	var lasted: String = "You lasted to night %d." % GameManager.current_day
 	if GameManager.new_record:
 		return lasted + "  New record!"
-	return "%s  %s" % [lasted, GameManager.endless_best_text()]
+	return "%s  %s" % [lasted, EndlessRecord.best_text()]
 
 
 func story_text() -> String:

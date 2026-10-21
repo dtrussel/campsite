@@ -11,11 +11,11 @@ extends Control
 ## Continue (shown
 ## when there is an autosave) resumes the saved run, with its party, at
 ## its next morning. Chapter 2 is locked until Chapter 1 is won
-## (journal badges 01, Profile.is_chapter_unlocked).
+## (Profile.is_chapter_unlocked).
 ## Once the true ending has been seen, Endless ("How long can you
 ## last?") starts a Chapter 2 run with no last night; under it, the
-## best endless run so far (endless mode 03).
-## Journal opens the scrapbook (journal badges 03) over the title.
+## best endless run so far.
+## Journal opens the scrapbook over the title.
 
 const BACKDROP: Script = preload("res://scripts/ui/title_backdrop.gd")
 const SCRAPBOOK_SCENE: PackedScene = preload("res://scenes/ui/Scrapbook.tscn")
@@ -127,7 +127,7 @@ func _ready() -> void:
 		var endless: Button = HudWidgets.icon_button("moon", "Endless", _on_endless, Color(0.7, 0.8, 1.0))
 		endless.custom_minimum_size = Vector2(250, 56)
 		endless.tooltip_text = "How long can you last? The Moon Lantern starts lit, and the nights never end."
-		var best: String = GameManager.endless_best_text()
+		var best: String = EndlessRecord.best_text()
 		var endless_slot: VBoxContainer = UiKit.vbox(2)
 		endless_slot.add_child(endless)
 		buttons.add_child(endless_slot)
