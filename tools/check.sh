@@ -36,8 +36,15 @@ run_scene() {
 
 echo "== import"
 timeout 300 "$GODOT" --headless --path "$GAME_DIR" --import >"$LOG_DIR/import.log" 2>&1 || true
+# On a fresh checkout (CI, a new worktree) scripts that preload a .glb
+# compile before that model is imported, so the first pass reports
+# preload errors. A second pass sees the imported models; only its
+# errors are real.
+if grep -qE "SCRIPT ERROR|Parse Error" "$LOG_DIR/import.log"; then
+	timeout 300 "$GODOT" --headless --path "$GAME_DIR" --import >"$LOG_DIR/import.log" 2>&1 || true
+fi
 if grep -E "SCRIPT ERROR|Parse Error" "$LOG_DIR/import.log"; then
-	echo "FAIL: import reported errors" >&2
+	echo "FAIL: import reported errors (log: $LOG_DIR/import.log)" >&2
 	exit 1
 fi
 

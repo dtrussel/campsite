@@ -10,14 +10,18 @@ signal day_started(day_number: int)
 signal sunset_warning(seconds_until_night: float)
 signal night_started(day_number: int)
 signal dawn_started(day_number: int)
+## Right after dawn_started, once every one of its handlers has run
+## (the run session's dawn autosave listens here, so it saves the camp
+## as the dawn left it).
+signal dawn_settled(day_number: int)
 signal phase_changed(new_phase: int)
 
 enum Phase { DAY, SUNSET, NIGHT, DAWN }
 
-@export var day_seconds: float = 120.0
-@export var sunset_seconds: float = 10.0
-@export var night_seconds: float = 75.0
-@export var dawn_seconds: float = 5.0
+@export var day_seconds: float = 200.0
+@export var sunset_seconds: float = 12.0
+@export var night_seconds: float = 120.0
+@export var dawn_seconds: float = 6.0
 
 var current_phase: int = Phase.DAY
 var remaining_seconds: float = 0.0
@@ -34,13 +38,26 @@ func _ready() -> void:
 	reset()
 
 
-## Resets to the start of day 1 without emitting anything.
+## Resets to the start of day 1 without emitting anything (also the
+## saving system's reset).
 func reset() -> void:
 	is_running = false
 	hold_night = false
 	current_phase = Phase.DAY
 	remaining_seconds = day_seconds
 	day_number = 1
+
+
+## Saving system (RunSession): the day the save was made on (its dawn).
+func save_state() -> Dictionary:
+	return {"day": day_number}
+
+
+## Saving system: takes the saved day back, without starting the clock;
+## RunSession starts it at the morning after once the camp is rebuilt.
+func load_state(data: Dictionary) -> void:
+	if data.has("day"):
+		day_number = maxi(1, int(data["day"]))
 
 
 ## Starts ticking from the morning of `first_day` (1, or later when a
@@ -107,6 +124,7 @@ func _advance_phase() -> void:
 			current_phase = Phase.DAWN
 			remaining_seconds = dawn_seconds
 			dawn_started.emit(day_number)
+			dawn_settled.emit(day_number)
 		Phase.DAWN:
 			day_number += 1
 			current_phase = Phase.DAY

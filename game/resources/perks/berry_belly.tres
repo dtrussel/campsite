@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="PerkDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/perk_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"berry_belly"
+display_name = "Berry Belly"
+description = "Berry Snacks heal 50% more."
+icon = "snack"
+pool = &"shared"
+player_only = true
+effect_kind = &"stat_mult"
+stat = &"snack_heal"
+value = 1.5

@@ -16,7 +16,7 @@ const MIN_SECONDS: float = 1.2
 const FADE_IN: float = 0.2
 const FADE_OUT: float = 0.35
 
-## The team's paintings (features 029-030), each with tips that fit it:
+## The team's paintings (features 029-030, 047), each with tips that fit it:
 ## [art, [[tip, icon], ...]]. Short, simple words for young players.
 const SCREENS: Array = [
 	["res://assets/ui/key_art.webp", [
@@ -24,18 +24,30 @@ const SCREENS: Array = [
 		["Hurt? Press R to eat berries and heal.", "res://assets/icons/berries.png"],
 		["Keep the campfire burning all night long!", "res://assets/icons/campfire.png"],
 	]],
+	# Feature 047: the two storybook paintings that give nothing away.
+	["res://assets/ui/story/story_c1_1.webp", [
+		["Mum left pages from her notebook. Look for them at dawn.", "res://assets/icons/tent.png"],
+		["Keep the fire burning, no matter what.", "res://assets/icons/campfire.png"],
+	]],
+	["res://assets/ui/story/story_c2_2.webp", [
+		["Glow Shards are bits of moonlight. Bring them to the Moon Lantern!", "res://assets/icons/glow_shards.png"],
+		["Each shard makes the Moon Lantern's safe ring bigger.", "res://assets/icons/lantern.png"],
+	]],
 	["res://assets/ui/loading_imp.webp", [
 		["Torches slow the Shadow Imps down.", "res://assets/icons/torch.png"],
 		["Glow Lanterns zap imps that come too close.", "res://assets/icons/lantern.png"],
 		["Imps love the campfire: build fences around it!", "res://assets/icons/fence.png"],
+		["Shadow Imps aren't mean. They're lost and cold, so they crowd the light.", "res://assets/icons/portrait_imp.png"],
 	]],
 	["res://assets/ui/loading_beast.webp", [
 		["Watch the Bramble Beast's fists: step away before the SLAM!", ""],
 		["Bramble Beasts smash fences first. Reinforced Walls last longer.", "res://assets/icons/stone.png"],
+		["Bramble Beasts are old fallen trees that the dark woke up.", "res://assets/icons/tree.png"],
 	]],
 	["res://assets/ui/loading_gremlin.webp", [
 		["Build a Storage Crate so Mushroom Gremlins can't grab everything.", "res://assets/icons/crate.png"],
 		["Catch a gremlin to get your things back!", "res://assets/icons/mushrooms.png"],
+		["Gremlins run home to the Hollow with what they grab. Be quick!", "res://assets/icons/mushrooms.png"],
 	]],
 ]
 

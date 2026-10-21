@@ -12,11 +12,13 @@ page = 1
 lines = [{
 "id": "shard.leo",
 "speaker": "leo",
+"face": "laugh",
 "text": "Ooh, it's warm! Like a little piece of moon!",
 "when": "leo"
 }, {
 "id": "shard.nela",
 "speaker": "nela",
+"face": "surprised",
 "text": "It's glowing... like a tiny piece of the moon.",
 "when": "nela"
 }]

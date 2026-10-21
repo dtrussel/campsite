@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PerkDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/perk_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"stand_firm"
+display_name = "Stand Firm"
+description = "Take 25% less damage near the fire."
+icon = "hearth"
+pool = &"leo"
+effect_kind = &"flag"
+value = 0.75

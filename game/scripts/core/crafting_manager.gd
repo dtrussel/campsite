@@ -30,6 +30,23 @@ func _ready() -> void:
 	)
 
 
+## Saving system (RunSession): back to a fresh run, no craft in
+## progress.
+func reset() -> void:
+	is_crafting = false
+
+
+## Saving system: nothing of crafting is saved (a craft never spans a
+## save).
+func save_state() -> Dictionary:
+	return {}
+
+
+## Saving system: nothing to load.
+func load_state(_data: Dictionary) -> void:
+	pass
+
+
 func get_recipes() -> Array[CraftingRecipe]:
 	return _recipes
 

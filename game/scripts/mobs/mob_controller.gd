@@ -366,7 +366,7 @@ func _try_attack(target: Node) -> void:
 	if _attack_cooldown_remaining > 0.0:
 		return
 	if _visual != null:
-		_visual.play_action(&"attack", 1.6)
+		_visual.play_action(&"attack", 1.3)
 	if definition.attack_hit_delay > 0.0:
 		# Telegraphed (feature 026): the blow lands at the clip's impact.
 		get_tree().create_timer(definition.attack_hit_delay, false).timeout.connect(_land_attack.bind(target))
@@ -435,8 +435,8 @@ func _update_chase_target() -> void:
 func _is_valid_character(node: Node3D) -> bool:
 	if node == null or not is_instance_valid(node) or not node.is_inside_tree():
 		return false
-	# Player and companions both expose an is_knocked_out property.
-	return node.get("is_knocked_out") != true
+	# A downed hero is left alone.
+	return not (node is Hero and (node as Hero).is_down())
 
 
 ## The strongest slow from lit torches and the Moon Lantern's ring.

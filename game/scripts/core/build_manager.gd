@@ -9,10 +9,17 @@ extends Node
 ## On confirm_build it spends the resources via ResourceManager and
 ## spawns the real building. Stays in build mode after a placement so
 ## the player can drop several buildings in a row.
+##
+## Playtest 1 (feature 044): a placed building is a *blueprint* (see
+## Building) that the hero walks over to and hammers up; XP comes when
+## it is finished (`building_completed`). Clicking an unstarted
+## blueprint in build mode takes it back with a full refund.
 
 signal build_mode_entered(definition: BuildingDefinition)
 signal build_mode_exited
 signal building_placed(building: Node)
+signal building_completed(building: Node)
+signal blueprint_removed(building: Node)
 signal placement_validity_changed(is_valid: bool)
 
 const BUILDINGS_DIR: String = "res://resources/buildings/"
@@ -20,6 +27,8 @@ const GHOST_NODE_NAME: StringName = &"_BuildGhost"
 const FOOTPRINT_NODE_NAME: StringName = &"_GhostFootprint"
 const GROUND_GROUP: StringName = &"ground"
 const BUILD_XP_REWARD: int = 5
+const WOOD_ID: StringName = &"wood"
+const BUILDERS_KNACK: StringName = &"builders_knack"
 
 var _definitions: Array[BuildingDefinition] = []
 var _by_id: Dictionary = {}                  # StringName -> BuildingDefinition
@@ -31,6 +40,11 @@ var _ghost_footprint: Area3D = null
 var _is_valid: bool = false
 var _has_ground_hit: bool = false
 var _ghost_yaw_degrees: float = 0.0  # kept between placements
+## The party's Builder's Knack discount in Wood, or -1 when it must be
+## worked out again. The HUD asks cost_of() for every building each
+## frame, so it is cached; PerkManager.perks_changed (a card taken,
+## perks restored, a reset, a hero leaving) clears it.
+var _wood_off: int = -1
 
 var _valid_material: StandardMaterial3D
 var _invalid_material: StandardMaterial3D
@@ -40,6 +54,54 @@ func _ready() -> void:
 	_valid_material = _make_ghost_material(Color(0.3, 1.0, 0.4, 0.55))
 	_invalid_material = _make_ghost_material(Color(1.0, 0.3, 0.3, 0.55))
 	_load_definitions()
+	# PerkManager is the next autoload but one: connect once it is ready.
+	_connect_perks.call_deferred()
+
+
+func _connect_perks() -> void:
+	if not PerkManager.perks_changed.is_connected(clear_cost_cache):
+		PerkManager.perks_changed.connect(clear_cost_cache)
+
+
+## Forgets the cached Wood discount (cost_of works it out again).
+func clear_cost_cache() -> void:
+	_wood_off = -1
+
+
+## What `definition` costs now: its `cost`, less the party's perks. The
+## Builder's Knack perk (perk cards, ticket 03) takes its `value` in Wood
+## off, never below 0; an item that drops to 0 is left out. Spending,
+## refunds, can-afford checks and the HUD's build menu all go through it.
+func cost_of(definition: BuildingDefinition) -> Dictionary:
+	if definition == null:
+		return {}
+	var cost: Dictionary = definition.cost.duplicate()
+	var wood_off: int = _wood_discount()
+	if wood_off > 0:
+		for key in cost.keys():
+			if StringName(key) == WOOD_ID:
+				var left: int = maxi(0, int(cost[key]) - wood_off)
+				if left > 0:
+					cost[key] = left
+				else:
+					cost.erase(key)
+	return cost
+
+
+func _wood_discount() -> int:
+	if _wood_off < 0:
+		_wood_off = _party_wood_discount()
+	return _wood_off
+
+
+func _party_wood_discount() -> int:
+	var party: Array[Node] = get_tree().get_nodes_in_group("player")
+	party.append_array(get_tree().get_nodes_in_group("companions"))
+	for member in party:
+		if PerkManager.has_flag(member, BUILDERS_KNACK):
+			var perk: PerkDefinition = PerkManager.get_definition(BUILDERS_KNACK)
+			return roundi(perk.value) if perk != null else 0
+	return 0
 
 
 func get_known_definitions() -> Array[BuildingDefinition]:
@@ -133,32 +195,85 @@ func _select_index(idx: int) -> void:
 
 
 func _try_confirm() -> void:
+	var unstarted: Building = _blueprint_under_ghost()
+	if unstarted != null:
+		remove_blueprint(unstarted)
+		_update_validity(_compute_validity(), true)
+		return
 	if not _is_valid:
 		return
 	if _active_definition == null or _active_definition.get_scene() == null:
 		return
-	if not ResourceManager.spend_costs(_active_definition.cost):
+	var cost: Dictionary = cost_of(_active_definition)
+	if get_tree().current_scene == null or not ResourceManager.spend_costs(cost):
 		return
-	var scene_root: Node = get_tree().current_scene
-	if scene_root == null:
-		return
-	var building: Node = _active_definition.get_scene().instantiate()
-	scene_root.add_child(building)
-	if _ghost != null:
-		(building as Node3D).global_transform = _ghost.global_transform
-	building_placed.emit(building)
-	AudioManager.play_sfx(_active_definition.place_sound, (building as Node3D).global_position)
-	_award_build_xp()
+	# It refunds what was paid, even if the perks change before it is
+	# taken back (the save keeps it too).
+	place_blueprint(_active_definition, _ghost.global_transform if _ghost != null else Transform3D.IDENTITY, cost)
 	# Force a validity re-eval so the ghost flips to red if the cost can
 	# no longer be afforded after spending.
 	_update_validity(_compute_validity(), true)
 
 
-func _award_build_xp() -> void:
-	var players: Array = get_tree().get_nodes_in_group("player")
-	if players.is_empty():
-		return
-	ProgressionManager.award_xp(players[0] as Node, BUILD_XP_REWARD, &"build")
+## Puts down a paid-for blueprint of `definition` at `where`. `paid` is
+## the cost Dictionary paid for it, refunded if it is taken back; null
+## refunds cost_of at that time.
+func place_blueprint(definition: BuildingDefinition, where: Transform3D, paid: Variant = null) -> Building:
+	var building: Building = definition.get_scene().instantiate() as Building
+	building.start_as_blueprint(0.0, paid)
+	get_tree().current_scene.add_child(building)
+	building.global_transform = where
+	building_placed.emit(building)
+	AudioManager.play_sfx(&"stone_place", building.global_position)
+	Fx.burst(&"dust", building.global_position)
+	return building
+
+
+## Takes back a blueprint nobody has started on, refunding its cost.
+func remove_blueprint(building: Building) -> bool:
+	if building == null or not building.is_blueprint() or building.build_progress > 0.0:
+		return false
+	if building.definition != null:
+		var paid: Dictionary = building.paid_cost() if building.has_paid_cost() else cost_of(building.definition)
+		for id in paid.keys():
+			ResourceManager.add(StringName(id), int(paid[id]))
+	Fx.burst(&"dust", building.global_position)
+	AudioManager.play_sfx(&"ui_click")
+	building.remove_from_group(Building.BLUEPRINT_GROUP)
+	blueprint_removed.emit(building)
+	building.queue_free()
+	return true
+
+
+## The oldest blueprint still waiting (the hero's next job).
+func next_blueprint() -> Building:
+	for node in get_tree().get_nodes_in_group(Building.BLUEPRINT_GROUP):
+		var building: Building = node as Building
+		if building != null and is_instance_valid(building) and building.current_hp > 0 and not building.is_queued_for_deletion():
+			return building
+	return null
+
+
+## Called by Building.complete_construction(): the builder (or the
+## player) gets the build XP.
+func on_construction_finished(building: Building, builder: Node) -> void:
+	var earner: Node = builder
+	if earner == null:
+		var players: Array = get_tree().get_nodes_in_group("player")
+		earner = players[0] if not players.is_empty() else null
+	if earner != null:
+		ProgressionManager.award_xp(earner, BUILD_XP_REWARD, &"build")
+	building_completed.emit(building)
+
+
+func _blueprint_under_ghost() -> Building:
+	if _ghost_footprint == null or not _has_ground_hit:
+		return null
+	for body in _ghost_footprint.get_overlapping_bodies():
+		var building: Building = body as Building
+		if building != null and is_instance_valid(building) and building.is_blueprint() and building.build_progress <= 0.0:
+			return building
+	return null
 
 
 func _spawn_ghost(definition: BuildingDefinition) -> bool:
@@ -257,7 +372,7 @@ func _compute_validity() -> bool:
 		return false
 	if _active_definition == null:
 		return false
-	if not ResourceManager.can_afford(_active_definition.cost):
+	if not ResourceManager.can_afford(cost_of(_active_definition)):
 		return false
 	if _ghost_footprint == null:
 		return false

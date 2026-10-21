@@ -12,21 +12,31 @@ page = 1
 lines = [{
 "id": "dawn.c2.n2.leo.1",
 "speaker": "leo",
+"face": "curious",
 "text": "Why do the shadows love our fire so much?",
 "when": "leo"
 }, {
 "id": "dawn.c2.n2.leo.2",
 "speaker": "nela",
-"text": "Maybe they're cold. They all crowd near the light.",
+"face": "curious",
+"text": "Maybe they're cold. Mum thought so too.",
 "when": "leo"
 }, {
 "id": "dawn.c2.n2.nela.1",
 "speaker": "nela",
+"face": "curious",
 "text": "The shadows crowd the fire. Like they're cold.",
 "when": "nela"
 }, {
 "id": "dawn.c2.n2.nela.2",
 "speaker": "leo",
-"text": "Cold? They're shadows! ...Huh. Maybe.",
+"face": "surprised",
+"text": "Cold? They're shadows! ...Huh. Mum thought so too.",
 "when": "nela"
+}, {
+"id": "dawn.c2.n2.note",
+"speaker": "note",
+"sketch": "res://assets/ui/story/note_3.png",
+"face": "curious",
+"text": "The shadows aren't wicked. They're lost things, and cold."
 }]

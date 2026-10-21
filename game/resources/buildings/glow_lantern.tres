@@ -7,7 +7,7 @@
 script = ExtResource("1_def")
 id = &"glow_lantern"
 display_name = "Glow Lantern"
-description = "A lantern of Glow Shards. Like a big torch that never burns out: imps within 5 m slow down and get zapped."
+description = "A little sister of the Moon Lantern, lit with Glow Shards. It never burns out: imps within 5 m slow down and get zapped."
 scene_path = "res://scenes/buildings/GlowLantern.tscn"
 cost = {
 &"glow_shards": 2,
@@ -15,6 +15,7 @@ cost = {
 &"wood": 2
 }
 max_hp = 60
+build_seconds = 3.0
 footprint_size = Vector3(0.9, 1.8, 0.9)
 ui_color = Color(0.45, 0.85, 1, 1)
 sort_order = 40

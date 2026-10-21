@@ -7,7 +7,7 @@
 script = ExtResource("1_def")
 id = &"snack"
 display_name = "Berry Snack"
-description = "Berries and a mushroom, cooked at the campfire. Press R to eat one: +35 HP."
+description = "Berries, cooked at the campfire. Press R to eat one: +35 HP."
 icon = ExtResource("2_icon")
 rarity = 2
 max_stack = 20

@@ -17,6 +17,9 @@ extends CanvasLayer
 ##                   Moon Lantern dial (feature 036)
 ##   under the top strip - the boss bar while the Moon-Eater stands
 ##                   (feature 038), with a thin bar for its lantern reach
+##   right, under the tray - toasts (HudToast): short notes such as the
+##                   companion's perk card, clear of the banner and the
+##                   story card; the perk picker covers them
 ## Everything is signal-driven except the clock, cooldown and imp count,
 ## which tick in _process. Names and portraits come from the party
 ## (GameManager.party_hero / party_companion, feature 034).
@@ -30,13 +33,17 @@ const _PHASE_COLOR_DAWN: Color = Color(1, 0.88, 0.65)
 const _TOP_WIDTH: float = 330.0
 const _DIAL_SIZE: float = 58.0
 const _BANNER_Y: float = 104.0
+## The banner's subtitle sits this far under the ribbon's top.
+const _BANNER_SUB_GAP: float = 62.0
 ## The banner drops below the boss bar while it is up.
 const _BANNER_Y_BOSS: float = 170.0
 const _BOSS_COLOR: Color = Color(0.5, 0.36, 0.86)
+## Toasts start this far down the right edge, under the resource tray.
+const _TOAST_Y: float = 92.0
+const _TOAST_MAX: int = 3
 
 var _vignette: TextureRect = null
-const _TRAY_ITEMS: Array[StringName] = [&"wood", &"stone", &"berries", &"fiber", &"leaves", &"resin", &"clay",
-	&"mushrooms", &"scrap", &"glow_shards", &"torch", &"snack"]
+const _TRAY_ITEMS: Array[StringName] = [&"wood", &"stone", &"berries", &"clay", &"scrap", &"glow_shards", &"torch", &"snack"]
 const _ICON_DIR: String = "res://assets/icons/"
 
 var _player: Node = null
@@ -51,6 +58,15 @@ var _imps_label: Label = null
 var _banner: Label = null
 var _banner_plate: PanelContainer = null
 var _banner_tween: Tween = null
+## A line under the banner: what a creature is, the first time one shows
+## up in a run (feature 046).
+var _banner_sub: Label = null
+var _banner_sub_plate: PanelContainer = null
+## The banner's faded-in alpha; it is drawn at zero while the perk
+## picker is open, so "NIGHT N!" never sits on the picker's heading.
+var _banner_alpha: float = 0.0
+var _pickers_open: int = 0
+var _met_mobs: Dictionary = {}
 var _build_label: Label = null
 
 var _hero_portrait: HudWidgets.Portrait = null
@@ -69,6 +85,9 @@ var _boss_bar: HudWidgets.StatBar = null
 var _reach_bar: HudWidgets.StatBar = null
 var _boss: BossController = null
 var _story_card: StoryCard = null
+var _story_queue: Array = []
+var _perk_host: Control = null
+var _toast_stack: VBoxContainer = null
 var _lantern_dial: HudWidgets.LanternDial = null
 var _tray_labels: Dictionary = {}  # StringName -> Label
 var _tray_rows: Dictionary = {}    # StringName -> Control
@@ -88,12 +107,18 @@ func _ready() -> void:
 	_build_banner(root)
 	_build_boss_bar(root)
 	_build_story_host(root)
+	_build_toast_stack(root)
+	_build_perk_host(root)
 
 	ResourceManager.resource_changed.connect(_on_resource_changed)
 	ResourceManager.caps_changed.connect(_refresh_tray)
 	BuildManager.build_mode_entered.connect(_on_build_mode_entered)
 	BuildManager.build_mode_exited.connect(func() -> void: (_build_label.get_meta(&"plate") as Control).visible = false)
 	BuildManager.placement_validity_changed.connect(_on_placement_validity_changed)
+	# A perk can change what buildings cost (Builder's Knack).
+	PerkManager.perk_taken.connect(func(_c: Node, _p: PerkDefinition) -> void:
+		if BuildManager.is_in_build_mode():
+			_refresh_build_label(BuildManager.get_active_definition()))
 	GameManager.companion_task_changed.connect(func(_c: Node, _t: int) -> void: _refresh_sibling())
 	ProgressionManager.xp_gained.connect(func(character: Node, _a: int, _s: StringName) -> void: _refresh_progress(character))
 	ProgressionManager.level_up.connect(_on_level_up)
@@ -268,7 +293,7 @@ func _build_tray(root: Control) -> void:
 	_anchor(plate, Control.PRESET_TOP_RIGHT, Vector2(-10, 8))
 	root.add_child(plate)
 	var grid: GridContainer = GridContainer.new()
-	grid.columns = 3
+	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 0)
 	plate.add_child(grid)
@@ -278,7 +303,7 @@ func _build_tray(root: Control) -> void:
 			continue
 		var row: HBoxContainer = HBoxContainer.new()
 		row.add_theme_constant_override("separation", 3)
-		row.tooltip_text = "%s - %s" % [definition.display_name, definition.description]
+		row.tooltip_text = "%s - %s" % [definition.display_name, UiKit.party_text(definition.description)]
 		row.mouse_filter = Control.MOUSE_FILTER_PASS
 		var icon: TextureRect = TextureRect.new()
 		icon.texture = definition.icon
@@ -408,6 +433,17 @@ func _build_banner(root: Control) -> void:
 	_banner.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_banner.add_theme_constant_override("outline_size", 9)
 	_banner_plate.add_child(_banner)
+	_banner_sub_plate = _plate(6, 16)
+	_anchor(_banner_sub_plate, Control.PRESET_CENTER_TOP, Vector2(0, _BANNER_Y + _BANNER_SUB_GAP))
+	_banner_sub_plate.modulate.a = 0.0
+	_banner_sub_plate.visible = false
+	root.add_child(_banner_sub_plate)
+	_banner_sub = UiKit.label("", 19, UiKit.COLOR_TEXT)
+	_banner_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_banner_sub.add_theme_constant_override("outline_size", 6)
+	_banner_sub.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
+	_banner_sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_banner_sub_plate.add_child(_banner_sub)
 
 
 ## The Moon-Eater's health under the top strip (feature 038), and a thin
@@ -466,6 +502,8 @@ func _on_boss_phase(phase: int, boss: BossController) -> void:
 func _set_banner_y(y: float) -> void:
 	_banner_plate.offset_top = y
 	_banner_plate.offset_bottom = y
+	_banner_sub_plate.offset_top = y + _BANNER_SUB_GAP
+	_banner_sub_plate.offset_bottom = y + _BANNER_SUB_GAP
 
 
 ## The story card's place: down the left edge, under the companion and
@@ -476,20 +514,98 @@ func _build_story_host(root: Control) -> void:
 	_anchor(_story_host, Control.PRESET_TOP_LEFT, Vector2(12, 176))
 	root.add_child(_story_host)
 	GameManager.run_ended.connect(func(_won: bool, _reason: String) -> void:
+		_story_queue.clear()
+		_met_mobs.clear()
 		if story_card() != null:
 			story_card().dismiss())
 
 
-## Shows a story card (dawn talk, first shard), replacing any open one.
+## Shows a story card (dawn talk, first shard). A card that is still
+## talking is never cut short (feature 046): the new one waits for it
+## and null is returned.
 func show_story(beat: StoryBeat, hint: String = "") -> StoryCard:
 	if beat == null:
 		return null
-	if _story_card != null and is_instance_valid(_story_card):
-		_story_card.queue_free()
+	var open: StoryCard = story_card()
+	if open != null and not open.is_closing():
+		_story_queue.append([beat, hint])
+		return null
+	if open != null:
+		open.queue_free()
 	_story_card = StoryCard.make(beat, GameManager.hero_id, hint)
+	_story_card.dismissed.connect(_show_queued_story, CONNECT_DEFERRED)
 	_story_host.add_child(_story_card)
 	PlaytestLog.write("story_card id=%s" % beat.id)
 	return _story_card
+
+
+## Toasts stack down the right edge under the resource tray: away from
+## the banner (top centre), the story card (left) and the hero bar.
+func _build_toast_stack(root: Control) -> void:
+	_toast_stack = UiKit.vbox(6)
+	_toast_stack.name = "ToastStack"
+	_toast_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_toast_stack.alignment = BoxContainer.ALIGNMENT_BEGIN
+	_anchor(_toast_stack, Control.PRESET_TOP_RIGHT, Vector2(-10, _TOAST_Y))
+	root.add_child(_toast_stack)
+
+
+## Shows a toast under the tray; the newest goes at the bottom. With
+## more than _TOAST_MAX up, the oldest fades early.
+func show_toast(text: String, icon: String = "", color: Color = UiKit.COLOR_GOLD_LIGHT, seconds: float = HudToast.SECONDS) -> HudToast:
+	var toast: HudToast = HudToast.make(text, icon, color, seconds)
+	_toast_stack.add_child(toast)
+	var open: Array[HudToast] = toasts()
+	if open.size() > _TOAST_MAX:
+		open[0].dismiss()
+	PlaytestLog.write("toast text=%s" % text)
+	return toast
+
+
+## The toasts up now, oldest first (not the ones fading out).
+func toasts() -> Array[HudToast]:
+	var out: Array[HudToast] = []
+	for child in _toast_stack.get_children():
+		if child is HudToast and not (child as HudToast).is_closing():
+			out.append(child as HudToast)
+	return out
+
+
+## The perk picker's place: over the whole screen, above the story card.
+func _build_perk_host(root: Control) -> void:
+	_perk_host = Control.new()
+	_perk_host.name = "PerkHost"
+	_perk_host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	UiKit.full_rect(_perk_host)
+	root.add_child(_perk_host)
+
+
+## Opens the level-up card picker (perk cards). PerkManager calls this
+## and takes the card the picker closes with.
+func show_perk_picker(cards: Array[PerkDefinition], auto_pick_seconds: float) -> PerkPicker:
+	var picker: PerkPicker = PerkPicker.make(cards, auto_pick_seconds)
+	_pickers_open += 1
+	picker.closed.connect(_on_perk_picker_closed, CONNECT_ONE_SHOT)
+	_perk_host.add_child(picker)
+	_set_banner_alpha(_banner_alpha)
+	return picker
+
+
+func _on_perk_picker_closed(_perk: PerkDefinition) -> void:
+	_pickers_open = maxi(0, _pickers_open - 1)
+	if _banner_plate != null and is_instance_valid(_banner_plate):
+		_set_banner_alpha(_banner_alpha)
+
+
+## True while the centre banner is hidden under an open perk picker.
+func is_banner_hidden() -> bool:
+	return _pickers_open > 0
+
+
+func _show_queued_story() -> void:
+	if not _story_queue.is_empty() and GameManager.is_playing():
+		var next: Array = _story_queue.pop_front()
+		show_story(next[0] as StoryBeat, String(next[1]))
 
 
 func story_card() -> StoryCard:
@@ -543,7 +659,7 @@ func _hook_world() -> void:
 		_refresh_progress(_player)
 	if _companion != null:
 		_companion.health_changed.connect(func(hp: int, max_hp: int) -> void: _sibling_hp.set_values(hp, max_hp))
-		_companion.knocked_out_changed.connect(_on_companion_knocked_out)
+		(_companion as Hero).down_changed.connect(_on_companion_down_changed)
 		_sibling_hp.set_values(_companion.current_hp, _companion.max_hp)
 		_refresh_sibling()
 	var lantern: MoonLantern = MoonLantern.find(get_tree())
@@ -579,8 +695,8 @@ func _process(_delta: float) -> void:
 func _refresh_slots() -> void:
 	if _player == null or not is_instance_valid(_player):
 		return
-	var cooldown: float = float(_player.get("_attack_cooldown_remaining")) / maxf(float(_player.attack_cooldown_seconds), 0.01)
-	(_slots[&"attack"] as HudWidgets.AbilitySlot).set_state(true, "", clampf(cooldown, 0.0, 1.0))
+	var cooldown: float = (_player as Hero).get_attack_cooldown_ratio() if _player is Hero else 0.0
+	(_slots[&"attack"] as HudWidgets.AbilitySlot).set_state(true, "", cooldown)
 	(_slots[&"gather"] as HudWidgets.AbilitySlot).set_state(true)
 	var torches: int = ResourceManager.get_count(&"torch")
 	(_slots[&"torch"] as HudWidgets.AbilitySlot).set_state(torches > 0, str(torches) if torches > 0 else "")
@@ -603,7 +719,7 @@ func _refresh_slots() -> void:
 	(_slots[&"craft"] as HudWidgets.AbilitySlot).set_state(craft_ready)
 	var can_build: bool = false
 	for definition in BuildManager.get_known_definitions():
-		can_build = can_build or ResourceManager.can_afford(definition.cost)
+		can_build = can_build or ResourceManager.can_afford(BuildManager.cost_of(definition))
 	(_slots[&"build"] as HudWidgets.AbilitySlot).set_state(can_build)
 	(_slots[&"build"] as HudWidgets.AbilitySlot).highlight = BuildManager.is_in_build_mode()
 
@@ -622,7 +738,7 @@ func _refresh_tray() -> void:
 		var definition: ResourceDefinition = ResourceManager.get_definition(id)
 		if definition != null:
 			var amount: String = "%d/%d" % [count, cap] if cap > 0 else str(count)
-			row.tooltip_text = "%s %s - %s" % [definition.display_name, amount, definition.description]
+			row.tooltip_text = "%s %s - %s" % [definition.display_name, amount, UiKit.party_text(definition.description)]
 
 
 func _refresh_progress(character: Node) -> void:
@@ -641,7 +757,7 @@ func _refresh_progress(character: Node) -> void:
 func _refresh_sibling() -> void:
 	if _companion == null or not is_instance_valid(_companion):
 		return
-	var knocked: bool = _companion.get("is_knocked_out") == true
+	var knocked: bool = _companion is Hero and (_companion as Hero).is_down()
 	var task: int = int(_companion.get("current_task"))
 	for i in range(_task_buttons.size()):
 		(_task_buttons[i] as Button).set_pressed_no_signal(i == task)
@@ -674,16 +790,31 @@ func _phase_duration(phase: int) -> float:
 
 # --- Events --------------------------------------------------------------------
 
-func show_banner(text: String, color: Color = UiKit.COLOR_GOLD_LIGHT) -> void:
+func show_banner(text: String, color: Color = UiKit.COLOR_GOLD_LIGHT, subtitle: String = "") -> void:
 	_banner.text = text.to_upper()
 	_banner.add_theme_color_override("font_color", color)
+	_banner_sub.text = subtitle
+	_banner_sub_plate.visible = subtitle != ""
+	_banner_sub_plate.reset_size()
 	if _banner_tween != null:
 		_banner_tween.kill()
-	_banner_plate.modulate.a = 0.0
+	_set_banner_alpha(0.0)
 	_banner_tween = create_tween()
-	_banner_tween.tween_property(_banner_plate, "modulate:a", 1.0, 0.25)
-	_banner_tween.tween_interval(_BANNER_SECONDS)
-	_banner_tween.tween_property(_banner_plate, "modulate:a", 0.0, 0.6)
+	_banner_tween.tween_method(_set_banner_alpha, 0.0, 1.0, 0.25)
+	# A subtitle needs a moment longer to read.
+	_banner_tween.tween_interval(_BANNER_SECONDS + (2.0 if subtitle != "" else 0.0))
+	_banner_tween.tween_method(_set_banner_alpha, 1.0, 0.0, 0.6)
+
+
+func banner_subtitle() -> String:
+	return _banner_sub.text
+
+
+func _set_banner_alpha(alpha: float) -> void:
+	_banner_alpha = alpha
+	var shown: float = 0.0 if _pickers_open > 0 else alpha
+	_banner_plate.modulate.a = shown
+	_banner_sub_plate.modulate.a = shown
 
 
 func _on_resource_changed(id: StringName, _value: int, delta: int) -> void:
@@ -715,9 +846,9 @@ func _refresh_build_label(definition: BuildingDefinition) -> void:
 	for i in range(known.size()):
 		var chip: Control = HudWidgets.AbilitySlot.new(known[i].icon, str(i + 1))
 		chip.custom_minimum_size = Vector2(40, 40)
-		(chip as HudWidgets.AbilitySlot).set_state(ResourceManager.can_afford(known[i].cost))
+		(chip as HudWidgets.AbilitySlot).set_state(ResourceManager.can_afford(BuildManager.cost_of(known[i])))
 		(chip as HudWidgets.AbilitySlot).highlight = known[i] == definition
-		chip.tooltip_text = "%s (%d): %s" % [known[i].display_name, i + 1, known[i].description]
+		chip.tooltip_text = "%s (%d): %s" % [known[i].display_name, i + 1, UiKit.party_text(known[i].description)]
 		_build_row.add_child(chip)
 	var picture: TextureRect = TextureRect.new()
 	picture.texture = definition.icon
@@ -725,9 +856,10 @@ func _refresh_build_label(definition: BuildingDefinition) -> void:
 	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_build_row.add_child(picture)
-	for key in definition.cost.keys():
+	var cost: Dictionary = BuildManager.cost_of(definition)
+	for key in cost.keys():
 		var item: ResourceDefinition = ResourceManager.get_definition(StringName(key))
-		_build_row.add_child(HudWidgets.icon_count(item.icon if item != null else null, "star", "%d" % int(definition.cost[key]), 34))
+		_build_row.add_child(HudWidgets.icon_count(item.icon if item != null else null, "star", "%d" % int(cost[key]), 34))
 	_build_row.add_child(HudWidgets.Glyph.new("mouse_left", Color(0.4, 1.0, 0.5), 30))
 	_build_row.add_child(HudWidgets.Glyph.new("mouse_right", Color(1.0, 0.4, 0.35), 30))
 
@@ -736,7 +868,7 @@ func _on_level_up(character: Node, new_level: int) -> void:
 	_refresh_progress(character)
 	if character == _companion:
 		_refresh_sibling()
-	elif character == _player and not ProgressionManager.is_restoring:
+	elif character == _player and not RunSession.is_restoring():
 		show_banner("Level up!", Color(1.0, 0.86, 0.45))
 
 
@@ -776,18 +908,31 @@ func _pulse_vignette(color: Color) -> void:
 
 
 ## A heavy mob gets its own warning: kids should run to their fences.
+## The first of a kind in a run also says what it is.
 func _on_mob_spawned(mob: Node3D, definition: MobDefinition) -> void:
-	if definition != null and definition.is_boss and mob is BossController:
+	if definition == null:
+		return
+	var about: String = ""
+	if not _met_mobs.has(definition.id):
+		_met_mobs[definition.id] = true
+		about = definition.description
+	if definition.is_boss and mob is BossController:
 		_show_boss(mob as BossController)
-		show_banner("%s rises!" % definition.display_name, UiKit.COLOR_MOON.lightened(0.4))
-	elif definition != null and definition.prefers_buildings:
-		show_banner("%s!" % definition.display_name, Color(0.6, 0.9, 0.35))
-	elif definition != null and definition.steals_resources:
-		show_banner("%s!" % definition.display_name, Color(0.85, 0.55, 1.0))
+		show_banner("%s rises!" % definition.display_name, UiKit.COLOR_MOON.lightened(0.4), about)
+	elif definition.prefers_buildings:
+		show_banner("%s!" % definition.display_name, Color(0.6, 0.9, 0.35), about)
+	elif definition.steals_resources:
+		show_banner("%s!" % definition.display_name, Color(0.85, 0.55, 1.0), about)
 		mob.stole.connect(func(_m: Node3D, item: StringName, amount: int) -> void:
 			show_banner("Thief! -%d %s" % [amount, _item_name(item)], Color(1.0, 0.55, 0.5)))
 		mob.escaped.connect(func(_m: Node3D, item: StringName, amount: int) -> void:
 			show_banner("It got away with %d %s!" % [amount, _item_name(item)], Color(1.0, 0.55, 0.5)))
+	elif about != "":
+		# Imps come right after the "Night" banner: let that one read first.
+		var name_text: String = "%s!" % definition.display_name
+		get_tree().create_timer(2.5, false).timeout.connect(func() -> void:
+			if GameManager.is_playing():
+				show_banner(name_text, UiKit.COLOR_MOON.lightened(0.4), about))
 
 
 func _item_name(id: StringName) -> String:
@@ -819,7 +964,7 @@ func _on_crafted(recipe: CraftingRecipe, _crafter: Node) -> void:
 		show_banner("Torch!  Q", Color(1, 0.75, 0.35))
 
 
-func _on_companion_knocked_out(is_down: bool) -> void:
+func _on_companion_down_changed(is_down: bool) -> void:
 	if is_down:
 		show_banner("Ouch!", Color(1, 0.6, 0.45))
 	_refresh_sibling()

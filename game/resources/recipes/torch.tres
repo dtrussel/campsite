@@ -8,9 +8,7 @@ id = &"torch"
 display_name = "Torch"
 description = "Plant it with Q. Shadow Imps hate the light: they slow down and get singed near a lit torch. Burns out at dawn."
 inputs = {
-&"wood": 1,
-&"resin": 1,
-&"leaves": 1
+&"wood": 2
 }
 output_id = &"torch"
 output_amount = 1

@@ -22,14 +22,17 @@ config/icon="res://icon.svg"
 [autoload]
 
 PlaytestLog="*res://scripts/core/playtest_log.gd"
+Profile="*res://scripts/core/profile.gd"
 TimeManager="*res://scripts/core/time_manager.gd"
 ResourceManager="*res://scripts/core/resource_manager.gd"
 BuildManager="*res://scripts/core/build_manager.gd"
 ProgressionManager="*res://scripts/core/progression_manager.gd"
+PerkManager="*res://scripts/progression/perk_manager.gd"
 CraftingManager="*res://scripts/core/crafting_manager.gd"
 GameManager="*res://scripts/core/game_manager.gd"
 AudioManager="*res://scripts/core/audio_manager.gd"
 SaveManager="*res://scripts/core/save_manager.gd"
+RunSession="*res://scripts/core/run_session.gd"
 
 [display]
 

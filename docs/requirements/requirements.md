@@ -116,25 +116,23 @@ choose the option that best serves them.
 
 ### Resources
 
-The game starts with **exactly 10 initial resource types**:
+The game has **6 raw resource types**. It started with 10; playtest 1
+(feature 044) cut Fiber, Mushrooms, Leaves and Resin because testers
+found that too many to keep track of.
 
 | ID  | Name        | Short description                                      |
 |-----|-------------|--------------------------------------------------------|
-| 1   | Wood        | Basic construction material.                           |
+| 1   | Wood        | Basic construction material, torches, repairs.         |
 | 2   | Stone       | Stronger structures.                                   |
-| 3   | Berries     | Food and healing.                                      |
-| 4   | Fiber       | Ropes, traps, simple tools.                            |
-| 5   | Mushrooms   | Potions, special crafting, risky food.                 |
-| 6   | Clay        | Walls, ovens, reinforced structures.                   |
-| 7   | Leaves      | Camouflage, bedding, simple roofs.                     |
-| 8   | Resin       | Glue, torches, fire upgrades.                          |
-| 9   | Scrap       | Advanced improvised tools.                             |
-| 10  | Glow Shards | Rare magical / night defense upgrades.                 |
+| 3   | Berries     | Food, healing and bandages.                            |
+| 4   | Clay        | Reinforced walls and the hearth.                       |
+| 5   | Scrap       | Traps, lanterns and improvised tools.                  |
+| 6   | Glow Shards | Rare magical / night defense upgrades.                 |
 
 - **FR-RES-1** The game shall support resource gathering, storage,
-  spending, and display in the UI for all 10 resources.
-- **FR-RES-2** All 10 resources shall be represented in data and in the UI
-  from the first prototype on, even if not all are gatherable yet.
+  spending, and display in the UI for every resource.
+- **FR-RES-2** Every resource shall have a source in the world and at
+  least two uses, and the HUD shall show them all at a glance.
 
 ### Crafting
 

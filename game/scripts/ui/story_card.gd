@@ -4,7 +4,8 @@ extends PanelContainer
 ## StoryCard
 ##
 ## The dawn card (feature 035): a small campcraft plate down the left
-## edge of the HUD where the played hero and the companion talk about the night,
+## edge of the HUD where the played hero and the companion talk about the night
+## (and read a page of Mum's notebook they found, feature 046),
 ## with a hint about the Moon Lantern underneath. It never pauses the
 ## game: it plays the voiced lines one after another, then fades by
 ## itself (or on a click).
@@ -54,14 +55,31 @@ static func line_row(line: Dictionary, text_size: int, portrait_size: float, cen
 	if name_text != "":
 		var who: Label = UiKit.title(name_text, int(text_size * 0.75), UiKit.COLOR_GOLD_LIGHT)
 		column.add_child(who)
-	var words: Label = UiKit.label(UiKit.party_text(String(line.get("text", ""))), text_size,
-		UiKit.COLOR_TEXT if name_text != "" else UiKit.COLOR_MOON.lightened(0.4))
+	var text: String = UiKit.party_text(String(line.get("text", "")))
+	var color: Color = UiKit.COLOR_TEXT if name_text != "" else UiKit.COLOR_MOON.lightened(0.4)
+	if speaker == "note":
+		# A page of Mum's notebook: her words in quotes, moonlit.
+		text = "\u201c%s\u201d" % text
+		color = UiKit.COLOR_MOON.lightened(0.6)
+	var words: Label = UiKit.label(text, text_size, color)
 	words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if centered:
 		words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	words.add_theme_constant_override("outline_size", 6)
 	words.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
 	column.add_child(words)
+	# Mum's note comes with her sketch, a taped scrap of her notebook (047).
+	var sketch_path: String = String(line.get("sketch", ""))
+	if sketch_path != "" and ResourceLoader.exists(sketch_path):
+		var sketch: TextureRect = TextureRect.new()
+		sketch.texture = load(sketch_path) as Texture2D
+		sketch.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		sketch.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		sketch.custom_minimum_size = Vector2(portrait_size * 2.4, portrait_size * 2.4)
+		sketch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		sketch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		sketch.name = "Sketch"
+		row.add_child(sketch)
 	return row
 
 
@@ -135,6 +153,10 @@ func _gui_input(event: InputEvent) -> void:
 	if click != null and click.pressed:
 		accept_event()
 		dismiss()
+
+
+func is_closing() -> bool:
+	return _closing
 
 
 func dismiss() -> void:

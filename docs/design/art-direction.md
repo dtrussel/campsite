@@ -13,8 +13,8 @@ By night it becomes **a deep blue world with warm pools of fire and lantern ligh
 ## Pillars
 
 1. **Tilt-shift miniature.**
-   - The camera looks down at about 42°, close to the kids, with a fairly narrow lens.
-   - The top and bottom of the frame blur softly; the play band in the middle stays crisp.
+   - The camera looks down at about 42°, close to the kids, with a fairly narrow lens. Zoomed in, it lowers to 28° and looks across the camp (044).
+   - The top and bottom of the frame blur softly; the play band in the middle stays crisp. Since playtest 1 (044) the default blur is Soft (half the old radius, a wider crisp band); Strong keeps the original look.
    - The UI is never blurred.
 2. **Golden hour by day.**
    - Light is warm amber and saturated. Shadows are deep but warm: brown and plum, never grey.
@@ -61,6 +61,38 @@ ground textures, lighting palettes (`world_lighting.gd`) and prop scripts.
 | Sky / ambient | — | `#252c3b`, `#080a0d` |
 | Accents | Awning red `#c8402e`, daisy white, lupine purple `#8a62c8`, water teal `#3fb2c8` | Lantern amber `#ffb455`, moon `#e8ecf4` |
 
+## Construction (feature 045)
+
+An unfinished building must never read as a finished one.
+
+- **Blueprint ghost:** pale cyan-blue (about `#61adff`), see-through, unshaded, with a bright fresnel edge, thin stripes drifting upward and a slow pulse (`shaders/blueprint_ghost.gdshader`). It is the only cool, glowing thing in the warm camp, so it stands out by day and at sunset.
+- **Rising solid:** the real painted building is cut off at the build line (`shaders/painted_prop_build.gdshader`), so it grows from the ground up inside the ghost. A thin warm glow marks the line, and fresh timber just under it is paler.
+- **Site:** four wooden stakes with a twine line, a faint dirt patch, and a small crossed pile of planks (stones, clay, scrap or shards to match the cost). Simple boxes styled as props; they sink away when the building is done.
+- **Mallet:** a kid-sized barrel mallet (`art/props/camp.py` `hammer`, about 500 tris) held in the right hand while building or repairing.
+
+## Storybook and story props (feature 047)
+
+- **Storybook paintings:** 16:9, painted in the key art's storybook style:
+  golden-hour warmth, deep-blue nights, the kids exactly as on their
+  turnarounds. In game they are cover-fitted at 1600×900 under a dark text
+  band over the bottom third, so faces and key props sit in the top two
+  thirds (`story_art.py` can `lift` a painting that needs it).
+- **Expression portraits:** the head and shoulders, cut into a 192 px round with
+  a brass ring, the same for Mum and the kids.
+- **Moon Lantern:** weathered granite, about 1.9 m tall. A tapered plinth of
+  stone courses with a carved crescent on the front, then an iron-framed
+  glass lamp, a stepped stone roof and a pointed finial. Moss and ivy grow on
+  the tops and joints. Its light is moon-blue: shards inside the glass, a
+  soft core, and the crescent glowing warm gold at the top stage.
+- **Little golem:** knee-high and chibi, in warmer versions of the
+  Moon-Eater's materials, with a head 0.42 of its height. It has a rounded face
+  of upright planks with tall, deep-set amber eyes and a small smile, under a
+  shaggy shingle bob with a round plank-slice ear on each side, and stick
+  pegs and a sprout on top. Its shield-shaped plank trunk has a big amber
+  window with a pale gold crescent. Chunky arms of stones and planks hang
+  to its hips, and its legs are stacked stones. It is the only warm glow of
+  its own by the fire.
+
 ## Mum (feature 043)
 
 Mum follows the team's character sheet
@@ -86,11 +118,11 @@ The camp sits in a forest clearing. Four mob lanes come in along the axes as ope
 | NW | Pine Grove |
 | NE | Stony Pond |
 | SW | Woodlot |
-| SE | Berry Hollow |
+| SE | Fairy Ring |
 
 Footpaths lead to each grove, and the old road runs south.
 
-The plan lives in `WorldLayout`. The rules and the map are in [`.features/032-world-layout/plan.md`](../../.features/032-world-layout/plan.md).
+The plan lives in `WorldLayout`. The rules and the map are in [`docs/history/features/032-world-layout/plan.md`](../history/features/032-world-layout/plan.md).
 
 ## UI: "campcraft" (feature 033)
 

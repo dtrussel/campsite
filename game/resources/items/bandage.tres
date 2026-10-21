@@ -7,7 +7,7 @@
 script = ExtResource("1_def")
 id = &"bandage"
 display_name = "Bandage"
-description = "Made at the Crafting Table. Press X next to Nela: +25 HP, or wakes her up if she is knocked out."
+description = "Made at the Crafting Table. Press X next to {companion}: +25 HP, or back up if knocked out."
 icon = ExtResource("2_icon")
 rarity = 2
 max_stack = 10

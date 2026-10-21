@@ -48,11 +48,11 @@ func _physics_process(delta: float) -> void:
 		collectors.append(player)
 		var to_player: Vector3 = player.global_position - global_position
 		to_player.y = 0.0
-		if to_player.length() < magnet_radius and player.get("is_knocked_out") != true:
+		if to_player.length() < magnet_radius and not (player is Hero and (player as Hero).is_down()):
 			global_position += to_player.normalized() * minf(magnet_speed * delta, to_player.length())
 	for node in collectors:
 		var collector: Node3D = node as Node3D
-		if collector == null or collector.get("is_knocked_out") == true:
+		if collector == null or (collector is Hero and (collector as Hero).is_down()):
 			continue
 		var offset: Vector3 = collector.global_position - global_position
 		offset.y = 0.0

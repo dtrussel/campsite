@@ -36,14 +36,12 @@ var end_reason: String = ""
 var end_trigger: StringName = &""
 ## Per-run counters for the end screen and the playtest log.
 var stats: Dictionary = {}
-## A save waiting to be applied once the gameplay scene is ready.
-var _pending_save: Dictionary = {}
 ## The party: the played hero and the companion (HeroRoster ids). Kept
 ## between runs so the hero select screen opens on the last pick.
 var hero_id: StringName = &"leo"
 var companion_id: StringName = &"nela"
 ## Glow Shard drops (feature 036): kills since each mob type last
-## dropped, for the pity rule. Reset every run.
+## dropped, for the pity rule. Saved, and reset every run.
 var loot_misses: Dictionary = {}
 var loot_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
@@ -68,7 +66,9 @@ func _run_selftest() -> void:
 	var recipes: int = CraftingManager.get_recipes().size()
 	var scene: PackedScene = load(GAME_SCENE) as PackedScene
 	var instance: Node = scene.instantiate() if scene != null else null
-	var ok: bool = items >= 11 and buildings >= 2 and recipes >= 1 and instance != null
+	# Floors, not exact counts: the six gathered resources (Playtest 1),
+	# the camp's first buildings and a recipe.
+	var ok: bool = items >= 6 and buildings >= 2 and recipes >= 1 and instance != null
 	print("selftest: items=%d buildings=%d recipes=%d main_scene=%s -> %s" % [
 		items, buildings, recipes, instance != null, "OK" if ok else "FAILED"
 	])
@@ -118,13 +118,19 @@ func chapter() -> int:
 	return 2 if nights_to_win >= 7 else 1
 
 
-## Hero select Go: the chapter intro the first time (StoryBook over
-## the hero select screen), then the run.
+## The intro pages a new game opens with. Every new game plays them
+## (Esc skips); Continue and Restart never do.
+func intro_pages() -> Array:
+	return StoryLibrary.find(&"intro", chapter())
+
+
+## Hero select Go: the chapter intro (StoryBook over the hero select
+## screen), then the run.
 func begin_chapter(hero: StringName, companion: StringName = &"") -> void:
 	set_party(hero, companion)
 	var key: String = "intro.c%d" % chapter()
-	var pages: Array = StoryLibrary.find(&"intro", chapter())
-	if pages.is_empty() or StoryLibrary.has_seen(key):
+	var pages: Array = intro_pages()
+	if pages.is_empty():
 		start_run()
 		return
 	var book: StoryBook = StoryBook.play(pages, hero_id)
@@ -141,41 +147,29 @@ func open_hero_select(nights: int) -> void:
 	get_tree().change_scene_to_file(HERO_SELECT_SCENE)
 
 
-## Resets every autoload and loads the gameplay scene. `nights` picks
-## the run length (3 or 7 from the title screen); 0 keeps the current
-## one (Again / restart). `hero` sets the party (empty keeps it). A new
-## run replaces any autosave.
+## A new run through the RunSession: resets every autoload and loads
+## the gameplay scene. `nights` picks the run length (3 or 7 from the
+## title screen); 0 keeps the current one (Again / restart). `hero` sets
+## the party (empty keeps it). A new run replaces any autosave.
 func start_run(nights: int = 0, hero: StringName = &"", companion: StringName = &"") -> void:
+	var run: RunConfig = RunConfig.current()
 	if nights > 0:
-		nights_to_win = nights
+		run.nights_to_win = nights
 	if hero != &"":
-		set_party(hero, companion)
-	_pending_save = {}
-	SaveManager.delete_save()
-	get_tree().paused = false
-	_reset_autoloads()
-	LoadingScreen.load_scene(GAME_SCENE)  # key art while the camp loads (feature 029)
+		run.hero_id = hero
+		run.companion_id = companion
+	RunSession.start(run)
 
 
-## Resumes the autosaved run at the morning after its last dawn.
-## False if there is no usable save.
+## Resumes the autosaved run at the morning after its last dawn, through
+## the RunSession. False if there is no usable save.
 func continue_run() -> bool:
-	var data: Dictionary = SaveManager.load_save()
-	if data.is_empty():
-		return false
-	nights_to_win = int(data["nights_to_win"])
-	var party: Dictionary = SaveManager.party_of(data)
-	set_party(party["hero"], party["companion"])
-	get_tree().paused = false
-	_reset_autoloads()
-	_pending_save = data
-	LoadingScreen.load_scene(GAME_SCENE)
-	return true
+	return RunSession.continue_from(SaveManager.load_save())
 
 
 func go_to_title() -> void:
 	get_tree().paused = false
-	_reset_autoloads()
+	RunSession.reset()
 	run_state = RunState.MENU
 	get_tree().change_scene_to_file(TITLE_SCENE)
 
@@ -185,15 +179,11 @@ func on_game_scene_ready() -> void:
 	run_state = RunState.PLAYING
 	_hook_base_core()
 	_hook_player()
-	if _pending_save.is_empty():
+	if RunSession.restore_pending():
+		PlaytestLog.write("run_continued nights_to_win=%d day=%d" % [nights_to_win, TimeManager.day_number])
+	else:
 		TimeManager.start_run()
 		PlaytestLog.write("run_started nights_to_win=%d" % nights_to_win)
-	else:
-		var data: Dictionary = _pending_save
-		_pending_save = {}
-		SaveManager.apply(data)
-		TimeManager.start_run(int(data["day"]) + 1)
-		PlaytestLog.write("run_continued nights_to_win=%d day=%d" % [nights_to_win, TimeManager.day_number])
 	run_started.emit()
 
 
@@ -214,16 +204,62 @@ func record(stat: StringName, amount: int = 1) -> void:
 	stats[stat] = int(stats.get(stat, 0)) + amount
 
 
-func _reset_autoloads() -> void:
-	TimeManager.reset()
-	BuildManager.exit_build_mode()
-	ResourceManager.reset()
-	ProgressionManager.reset()
+## The party a save was made with: {"hero", "companion"} as ids. Saves
+## from before feature 034 have no "party" and are Leo with Nela.
+static func party_of(data: Dictionary) -> Dictionary:
+	var party: Dictionary = data.get("party", {}) if data.get("party") is Dictionary else {}
+	return {
+		"hero": StringName(str(party.get("hero", "leo"))),
+		"companion": StringName(str(party.get("companion", "nela"))),
+	}
+
+
+## Saving system (RunSession): the run fields. The run's stats, the
+## chapter goal, the party and the shard pity counter (kills since each
+## mob type last dropped; saves from before it start it empty).
+func save_state() -> Dictionary:
+	var saved_stats: Dictionary = {}
+	for key in stats.keys():
+		saved_stats[String(key)] = stats[key]
+	var misses: Dictionary = {}
+	for id in loot_misses.keys():
+		misses[String(id)] = int(loot_misses[id])
+	return {
+		"nights_to_win": nights_to_win,
+		"party": {"hero": String(hero_id), "companion": String(companion_id)},
+		"stats": saved_stats,
+		"loot_misses": misses,
+	}
+
+
+## Saving system: takes the run fields back over a fresh run. Missing
+## keys keep the fresh values (and the current party and run length).
+func load_state(data: Dictionary) -> void:
+	if data.has("nights_to_win"):
+		nights_to_win = int(data["nights_to_win"])
+	if data.get("party") is Dictionary:
+		var party: Dictionary = party_of(data)
+		set_party(party["hero"], party["companion"])
+	var saved_stats: Variant = data.get("stats", {})
+	if saved_stats is Dictionary:
+		for key in (saved_stats as Dictionary).keys():
+			stats[StringName(key)] = int(saved_stats[key])
+	var misses: Variant = data.get("loot_misses", {})
+	if misses is Dictionary:
+		for id in (misses as Dictionary).keys():
+			loot_misses[StringName(id)] = int(misses[id])
+
+
+## Saving system: a fresh run's fields. Keeps the party and run length
+## (the next run starts from them); the loot rolls are reshuffled, and
+## RunSession then seeds them from the run config.
+func reset() -> void:
 	current_day = 1
 	is_camp_destroyed = false
 	end_reason = ""
 	end_trigger = &""
 	loot_misses = {}
+	loot_rng.randomize()
 	_reset_stats()
 
 
@@ -272,8 +308,9 @@ func _on_dawn_started(day_number: int) -> void:
 
 
 func _on_resource_changed(_id: StringName, _new_value: int, delta: int) -> void:
-	# Only count gathering; crafting outputs are counted separately.
-	if delta > 0 and run_state == RunState.PLAYING and not CraftingManager.is_crafting:
+	# Only count gathering; crafting outputs are counted separately, and
+	# the inventory a save loads back was counted when it was gathered.
+	if delta > 0 and run_state == RunState.PLAYING and not CraftingManager.is_crafting and not RunSession.is_restoring():
 		record(&"gathered", delta)
 
 
@@ -303,8 +340,9 @@ func _hook_base_core() -> void:
 
 func _hook_player() -> void:
 	for node in get_tree().get_nodes_in_group("player"):
-		if node.has_signal("knocked_out") and not node.knocked_out.is_connected(_on_player_knocked_out):
-			node.knocked_out.connect(_on_player_knocked_out)
+		var player_hero: Hero = node as Hero
+		if player_hero != null and not player_hero.down_changed.is_connected(_on_player_down_changed):
+			player_hero.down_changed.connect(_on_player_down_changed)
 
 
 func _on_camp_destroyed() -> void:
@@ -315,5 +353,8 @@ func _on_camp_destroyed() -> void:
 	_end_run(false, "The campfire went out.", &"loss_fire")
 
 
-func _on_player_knocked_out() -> void:
+## The player's hero being down ends the run.
+func _on_player_down_changed(is_down: bool) -> void:
+	if not is_down:
+		return
 	_end_run(false, "You were knocked out.", &"loss_hero")

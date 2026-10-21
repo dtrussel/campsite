@@ -8,8 +8,9 @@
 
 ### 1. Manual smoke testing (always)
 
-- Every phase has a smoke checklist under
-  `.features/<phase>/test-plan.md`.
+- Every spec and ticket in `.scratch/` lists its acceptance criteria as
+  checkboxes. Checks that need a person playing go in a `ready-for-human`
+  ticket; the standing list is `.scratch/hand-play-backlog/`.
 - Smoke testing covers: project opens, main scene runs, no errors on
   startup, key controls work, no obvious visual regressions.
 
@@ -43,9 +44,10 @@
 ## Acceptance criteria pattern
 
 Each roadmap phase ends in &ldquo;Acceptance criteria&rdquo;. The matching
-`.features/*/test-plan.md` reproduces those criteria as checkboxes the
-tester ticks. A phase is &ldquo;done&rdquo; only when its checkboxes are
-all green and `handoff.md` is updated.
+spec or ticket in `.scratch/` reproduces those criteria as checkboxes the
+tester ticks. A ticket is &ldquo;done&rdquo; only when its checkboxes are
+all green and its `Status:` line says `done`. (Features 000&ndash;048 kept
+them in `test-plan.md` files, archived in `docs/history/features/`.)
 
 ## What exists today
 

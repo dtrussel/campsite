@@ -5,7 +5,9 @@ extends Node3D
 ##
 ## A slingshot pebble (feature 034): flies in a short arc from the
 ## shooter's hand to the target and deals its damage on arrival. If the
-## target died or left on the way, the pebble just lands.
+## target died or left on the way, the pebble just lands. The damage goes
+## through HeroHits.strike, and Ricochet (perk cards) bounces a hit on to
+## the next mob.
 
 const FLIGHT_SECONDS: float = 0.2
 const ARC_HEIGHT: float = 0.45
@@ -19,19 +21,32 @@ var _target: Node3D = null
 var _damage: int = 0
 var _from: Vector3 = Vector3.ZERO
 var _to: Vector3 = Vector3.ZERO
+## A bounce (Ricochet) never bounces again.
+var _is_bounce: bool = false
 
 
 ## Fires a pebble from `shooter` at `target`. Returns the pebble.
 static func fire(shooter: Node3D, target: Node3D, damage: int) -> PebbleShot:
+	var facing: Vector3 = target.global_position - shooter.global_position
+	facing.y = 0.0
+	var from: Vector3 = shooter.global_position + Vector3(0, HAND_HEIGHT, 0) + facing.normalized() * 0.3
+	return _launch(shooter, from, target, damage, false)
+
+
+## Bounces a pebble that hit at `from` on to `target` (Ricochet).
+static func bounce(shooter: Node, from: Vector3, target: Node3D, damage: int) -> PebbleShot:
+	return _launch(shooter, from, target, damage, true)
+
+
+static func _launch(shooter: Node, from: Vector3, target: Node3D, damage: int, is_bounce: bool) -> PebbleShot:
 	var shot: PebbleShot = PebbleShot.new()
 	shot._shooter = shooter
 	shot._target = target
 	shot._damage = damage
-	var facing: Vector3 = target.global_position - shooter.global_position
-	facing.y = 0.0
-	shot._from = shooter.global_position + Vector3(0, HAND_HEIGHT, 0) + facing.normalized() * 0.3
+	shot._is_bounce = is_bounce
+	shot._from = from
 	shot._to = target.global_position + Vector3(0, TARGET_HEIGHT, 0)
-	shooter.get_tree().current_scene.add_child(shot)
+	target.get_tree().current_scene.add_child(shot)
 	shot.global_position = shot._from
 	return shot
 
@@ -65,6 +80,9 @@ func _fly(t: float) -> void:
 func _land() -> void:
 	if _target != null and is_instance_valid(_target) and _target.is_in_group("mobs") and _target.has_method("take_damage"):
 		var shooter: Node = _shooter if is_instance_valid(_shooter) else null
-		_target.take_damage(_damage, shooter)
+		HeroHits.strike(shooter, _target, _damage)
 		Fx.burst(&"hit", global_position)
+		if not _is_bounce:
+			for next in HeroHits.extra_targets(shooter, _target, &"pebble"):
+				PebbleShot.bounce(shooter, global_position, next, _damage)
 	queue_free()

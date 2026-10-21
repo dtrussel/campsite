@@ -77,7 +77,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_player.command_gather(_hover_target)
 			_spawn_marker(_hover_target.global_position, Color(1.0, 0.85, 0.35))
 		Hover.REPAIR:
-			_player.command_repair(_hover_target)
+			if _hover_target is Building and (_hover_target as Building).is_blueprint():
+				_player.command_build(_hover_target)
+			else:
+				_player.command_repair(_hover_target)
 			_spawn_marker(_hover_target.global_position, Color(0.45, 1.0, 0.5))
 		Hover.CAMPFIRE:
 			_player.command_campfire(_hover_target)
@@ -124,7 +127,7 @@ func _pick_under_mouse() -> void:
 		if collider.is_in_group("base_core"):
 			_set_hover(Hover.CAMPFIRE, collider as Node3D)
 			return
-		if collider is Building and Repair.needs_repair(collider):
+		if collider is Building and ((collider as Building).is_blueprint() or Repair.needs_repair(collider)):
 			_set_hover(Hover.REPAIR, collider as Node3D)
 			return
 		if collider is CraftingTable:
@@ -225,7 +228,8 @@ func _hover_color(kind: int) -> Color:
 func _make_range_ring() -> MeshInstance3D:
 	var ring: MeshInstance3D = MeshInstance3D.new()
 	var torus: TorusMesh = TorusMesh.new()
-	var reach: float = float(_player.get("attack_range"))
+	var reach: float = _player_reach()
+	ring.set_meta(&"reach", reach)
 	torus.inner_radius = reach - 0.05
 	torus.outer_radius = reach + 0.02
 	torus.rings = 48
@@ -248,8 +252,17 @@ func _make_range_ring() -> MeshInstance3D:
 func _update_range_ring() -> void:
 	if _range_ring == null or _player == null:
 		return
-	var attacking: bool = int(_player.get("command")) == 2  # Command.ATTACK
-	_range_ring.visible = (attacking or _hover_kind == Hover.MOB) and not bool(_player.get("is_knocked_out"))
+	var hero: Hero = _player as Hero
+	var attacking: bool = hero != null and hero.is_attacking()
+	_range_ring.visible = (attacking or _hover_kind == Hover.MOB) and not (hero != null and hero.is_down())
+	# The reach can grow during a run (the Slingshot, Eagle Eye).
+	var grow: float = _player_reach() / float(_range_ring.get_meta(&"reach", 1.0))
+	_range_ring.scale = Vector3(grow, 0.05, grow)
+
+
+## The player's attack reach now, perks included.
+func _player_reach() -> float:
+	return (_player as Hero).get_attack_range() if _player is Hero else 1.0
 
 
 func _spawn_marker(position: Vector3, color: Color) -> void:

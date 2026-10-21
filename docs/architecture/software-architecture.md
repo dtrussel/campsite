@@ -2,7 +2,7 @@
 
 > Engine: Godot 4.x. Language: GDScript with static typing wherever
 > practical. See
-> [`docs/decisions/ADR-0001-engine-and-language-selection.md`](../decisions/ADR-0001-engine-and-language-selection.md).
+> [`docs/adr/0001-engine-and-language-selection.md`](../adr/0001-engine-and-language-selection.md).
 
 ## Guiding principles
 
@@ -67,11 +67,14 @@ guidelines, not enforced separations.
 
 ### 5. Persistence layer
 
-- Save / load logic in `game/scripts/save/`.
+- Every module that holds run state is a **saving system**: it saves,
+  loads and resets its own state. The **run session**
+  (`game/scripts/core/run_session.gd`) walks them; the save manager
+  (`game/scripts/core/save_manager.gd`) only handles the file.
 - Versioned save data with a schema version number.
-- Saves the game state layer plus a snapshot of placed buildings, *not*
-  raw scene references.
-- Reload reconstructs scenes from saved data and the data layer.
+- Saves plain data (ids, positions, HP, progress), *not* raw scene
+  references; spawned objects are rebuilt by their own module.
+- See section H for the interface and the restore order.
 
 ## B. Proposed autoloads
 
@@ -83,9 +86,12 @@ Each autoload is a single small node script registered in
 | `GameManager`        | High-level game state; coordinates day/night transitions.   |
 | `TimeManager`        | Drives the day/night cycle and emits time-of-day signals.   |
 | `ResourceManager`    | Tracks resource inventory; validates costs; adds/removes.   |
-| `BuildManager`       | Handles build mode, placement validation, building spawn.   |
+| `BuildManager`       | Handles build mode, placement validation, blueprint spawn and completion. |
 | `ProgressionManager` | Handles XP totals and level-up rules.                       |
-| `SaveManager`        | Serializes and deserializes save data.                      |
+| `PerkManager`        | Perk cards: deals cards on level-up, opens the picker, answers perk hooks. |
+| `SaveManager`        | The save file only: path, version, JSON read and write, parse checks, delete. |
+| `RunSession`         | One run's lifecycle: start, continue, reset, the dawn autosave, `restore_finished` (see H). |
+| `Profile`            | Keeps a player's progress across runs (see "Profile" under H). |
 
 ### Autoload contract
 
@@ -140,15 +146,19 @@ game/scripts/core/time_manager.gd
 game/scripts/core/resource_manager.gd          # later
 game/scripts/core/build_manager.gd             # later
 game/scripts/core/progression_manager.gd       # later
-game/scripts/save/save_manager.gd              # later
+game/scripts/core/save_manager.gd
+game/scripts/core/run_session.gd
 
 game/scripts/game_loop/wave_controller.gd      # later
 
-game/scripts/player/player_controller.gd
-game/scripts/player/player_state_machine.gd    # later
+game/scripts/characters/hero.gd               # Hero: what both heroes do in either role
+game/scripts/characters/hero_hits.gd           # the perk math under every hero hit
+game/scripts/characters/party.gd               # Party: who plays which role
 
-game/scripts/companions/companion_controller.gd
-game/scripts/companions/companion_tasks.gd
+game/scripts/player/player_controller.gd       # the player's hero role (extends Hero)
+game/scripts/player/pointer_commands.gd
+
+game/scripts/companions/companion_controller.gd  # the companion role (Companion, extends Hero)
 
 game/scripts/mobs/mob_controller.gd
 game/scripts/mobs/mob_spawner.gd
@@ -174,6 +184,60 @@ game/scripts/ui/resource_panel.gd              # later
 
 game/scripts/utilities/math_utils.gd           # as needed
 ```
+
+### Heroes: the Hero module, the two roles and Party
+
+Leo and Nela are each played in one of two **roles** (see `GLOSSARY.md`).
+Everything a hero does whichever role it plays lives in one base class,
+`Hero` (`game/scripts/characters/hero.gd`, extends `CharacterBody3D`). The
+two role scripts extend it and keep only what differs. Outside code talks
+to a hero through the Hero interface, never through a role's private
+fields.
+
+- **Health:** `take_damage(amount, source)`, `heal(amount)`, `is_down()`,
+  `revive(hp)`, `max_hp` / `current_hp`, `is_invulnerable()`,
+  `clear_invulnerability()` and `health_bar()`. Regen and the
+  invulnerability window run inside. Signals: `health_changed(hp, max)`
+  and `down_changed(is_down)` (the only "downed" signal).
+- **Attack:** `attack(target)`, `get_attack_damage()`,
+  `get_attack_range()` (reach, after perks), `is_attack_ready()`,
+  `is_attacking()`, `get_attack_cooldown_ratio()`, `apply_signature()`
+  and the `attacked` signal. Hero owns the cooldown and the melee vs
+  pebble branch; the perk effects come from `HeroHits` underneath.
+  `tool_tier` and `on_attack_hit(target, damage)` are the (unused) slots
+  for tool tiers. The definition's `companion_` reach, cooldown and
+  signature factor are read for the companion role.
+- **Progress:** each role calls `_setup_progress()` once; on
+  ProgressionManager's raw `level_up`, Hero applies the stat bumps and
+  then emits `leveled(level)`. PerkManager listens to `leveled`
+  (`PerkManager.watch(hero)`), so the picker opens after the new HP shows,
+  whatever order the autoloads connected in.
+- **Gathering and queries:** `start_gather(node)`, `cancel_gather()`,
+  `is_gathering()`, `gather_target()`, the `gather_finished(node)` signal,
+  and `nearest_mob(within)`. The node-radius fallback is 0.4.
+- **Role hooks** (the role overrides them): `_show_hurt`,
+  `_on_down_changed`, `_show_attack`, `_swing`, `_show_level_up` and
+  `_on_gather_started`.
+
+**The player's hero** (`player_controller.gd`) adds input, the pointer
+commands (`command_move/attack/gather/campfire/repair/build`,
+`stop_commands()`, `has_command()`, `is_building()`), the hit feel (the
+wind-up, the x1.4 range re-check and the hit-stop), the build and repair
+ticks, auto-attack and the hero's actions (`try_place_torch()`,
+`try_eat_berries()`, `try_use_bandage()`, `try_feed_lantern()`). When it
+is down, GameManager ends the run.
+
+**The companion** (`Companion`, `companion_controller.gd`) adds the task
+AI (`set_task(Companion.Task.…)`), the repair and build ticks with its own
+constants, the stuck watchdog and the quick sparkle hit. When it is down,
+it revives at dawn.
+
+**Party** (`game/scripts/characters/party.gd`, static) answers who is who
+in the running camp: `Party.player_hero()`, `Party.companion()`,
+`Party.other(hero)`, `Party.heroes()` and `Party.role_of(hero)`
+(`Party.PLAYER`, `Party.COMPANION` or `&""`). Use it instead of the
+`"player"` / `"companions"` group names; the older group lookups move to
+it as they are touched.
 
 ### Style rules (see `coding-standards.md` for the full list)
 
@@ -211,7 +275,7 @@ extends Resource
 @export var id: StringName
 @export var display_name: String
 @export var scene: PackedScene
-@export var cost: Dictionary  # { "wood": 2, "fiber": 1 } keyed by ResourceDefinition.id
+@export var cost: Dictionary  # { "wood": 4, "stone": 2 } keyed by ResourceDefinition.id
 @export var max_hp: int = 50
 ```
 
@@ -255,6 +319,27 @@ extends Resource
 @export var xp_table: PackedInt32Array  # threshold per level
 ```
 
+```gdscript
+# game/scripts/progression/perk_definition.gd (feature 039; data in
+# game/resources/perks/*.tres, dealt and applied by PerkManager)
+class_name PerkDefinition
+extends Resource
+
+@export var id: StringName
+@export var pool: StringName         # shared, leo, nela or sibling
+@export var effect_kind: StringName  # stat_mult, flag or on_hit
+@export var stat: StringName         # for stat_mult (one of STATS)
+@export var value: float
+@export var stacks: bool = false
+@export var player_only: bool = false  # never dealt to the companion
+```
+
+Perk effects are read where they apply, through `PerkManager`
+(`multiplier(character, stat)`, `has_flag(...)`, `flag_count(...)`,
+`on_hit_perks(...)`),
+and every hero hit and damage taken goes through `HeroHits`
+(`game/scripts/characters/hero_hits.gd`).
+
 For Phase 0 **only the script declarations are introduced as stubs** if
 needed at all. The actual `.tres` assets are created in later phases as
 features are built.
@@ -274,12 +359,18 @@ Initial signal vocabulary (declared on the relevant autoload or scene):
 | `night_started`          | `TimeManager`        | `(day_number: int)`               |
 | `sunset_warning`         | `TimeManager`        | `(seconds_until_night: float)`    |
 | `base_damaged`           | `BaseCore`           | `(new_hp: int)`                   |
-| `building_placed`        | `BuildManager`       | `(building_node: Node3D)`         |
+| `building_placed`        | `BuildManager`       | `(building_node: Node3D)` (a blueprint since 044) |
+| `building_completed`     | `BuildManager`       | `(building_node: Node3D)`         |
 | `mob_spawned`            | `MobSpawner`         | `(mob_node: Node3D)`              |
 | `mob_defeated`           | `MobController`      | `(mob_node: Node3D)`              |
 | `xp_gained`              | `ProgressionManager` | `(character: Node, amount: int)`  |
 | `level_up`               | `ProgressionManager` | `(character: Node, new_level: int)`|
+| `perk_taken`             | `PerkManager`        | `(character: Node, perk: PerkDefinition)`|
 | `companion_task_changed` | `CompanionController`| `(companion: Node, task: int)`    |
+| `health_changed`         | `Hero`               | `(current_hp: int, max_hp: int)`  |
+| `down_changed`           | `Hero`               | `(is_down: bool)`                 |
+| `leveled`                | `Hero`               | `(level: int)`, after the stat bumps |
+| `gather_finished`        | `Hero`               | `(node: ResourceNode)`            |
 
 Signal names use snake_case and are documented in the script that emits
 them.
@@ -292,24 +383,19 @@ a node-based state machine framework yet.
 
 ### Player states
 
-```
-idle
-moving
-gathering
-building
-attacking
-```
+The player's hero has no state enum: it has a pointer **command**
+(`NONE`, `MOVE`, `ATTACK`, `GATHER`, `CAMPFIRE`, `REPAIR`, `BUILD`) and,
+apart from it, Hero's gathering and down flags. Outside code asks through
+`has_command()`, `is_attacking()`, `is_building()`, `is_gathering()` and
+`is_down()`, never by the command's number. Its `is_attacking()` is
+Hero's (the cooldown after an attack) or an attack command.
 
 ### Companion states
 
-```
-idle
-following
-gathering
-guarding
-repairing
-supporting
-```
+The companion's states are its tasks, `Companion.Task`: `IDLE`,
+`FOLLOW_PLAYER`, `GUARD_BASE`, `GATHER_NEAREST` and `REPAIR` (which builds
+blueprints too). Set them by name (`set_task(Companion.Task.GUARD_BASE)`),
+never by number.
 
 ### Mob states
 
@@ -333,19 +419,150 @@ Each transition is a single function call (`_change_state(NEW_STATE)`)
 that runs an exit hook for the old state, sets `current_state`, then runs
 an enter hook for the new state. No framework needed.
 
-## H. Save / load architecture (forward-looking)
+## H. Save / load architecture
 
-Not implemented in Phase 0. Planned shape:
+The run save (`user://save.json`) holds one run in progress. It is
+written at every dawn and offered as Continue on the title screen; a won
+or lost run deletes it, and a new run replaces it. Built by the run
+lifecycle spec (`.scratch/run-lifecycle/`).
 
-- A `SaveManager` autoload owns a versioned save schema.
-- Game state is captured into a plain `Dictionary` that can be turned into
-  JSON.
-- Placed buildings are saved as `(building_id, position, rotation, hp)`
-  tuples, not as scene references.
-- On load, the world is wiped and rebuilt from the dictionary using
-  `BuildingDefinition` lookups.
-- Player and companion state is saved similarly.
-- `schema_version` lets future versions migrate old saves.
+### Saving systems
+
+A **saving system** is any module that holds run state. It has three
+methods:
+
+- `save_state() -> Dictionary`: its own keys, at their place in the
+  save file;
+- `load_state(data: Dictionary)`: takes the whole save, reads its own
+  keys and tolerates missing ones (an older save gets fresh values);
+- `reset()`: back to a fresh run.
+
+The saving systems, and what each saves:
+
+| Saving system | Saves |
+|---------------|-------|
+| `TimeManager` | `"day"` |
+| `GameManager` (the run fields) | `"nights_to_win"`, `"party"`, `"stats"`, `"loot_misses"` (the shard pity counter) |
+| `ResourceManager` | `"inventory"` |
+| `ProgressionManager` | each hero's `"xp"` |
+| `PerkManager` | each hero's `"perks"`; the reset zeroes the perk clock and reshuffles the deal |
+| `CraftingManager` | nothing; the reset clears the craft in progress |
+| `BaseCore` (the campfire) | `"campfire"`: HP and hearth |
+| `BuildingSaves` | `"buildings"`: each building or blueprint's type, place, HP, construction progress and paid cost (`Building.save_entry` / `Building.rebuild`) |
+| `TorchSaves` | `"torches"`: the Ember Heart torches still burning, with their dawns left and radius (`Torch.save_entry` / `Torch.rebuild`) |
+| `MoonLantern` | `"lantern"`: its shards |
+| `Hero` (both heroes) | each hero's `"signature"` tool; the companion also saves its `"task"`. The reset restores the base stats, gets a downed hero up without `down_changed`, and registers it with ProgressionManager again |
+
+- **Hero entries are shared.** A hero's keys sit under `"player"` and
+  `"sibling"` (`Party.SAVE_KEYS`), and several systems write there.
+  `RunSession.merge_state` merges them key by key.
+- **Spawned objects are rebuilt by their own module.** Buildings,
+  blueprints and torches are listed by `BuildingSaves` / `TorchSaves`,
+  which own their legacy fallbacks: a missing `"paid"` in
+  `Building.rebuild`, and the old `"stick"` / `"slingshot"` signature
+  names in `Hero.LEGACY_SIGNATURE_KEYS`. The old party-less saves are
+  Leo with Nela (`GameManager.party_of`). An entry missing its
+  position is skipped.
+- **Objects refresh themselves.** Each one refreshes its own HP bar after
+  it loads; nothing outside calls a private refresh or reads a meta.
+- **Not saved:** resource nodes and pickups (they reset), plain torches
+  (they burn out at the dawn the save is made on), trap snaps, build
+  mode.
+
+A new piece of run state is saved, loaded and reset in the module that
+owns it. If that module is not yet a saving system, add it to the
+session's list.
+
+### The run session and the run config
+
+`RunSession` (an autoload, last in the list) is the one entry point for
+a run's lifecycle:
+
+- `start(config, open_scene)`: resets every saving system, deletes any
+  save and opens the gameplay scene, which starts the clock at day 1.
+- `continue_from(data, config, open_scene)`: resets, then keeps `data`
+  (from `SaveManager.load_save` or `parse`) waiting for the gameplay
+  scene. The party and run length come from the save.
+- `reset(config)`: every saving system back to a fresh run. It also
+  leaves build mode, which is not run state, and applies the config's
+  seeds and auto-pick time.
+- `snapshot()`: the run as plain data, for the save file. It is `{}`
+  when there is no camp to save. `save_now()` writes it.
+- `restore_finished`: a continued run is fully back. The perk top-up
+  (dealing the cards a level-up still owes) listens here.
+  `is_restoring()` is true while the systems load, so replayed level-ups
+  skip the fanfare and deal no card.
+- **The dawn autosave:** the session saves on `TimeManager.dawn_settled`,
+  which fires right after every `dawn_started` handler has run (the win
+  check, the companion waking, torches burning out, the night's XP). It
+  also deletes the save when a run ends.
+
+A `RunConfig` (`game/scripts/core/run_config.gd`) is what a run starts
+from: the hero and companion, the chapter goal (`nights_to_win`), the
+seeds of the perk deal and the loot rolls, and the perk auto-pick time.
+`RunConfig.current()` gives a config for the next run, with fresh seeds.
+A test that passes the same config replays the same deals and drops.
+
+### The restore order
+
+`RunSession.saving_systems()` declares the order, and `restore_pending`
+(called by `GameManager.on_game_scene_ready` once the gameplay scene is
+up) loads each system in it:
+
+1. `TimeManager`, then `GameManager`'s run fields;
+2. `ResourceManager`;
+3. `ProgressionManager` (it replays the level-ups quietly);
+4. `PerkManager`, then `CraftingManager`;
+5. the world: the campfire, the buildings and blueprints, the torches,
+   the Moon Lantern;
+6. the heroes: the player's hero, then the companion.
+
+Then the clock starts at the morning after the saved day, and
+`restore_finished` follows once the scene's `run_started` has gone out.
+Nothing depends on the order of autoloads in the project file or on a
+deferred call happening to come last.
+
+### The save file
+
+`SaveManager` knows nothing of what is in a run. It holds:
+
+- the path (`set_save_path` lets tests write elsewhere) and `VERSION`
+  (2);
+- `serialize` and `write`, which stamp the version and write JSON;
+- `load_save` and `parse`, which reject a damaged file, another version
+  or one missing a required key; Continue is then hidden, never
+  half-loaded;
+- `delete_save`.
+
+The version changes only when an old save can no longer be read the old
+way. Keys added since version 2 are optional, so older saves still load.
+`game/tests/fixtures/save_v2_day1.json`, a save from before the run
+session, must continue with every field intact (smoke).
+
+### Profile
+
+The run save holds one run; the **profile** holds what a player keeps
+across runs (story beats seen, chapters won, records and, later,
+badges). It is the `Profile` autoload (`game/scripts/core/profile.gd`)
+on its own file, `user://profile.json`, which a run ending never deletes.
+
+- **Interface:** `get_value(key, fallback)`, `set_value(key, value)`
+  (saved at once), `has_value`, `record_best(key, value)` (true for a
+  new record), `forget(prefix)`, `delete`, `reload`, and
+  `set_path(path, old_story_path)` so tests use their own file.
+- **Keys:** strings with a dotted owner prefix, such as `story.`,
+  `chapters.`, `endless.` and `badges.`; values are JSON-friendly. A
+  new kind of progress adds keys rather than a new store.
+- **Bad files:** a missing or corrupt file loads as empty and is
+  rewritten on the next write.
+- **Story beats:** `StoryLibrary.has_seen` / `mark_seen` /
+  `forget_progress` read and write `story.<beat>` keys.
+- **The old `story.cfg`:** imported once, when a profile that has never
+  been created loads. Seen beats are copied, and a seen `intro.c2` or
+  `ending.c2` sets `chapters.c2.unlocked`. The import note survives
+  `delete`, so it never runs twice; `story.cfg` stays on disk, unused.
+- **Not here:** device settings (audio, look, auto-attack) stay in
+  `user://settings.cfg`, so deleting a profile never resets them.
 
 ## I. Testing strategy
 
@@ -354,8 +571,8 @@ Detailed plan in
 
 - Most early testing is manual smoke testing: open the project, run the
   main scene, verify the checklist.
-- Per-phase manual playtest checklists live alongside each `.features/`
-  folder&rsquo;s `test-plan.md`.
+- Manual playtest checklists live in the `.scratch/` specs and tickets
+  (`ready-for-human` ones for hand play).
 - Data validation checks ensure required `.tres` files have valid IDs and
   references (later).
 - Script-level tests (e.g. via [GUT](https://github.com/bitwes/Gut)) are
@@ -394,9 +611,8 @@ Detailed plan in
 | `game/scripts/buildings/`     | Building behavior and definitions.              |
 | `game/scripts/resources/`     | Gathering and resource definitions.             |
 | `game/scripts/crafting/`      | Recipes and crafting flow.                      |
-| `game/scripts/progression/`   | XP, levels, character stats.                    |
+| `game/scripts/progression/`   | XP, levels, character stats, perk cards.        |
 | `game/scripts/ui/`            | UI controllers.                                 |
-| `game/scripts/save/`          | Save / load.                                    |
 | `game/scripts/utilities/`     | Math, helpers, reusable bits.                   |
 | `game/resources/`             | Data-driven `.tres` content.                    |
 | `game/assets/placeholder/`    | Throwaway placeholder art / audio.              |

@@ -26,9 +26,12 @@ var _armed: bool = true
 func _ready() -> void:
 	super()
 	_set_jaws(OPEN_DEGREES)
-	set_physics_process(not has_meta(&"build_ghost"))
-	if not has_meta(&"build_ghost"):
-		add_to_group(GROUP)
+
+
+func _on_built() -> void:
+	super()
+	set_physics_process(true)
+	add_to_group(GROUP)
 
 
 func _physics_process(_delta: float) -> void:

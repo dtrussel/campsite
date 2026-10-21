@@ -7,7 +7,7 @@
 script = ExtResource("1_def")
 id = &"scrap"
 display_name = "Scrap"
-description = "Old camper junk: nails, tins and springs. Needed for traps and lanterns."
+description = "Nails, tins and springs the old campers left by the Old Road. Needed for traps and lanterns."
 icon = ExtResource("2_icon")
 rarity = 3
 max_stack = 30

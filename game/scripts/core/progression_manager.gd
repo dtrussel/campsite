@@ -12,10 +12,6 @@ signal level_up(character: Node, new_level: int)
 
 const SURVIVE_NIGHT_XP: int = 10
 
-## True while a save is being restored: level-ups still apply their
-## stat boosts, but skip the fanfare.
-var is_restoring: bool = false
-
 var _state: Dictionary = {}  # Node -> { level: int, xp: int, stats: CharacterStatsDefinition }
 
 
@@ -40,10 +36,31 @@ func register_character(character: Node, stats: CharacterStatsDefinition) -> voi
 		character.tree_exiting.connect(_on_character_exiting.bind(character))
 
 
-## Forgets every character (new run). Characters re-register in
-## their own _ready when the gameplay scene loads.
+## Forgets every character (new run; the saving system's reset).
+## Characters re-register in their own _ready when the gameplay scene
+## loads.
 func reset() -> void:
 	_state.clear()
+
+
+## Saving system (RunSession): each hero's XP, under its role's key
+## ("player" / "sibling").
+func save_state() -> Dictionary:
+	var out: Dictionary = {}
+	for role in Party.SAVE_KEYS:
+		var hero: Node = Party.member(role)
+		if hero != null and _state.has(hero):
+			out[Party.SAVE_KEYS[role]] = {"xp": get_xp(hero)}
+	return out
+
+
+## Saving system: gives each registered hero its saved XP back, its
+## level-ups replayed quietly (restore_xp).
+func load_state(data: Dictionary) -> void:
+	for role in Party.SAVE_KEYS:
+		var saved: Variant = data.get(Party.SAVE_KEYS[role])
+		if saved is Dictionary and (saved as Dictionary).has("xp"):
+			restore_xp(Party.member(role), int(saved["xp"]))
 
 
 func unregister_character(character: Node) -> void:
@@ -61,16 +78,15 @@ func award_xp(character: Node, amount: int, source: StringName) -> void:
 	_check_level_ups(character, entry)
 
 
-## Sets a character's XP from a save, replaying level-ups quietly so
-## their stat boosts are applied the same way as in play.
+## Sets a character's XP from a save, replaying level-ups so their stat
+## boosts are applied the same way as in play. Called while
+## RunSession.is_restoring(), so their listeners keep quiet.
 func restore_xp(character: Node, xp: int) -> void:
 	if character == null or not _state.has(character):
 		return
 	var entry: Dictionary = _state[character]
-	is_restoring = true
 	entry["xp"] = maxi(int(entry["xp"]), xp)
 	_check_level_ups(character, entry)
-	is_restoring = false
 
 
 func get_level(character: Node) -> int:

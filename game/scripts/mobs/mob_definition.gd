@@ -8,6 +8,9 @@ extends Resource
 
 @export var id: StringName = &""
 @export var display_name: String = ""
+## What it is, in the story's words (feature 046): shown under its
+## warning banner the first time one shows up in a run.
+@export_multiline var description: String = ""
 @export var max_hp: int = 6
 @export var move_speed: float = 2.2
 @export var attack_damage: int = 3

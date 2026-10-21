@@ -8,10 +8,8 @@ extends Building
 ## ResourceManager.get_cap). Losing it lowers the cap again, but items
 ## already above the new cap are kept.
 
-func _ready() -> void:
+func _on_built() -> void:
 	super()
-	if has_meta(&"build_ghost"):
-		return
 	add_to_group(ResourceManager.STORAGE_GROUP)
 	ResourceManager.notify_caps_changed()
 	tree_exited.connect(ResourceManager.notify_caps_changed)

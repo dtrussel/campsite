@@ -36,7 +36,8 @@ func _ready() -> void:
 	column.add_child(UiKit.divider(280))
 	column.add_child(_volume_row("Music", AudioManager.music_volume, AudioManager.set_music_volume))
 	column.add_child(_volume_row("Sounds", AudioManager.sfx_volume, AudioManager.set_sfx_volume))
-	column.add_child(_toggle_row("Blur", PostFx.is_blur_enabled(), PostFx.set_blur_enabled))
+	column.add_child(_choice_row("Blur", PostFx.BLUR_NAMES, PostFx.blur_level(), PostFx.set_blur_level))
+	column.add_child(_toggle_row("Auto-fight", GameSettings.auto_attack(), GameSettings.set_auto_attack))
 	_root.visible = false
 
 
@@ -74,6 +75,27 @@ func _toggle_row(caption: String, value: bool, on_toggled: Callable) -> HBoxCont
 	toggle.focus_mode = Control.FOCUS_NONE
 	toggle.toggled.connect(on_toggled)
 	row.add_child(toggle)
+	return row
+
+
+## A labelled row of exclusive choices; picking one applies (and saves) it.
+func _choice_row(caption: String, names: PackedStringArray, value: int, on_picked: Callable) -> HBoxContainer:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	var label: Label = UiKit.label(caption.to_upper(), 18)
+	label.custom_minimum_size = Vector2(96, 0)
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(label)
+	var group: ButtonGroup = ButtonGroup.new()
+	for i in names.size():
+		var choice: Button = Button.new()
+		choice.text = names[i]
+		choice.toggle_mode = true
+		choice.button_group = group
+		choice.button_pressed = i == value
+		choice.focus_mode = Control.FOCUS_NONE
+		choice.pressed.connect(on_picked.bind(i))
+		row.add_child(choice)
 	return row
 
 

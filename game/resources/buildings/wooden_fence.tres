@@ -7,13 +7,13 @@
 script = ExtResource("1_def")
 id = &"wooden_fence"
 display_name = "Wooden Fence"
-description = "A cheap wooden barrier. Slows or blocks small mobs."
+description = "Posts and planks, ranger style. Slows or blocks small mobs."
 scene_path = "res://scenes/buildings/WoodenFence.tscn"
 cost = {
-&"wood": 2,
-&"fiber": 1
+&"wood": 3
 }
 max_hp = 50
+build_seconds = 2.0
 footprint_size = Vector3(1.6, 1.2, 0.3)
 ui_color = Color(0.55, 0.36, 0.18, 1)
 sort_order = 10

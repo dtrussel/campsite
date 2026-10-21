@@ -15,6 +15,9 @@ extends Node
 ## Exits 0 when clean, 1 otherwise.
 
 const SKIP_DIRS: Array[String] = ["res://.godot", "res://addons"]
+## The profile check's own file, never the player's profile.
+const TEST_PROFILE_PATH: String = "user://validate_profile.json"
+const TEST_OLD_STORY_PATH: String = "user://validate_story.cfg"
 
 var _errors: PackedStringArray = PackedStringArray()
 
@@ -48,6 +51,11 @@ func _ready() -> void:
 			_fail("script does not compile: %s" % path)
 	_validate_data()
 	_validate_key_art()
+	_validate_profile()
+	_validate_story_import()
+	_validate_saving_systems()
+	_validate_run_lifecycle_contract()
+	_validate_rebuild_missing_keys()
 	if _errors.is_empty():
 		print("validate_project: OK (%d files checked)" % files.size())
 		get_tree().quit(0)
@@ -119,6 +127,9 @@ func _validate_data() -> void:
 			_fail("%s has no result icon (output item icon or icon_name)" % recipe.resource_path)
 
 	_validate_heroes(recipe_ids)
+	_validate_perks()
+	_validate_hero_perks()
+	_validate_perk_problems()
 	_validate_audio()
 	_validate_story()
 
@@ -238,6 +249,93 @@ func _validate_heroes(recipe_ids: Dictionary) -> void:
 		_fail("the roster needs at least two heroes (a hero and a companion)")
 
 
+## Perk cards: every perk has an icon, a name, a line of text and a
+## known effect kind (PerkDefinition.problems), and ids are unique.
+func _validate_perks() -> void:
+	var perk_ids: Dictionary = {}
+	var perks: Array[Resource] = DefinitionLoader.load_all(PerkManager.PERKS_DIR)
+	for res in perks:
+		var perk: PerkDefinition = res as PerkDefinition
+		if perk == null:
+			_fail("%s is not a PerkDefinition" % res.resource_path)
+			continue
+		_check_id(perk.id, perk.resource_path, perk_ids)
+		for problem in perk.problems():
+			_fail("%s %s" % [perk.resource_path, problem])
+	if perks.size() != PerkManager.definitions().size():
+		_fail("PerkManager loaded %d perks, %s has %d" % [PerkManager.definitions().size(), PerkManager.PERKS_DIR, perks.size()])
+	if PerkManager.offer(null, 3).is_empty():
+		_fail("no perk is offered to every hero (the shared pool is empty)")
+
+
+## Perk cards 04: each hero has at least two cards of their own, and no
+## hero is dealt another hero's, as the player or as the companion.
+## Asks PerkManager.offer itself, with a stand-in for each hero, so a
+## broken pool filter fails here. As the companion, no player-only card
+## is dealt, and there is still a card to draw.
+func _validate_hero_perks() -> void:
+	var probe_script: GDScript = GDScript.new()
+	probe_script.source_code = "extends Node\nvar hero: HeroDefinition\n"
+	probe_script.reload()
+	for hero in HeroRoster.all():
+		var own: int = 0
+		for perk in PerkManager.definitions():
+			if perk.pool == hero.id:
+				own += 1
+		if own < 2:
+			_fail("%s has %d hero-only perks (needs 2)" % [hero.id, own])
+		for as_companion in [false, true]:
+			var probe: Node = probe_script.new()
+			probe.set("hero", hero)
+			if as_companion:
+				probe.add_to_group("companions")
+			var role: String = "companion" if as_companion else "player"
+			var dealt: Array[PerkDefinition] = PerkManager.offer(probe, 999)
+			for perk in dealt:
+				if perk.pool != &"shared" and perk.pool != &"sibling" and perk.pool != hero.id:
+					_fail("%s (%s) is offered %s, another hero's perk" % [hero.id, role, perk.id])
+				if as_companion and perk.player_only:
+					_fail("%s (companion) is offered %s, a player-only perk" % [hero.id, perk.id])
+			if dealt.is_empty():
+				_fail("%s (%s) is offered no perk at all" % [hero.id, role])
+			probe.free()
+	for perk in PerkManager.definitions():
+		if perk.pool != &"shared" and perk.pool != &"sibling" and HeroRoster.get_hero(perk.pool) == null:
+			_fail("%s is for unknown hero '%s'" % [perk.resource_path, perk.pool])
+
+
+## PerkDefinition.problems() itself: a card with an unknown flag, or an
+## on_hit card that reaches no extra mob, is caught.
+func _validate_perk_problems() -> void:
+	var bad_flag: PerkDefinition = _probe_perk(&"flag")
+	bad_flag.flag = &"no_such_flag"
+	if bad_flag.problems().is_empty():
+		_fail("PerkDefinition.problems() lets an unknown flag through")
+	var no_targets: PerkDefinition = _probe_perk(&"on_hit")
+	no_targets.reach = 2.0
+	if no_targets.problems().is_empty():
+		_fail("PerkDefinition.problems() lets an on_hit perk with no extra targets through")
+	var no_reach: PerkDefinition = _probe_perk(&"on_hit")
+	no_reach.extra_targets = 1
+	if no_reach.problems().is_empty():
+		_fail("PerkDefinition.problems() lets an on_hit perk with no reach through")
+	var sound: PerkDefinition = _probe_perk(&"on_hit")
+	sound.extra_targets = 1
+	sound.reach = 2.0
+	if not sound.problems().is_empty():
+		_fail("PerkDefinition.problems() rejects a sound on_hit perk: %s" % ", ".join(sound.problems()))
+
+
+func _probe_perk(kind: StringName) -> PerkDefinition:
+	var perk: PerkDefinition = PerkDefinition.new()
+	perk.id = &"stand_firm"
+	perk.display_name = "Probe"
+	perk.description = "A probe."
+	perk.icon = "stick"
+	perk.effect_kind = kind
+	return perk
+
+
 ## Feature 035: every story beat is complete and readable, each
 ## chapter has its intro, dawn cards and ending, every hero has lines,
 ## and every voice file belongs to a line. Lines still waiting for a
@@ -260,6 +358,8 @@ func _validate_story() -> void:
 			_fail("%s has unknown chapter %d" % [beat.resource_path, beat.chapter])
 		if beat.trigger in [&"intro", &"win"] and beat.painting == null:
 			_fail("%s is a storybook page without a painting" % beat.resource_path)
+		elif beat.trigger in [&"intro", &"win"] and not beat.painting.resource_path.begins_with("res://assets/ui/story/"):
+			_fail("%s uses a placeholder painting (%s), not its own (047)" % [beat.resource_path, beat.painting.resource_path])
 		for hero_id in hero_ids:
 			if beat.lines_for(StringName(hero_id)).is_empty():
 				_fail("%s has no lines when %s is played" % [beat.resource_path, hero_id])
@@ -271,8 +371,15 @@ func _validate_story() -> void:
 			if not StoryBeat.SPEAKERS.has(String(line.get("speaker", ""))) and not hero_ids.has(String(line.get("speaker", ""))):
 				_fail("%s line %s has unknown speaker '%s'" % [beat.resource_path, line_id, line.get("speaker", "")])
 			var face: String = String(line.get("face", ""))
-			if face != "" and (String(line.get("speaker", "")) != "mum" or not StoryLibrary.MUM_FACES.has(face)):
-				_fail("%s line %s has face '%s' (only Mum's lines, one of %s)" % [beat.resource_path, line_id, face, StoryLibrary.MUM_FACES])
+			var speaker: String = String(line.get("speaker", ""))
+			if face != "" and speaker in ["mum", "note"] and not StoryLibrary.MUM_FACES.has(face):
+				_fail("%s line %s has face '%s' (Mum's are %s)" % [beat.resource_path, line_id, face, StoryLibrary.MUM_FACES])
+			elif face != "" and hero_ids.has(speaker) and not ResourceLoader.exists(StoryLibrary.hero_face_path(speaker, face)):
+				_fail("%s line %s has face '%s', but %s has no such portrait" % [beat.resource_path, line_id, face, speaker])
+			elif String(line.get("sketch", "")) != "" and (speaker != "note" or not ResourceLoader.exists(String(line["sketch"]))):
+				_fail("%s line %s has sketch '%s' (Mum's notes only, and the file must exist)" % [beat.resource_path, line_id, line["sketch"]])
+			elif face != "" and speaker == "narrator":
+				_fail("%s line %s: the narrator has no face" % [beat.resource_path, line_id])
 			var when: String = String(line.get("when", ""))
 			if when != "" and not hero_ids.has(when):
 				_fail("%s line %s is for unknown hero '%s'" % [beat.resource_path, line_id, when])
@@ -324,7 +431,7 @@ func _validate_barks(line_ids: Dictionary, hero_ids: Array[String]) -> void:
 		var tuning: Dictionary = barks.triggers[trigger] as Dictionary
 		if not BarkSet.ROLES.has(String(tuning.get("role", ""))):
 			_fail("bark trigger '%s' has unknown role '%s'" % [trigger, tuning.get("role", "")])
-		if not String(tuning.get("once", "")) in ["", "night"]:
+		if not String(tuning.get("once", "")) in ["", "night", "run"]:
 			_fail("bark trigger '%s' has unknown once '%s'" % [trigger, tuning.get("once", "")])
 		for hero_id in hero_ids:
 			for played in hero_ids:
@@ -350,3 +457,196 @@ func _validate_barks(line_ids: Dictionary, hero_ids: Array[String]) -> void:
 			&"lantern_stage", &"companion_down", &"companion_up", &"danger_behind", &"boss", &"boss_lantern"]:
 		if not barks.triggers.has(trigger):
 			_fail("bark trigger '%s' is fired by BarkDirector but has no tuning" % trigger)
+
+
+## Profile ticket 01: the profile keeps keys across a reload, records
+## bests, loads a missing or corrupt file as empty and deletes cleanly.
+## It runs on its own file and points the profile back afterwards.
+func _validate_profile() -> void:
+	Profile.set_path(TEST_PROFILE_PATH)
+	Profile.delete()
+	if Profile.has_value("test.missing") or Profile.get_value("test.missing", 7) != 7:
+		_fail("Profile: a missing file does not load as empty")
+	Profile.set_value("test.word", "moon")
+	Profile.set_value("test.count", 3)
+	Profile.reload()
+	if not Profile.has_value("test.word") or Profile.get_value("test.word", "") != "moon":
+		_fail("Profile: a string does not survive a reload")
+	if int(Profile.get_value("test.count", 0)) != 3:
+		_fail("Profile: a number does not survive a reload")
+	if not Profile.record_best("test.best", 5):
+		_fail("Profile: a first best is not a record")
+	if not Profile.record_best("test.best", 8):
+		_fail("Profile: a higher best is not a record")
+	if Profile.record_best("test.best", 6) or Profile.record_best("test.best", 8):
+		_fail("Profile: a lower or equal best counts as a record")
+	Profile.reload()
+	if int(Profile.get_value("test.best", 0)) != 8:
+		_fail("Profile: the best is not 8 after a reload (%s)" % Profile.get_value("test.best", 0))
+	Profile.delete()
+	if Profile.has_value("test.word") or FileAccess.file_exists(TEST_PROFILE_PATH):
+		_fail("Profile: delete leaves keys or the file behind")
+	Profile.reload()
+	if Profile.has_value("test.word"):
+		_fail("Profile: deleted keys come back after a reload")
+	var corrupt: FileAccess = FileAccess.open(TEST_PROFILE_PATH, FileAccess.WRITE)
+	corrupt.store_string("{ not json [")
+	corrupt.close()
+	Profile.reload()
+	if Profile.has_value("test.word") or Profile.get_value("test.word", "none") != "none":
+		_fail("Profile: a corrupt file does not load as empty")
+	Profile.set_value("test.word", "sun")
+	Profile.reload()
+	if Profile.get_value("test.word", "") != "sun":
+		_fail("Profile: a corrupt file is not rewritten on the next write")
+	Profile.delete()
+	Profile.set_path(Profile.PROFILE_PATH)
+
+
+## Profile ticket 02: an old story.cfg is imported into a new profile
+## once. Its seen beats read as seen, a seen Chapter 2 intro or true
+## ending sets the Chapter 2 unlocked flag, and after delete the import
+## never runs again. Runs on its own files; the old file stays on disk.
+func _validate_story_import() -> void:
+	_import_old_story(["intro.c1"])
+	if not StoryLibrary.has_seen("intro.c1") or StoryLibrary.has_seen("intro.c2"):
+		_fail("Profile: the imported intro.c1 does not read as the only seen beat")
+	if Profile.has_value(Profile.CHAPTER_2_UNLOCKED):
+		_fail("Profile: a seen intro.c1 alone unlocks Chapter 2")
+	for seen in [["intro.c1", "intro.c2"], [StoryLibrary.TRUE_ENDING]]:
+		_import_old_story(seen)
+		for key in seen:
+			if not StoryLibrary.has_seen(key):
+				_fail("Profile: the imported %s does not read as seen" % key)
+		if not bool(Profile.get_value(Profile.CHAPTER_2_UNLOCKED, false)):
+			_fail("Profile: a seen %s does not unlock Chapter 2" % seen[-1])
+	Profile.delete()
+	Profile.set_path(TEST_PROFILE_PATH, TEST_OLD_STORY_PATH)  # as on the next launch
+	if StoryLibrary.has_seen(StoryLibrary.TRUE_ENDING) or Profile.has_value(Profile.CHAPTER_2_UNLOCKED):
+		_fail("Profile: the old story file is imported again after delete")
+	if not FileAccess.file_exists(TEST_OLD_STORY_PATH):
+		_fail("Profile: the import removed the old story file")
+	StoryLibrary.mark_seen("intro.c1")
+	StoryLibrary.forget_progress()
+	if StoryLibrary.has_seen("intro.c1"):
+		_fail("Profile: forget_progress leaves a beat seen")
+	_remove_user_file(TEST_PROFILE_PATH)
+	_remove_user_file(TEST_OLD_STORY_PATH)
+	Profile.set_path(Profile.PROFILE_PATH)
+
+
+## Prepares an old story.cfg with these beats seen and a profile that
+## has never been created, then loads the profile so it imports.
+func _import_old_story(seen: Array) -> void:
+	_remove_user_file(TEST_PROFILE_PATH)
+	_remove_user_file(TEST_OLD_STORY_PATH)
+	var old: ConfigFile = ConfigFile.new()
+	for key in seen:
+		old.set_value("seen", key, true)
+	old.save(TEST_OLD_STORY_PATH)
+	Profile.set_path(TEST_PROFILE_PATH, TEST_OLD_STORY_PATH)
+
+
+func _remove_user_file(path: String) -> void:
+	if FileAccess.file_exists(path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+## Run lifecycle 02: every autoload saving system saves, resets and
+## loads itself, with no gameplay scene. For each: set some state, save
+## it, reset (it reads as fresh), load the save (it reads as saved). The
+## two heroes are stand-ins in their role groups, registered again after
+## the reset as a new camp's heroes would be. The run state that is not
+## saved (the perk clock and deal, the crafting flag, the loot rolls)
+## must reset too.
+func _validate_saving_systems() -> void:
+	var systems: Array = RunSession.autoload_systems()
+	for system in [TimeManager, GameManager, ResourceManager, ProgressionManager, PerkManager, CraftingManager]:
+		if not systems.has(system):
+			_fail("RunSession does not list %s as a saving system" % system.name)
+	var stats: CharacterStatsDefinition = HeroRoster.get_hero(&"leo").stats
+	var hero: Node = Node.new()
+	hero.add_to_group("player")
+	var sibling: Node = Node.new()
+	sibling.add_to_group("companions")
+	add_child(hero)
+	add_child(sibling)
+	var register: Callable = func() -> void:
+		ProgressionManager.register_character(hero, stats)
+		ProgressionManager.register_character(sibling, stats)
+	for system in systems:
+		system.reset()
+	register.call()
+	var fresh: Dictionary = {}
+	for system in systems:
+		fresh[system] = system.save_state()
+	# Some state in every system.
+	TimeManager.day_number = 4
+	GameManager.record(&"kills", 5)
+	GameManager.loot_misses = {&"shadow_imp": 3}
+	ResourceManager.add(&"wood", 7)
+	ProgressionManager.award_xp(hero, ProgressionManager.get_xp_to_next_level(hero) + 3, &"test")
+	ProgressionManager.award_xp(sibling, 4, &"test")
+	PerkManager.take(hero, &"stand_firm")
+	PerkManager.take(sibling, &"quick_hands")
+	PerkManager.clock = 99.0
+	var deal_state: int = PerkManager.rng.state
+	var loot_state: int = GameManager.loot_rng.state
+	CraftingManager.is_crafting = true
+	var saved: Dictionary = {}
+	for system in systems:
+		saved[system] = system.save_state()
+		if saved[system] == fresh[system] and system != CraftingManager:
+			_fail("%s saves nothing of the state it was given: %s" % [system.name, saved[system]])
+	for system in systems:
+		system.reset()
+	register.call()
+	for system in systems:
+		if system.save_state() != fresh[system]:
+			_fail("%s keeps state across a reset: %s" % [system.name, system.save_state()])
+	if PerkManager.clock != 0.0 or PerkManager.rng.state == deal_state:
+		_fail("PerkManager: the perk clock or the deal survives a reset")
+	if GameManager.loot_rng.state == loot_state:
+		_fail("GameManager: the loot rolls survive a reset")
+	if CraftingManager.is_crafting:
+		_fail("CraftingManager: the crafting state survives a reset")
+	var whole: Dictionary = {}
+	for system in systems:
+		RunSession.merge_state(whole, saved[system])
+	for system in systems:
+		system.load_state(whole)
+	for system in systems:
+		if system.save_state() != saved[system]:
+			_fail("%s does not load what it saved: %s, not %s" % [system.name, system.save_state(), saved[system]])
+	if ProgressionManager.get_level(hero) != 2:
+		_fail("ProgressionManager: the loaded XP does not give the level back (%d)" % ProgressionManager.get_level(hero))
+	for system in systems:
+		system.load_state({})  # missing keys are tolerated
+		system.reset()
+	hero.free()
+	sibling.free()
+
+
+## Run lifecycle 04: the old lifecycle is gone. The save manager only
+## handles the file, so it names no game system that holds run state,
+## and the game manager keeps no reset list of its own (the run
+## session resets every saving system).
+func _validate_run_lifecycle_contract() -> void:
+	var source: String = FileAccess.get_file_as_string("res://scripts/core/save_manager.gd")
+	for word in ["BaseCore", "Building", "Torch", "Hero", "Perk", "Party", "TimeManager", "GameManager", "get_first_node_in_group"]:
+		if source.contains(word):
+			_fail("save_manager.gd names %s; the save manager only handles the file" % word)
+	for old in ["reset_autoloads", "_reset_autoloads"]:
+		if GameManager.has_method(old):
+			_fail("GameManager still has its own reset list (%s)" % old)
+	if SaveManager.has_method("snapshot"):
+		_fail("SaveManager still gathers the run itself; RunSession.snapshot does")
+
+
+## Review fixes: a saved building or torch entry with a missing key
+## (no position) is skipped on load, not an error.
+func _validate_rebuild_missing_keys() -> void:
+	if Building.rebuild({"id": "wooden_fence", "hp": 3}, self) != null:
+		_fail("Building.rebuild builds an entry with no position")
+	if Torch.rebuild({"dawns": 1}, self) != null:
+		_fail("Torch.rebuild builds an entry with no position")

@@ -26,15 +26,17 @@ extends Resource
 @export var step_distance: float = 1.1
 @export var capsule_height: float = 1.2
 @export var hurt_sfx: StringName = &"player_hurt"
+## Model parts put away while a hand tool (the build hammer) is out.
+@export var tool_hidden_parts: PackedStringArray = PackedStringArray()
 
 @export_group("Combat")
 @export var stats: CharacterStatsDefinition
-@export var move_speed: float = 5.0
-@export var companion_move_speed: float = 4.8
+@export var move_speed: float = 4.0
+@export var companion_move_speed: float = 3.9
 @export var attack_range: float = 2.0
 @export var companion_attack_range: float = 2.0
-@export var attack_cooldown: float = 0.5
-@export var companion_attack_cooldown: float = 0.6
+@export var attack_cooldown: float = 0.65
+@export var companion_attack_cooldown: float = 0.75
 ## Ranged heroes fire a pebble (PebbleShot); the hit lands on impact.
 @export var ranged: bool = false
 

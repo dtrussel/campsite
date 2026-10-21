@@ -1,15 +1,16 @@
 # Campsite (working title)
 
-> A stylized 3D base-builder / survival defense game about Leo, a 7-year-old boy,
-> protecting his family campsite from evil forest mobs that emerge at night.
+> A stylized 3D base-builder / survival defense game about Leo (7) and his
+> sister Nela, protecting their campsite from the forest's shadows at night
+> while their mum is missing and the moon has gone dark.
 
 ## Pitch
 
 By day you explore the woods, gather resources, craft tools, improve the
-campsite, and assign tasks to family members and pets. At sunset, the forest
-turns hostile: evil mobs swarm the camp and you must defend the campfire, the
-tent, your family, and yourself. Survive the night, level up, and turn a
-fragile camping trip into a magical woodland fortress.
+campsite, and give your sibling tasks. At sunset, the forest turns hostile:
+lost, cold shadows swarm toward the light and you must defend the campfire,
+the tent, each other, and the old Moon Lantern. Survive the nights, follow
+Mum's notes, and bring the moon back.
 
 ## Status
 
@@ -58,7 +59,7 @@ Feature 031 brings the look closer to the team's concept art.
 
 Feature 020 adds **3- or 7-night runs**. The game **autosaves every
 morning**, and **Continue** on the title screen resumes the run. See [`docs/roadmap/roadmap.md`](docs/roadmap/roadmap.md)
-and [`.features/005-first-playtest-build/handoff.md`](.features/005-first-playtest-build/handoff.md).
+and [`docs/history/features/005-first-playtest-build/handoff.md`](docs/history/features/005-first-playtest-build/handoff.md).
 
 **Playtesters:** follow [`docs/testing/playtest-001.md`](docs/testing/playtest-001.md).
 The tester package is built with `tools/export_playtest.sh`.
@@ -71,7 +72,7 @@ The tester package is built with `tools/export_playtest.sh`.
 - **Licensing intent:** Free / open-source friendly.
 
 The reasoning is captured in
-[`docs/decisions/ADR-0001-engine-and-language-selection.md`](docs/decisions/ADR-0001-engine-and-language-selection.md).
+[`docs/adr/0001-engine-and-language-selection.md`](docs/adr/0001-engine-and-language-selection.md).
 
 ## How to open the project
 
@@ -190,19 +191,17 @@ both zips (a pre-release when the version has a `-suffix`).
   architecture/       Software architecture and coding standards
   design/             Game design specification
   roadmap/            Phased roadmap
-  decisions/          Architecture decision records (ADRs)
+  adr/                Architecture decision records (ADRs)
+  agents/             How agent skills use this repo (issue tracker, labels, domain docs)
+  history/features/   Archived feature folders 000-048 (read-only)
   testing/            Test strategy and checklists
 
 /tools/               check.sh, export_playtest.sh, pinned Godot version
 
-/.features/           Agent feature workflow
-  README.md
-  000-project-bootstrap/
-    plan.md
-    status.md
-    decisions.md
-    test-plan.md
-    handoff.md
+/.scratch/            Issue tracker: one folder per piece of work
+  <feature-slug>/
+    spec.md
+    issues/01-<slug>.md
 ```
 
 ## Documentation index
@@ -215,20 +214,24 @@ Start here if you are a new contributor or coding agent:
 4. [Coding standards](docs/architecture/coding-standards.md)
 5. [Roadmap](docs/roadmap/roadmap.md)
 6. [Test strategy](docs/testing/test-strategy.md)
-7. [ADR-0001: Engine & language selection](docs/decisions/ADR-0001-engine-and-language-selection.md)
-8. [Agent feature workflow](.features/README.md)
-9. [Latest feature handoff](.features/029-key-art-splash/handoff.md)
+7. [ADR-0001: Engine & language selection](docs/adr/0001-engine-and-language-selection.md)
+8. [Issue tracker (`.scratch/`)](docs/agents/issue-tracker.md)
+9. [Archived feature folders](docs/history/features/README.md)
 10. [Playtest 001 script](docs/testing/playtest-001.md)
 
 ## Development workflow
 
-- Larger pieces of work are tracked in `.features/<id>-<slug>/` folders.
-  Each folder contains a `plan.md`, `status.md`, `decisions.md`,
-  `test-plan.md`, and `handoff.md`. See
-  [`.features/README.md`](.features/README.md) for the rules.
+- Coding agents use [Matt Pocock's skills](https://github.com/mattpocock/skills),
+  enabled for this project in `.claude/settings.json`. Larger work goes
+  `/grill-with-docs` → `/to-spec` → `/to-tickets` → `/implement`.
+- Work is tracked as local markdown issues in `.scratch/<feature-slug>/`
+  (a `spec.md` plus one file per ticket in `issues/`). See
+  [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md).
+- Features 000&ndash;048 used the older five-file folders; they are archived,
+  read-only, in [`docs/history/features/`](docs/history/features/README.md).
 - Small fixes and tweaks can be made directly without a feature folder, but
   documentation and tests should still be kept in sync.
-- All architectural decisions go into `docs/decisions/` as ADRs.
+- Architectural decisions go into `docs/adr/` as ADRs.
 - Coding style is documented in
   [`docs/architecture/coding-standards.md`](docs/architecture/coding-standards.md).
 

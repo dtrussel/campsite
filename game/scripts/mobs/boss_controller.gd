@@ -453,6 +453,8 @@ func _curl_up_by_fire() -> void:
 	if _look != null:
 		_look.set_locomotion(0.0)
 		_look.face_instantly(_base.global_position - global_position)
+		if _look.little_golem() != null:
+			_look.little_golem().curl_up()
 
 
 ## A column of moonlight rising out of its belly into the sky.

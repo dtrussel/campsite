@@ -7,7 +7,8 @@ extends Node
 ## game's events, picks who speaks (keyed by who is played), shows the
 ## line in a SpeechBubble and plays its recording, or a chirp until the
 ## recordings arrive. Cooldowns keep it from chattering: one shared gap
-## between barks, one per trigger, and once-a-night triggers. Urgent
+## between barks, one per trigger, and once-a-night or once-a-run
+## triggers. Urgent
 ## barks (hurt, knocked out, danger) skip the shared gap.
 ## Added to the gameplay scene by Main.
 
@@ -39,7 +40,7 @@ func _ready() -> void:
 	GameManager.run_started.connect(_on_run_started)
 	TimeManager.sunset_warning.connect(func(_seconds: float) -> void: bark(&"sunset"))
 	TimeManager.night_started.connect(func(_day: int) -> void: bark(&"night_start"))
-	ProgressionManager.level_up.connect(func(character: Node, _level: int) -> void: bark(&"level_up", character))
+	ProgressionManager.level_up.connect(_on_level_up)
 	get_tree().node_added.connect(_on_node_added)
 
 
@@ -64,7 +65,10 @@ func bark(trigger: StringName, subject: Node = null) -> bool:
 	var urgent: bool = bool(tuning.get("urgent", false))
 	if clock - float(_last_trigger.get(trigger, -INF)) < float(tuning.get("cooldown", 0.0)):
 		return false
-	if String(tuning.get("once", "")) == "night" and int(_once_day.get(trigger, -1)) == TimeManager.day_number:
+	var once: String = String(tuning.get("once", ""))
+	if once == "night" and int(_once_day.get(trigger, -1)) == TimeManager.day_number:
+		return false
+	if once == "run" and _once_day.has(trigger):
 		return false
 	if not urgent and (clock - _last_any < GLOBAL_COOLDOWN or _story_open()):
 		return false
@@ -114,7 +118,7 @@ static func speaker_id(node: Node) -> StringName:
 func _speakers(role: String, subject: Node, trigger: StringName) -> Array:
 	var player: Node3D = _player()
 	var companion: Node3D = _companion()
-	var awake: bool = companion != null and not bool(companion.get("is_knocked_out"))
+	var awake: bool = companion != null and not (companion is Hero and (companion as Hero).is_down())
 	match role:
 		"hero":
 			return [player] if player != null else []
@@ -190,9 +194,9 @@ func _on_run_started() -> void:
 		if node.has_signal("health_changed") and not node.health_changed.is_connected(_on_health_changed):
 			node.health_changed.connect(_on_health_changed.bind(node))
 	var companion: Node = _companion()
-	if companion != null and companion.has_signal("knocked_out_changed") \
-			and not companion.knocked_out_changed.is_connected(_on_companion_knocked_out):
-		companion.knocked_out_changed.connect(_on_companion_knocked_out)
+	var companion_hero: Hero = companion as Hero
+	if companion_hero != null and not companion_hero.down_changed.is_connected(_on_companion_down_changed):
+		companion_hero.down_changed.connect(_on_companion_down_changed)
 	var lantern: MoonLantern = MoonLantern.find(get_tree())
 	if lantern != null:
 		_lantern_stage = lantern.stage
@@ -218,6 +222,8 @@ func _hook_mob(node: Node) -> void:
 		return
 	if not mob.stole.is_connected(_on_mob_stole):
 		mob.stole.connect(_on_mob_stole)
+	if not mob.escaped.is_connected(_on_mob_escaped):
+		mob.escaped.connect(_on_mob_escaped)
 	if not mob.defeated.is_connected(_on_mob_defeated):
 		mob.defeated.connect(_on_mob_defeated)
 	var boss: BossController = mob as BossController
@@ -235,6 +241,11 @@ func _on_mob_stole(_mob: Node3D, _item_id: StringName, _amount: int) -> void:
 	bark(&"thief")
 
 
+## A gremlin made it back to the woods with its loot (feature 046).
+func _on_mob_escaped(_mob: Node3D, _item_id: StringName, _amount: int) -> void:
+	bark(&"thief_escaped")
+
+
 func _on_mob_defeated(mob: Node) -> void:
 	# Defeated fires before the loot spills: a full satchel means caught.
 	if int(mob.get("loot_amount")) > 0:
@@ -249,8 +260,14 @@ func _on_health_changed(current_hp: int, max_hp: int, node: Node) -> void:
 		bark(&"low_hp", node)
 
 
-func _on_companion_knocked_out(is_knocked_out: bool) -> void:
-	bark(&"companion_down" if is_knocked_out else &"companion_up")
+# A save's level-ups are replayed quietly on Continue: no cheer.
+func _on_level_up(character: Node, _level: int) -> void:
+	if not RunSession.is_restoring():
+		bark(&"level_up", character)
+
+
+func _on_companion_down_changed(is_down: bool) -> void:
+	bark(&"companion_down" if is_down else &"companion_up")
 
 
 func _on_lantern_stage(stage: int, _max_stage: int) -> void:

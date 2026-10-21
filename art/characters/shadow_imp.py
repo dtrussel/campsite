@@ -3,7 +3,7 @@ KayKit Skeleton_Minion rig. Its own clips come from
 characters/imp_anims.py (feature 028).
 
 Feature 028 remodel, after the concept in
-.features/028-imp-remodel/reference/concept.png, built in the order the
+docs/history/features/028-imp-remodel/reference/concept.png, built in the order the
 team asked for:
 1. Silhouette: a big round head, large pointed bat ears with magenta
    insides, curved cream horns curling at the tips, a spiky crest, small

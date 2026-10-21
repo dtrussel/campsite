@@ -71,6 +71,7 @@ var _hold: StringName = &""
 var _speed: float = 0.0
 var _time: float = 0.0
 var _belly: float = 1.0
+var _little: LittleGolem = null
 
 
 func _ready() -> void:
@@ -350,16 +351,24 @@ func _fall_apart() -> void:
 	float_up.tween_callback(_hoard.queue_free)
 
 
-## The small golem, under the heap's top, about to climb out.
+## The little golem (feature 047, its own model after the team's sheet),
+## under the heap's top, about to climb out. The Moon-Eater's parts stay
+## hidden; the golem keeps its real size whatever this visual's scale.
 func _reassemble_small() -> void:
 	for part in [_body, _head, _arm_l, _arm_r]:
-		part.visible = true
-	_rig.scale = Vector3.ONE * 0.24
+		part.visible = false
+	_rig.scale = Vector3.ONE
 	_rig.rotation = Vector3.ZERO
 	_rig.position.y = -0.5
-	_arm_l.rotation = Vector3(-0.3, 0, -0.3)
-	_arm_r.rotation = Vector3(-0.3, 0, 0.3)
-	_head.rotation = Vector3(0.15, 0, 0)
+	_little = LittleGolem.new()
+	_little.name = "LittleGolem"
+	_little.scale = Vector3.ONE / maxf(0.01, model_scale)
+	_rig.add_child(_little)
+
+
+## The little golem once the Moon-Eater has let the moon go, else null.
+func little_golem() -> LittleGolem:
+	return _little if _little != null and is_instance_valid(_little) else null
 
 
 ## Where the heap and the floating things go: the boss's own parent, so

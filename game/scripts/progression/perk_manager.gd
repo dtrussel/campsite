@@ -1,0 +1,374 @@
+extends Node
+
+## PerkManager
+##
+## Autoload that owns the perk cards each character has taken (perk
+## cards, .scratch/perk-cards). When the player's hero levels up it
+## deals up to three cards and opens the PerkPicker in the HUD; when the
+## companion levels up it takes a random card itself and the HUD shows a
+## toast. The gameplay hooks then ask it about the taken perks:
+##
+##   PerkManager.multiplier(actor, &"gather_time")   # stat_mult, 1.0 if none
+##   PerkManager.has_flag(actor, &"stand_firm")       # flag
+##   PerkManager.on_hit_perks(actor, &"pebble")       # on_hit
+##
+## The cards are PerkDefinition .tres files under res://resources/perks/.
+
+signal perk_taken(character: Node, perk: PerkDefinition)
+signal picker_opened(character: Node, picker: PerkPicker)
+signal picker_closed(character: Node)
+## Any character's held perks changed: a card taken, perks restored from
+## a save, a run reset, or a character left. BuildManager's cached Wood
+## discount listens to it.
+signal perks_changed
+
+const PERKS_DIR: String = "res://resources/perks/"
+const OFFER_SIZE: int = 3
+
+## Real seconds the picker waits before it takes the first card itself.
+## 0 (or less) skips the picker: the first card is taken at once. Tests
+## and the balance sim use that so they never stall on the picker.
+var auto_pick_seconds: float = 10.0
+## Deals the cards. Seed it for a repeatable deal.
+var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+
+var _definitions: Array[PerkDefinition] = []
+var _by_id: Dictionary = {}  # StringName -> PerkDefinition
+var _taken: Dictionary = {}  # Node -> Array[StringName], in the order taken
+var _picker: PerkPicker = null
+var _picker_character: Node = null
+## Level-ups that came while the picker was open, per character.
+var _pending: Dictionary = {}  # Node -> int
+## Seconds of unpaused, time-scaled play this run: the clock HeroHits
+## stamps hits with (Twin Strike's "recently").
+var clock: float = 0.0
+## The heroes a loaded save may owe cards, dealt on restore_finished.
+var _owed: Array[Node] = []
+
+
+func _ready() -> void:
+	rng.randomize()
+	for res in DefinitionLoader.load_all(PERKS_DIR):
+		var perk: PerkDefinition = res as PerkDefinition
+		if perk != null:
+			_definitions.append(perk)
+	_definitions.sort_custom(func(a: PerkDefinition, b: PerkDefinition) -> bool: return String(a.id) < String(b.id))
+	for perk in _definitions:
+		_by_id[perk.id] = perk
+
+
+func _process(delta: float) -> void:
+	clock += delta
+
+
+# --- Definitions ---------------------------------------------------------------
+
+func definitions() -> Array[PerkDefinition]:
+	return _definitions
+
+
+func get_definition(id: StringName) -> PerkDefinition:
+	return _by_id.get(id, null) as PerkDefinition
+
+
+# --- Taking perks ----------------------------------------------------------------
+
+## Up to `n` distinct cards `character` can take now, in random order:
+## its hero's pool plus the shared and sibling cards, minus the ones
+## already taken that do not stack. A companion is never dealt a
+## player-only card. Empty when the pool is used up.
+func offer(character: Node, n: int = OFFER_SIZE) -> Array[PerkDefinition]:
+	var hero_id: StringName = _hero_id(character)
+	var as_companion: bool = Party.role_of(character) == Party.COMPANION
+	var pool: Array[PerkDefinition] = []
+	for perk in _definitions:
+		if perk.is_for(hero_id, as_companion) and (perk.stacks or not has(character, perk.id)):
+			pool.append(perk)
+	# Fisher-Yates with our own rng, so a seeded deal repeats.
+	for i in range(pool.size() - 1, 0, -1):
+		var j: int = rng.randi_range(0, i)
+		var swap: PerkDefinition = pool[i]
+		pool[i] = pool[j]
+		pool[j] = swap
+	return pool.slice(0, maxi(n, 0))
+
+
+## Gives `character` the perk `id`. False if the id is unknown, or it is
+## already held and does not stack.
+func take(character: Node, id: StringName) -> bool:
+	var perk: PerkDefinition = get_definition(id)
+	if character == null or perk == null:
+		return false
+	if has(character, id) and not perk.stacks:
+		return false
+	_list(character).append(id)
+	PlaytestLog.write("perk_taken who=%s id=%s" % [_hero_id(character), id])
+	perk_taken.emit(character, perk)
+	perks_changed.emit()
+	return true
+
+
+func has(character: Node, id: StringName) -> bool:
+	return _taken.has(character) and (_taken[character] as Array).has(id)
+
+
+## How many copies of `id` the character holds (stacking perks).
+func count(character: Node, id: StringName) -> int:
+	return (_taken[character] as Array).count(id) if _taken.has(character) else 0
+
+
+## The taken perk ids, in the order taken (one entry per copy). A copy:
+## the save writes it.
+func perks_of(character: Node) -> Array[StringName]:
+	var out: Array[StringName] = []
+	if _taken.has(character):
+		out.assign(_taken[character])
+	return out
+
+
+## Sets the character's perks from a save, quietly: no picker, no
+## perk_taken. Unknown ids (a perk since removed) are skipped.
+func restore(character: Node, ids: Array) -> void:
+	if character == null:
+		return
+	var list: Array[StringName] = _list(character)
+	list.clear()
+	for raw in ids:
+		var perk: PerkDefinition = get_definition(StringName(str(raw)))
+		if perk != null and (perk.stacks or not list.has(perk.id)):
+			list.append(perk.id)
+	perks_changed.emit()
+
+
+## Deals the cards `character` is owed: one per level-up past level 1
+## that it holds no card for. Continue calls it after a save is applied,
+## so a card is never lost to the dawn autosave (it can land while the
+## picker is open, or with level-ups queued behind it). The player gets
+## the picker (the rest queue behind it); the companion takes its cards
+## itself. A used-up pool simply gives nothing.
+func top_up(character: Node) -> void:
+	if character == null or not is_instance_valid(character):
+		return
+	var owed: int = ProgressionManager.get_level(character) - 1 - perks_of(character).size()
+	for i in owed:
+		var role: StringName = Party.role_of(character)
+		if role == Party.PLAYER:
+			open_picker(character)
+		elif role == Party.COMPANION:
+			if companion_pick(character) == null:
+				return
+
+
+## Forgets every character's perks and closes the picker (new run; the
+## saving system's reset). The perk clock starts again and the deal is
+## reshuffled; RunSession then seeds it from the run config.
+func reset() -> void:
+	close_picker()
+	_taken.clear()
+	_pending.clear()
+	_owed.clear()
+	clock = 0.0
+	rng.randomize()
+	perks_changed.emit()
+
+
+## Saving system (RunSession): each hero's taken perk ids, one per copy
+## in the order taken, under its role's key ("player" / "sibling").
+func save_state() -> Dictionary:
+	var out: Dictionary = {}
+	for role in Party.SAVE_KEYS:
+		var hero: Node = Party.member(role)
+		if hero != null:
+			var ids: Array = perks_of(hero).map(func(id: StringName) -> String: return String(id))
+			out[Party.SAVE_KEYS[role]] = {"perks": ids}
+	return out
+
+
+## Saving system: gives each hero its saved perks back, quietly
+## (restore). Once RunSession.restore_finished fires, the cards still
+## owed are dealt (top_up): the dawn autosave can land while the picker
+## is open, or with level-ups queued behind it. Saves from before perk
+## cards have no "perks": the heroes hold none and are dealt none.
+func load_state(data: Dictionary) -> void:
+	for role in Party.SAVE_KEYS:
+		var hero: Node = Party.member(role)
+		if hero == null:
+			continue
+		var saved: Variant = data.get(Party.SAVE_KEYS[role], {})
+		var entry: Dictionary = saved if saved is Dictionary else {}
+		var ids: Variant = entry.get("perks", [])
+		restore(hero, ids if ids is Array else [])
+		if entry.has("perks"):
+			_owed.append(hero)
+	if not _owed.is_empty() and not RunSession.restore_finished.is_connected(_deal_owed):
+		RunSession.restore_finished.connect(_deal_owed)
+
+
+# --- Effect queries ----------------------------------------------------------------
+
+## The product of every taken `stat_mult` perk on `stat` (each copy
+## counts). 1.0 when there are none.
+func multiplier(character: Node, stat: StringName) -> float:
+	var result: float = 1.0
+	if not _taken.has(character):
+		return result
+	for id in _taken[character]:
+		var perk: PerkDefinition = _by_id.get(id, null) as PerkDefinition
+		if perk != null and perk.effect_kind == &"stat_mult" and perk.stat == stat:
+			result *= perk.value
+	return result
+
+
+## True if a taken `flag` perk sets `flag`.
+func has_flag(character: Node, flag: StringName) -> bool:
+	return flag_count(character, flag) > 0
+
+
+## How many taken `flag` perks set `flag` (each copy of a stacking card
+## counts once).
+func flag_count(character: Node, flag: StringName) -> int:
+	var copies: int = 0
+	if not _taken.has(character):
+		return copies
+	for id in _taken[character]:
+		var perk: PerkDefinition = _by_id.get(id, null) as PerkDefinition
+		if perk != null and perk.effect_kind == &"flag" and perk.flag_name() == flag:
+			copies += 1
+	return copies
+
+
+## The taken `on_hit` perks that fire on a hit from `source` (&"melee" or
+## &"pebble"), one entry per copy.
+func on_hit_perks(character: Node, source: StringName) -> Array[PerkDefinition]:
+	var out: Array[PerkDefinition] = []
+	if not _taken.has(character):
+		return out
+	for id in _taken[character]:
+		var perk: PerkDefinition = _by_id.get(id, null) as PerkDefinition
+		if perk != null and perk.effect_kind == &"on_hit" and (perk.hit_source == &"any" or perk.hit_source == source):
+			out.append(perk)
+	return out
+
+
+# --- The picker ---------------------------------------------------------------------
+
+## Deals cards to `character` and lets the player choose. With
+## auto_pick_seconds <= 0, or no HUD to show it in, the first card is
+## taken at once. Nothing happens when the pool is empty. If a picker is
+## already open, this one waits for it.
+func open_picker(character: Node) -> void:
+	if is_picking():
+		_pending[character] = int(_pending.get(character, 0)) + 1
+		return
+	var cards: Array[PerkDefinition] = offer(character)
+	if cards.is_empty():
+		return
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	if auto_pick_seconds <= 0.0 or hud == null or not hud.has_method("show_perk_picker"):
+		take(character, cards[0].id)
+		return
+	_picker = hud.call("show_perk_picker", cards, auto_pick_seconds) as PerkPicker
+	_picker_character = character
+	_picker.closed.connect(_on_picker_closed.bind(character), CONNECT_ONE_SHOT)
+	PlaytestLog.write("perk_picker cards=%s" % ",".join(cards.map(func(p: PerkDefinition) -> String: return String(p.id))))
+	picker_opened.emit(character, _picker)
+
+
+func is_picking() -> bool:
+	return _picker != null and is_instance_valid(_picker) and not _picker.is_closing()
+
+
+## The open picker, or null.
+func picker() -> PerkPicker:
+	return _picker if is_picking() else null
+
+
+## Closes the picker without taking a card (the run ended).
+func close_picker() -> void:
+	if is_picking():
+		_picker.dismiss()
+	_picker = null
+	_picker_character = null
+
+
+func _on_picker_closed(perk: PerkDefinition, character: Node) -> void:
+	_picker = null
+	_picker_character = null
+	if perk != null and is_instance_valid(character):
+		take(character, perk.id)
+	if is_instance_valid(character):
+		picker_closed.emit(character)
+	# Another level-up came while it was open: deal again.
+	if is_instance_valid(character) and int(_pending.get(character, 0)) > 0 and GameManager.is_playing():
+		_pending[character] = int(_pending[character]) - 1
+		open_picker(character)
+	else:
+		_pending.erase(character)
+
+
+## Reacts to `hero`'s level-ups: each hero calls it once, from
+## `Hero._setup_progress`. `leveled` fires after the stat bumps, so the
+## picker opens with the new HP already shown.
+func watch(hero: Hero) -> void:
+	if hero == null:
+		return
+	var react: Callable = _on_leveled.bind(hero)
+	if not hero.leveled.is_connected(react):
+		hero.leveled.connect(react)
+
+
+func _on_leveled(_new_level: int, character: Node) -> void:
+	if RunSession.is_restoring() or not is_instance_valid(character):
+		return
+	HeroHits.cheer_up(character)  # before this level's card is taken
+	var role: StringName = Party.role_of(character)
+	if role == Party.PLAYER:
+		open_picker(character)
+	elif role == Party.COMPANION:
+		companion_pick(character)
+
+
+## The companion takes one random card from its own pool by itself (no
+## picker, so play never stops for it) and a HUD toast names it. Returns
+## the card, or null when its pool is used up.
+func companion_pick(character: Node) -> PerkDefinition:
+	var cards: Array[PerkDefinition] = offer(character, 1)
+	if cards.is_empty() or not take(character, cards[0].id):
+		return null
+	var perk: PerkDefinition = cards[0]
+	var hero: HeroDefinition = character.get("hero") as HeroDefinition
+	var who: String = hero.display_name if hero != null else "Your sibling"
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	if hud != null and hud.has_method("show_toast"):
+		hud.call("show_toast", "%s took %s!" % [who, perk.display_name], perk.icon)
+	return perk
+
+
+# --- Helpers -------------------------------------------------------------------------
+
+func _hero_id(character: Node) -> StringName:
+	var hero: HeroDefinition = character.get("hero") as HeroDefinition if character != null else null
+	return hero.id if hero != null else &""
+
+
+func _list(character: Node) -> Array[StringName]:
+	if not _taken.has(character):
+		var list: Array[StringName] = []
+		_taken[character] = list
+		if not character.tree_exiting.is_connected(_on_character_exiting):
+			character.tree_exiting.connect(_on_character_exiting.bind(character))
+	return _taken[character]
+
+
+func _deal_owed() -> void:
+	var heroes: Array[Node] = _owed.duplicate()
+	_owed.clear()
+	for hero in heroes:
+		top_up(hero)
+
+
+func _on_character_exiting(character: Node) -> void:
+	_owed.erase(character)
+	_taken.erase(character)
+	_pending.erase(character)
+	perks_changed.emit()

@@ -64,7 +64,7 @@ func _ready() -> void:
 		play = HudWidgets.icon_button("play", "Continue", _on_continue, Color(0.55, 0.9, 0.4))
 		play.custom_minimum_size = Vector2(300, 72)
 		play.add_theme_font_size_override("font_size", 30)
-		var saved_hero: HeroDefinition = HeroRoster.get_hero(SaveManager.party_of(save)["hero"])
+		var saved_hero: HeroDefinition = HeroRoster.get_hero(GameManager.party_of(save)["hero"])
 		play.tooltip_text = "%s - night %d of %d" % [saved_hero.display_name if saved_hero != null else "Leo",
 			int(save["day"]) + 1, int(save["nights_to_win"])]
 		buttons.add_child(play)

@@ -58,6 +58,23 @@ func _ready() -> void:
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	await _settle(1.0)
 	_shot("03_day_hud")
+	# Feature 044: the camera tilts as it zooms in; the three blur levels.
+	var rig: Node = get_tree().get_first_node_in_group("camera_rig")
+	rig.set("_zoom_target", rig.get("min_zoom"))
+	await _settle(1.0)
+	_shot("03d_zoom_close")
+	# Feature 047: the team's Moon Lantern by day, still dark.
+	var day_spot: Vector3 = player.global_position
+	player.global_position = MoonLantern.find(get_tree()).global_position + Vector3(1.6, 0, 1.2)
+	await _settle(1.5)
+	_shot("03g_moon_lantern_day")
+	player.global_position = day_spot
+	rig.set("_zoom_target", 1.0)
+	await _settle(1.0)
+	for level in [PostFx.Blur.OFF, PostFx.Blur.STRONG, PostFx.Blur.SOFT]:
+		PostFx.set_blur_level(level)
+		await _settle(0.3)
+		_shot("03e_blur_%s" % PostFx.BLUR_NAMES[level].to_lower())
 	# Feature 037: a call and response over both kids' heads.
 	var director: BarkDirector = get_tree().get_first_node_in_group("bark_director") as BarkDirector
 	await _settle(2.5)  # past the DAY banner
@@ -76,13 +93,21 @@ func _ready() -> void:
 	await _settle(1.5)
 	_shot("03b_dawn_card")
 	card.dismiss()
+	# Feature 046: a Chapter 2 dawn card with one of Mum's notes, and a
+	# creature's first banner saying what it is.
+	await _settle(0.8)
+	card = hud.call("show_story", StoryLibrary.first(&"dawn", 2, 2), "")
+	await _settle(1.5)
+	_shot("03b2_dawn_note")
+	if card != null:
+		card.dismiss()
+	hud.call("_on_mob_spawned", player, load("res://resources/mobs/bramble_beast.tres"))
+	await _settle(2.0)  # the banner fades in, and xvfb renders slowly
+	_shot("03f_creature_banner")
 
-	ResourceManager.add(&"wood", 6)
-	ResourceManager.add(&"resin", 2)
-	ResourceManager.add(&"leaves", 2)
-	ResourceManager.add(&"fiber", 3)
+	ResourceManager.add(&"wood", 9)
 	# Feature 017 items, so the tray, recipes and build chips light up.
-	for item in [&"clay", &"stone", &"berries", &"mushrooms", &"scrap", &"glow_shards"]:
+	for item in [&"clay", &"stone", &"berries", &"scrap", &"glow_shards"]:
 		ResourceManager.add(item, 5)
 	var fire: Node = get_tree().get_first_node_in_group("base_core")
 	fire.take_damage(30)
@@ -102,8 +127,64 @@ func _ready() -> void:
 	var placed: Array = []
 	BuildManager.building_placed.connect(func(b: Node) -> void: placed.append(b))
 	BuildManager.call("_try_confirm")
-	print("build: placed=", placed.size(), " fiber_left=", ResourceManager.get_count(&"fiber"))
+	print("build: placed=", placed.size(), " wood_left=", ResourceManager.get_count(&"wood"))
 	BuildManager.exit_build_mode()
+	get_viewport().warp_mouse(Vector2(200, 640))  # no hover highlight on the site
+	# Feature 044: the hero walks over and hammers the blueprint up.
+	if not placed.is_empty():
+		var site: Building = placed[0] as Building
+		await _settle(0.2)
+		_shot("04b1_blueprint_fresh")
+		for i in 200:
+			if site.build_progress >= 0.4:
+				break
+			await _settle(0.05)
+		_shot("04b2_blueprint_building")
+		site.complete_construction(player)
+		# The finish tweens need a few frames, and xvfb renders only a few a second.
+		for i in 60:
+			if site.get_node_or_null("Site") == null and site.get_node_or_null("Ghost") == null:
+				break
+			await _settle(0.1)
+		_shot("04b4_blueprint_done")
+		# Feature 045: zoomed in on the hero mid-blow on a watch post.
+		var cam_rig: Node = get_tree().get_first_node_in_group("camera_rig")
+		cam_rig.set("_zoom_target", cam_rig.get("min_zoom"))
+		var post: Building = BuildManager.place_blueprint(BuildManager.get_definition(&"watch_post"),
+			Transform3D(Basis(), player.global_position + Vector3(2.2, 0, 0.6)))
+		for i in 200:
+			if post.build_progress >= 0.45:
+				break
+			await _settle(0.05)
+		var hits: int = int(player.call("build_hits"))
+		for i in 300:
+			if post.build_progress < 0.4:
+				hits = int(player.call("build_hits"))
+			elif int(player.call("build_hits")) > hits or post.build_progress > 0.8:
+				break
+			await _settle(0.02)
+		_shot("04b3_build_close")
+		post.complete_construction(player)
+		post.queue_free()
+		# Side on, so the hammer reads.
+		player.global_position = Vector3(1.0, 0, 6.0)
+		var side: Building = BuildManager.place_blueprint(BuildManager.get_definition(&"reinforced_wall"),
+			Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(2.6, 0, 6.0)))
+		for i in 200:
+			if side.build_progress >= 0.1:
+				break
+			await _settle(0.05)
+		var side_hits: int = int(player.call("build_hits"))
+		for i in 100:
+			if int(player.call("build_hits")) > side_hits:
+				break
+			await _settle(0.02)
+		_shot("04b5_hammer")
+		side.complete_construction(player)
+		side.queue_free()
+		cam_rig.set("_zoom_target", 1.0)
+		await _settle(0.6)
+		get_viewport().warp_mouse(Vector2(820, 470))
 
 	# Feature 017: the Stone Hearth, a snap trap and a glow lantern by the fire,
 	# and a glow shard pickup lying in the grass.
@@ -118,7 +199,7 @@ func _ready() -> void:
 		get_tree().current_scene.add_child(extra)
 		extra.global_position = spec[1]
 	player.global_position = Vector3(0.5, 0, 2.2)
-	get_tree().get_first_node_in_group("companions").call("set_task", 4)
+	get_tree().get_first_node_in_group("companions").call("set_task", Companion.Task.REPAIR)
 	await _settle(1.0)
 	_shot("04c_feature_017")
 	# Feature 019: the Crafting Table's own recipes, and a full stash.
@@ -135,7 +216,7 @@ func _ready() -> void:
 	_shot("04d_build_lantern")
 	BuildManager.exit_build_mode()
 	CraftingManager.craft(CraftingManager.get_recipes()[0], player)
-	player.call("_try_place_torch")
+	player.call("try_place_torch")
 	var fence: Node3D = BuildManager.get_definition(&"wooden_fence").get_scene().instantiate()
 	get_tree().current_scene.add_child(fence)
 	fence.global_position = Vector3(0, 0, -3)
@@ -174,9 +255,22 @@ func _ready() -> void:
 	player.global_position = lantern.global_position + Vector3(2.2, 0, 0.8)
 	await _settle(2.0)
 	_shot("06b_moon_lantern")
+	# Feature 047: the team's lantern, fully lit, up close.
+	lantern.restore(lantern.shards_for_max())
+	rig.set("_zoom_target", rig.get("min_zoom"))
+	await _settle(2.0)
+	_shot("06c_moon_lantern_full")
+	rig.set("_zoom_target", 1.0)
 	player.global_position = spot
 	await get_tree().create_timer(3.0, true, false, true).timeout
 	_shot("07_night_later")
+	# Perk cards (039): the level-up picker over the night. A fixed deal.
+	PerkManager.rng.seed = 3
+	ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"screenshot")
+	await _settle(0.8)
+	_shot("07c_perk_picker")
+	PerkManager.close_picker()
+	await _settle(0.4)
 	# Feature 022: the remodelled Shadow Imp up close, next to Leo.
 	for offset in [Vector3(-1.4, 0, 1.2), Vector3(1.5, 0, 1.0)]:
 		var imp: Node3D = (load("res://scenes/mobs/ShadowImp.tscn") as PackedScene).instantiate() as Node3D
@@ -199,11 +293,23 @@ func _ready() -> void:
 	_shot("09b_chapter_1_ending")
 	ending.skip()
 	await _settle(0.4)
+	# Feature 047: every storybook page with the team's paintings.
+	for book_spec in [[&"intro", 1], [&"intro", 2], [&"win", 1], [&"win", 2]]:
+		var pages: Array = StoryLibrary.find(book_spec[0], book_spec[1])
+		var story: StoryBook = StoryBook.play(pages, &"nela" if book_spec[1] == 1 and book_spec[0] == &"intro" else &"leo", 30)
+		await _settle(1.2)
+		for i in pages.size():
+			_shot("14_story_%s" % String((pages[i] as StoryBeat).id).replace(".", "_"))
+			story.next()
+			await _settle(1.2)
+		if is_instance_valid(story):
+			story.skip()
+		await _settle(0.4)
 	# Feature 034: a run playing Nela, with Leo as the companion.
 	main.queue_free()
 	await get_tree().process_frame
 	await get_tree().process_frame
-	GameManager.call("_reset_autoloads")
+	RunSession.reset()
 	GameManager.set_party(&"nela")
 	main = load("res://scenes/main/Main.tscn").instantiate()
 	add_child(main)
@@ -225,7 +331,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	# Feature 038: the Moon-Eater on Chapter 2's last night.
 	get_tree().paused = false
-	GameManager.call("_reset_autoloads")
+	RunSession.reset()
 	GameManager.set_party(&"leo")
 	GameManager.nights_to_win = 7
 	main = load("res://scenes/main/Main.tscn").instantiate()
@@ -276,13 +382,13 @@ func _ready() -> void:
 	main.queue_free()
 	GameManager.nights_to_win = 3
 	# ...and after the true ending Mum sits by the title fire.
-	StoryLibrary.progress_path = "user://screenshot_story.cfg"
+	Profile.set_path("user://screenshot_profile.json")
 	StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING)
 	var home: Node = load("res://scenes/ui/TitleScreen.tscn").instantiate()
 	add_child(home)
 	await _settle(1.0)
 	_shot("12_title_mum_home")
-	StoryLibrary.forget_progress()
+	Profile.delete()
 	get_tree().quit(0)
 
 

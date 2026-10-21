@@ -221,9 +221,8 @@ const BURSTS: Dictionary = {
 	&"dust": [16, 0.8, Color(0.75, 0.62, 0.45, 0.8), Color(0.6, 0.5, 0.4, 0), 1.6, 0.4, 0.5, false, 90.0],
 	&"wood": [14, 0.7, Color(0.72, 0.48, 0.25), Color(0.5, 0.32, 0.16, 0), 3.5, -9.0, 0.14, false, 60.0],
 	&"stone": [14, 0.7, Color(0.8, 0.8, 0.85), Color(0.5, 0.5, 0.55, 0), 3.5, -9.0, 0.13, false, 60.0],
-	&"leaves": [16, 1.1, Color(0.55, 0.85, 0.3), Color(0.9, 0.6, 0.2, 0), 2.5, -2.0, 0.16, false, 70.0],
 	&"berries": [12, 0.8, Color(0.95, 0.25, 0.35), Color(0.6, 0.1, 0.2, 0), 2.8, -7.0, 0.13, false, 60.0],
-	&"resin": [12, 0.8, Color(1.0, 0.75, 0.3), Color(0.9, 0.5, 0.1, 0), 2.5, -6.0, 0.13, true, 60.0],
+	&"build_done": [26, 0.9, Color(1, 0.92, 0.55), Color(1, 0.75, 0.3, 0), 3.2, -1.5, 0.15, true, 180.0],
 	&"heal": [18, 1.0, Color(0.55, 1.0, 0.55), Color(0.3, 1.0, 0.6, 0), 1.0, 2.5, 0.16, true, 40.0],
 	&"level_up": [48, 1.4, Color(1.0, 0.9, 0.45), Color(1.0, 0.7, 0.2, 0), 1.6, 3.5, 0.2, true, 25.0],
 	&"shadow_death": [26, 1.0, Color(0.55, 0.2, 0.8, 0.9), Color(0.1, 0.0, 0.2, 0), 1.8, 1.5, 0.6, false, 70.0],
@@ -232,7 +231,6 @@ const BURSTS: Dictionary = {
 	&"sparkle": [10, 0.7, Color(1.0, 0.95, 0.7), Color(1.0, 0.8, 0.3, 0), 1.5, 1.0, 0.12, true, 60.0],
 	&"repair": [14, 0.6, Color(0.9, 0.75, 0.45), Color(0.6, 1.0, 0.6, 0), 3.0, -6.0, 0.12, false, 70.0],
 	&"clay": [14, 0.7, Color(0.85, 0.5, 0.3), Color(0.6, 0.3, 0.18, 0), 3.0, -9.0, 0.13, false, 60.0],
-	&"mushrooms": [12, 0.8, Color(0.75, 0.5, 0.3), Color(0.95, 0.9, 0.75, 0), 2.4, -5.0, 0.12, false, 60.0],
 	&"scrap": [12, 0.6, Color(0.7, 0.72, 0.78), Color(0.6, 0.35, 0.2, 0), 3.5, -9.0, 0.1, false, 70.0],
 	&"shard": [16, 0.9, Color(0.6, 1.0, 1.0), Color(0.5, 0.4, 1.0, 0), 2.0, 2.0, 0.14, true, 60.0],
 	&"bramble_spawn": [34, 1.4, Color(0.45, 0.35, 0.22, 0.9), Color(0.3, 0.45, 0.15, 0), 2.2, -3.0, 0.5, false, 50.0],
@@ -250,7 +248,7 @@ const BURSTS: Dictionary = {
 }
 
 ## Bursts that are purely visual (footsteps): no AudioLibrary sound.
-const SILENT_BURSTS: Array[StringName] = [&"step_dust", &"step_thud"]
+const SILENT_BURSTS: Array[StringName] = [&"step_dust", &"step_thud", &"build_done"]
 
 static var _soft_texture: Texture2D = null
 static var _burst_materials: Dictionary = {}  # additive(bool) -> material
@@ -352,6 +350,7 @@ static func shake(amount: float) -> void:
 
 
 static var _hit_stop_scale: float = -1.0
+static var _hit_stop_previous: float = 1.0
 
 
 ## Freezes the game for a blink (a few frames) so a hit lands with
@@ -362,6 +361,7 @@ static func hit_stop(seconds: float = 0.05, slow_factor: float = 0.08) -> void:
 	if tree == null or _hit_stop_scale > 0.0 or tree.paused:
 		return
 	var previous: float = Engine.time_scale
+	_hit_stop_previous = previous
 	_hit_stop_scale = previous * slow_factor
 	Engine.time_scale = _hit_stop_scale
 	tree.create_timer(seconds, true, false, true).timeout.connect(func() -> void:
@@ -369,3 +369,11 @@ static func hit_stop(seconds: float = 0.05, slow_factor: float = 0.08) -> void:
 			Engine.time_scale = previous
 		_hit_stop_scale = -1.0
 	)
+
+
+## The time scale with any running hit-stop taken out: what it will
+## return to. The perk picker slows from (and restores to) this.
+static func unstopped_time_scale() -> float:
+	if _hit_stop_scale > 0.0 and is_equal_approx(Engine.time_scale, _hit_stop_scale):
+		return _hit_stop_previous
+	return Engine.time_scale

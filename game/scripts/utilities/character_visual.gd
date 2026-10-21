@@ -32,6 +32,15 @@ const UPPER_BONES: Array[String] = ["spine", "chest", "head", "upperarm.l", "low
 const MAX_LEAN: float = 0.17  # radians (~10 degrees) into a turn
 const LEAN_PER_TURN_RATE: float = 0.045
 
+## Hand tools (feature 045): key -> model, held on TOOL_BONE.
+const TOOLS: Dictionary = {&"hammer": preload("res://assets/custom/hammer.glb")}
+const TOOL_BONE: String = "handslot.r"
+## Tool models have the grip at the origin, the handle up +Y and the
+## head along X: in the hand bone's frame that points the handle forward
+## out of the fist (X runs along the forearm). Drawn a bit large so it
+## reads from the game camera.
+const TOOL_SCALE: float = 1.9
+
 @export var model_scene: PackedScene
 @export var model_scale: float = 1.0
 ## Accessory nodes (BoneAttachment3D or MeshInstance3D names) to hide.
@@ -65,6 +74,9 @@ const LEAN_PER_TURN_RATE: float = 0.045
 ## running (feature 024); empty = none.
 @export var footstep_dust: StringName = &""
 @export var step_distance: float = 1.1
+## Model parts put away while a hand tool is out (Leo's stick, Nela's
+## lantern); set by HeroBody.
+@export var tool_hidden_parts: PackedStringArray = PackedStringArray()
 
 var model: Node3D = null
 var _player: AnimationPlayer = null
@@ -82,6 +94,9 @@ var _lean: float = 0.0
 var _last_yaw: float = 0.0
 var _last_step_pos: Vector3 = Vector3.INF
 var _step_travel: float = 0.0
+var _tool_slot: BoneAttachment3D = null
+var _tools: Dictionary = {}  # key -> Node3D
+var _tool_key: StringName = &""
 ## Footstep puffs made so far (tests).
 var steps_puffed: int = 0
 
@@ -200,6 +215,52 @@ func unlock(state: StringName = &"idle") -> void:
 		_player.stop()
 		_tree.active = true
 	play_action(state)
+
+
+## Puts `key`'s tool in the right hand (and the usual hand-held parts
+## away). Building and repairing use &"hammer".
+func show_tool(key: StringName) -> void:
+	if key == _tool_key or model == null or not TOOLS.has(key):
+		return
+	if _tool_slot == null:
+		var skeleton: Skeleton3D = model.find_child("Skeleton3D", true, false) as Skeleton3D
+		if skeleton == null or skeleton.find_bone(TOOL_BONE) == -1:
+			return
+		_tool_slot = BoneAttachment3D.new()
+		_tool_slot.name = &"ToolSlot"
+		_tool_slot.bone_name = TOOL_BONE
+		skeleton.add_child(_tool_slot)
+	if _tool_key != &"":
+		(_tools[_tool_key] as Node3D).visible = false
+	if not _tools.has(key):
+		var tool: Node3D = (TOOLS[key] as PackedScene).instantiate() as Node3D
+		tool.scale = Vector3.ONE * TOOL_SCALE
+		_tool_slot.add_child(tool)
+		Stylize.apply(tool, style)
+		_tools[key] = tool
+	(_tools[key] as Node3D).visible = true
+	_tool_key = key
+	_set_tool_parts_visible(false)
+
+
+func hide_tool() -> void:
+	if _tool_key == &"":
+		return
+	(_tools[_tool_key] as Node3D).visible = false
+	_tool_key = &""
+	_set_tool_parts_visible(true)
+
+
+## The tool in hand, or &"" (tests).
+func tool_shown() -> StringName:
+	return _tool_key
+
+
+func _set_tool_parts_visible(shown: bool) -> void:
+	for part in tool_hidden_parts:
+		var node: Node3D = model.find_child(part, true, false) as Node3D
+		if node != null and not hidden_parts.has(part):
+			node.visible = shown
 
 
 func is_in_action() -> bool:

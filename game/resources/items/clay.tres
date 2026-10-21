@@ -7,7 +7,7 @@
 script = ExtResource("1_def")
 id = &"clay"
 display_name = "Clay"
-description = "Orange river clay from the clay pits. Bake it into the Stone Hearth."
+description = "Orange clay from the banks of Stony Pond. Bake it into the Stone Hearth."
 icon = ExtResource("2_icon")
 rarity = 2
 max_stack = 50

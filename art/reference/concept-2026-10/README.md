@@ -1,12 +1,12 @@
 # Concept art, October 2026
 
-These are the team's concept paintings: 12 images plus three sheets that came later (13–15), supplied as PNG and stored here as WebP at quality 90.
+These are the team's concept paintings: 12 images plus the sheets that came later (13–19), supplied as PNG and stored here as WebP at quality 90.
 They are **reference only**. The game never loads them.
 
 The style guide built from them is in
 [`docs/design/art-direction.md`](../../../docs/design/art-direction.md).
 The work that applies them is
-[`.features/031-concept-look-pass/`](../../../.features/031-concept-look-pass/plan.md).
+[`docs/history/features/031-concept-look-pass/`](../../../docs/history/features/031-concept-look-pass/plan.md).
 
 | File | Shows | Canonical for |
 |------|-------|---------------|
@@ -24,6 +24,10 @@ The work that applies them is
 | `12_forest_village_environment.webp` | Cottages, a well and a market stall | Well and stall props; houses are future scope |
 | `14_mum_character_sheet.webp` | Mum's character sheet (supplied 2026-10-17): turnaround, six expressions, poses, an in-game scene, details | **Canonical for Mum** (feature 043): outfit, colours, hair, face. Her storybook portraits are cut from its expressions (`art/ui/story_art.py`). The beagle is not adopted |
 | `15_moon_eater_character_sheet.webp` | The Moon-Eater's character sheet (supplied 2026-10-18): turnaround, size comparison (~3× a beast), seven poses (rise, idle, stomp, sweep, summon, stagger, shrink ending), an in-game scene, details and palette | **Canonical for the Moon-Eater** (feature 038): a wood-and-stone golem with a golden chest window holding its hoard. The game model (`art/characters/moon_eater.py`) is built after it |
+| `16_moon_lantern_sheet.webp` | The Moon Lantern sheet (supplied 2026-10-18, feature 047): six states from dark to blazing, details, palette and a size line-up with the kids | **Canonical for the Moon Lantern** (`art/props/camp.py` `moon_lantern`) |
+| `17_mum_lantern_sheet.webp` | Mum's brass ranger lantern, lit and cold, with details and a size line-up | Reference for a later prop (feature 047) |
+| `18_little_golem_sheet.webp` | The little golem from the true ending: turnaround, waving and curled-up poses, details, palette and a size line-up | **Canonical for the little golem** (`art/characters/little_golem.py`) |
+| `19_story_props_sheet.webp` | The three sheets above on one page | Overview only |
 | `13_style_target_village.webp` | A village square in an HD-2D style (supplied 2026-10-16) | **Style target only** (milestone 4): contrast, warm grade, strong tilt-shift, ink line, painted detail. Its props are not adopted |
 
 Sheets 04–12 are crops from a contact sheet, so they are small and soft.

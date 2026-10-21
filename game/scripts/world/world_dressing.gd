@@ -9,10 +9,10 @@ extends Node3D
 ## old road south. It builds:
 ##   - the painted ground's paths and grove grounds (via WorldLayout),
 ##   - a grass field (one MultiMesh, wind-animated), wildflower drifts
-##     (daisies, buttercups, lupines) thickest in the Berry Hollow,
+##     (daisies, buttercups, lupines) thickest round the Fairy Ring,
 ##     ferns in the shady groves and reeds round the pond,
 ##   - each grove's dressing and landmark: the giant pine, the pond,
-##     the woodcutters' stumps and woodpile, the great oak's fairy ring,
+##     the woodcutters' stumps and woodpile, the old stump's fairy ring,
 ##   - a forest wall that matches the grove behind it, with gaps where
 ##     the mob lanes come in (dead trees and jack-o'-lanterns there),
 ##   - the camp props and the feature 031 homestead decor.
@@ -182,7 +182,7 @@ func _build_flowers() -> void:
 
 
 ## Drift centres: two in five ring the camp yard, two in five fill the
-## Berry Hollow, the rest are spread over the meadow and the woodlot.
+## Fairy Ring, the rest are spread over the meadow and the woodlot.
 func _drift_centre(i: int) -> Vector2:
 	if i % 5 == 1 or i % 5 == 3:
 		var hollow: Array = WorldLayout.GROVES[3]
@@ -300,7 +300,7 @@ const TALL_SOUTH_LIMIT: float = 16.5
 
 ## The wall behind each grove matches it: pines behind the Pine Grove,
 ## pines and boulders behind the pond, broadleaf woods behind the
-## Woodlot and the Berry Hollow. [path, min scale, max scale]
+## Woodlot and the Fairy Ring. [path, min scale, max scale]
 const WALL_NEAR: Dictionary = {
 	WorldLayout.Zone.PINE_GROVE: [["custom/pine_c.glb", 0.85, 1.15], ["custom/pine_d.glb", 0.85, 1.15],
 		["custom/pine_c.glb", 0.9, 1.2], ["custom/tree_c.glb", 0.85, 1.05]],
@@ -452,7 +452,7 @@ func _build_groves() -> void:
 	_build_pine_grove()
 	_build_pond()
 	_build_woodlot()
-	_build_berry_hollow()
+	_build_fairy_ring()
 	_build_ferns()
 	# Small stones along the road's verges.
 	for i in range(10):
@@ -539,11 +539,11 @@ func _build_woodlot() -> void:
 	_scatter_grove(2, BROADLEAF, 5, 14.5, 0.9, 1.2, 1.6, true)
 
 
-## SE: the lush hollow round a giant old stump with a fairy ring of
+## SE, the Fairy Ring: a lush dell round a giant old stump with a fairy ring of
 ## toadstools (the mushroom patches grow beside it) and flowering bushes.
 ## The landmark is low on purpose: the sun casts shadows north, and
 ## anything tall here would darken the east lane and hide the kids.
-func _build_berry_hollow() -> void:
+func _build_fairy_ring() -> void:
 	var stump: Vector2 = Vector2(12.8, 12.2)
 	_landmark("custom/tree_stump.glb", stump, 2.6, 1.3)
 	for i in range(10):
@@ -588,7 +588,7 @@ func _scatter_grove(index: int, paths: Array, count: int, min_r: float, min_s: f
 # --- Ferns and water plants ------------------------------------------------
 
 ## Ferns carpet the shade of the Pine Grove and the back of the Woodlot,
-## with a few under the great oak.
+## with a few round the old stump.
 func _build_ferns() -> void:
 	var data: Array = [[], []]
 	for spec in [[0, 70], [2, 40], [3, 14]]:

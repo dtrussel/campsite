@@ -18,14 +18,15 @@
 **Deliverables**
 
 - Repository layout (folders for `game/`, `docs/`, `tools/`,
-  `.features/`).
+  `.features/`, now archived in `docs/history/features/`).
 - README.
 - Engine / language ADR.
 - Requirements specification.
 - Game design specification.
 - Software architecture specification.
 - Coding standards.
-- Feature workflow (`.features/README.md`).
+- Feature workflow (`.features/README.md`; replaced in 2026-10 by the
+  `.scratch/` issue tracker, see `docs/agents/issue-tracker.md`).
 - Minimal runnable Godot project skeleton.
 
 **Acceptance criteria**
@@ -34,7 +35,7 @@
 - Main scene runs.
 - All documents listed above exist and are coherent.
 - Next coding agent can continue from
-  `.features/000-project-bootstrap/handoff.md`.
+  `docs/history/features/000-project-bootstrap/handoff.md`.
 
 ## Phase 1 &mdash; Playable movement and camp scene
 
@@ -181,7 +182,7 @@ placeholder HUD.
 
 **Goal:** confirm that a first-time player understands the loop and
 enjoys it before we invest in save/load. Implemented by
-`.features/005-first-playtest-build`.
+`docs/history/features/005-first-playtest-build`.
 
 **Deliverables**
 
@@ -221,7 +222,8 @@ versioned `user://save.json`. No manual save or load menu.*
 ## Beyond Phase 8
 
 After Phase 8 the project has a complete vertical slice. Subsequent
-planning is captured in new `.features/` folders as new goals are chosen:
+planning is captured as specs and tickets in `.scratch/` (before 2026-10:
+feature folders, archived in `docs/history/features/`) as new goals are chosen:
 
 - Additional mob types (Bramble Beast, Night Crow, Mushroom Gremlin).
 - Additional companions (Parent, Cat).
@@ -252,21 +254,27 @@ art track in parallel.
 | 028 Shadow Imp remodel | **Done.** Rebuilt after the team's concept: big head with oversized glowing eyes and slit pupils, cheeky fanged grin, pink bat ears, curled horns, spiky crest, small bat wings, S-curling arrow tail, lavender belly and magenta stripes. Its own clips: bouncy crouch idle, hop-run, claw swipe, flinch, rise from the ground, tumble-over death. All mobs now have original models and clips. |
 | 029 Key-art splash | **Done.** The team's painted key art is the boot splash (with the gold logo) and a loading screen with kid-friendly tips while the camp loads on a background thread (no more freeze after Play). |
 | 030 More loading art | **Done.** Three more team paintings (imp, beast, gremlin) join the loading screen, each with matching tips; a load never repeats the previous picture. |
-| 031 Concept look pass | **Done.** Built after the team's October concept art, with a style guide (`docs/design/art-direction.md`).<br>- Golden-hour and teal-night lighting.<br>- A tilt-shift and warm-grade post pass (with a Blur switch).<br>- A flatter camera.<br>- An ochre clearing with a dirt path.<br>- Wildflower drifts, green pines and warm rocks.<br>- Cozy camp decor: seats, cooking tripod, signpost, lantern posts, market stall, stone well, and a cream A-frame tent.<br>- An HD-2D style finish: deeper warm shadows, painted surface detail, ink lines on props, a softer bokeh tilt-shift and a filmic warm grade.<br>- A model detail pass: 60 models rebuilt dense and baked (bark, planks, tiles, stitching, leaf tufts), plus fanned grass and cupped daisies. |
+| 031 Concept look pass | **Done.** Built after the team's October concept art, with a style guide (`docs/design/art-direction.md`).<br>- Golden-hour and teal-night lighting.<br>- A tilt-shift and warm-grade post pass (Blur Off / Soft / Strong since 044).<br>- A flatter camera.<br>- An ochre clearing with a dirt path.<br>- Wildflower drifts, green pines and warm rocks.<br>- Cozy camp decor: seats, cooking tripod, signpost, lantern posts, market stall, stone well, and a cream A-frame tent.<br>- An HD-2D style finish: deeper warm shadows, painted surface detail, ink lines on props, a softer bokeh tilt-shift and a filmic warm grade.<br>- A model detail pass: 60 models rebuilt dense and baked (bark, planks, tiles, stitching, leaf tufts), plus fanned grass and cupped daisies. |
 | 034 Choose your hero | **Done.** A hero select screen after Play: play Leo (melee stick-fighter) or Nela (ranged slinger); the other hero is the AI companion. Signature crafts follow the hero. Later: a companion picker step once there are more heroes. |
-| 035 Story frame | **Done.** The story of [`story.md`](../design/story.md): an intro storybook after hero select (once per chapter), a voiced story card at each dawn and at the first shard, chapter endings before the win stats (3 Nights = Chapter 1 "The Dark Moon", 7 Nights = Chapter 2 "Into the Hollow"), and the defeat reason as a story line on the end screen. Placeholder paintings and no recordings yet. |
+| 035 Story frame | **Done.** The story of [`story.md`](../design/story.md): an intro storybook after hero select (every new game since 044), a voiced story card at each dawn and at the first shard, chapter endings before the win stats (3 Nights = Chapter 1 "The Dark Moon", 7 Nights = Chapter 2 "Into the Hollow"), and the defeat reason as a story line on the end screen. Placeholder paintings and no recordings yet. |
 | 036 Moon Lantern | **Done.** A lantern by the tent. Press E next to it to hand over Glow Shards; each stage (3 in Chapter 1, 6 in Chapter 2) widens a safe light ring (4 to 9 m) that slows mobs and hurts imps, and a bright lantern turns gremlins back. Shard drops are a per-mob chance with pity. A HUD moon dial shows the stage. The model is a stand-in. |
 | 043 Mum | **Done.** From the team's character sheet: six storybook expressions (a line picks one) and a 3D Mum on the kids' rig with a hand-keyed wave. In the true ending (Chapter 2) she walks out of the woods to the kids before the ending book, and afterwards she sits by the title fire. |
 | 037 Sibling barks | **Done.** Speech bubbles over the kids on events (low HP, thief and thief caught, the first beast, level up, sunset, nightfall, a lantern stage, knocked out and back up), keyed by who is played, with cooldowns. The companion also warns "Behind you!". Each bark has a voice id and chirps until its recording arrives. |
 | 038 The Moon-Eater | **Done.** The final night of Chapter 2 is a boss that holds the night until it is calmed.<br>- A telegraphed stomp ring and sweep.<br>- Below 60%, imp summons that put out the torches.<br>- Below 25%, it drinks the Moon Lantern's light: the lantern stage sets how long the kids have.<br>- At 0 HP it falls apart into a heap, lets the moon go, and a small warm golem climbs out and curls up by the fire; the true ending plays.<br>- Its eyes watch from the treeline on nights 5–6.<br>- A boss bar, boss music and two boss barks.<br>- The model is a baked wood-and-stone golem after the team's character sheet (`art/characters/moon_eater.py`). |
-| 039 Perk cards | **Planned.** On level-up, pick 1 of 3 cards (shared and hero-only) instead of only a flat stat bump. |
+| 044 Playtest 1 fixes | **Done.** From the first user test:<br>- The intro plays on every new game.<br>- The companion follows nav paths and has a stuck watchdog.<br>- 6 raw resources instead of 10.<br>- A slower pace (200 s days, 120 s nights, about 20% slower moves, ×1.25 cooldowns).<br>- Hero auto-attack.<br>- The camera tilts as it zooms in.<br>- A softer blur with Off / Soft / Strong.<br>- Buildings go up as blueprints the hero walks over and builds. |
+| 045 Construction polish | **Done.** Blueprints are a blue ghost on a staked-out site with a shrinking material pile; the solid building rises inside the ghost from the bottom up. Builders hold a mallet and hammer in a two-blows-then-fetch beat (hero and companion); each blow squashes the building and throws chips. The finish fades the ghost, sinks the site and bounces the building. |
+| 046 Story polish | **Done.** One story, told the same everywhere: Mum's lantern (its light drunk, relit in the true ending) kept apart from the Moon Lantern; Mum's notes on the dawn cards (mystery layers 2&ndash;5); the creatures as lost things with a motive (banner subtitles, loading tips, barks); named places (Stony Pond, Fairy Ring, the Old Road, the Hollow) in item text; the true ending rewritten to match the golem ending; no repeated or contradicting barks. |
+| 047 Story art | **Done.** The team's art brief came back: every storybook page has its own painting (12), with the Chapter 2 intro's lantern retouched cold. Nela has painted faces on her lines. The Moon Lantern is a model after its sheet (shards fill its glass, the crescent glows at the top). The Moon-Eater's ending leaves the little golem from its sheet, which curls up by the fire and by the title fire. Follow-up: pages lifted out of the text band, the kids' six faces each (the rest cut from the paintings), and Mum's notebook: a page and a sketch per note on the dawn cards, made from the team's art. |
+| 048 Little golem pass | **Done.** The little golem is rebuilt and measured against its sheet. It has a rounded plank face with deep-set amber eyes and a smile, a shingle bob with plank-slice ears, a shield-shaped trunk with the crescent glowing on its own, and long stone-and-plank arms that tuck in when it curls up. |
+| 039 Perk cards | **Done.** On each level-up the hero picks 1 of 3 wood plate cards (click or 1/2/3; the night slows to 10% and the first card is taken after 10 s). Ten cards: four shared (Quick Hands, Ember Heart, Berry Belly, Builder's Knack), two each for Leo (Big Swing, Stand Firm) and Nela (Ricochet, Eagle Eye), and two sibling cards (Twin Strike, Cheer Up). The companion takes a random card, shown on a toast. Perks are saved, and the flat HP per level is smaller (Leo +5 &rarr; +3, Nela +4 &rarr; +3). |
 | 040 Tool tiers | **Planned.** The signature crafts get tiers (Stick &rarr; Sturdy &rarr; Ember Stick, Slingshot &rarr; Double &rarr; Glow Sling). The upper tiers cost shards, which the lantern also needs. |
-| 041 Ranger's Journal and Camp Badges | **Planned.** A profile that persists between runs: badges for milestones, mum's journal pages, a scrapbook screen, and unlocks (Chapter 2 / 7 Nights after Chapter 1, cosmetics, starting perks). |
+| 041 Ranger's Journal and Camp Badges | **Planned.** A profile that persists between runs: badges for milestones, mum's journal pages (her notes already appear on the dawn cards since 046; the journal collects them), a scrapbook screen, and unlocks (Chapter 2 / 7 Nights after Chapter 1, cosmetics, starting perks). |
 | 042 Endless mode | **Planned, optional.** "How long can you last?", unlocked by the true ending, with a best-nights record. |
 
 Features 035&ndash;042 come from the mechanics brainstorm of 2026-10 (story
-and meta progression, adventure tone). Their plans are in `.features/035-*`
-to `.features/042-*`. The order is story first (035&ndash;038), then
+and meta progression, adventure tone). The plans for 035&ndash;038 are archived in
+`docs/history/features/`. The specs for 039&ndash;042 are in
+`.scratch/` (`perk-cards`, `tool-tiers`, `journal-badges`, `endless-mode`); 039 is built. The order is story first (035&ndash;038), then
 choices (039&ndash;040), then meta (041&ndash;042). Ideas that were not
 chosen this time: fire fuel and burn-down, night omens, last stand and
 revive, a trader, well blessings and signpost chores.

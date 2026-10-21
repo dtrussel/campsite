@@ -41,7 +41,7 @@ signal mob_spawned(mob: Node3D, definition: MobDefinition)
 @export var boss_spawn_point: StringName = &"SpawnPointN"
 ## Summons never push the mobs on the field past this.
 @export var mob_cap: int = 14
-@export var spawn_interval_seconds: float = 4.0
+@export var spawn_interval_seconds: float = 5.5
 @export var initial_delay_seconds: float = 2.0
 
 var _spawn_points: Array[Marker3D] = []

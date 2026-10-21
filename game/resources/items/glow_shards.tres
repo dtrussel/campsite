@@ -7,7 +7,7 @@
 script = ExtResource("1_def")
 id = &"glow_shards"
 display_name = "Glow Shards"
-description = "Magic crystals some Shadow Imps drop. Glow Lanterns keep imps away all night."
+description = "Bits of moonlight the shadows carry. Feed them to the Moon Lantern, or build Glow Lanterns."
 icon = ExtResource("2_icon")
 rarity = 3
 max_stack = 20

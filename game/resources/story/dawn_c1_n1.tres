@@ -12,21 +12,25 @@ page = 1
 lines = [{
 "id": "dawn.c1.n1.leo.1",
 "speaker": "leo",
+"face": "laugh",
 "text": "We did it! The fire is still burning!",
 "when": "leo"
 }, {
 "id": "dawn.c1.n1.leo.2",
 "speaker": "nela",
+"face": "curious",
 "text": "Look, an old stone lantern by the tent. It's empty.",
 "when": "leo"
 }, {
 "id": "dawn.c1.n1.nela.1",
 "speaker": "nela",
+"face": "laugh",
 "text": "We made it. The fire is still burning.",
 "when": "nela"
 }, {
 "id": "dawn.c1.n1.nela.2",
 "speaker": "leo",
-"text": "Hey, an old lantern by the tent! It's all empty.",
+"face": "curious",
+"text": "Hey, an old stone lantern by the tent! It's all empty.",
 "when": "nela"
 }]

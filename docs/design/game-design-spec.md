@@ -6,9 +6,11 @@
 
 ## A. High-level pitch
 
-A 7-year-old boy must protect his family campsite from evil forest mobs by
-gathering resources, crafting tools, building defenses, assigning
-companions to tasks, and surviving increasingly dangerous nights.
+Leo (7) and his little sister Nela must protect their campsite from the
+shadows of the forest by gathering resources, crafting tools, building
+defenses, giving the companion tasks, and surviving increasingly
+dangerous nights. The shadows are not evil: they are lost things,
+cold and drawn to the light (see [`story.md`](story.md)).
 
 By day, the woods are cozy and inviting: birdsong, dappled light,
 gatherable plants and rocks. At sunset, light fades and shadows lengthen.
@@ -17,8 +19,8 @@ campfire is the heart of safety; everything is about keeping it lit and
 your family alive until dawn.
 
 The story (an adventure: mum is missing, the moon has gone dark, and the
-kids must rebuild the Moon Lantern) is planned in
-[`story.md`](story.md).
+kids must fill the old Moon Lantern again) is in [`story.md`](story.md):
+the cast, the creatures' place in it, the named places and Mum's notes.
 
 ## B. Core gameplay loop
 
@@ -75,10 +77,10 @@ All numbers are placeholder until balancing.
 
 ### Level-up effects
 
-- Every level grants a small stat boost on at least one of the above.
-- Specific level-up bonuses are defined in
-  `game/resources/companions/` and via a `CharacterStatsDefinition`
-  resource (see architecture doc).
+- Every level grants a small flat boost to max HP and attack damage,
+  and a perk card (see [J. XP and leveling](#j-xp-and-leveling)).
+- The numbers live in a `CharacterStatsDefinition` per hero
+  (`game/resources/progression/`, see the architecture doc).
 
 ## D. Companions
 
@@ -96,6 +98,11 @@ the party, so Continue skips the screen.
 
 Family members and pets form a small team around the boy. Each companion
 has a clear role.
+
+> **Superseded by the story (035, 043):** the companion is the other
+> sibling. Mum is the missing parent, so there is no Parent companion,
+> and there are no pets (the dog on Mum's sheet is concept flavour). The
+> roles below are kept as the original design notes.
 
 ### Parent Companion
 
@@ -163,30 +170,22 @@ not behaviorally implemented yet.
 
 ## F. Resource system
 
-All 10 resources are present in data and UI from day one. Initial uses are
-guidelines; final recipes will live in `.tres` data files.
+*Playtest 1 (feature 044) cut the list from 10 raw resources to 6.*
+Testers found 10 too many to keep track of. Fiber, Leaves, Resin and
+Mushrooms are gone, and their recipes use the remaining six instead.
+Pine trees give wood, and mushroom patches are now only scenery.
 
-| Name        | Rarity   | Stack | Initial uses                                                  |
-|-------------|----------|-------|---------------------------------------------------------------|
-| Wood        | Common   | 99    | Fences, watch posts, torches, traps, most early buildings.    |
-| Stone       | Common   | 99    | Reinforced walls, watch post tops, heavy traps.               |
-| Berries     | Common   | 50    | Food, basic healing snack, simple recipes.                    |
-| Fiber       | Common   | 99    | Ropes, traps, bows, bandages.                                 |
-| Mushrooms   | Uncommon | 50    | Potions, risky food, magical-adjacent recipes.                |
-| Clay        | Uncommon | 50    | Reinforced walls, ovens, brick variants.                      |
-| Leaves      | Common   | 99    | Camouflage, bedding, simple roofs, ground cover crafts.       |
-| Resin       | Uncommon | 50    | Glue, fire upgrades, longer-burning torches.                  |
-| Scrap       | Rare     | 30    | Improvised tools, weapon upgrades, complex devices.           |
-| Glow Shards | Rare     | 20    | Magical upgrades, night defenses, vision items.               |
+| Name        | Rarity   | Cap | Source | Uses |
+|-------------|----------|-----|--------|------|
+| Wood        | Common   | 20  | Trees and pines | Every building, torches, Feed the Fire, repairs, table crafts |
+| Stone       | Common   | 20  | Rocks | Watch Post, Crate, Table, Reinforced Wall, Stone Hearth |
+| Berries     | Common   | 20  | Berry bushes | Eat (R), Berry Snack, Bandage |
+| Clay        | Uncommon | 20  | Clay pits in the NE and SW corners | Reinforced Wall, Stone Hearth |
+| Scrap       | Rare     | 20  | Junk piles near the E and S spawn lanes | Trap, Lantern, Table, Sturdy Stick, Slingshot, Trap Refill |
+| Glow Shards | Rare     | 10  | Imps (40% chance per kill, with pity) and every bramble beast | Glow Lantern, the Moon Lantern |
 
-*Feature 017 status:* every resource now has a source and a use.
-
-| Resource | Source | Uses |
-|----------|--------|------|
-| Clay | Clay pits in the NE and SW corners | Stone Hearth |
-| Mushrooms | Mushroom patches in the NW and SE corners | Berry Snack |
-| Scrap | Junk piles near the E and S spawn lanes | Snap Trap, Glow Lantern |
-| Glow Shards | Every third imp kill drops one as a pickup | Glow Lantern |
+Each Storage Crate adds another cap's worth. The crafted items (Torch,
+Berry Snack and Bandage) have no cap.
 
 ### Display
 
@@ -215,12 +214,12 @@ These are stored as `ResourceDefinition` `.tres` files; see the architecture doc
 | Building       | Purpose                                                      |
 |----------------|--------------------------------------------------------------|
 | Campfire Core  | Central base object; mobs target it; provides light radius.  |
-| Wooden Fence   | Cheap barrier; blocks or slows mobs.                         |
-| Watch Post     | Elevated post; companions can guard from here.               |
+| Wooden Fence   | Cheap barrier; blocks or slows mobs. 3 Wood.                 |
+| Watch Post     | Elevated post; companions can guard from here. 5 Wood + 2 Stone. |
 | Storage Crate  | *(019)* +20 stash cap per resource (caps start at 20). 4 Wood + 2 Stone. |
 | Crafting Table | *(019)* A second crafting station with the Sturdy Stick, Slingshot, Bandage and Trap Refill. 4 Wood + 2 Stone + 1 Scrap. |
 | Reinforced Wall | *(019)* 150 HP, three times a fence. 3 Stone + 2 Clay + 1 Wood. |
-| Snap Trap      | *(017)* Snaps the first imp on it: 10 damage, held 2.5 s; 3 snaps. 2 Wood + 1 Fiber + 1 Scrap. |
+| Snap Trap      | *(017)* Snaps the first imp on it: 10 damage, held 2.5 s; 3 snaps. 3 Wood + 1 Scrap. |
 | Glow Lantern   | *(017)* A torch that never burns out: slows and zaps imps within 5 m. 2 Glow Shards + 1 Scrap + 2 Wood. |
 
 ### Prototype subset
@@ -237,6 +236,38 @@ These are stored as `ResourceDefinition` `.tres` files; see the architecture doc
   terrain, or insufficient resources).
 - Left-click commits placement and spends resources.
 - Right-click or Esc cancels build mode.
+
+*Construction (playtest 1, feature 044):*
+- A placed building is a **blueprint**: a see-through blue ghost of the
+  finished shape on a staked-out site (corner stakes, a rope line and a
+  small pile of what it costs), with a blue progress bar. It does
+  nothing yet: no light, aura, trap, crate cap or table recipes.
+- Its HP starts at 20% and grows as it is built.
+- An idle hero walks to the oldest blueprint and hammers it up. Each
+  building has its own `build_seconds` (2–4 s). Right-clicking a
+  blueprint sends the hero to it.
+- Builders take out a wooden mallet (Leo's stick and Nela's lantern are
+  put away) and work in a beat of two overhead blows, then fetching a
+  plank or fiddling a peg in (feature 045). Each blow throws wood chips,
+  squashes the building a little and flashes the ghost. Repairs use the
+  mallet too.
+- As the work goes on, the solid building rises inside the ghost from
+  the bottom up (a glowing build line marks the edge) and the material
+  pile shrinks.
+- The companion's Repair task builds blueprints before it repairs.
+- When the building is finished the ghost fades, the site sinks away,
+  the building bounces with dust and a gold sparkle, and the builder
+  gets the build XP.
+- Clicking an unstarted blueprint in build mode takes it back with a full
+  refund.
+
+### Auto-attack
+
+*Playtest 1 (feature 044):* when the hero is idle or gathering, it fights
+the nearest mob within max(attack range × 1.3, 3.5 m) on its own. When
+that mob is beaten it moves on to the next one, then goes back to the
+gather it left. A player command or WASD always wins. The pause menu's
+**Auto-fight** switch turns it off.
 
 ### Building health and repair
 
@@ -257,29 +288,23 @@ These are stored as `ResourceDefinition` `.tres` files; see the architecture doc
 
 ## H. Crafting system
 
-### Initial recipe examples
+### Recipes
 
-| Item         | Recipe                                |
-|--------------|---------------------------------------|
-| Wooden Fence | 2 Wood + 1 Fiber                      |
-| Watch Post   | 4 Wood + 2 Stone + 1 Fiber            |
-| Torch        | 1 Wood + 1 Resin + 1 Leaves           |
-| Berry Snack  | 2 Berries + 1 Leaves                  |
-| Simple Trap  | 2 Wood + 2 Fiber + 1 Scrap            |
+*Since playtest 1 (feature 044):*
 
-These numbers are placeholder; final values live in `CraftingRecipe`
-resources.
+| Recipe | Station | Inputs | Result |
+|--------|---------|--------|--------|
+| Feed the Fire | Campfire | 1 Wood | +20 campfire HP (only while it is damaged) |
+| Torch | Campfire | 2 Wood | A torch (plant with Q) |
+| Berry Snack | Campfire | 3 Berries | A snack (R: +35 HP) |
+| Stone Hearth | Campfire | 5 Clay + 4 Stone | Campfire +75 max HP, fully healed; once per run |
+| Bandage | Table | 2 Berries + 1 Wood | X next to the companion: +25 HP, or a revive |
+| Sturdy Stick | Table | 4 Wood + 2 Scrap | Leo +2 attack; once per run |
+| Slingshot | Table | 3 Wood + 2 Scrap | Nela's range; once per run |
+| Trap Refill | Table | 1 Wood + 1 Scrap | Restores a Snap Trap |
 
-*Implemented at the campfire (feature 017):*
-
-| Recipe | Inputs | Result |
-|--------|--------|--------|
-| Feed the Fire | 1 Wood | +20 campfire HP (only while it is damaged) |
-| Torch | 1 Wood + 1 Resin + 1 Leaves | A torch (plant with Q) |
-| Berry Snack | 2 Berries + 1 Mushroom | A snack (R: +35 HP); mushrooms replace leaves to give mushrooms a use |
-| Stone Hearth | 5 Clay + 4 Stone | Campfire +75 max HP, fully healed; once per run |
-
-The Simple Trap became the Snap Trap building (build menu 3).
+These numbers live in the `CraftingRecipe` resources
+(`game/resources/recipes/`).
 
 ### Prototype subset
 
@@ -304,7 +329,7 @@ data only.
 |------------------|---------------------------------------------------------------|
 | Shadow Imp       | Small, fast, weak. Attacks structures and characters alike.   |
 | Bramble Beast    | Slow, durable. Specializes in destroying fences.              |
-| Night Crow       | Flying scout / harasser. Damages soft targets and flees.      |
+| Night Crow       | Flying scout / harasser. Damages soft targets and flees. (Not planned: no place in the story.) |
 | Mushroom Gremlin | Steals resources from the base, then runs.                    |
 
 ### Prototype subset
@@ -347,6 +372,24 @@ Implement **Shadow Imp** only.
 - When all mobs in the wave are defeated *or* a wave timer expires, the
   wave ends and `night_ended` is signaled.
 
+### Pacing
+
+*Playtest 1 (feature 044) slowed the game down.* Testers found the
+movement, fights and day/night cycle too fast.
+
+| | Before | Since 044 |
+|---|---|---|
+| Day / sunset / night / dawn | 120 / 10 / 75 / 5 s | 200 / 12 / 120 / 6 s |
+| Hero and companion speed | 5.0 and 4.8–4.9 m/s | 4.0 and 3.9 m/s |
+| Imp / bramble / gremlin / Moon-Eater speed | 2.4 / 1.5 / 3.1 / 0.9 | 1.9 / 1.2 / 2.5 / 0.75 |
+| Attack cooldowns | Leo 0.5, Nela 0.6, mobs 1.0–3.0 s | ×1.25 (Leo 0.65, Nela 0.75) |
+| Spawn interval | 4.0 s | 5.5 s |
+| Hero regen | 1.5 HP/s | 1.2 HP/s |
+
+HP and damage did not change, so a fight takes the same number of hits
+but more time. The durations live in `TimeManager`, the speeds in the
+hero and mob `.tres` files.
+
 ## J. XP and leveling
 
 ### XP sources
@@ -377,8 +420,51 @@ level_5 = 900
 ... (level_n = level_n-1 + 150 * n until rebalanced)
 ```
 
-- Skill trees are **out of scope** for the first prototype. Stat bumps
-  only.
+- Skill trees are **out of scope**. Levels give a small flat bump plus
+  a perk card (below).
+
+### Flat bump per level
+
+| Hero | Base HP / damage | Per level (since 039) | Before 039 |
+|------|------------------|-----------------------|------------|
+| Leo  | 50 / 4           | +3 HP, +1 damage      | +5 HP, +1  |
+| Nela | 40 / 3           | +3 HP, +1 damage      | +4 HP, +1  |
+
+The HP bump was made smaller when perk cards arrived, so that a run
+with perks lands near the pre-perk balance in the balance sim
+(`game/tests/sim/balance_sim.gd`). The damage bump stays at +1: at +1
+every other level, or three levels in four, the sim's fighting player
+started losing night 3 (perk cards ticket 07).
+
+### Perk cards (feature 039)
+
+![The perk picker over a night](screenshots/perk-picker.png)
+
+- On each level-up the played hero picks **1 of 3 cards**: click a
+  card or press 1/2/3. The game slows to 10% while the picker is open,
+  and after 10 s of real time the first card is taken, so the picker
+  never hides a fight for long. The centre banner hides while it is up.
+- The companion takes a **random card** from its own pool when it
+  levels up, shown on a small toast. It is never dealt Ember Heart or
+  Berry Belly, which only work through the played hero's own actions.
+- A card is not offered again once taken, unless it stacks. Perks are
+  saved with the run, and so are Ember Heart torches that outlast the
+  dawn. A card still being picked when the dawn autosave lands is dealt
+  again on Continue.
+- The cards are data (`game/resources/perks/*.tres`):
+
+| Pool | Card | Effect |
+|------|------|--------|
+| Shared | Quick Hands | Gather 30% faster. |
+| Shared | Ember Heart | Torches burn a night longer and light 40% wider. |
+| Shared | Berry Belly | Snacks heal 50% more. |
+| Shared | Builder's Knack | Buildings cost 1 Wood less. |
+| Leo | Big Swing | Each swing hits up to 2 mobs. |
+| Leo | Stand Firm | 25% less damage taken near the fire. |
+| Nela | Ricochet | A pebble bounces to a second mob. |
+| Nela | Eagle Eye | Shoots from 20% further away. |
+| Sibling | Twin Strike | +50% damage on a mob the other hero just hit. |
+| Sibling | Cheer Up | On a level-up, the other hero heals a quarter of their health. |
 
 ## K. Camera and controls
 
@@ -465,7 +551,8 @@ A successful first vertical slice means:
 
 - [ ] The player can move the boy around a small test map.
 - [ ] The map contains a campfire core.
-- [ ] The UI shows time of day, base health, and all 10 resources.
+- [ ] The UI shows time of day, base health, and all resources (6 since
+      playtest 1).
 - [ ] The player can gather at least 3 resource types
       (recommended: Wood, Stone, Berries).
 - [ ] The player can place at least one Wooden Fence.
