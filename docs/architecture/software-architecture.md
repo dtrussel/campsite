@@ -87,6 +87,7 @@ Each autoload is a single small node script registered in
 | `ProgressionManager` | Handles XP totals and level-up rules.                       |
 | `PerkManager`        | Perk cards: deals cards on level-up, opens the picker, answers perk hooks. |
 | `SaveManager`        | Serializes and deserializes save data.                      |
+| `Profile`            | Keeps a player's progress across runs (see "Profile" under H). |
 
 ### Autoload contract
 
@@ -370,6 +371,32 @@ Not implemented in Phase 0. Planned shape:
   `BuildingDefinition` lookups.
 - Player and companion state is saved similarly.
 - `schema_version` lets future versions migrate old saves.
+
+### Profile
+
+The run save holds one run; the **profile** holds what a player keeps
+across runs (story beats seen, chapters won, records and, later,
+badges). It is the `Profile` autoload (`game/scripts/core/profile.gd`)
+on its own file, `user://profile.json`, which a run ending never deletes.
+
+- **Interface:** `get_value(key, fallback)`, `set_value(key, value)`
+  (saved at once), `has_value`, `record_best(key, value)` (true for a
+  new record), `forget(prefix)`, `delete`, `reload`, and
+  `set_path(path, old_story_path)` / `file_path` so tests use their own
+  file.
+- **Keys:** strings with a dotted owner prefix, such as `story.`,
+  `chapters.`, `endless.` and `badges.`; values are JSON-friendly. A
+  new kind of progress adds keys rather than a new store.
+- **Bad files:** a missing or corrupt file loads as empty and is
+  rewritten on the next write.
+- **Story beats:** `StoryLibrary.has_seen` / `mark_seen` /
+  `forget_progress` read and write `story.<beat>` keys.
+- **The old `story.cfg`:** imported once, when a profile that has never
+  been created loads. Seen beats are copied, and a seen `intro.c2` or
+  `ending.c2` sets `chapters.c2.unlocked`. The import note survives
+  `delete`, so it never runs twice; `story.cfg` stays on disk, unused.
+- **Not here:** device settings (audio, look, auto-attack) stay in
+  `user://settings.cfg`, so deleting a profile never resets them.
 
 ## I. Testing strategy
 
