@@ -106,15 +106,9 @@ func _ready() -> void:
 	add_to_group("player")
 	if _interactor != null and _interactor.has_signal("interactable_exited"):
 		_interactor.interactable_exited.connect(_on_interactor_exited)
-	if stats != null:
-		attack_damage = stats.base_attack_damage
-		max_hp = stats.base_max_health
-	current_hp = max_hp
+	_setup_progress()
 	auto_attack = GameSettings.auto_attack()
 	_agent = NavSteer.make_agent(self)
-	ProgressionManager.register_character(self, stats)
-	if not ProgressionManager.level_up.is_connected(_on_level_up):
-		ProgressionManager.level_up.connect(_on_level_up)
 	_hp_bar = HealthBar3D.attach(self, 2.45, "hero", 1.3)
 	health_changed.connect(func(hp: int, max_value: int) -> void: _hp_bar.set_value(hp, max_value))
 	_hp_bar.set_value.call_deferred(current_hp, max_hp)
@@ -501,19 +495,16 @@ func try_use_bandage() -> bool:
 	return true
 
 
-func _on_level_up(character: Node, _new_level: int) -> void:
-	if character != self or stats == null:
+# --- Progress (the role's part; see Hero) ----------------------------
+
+func _show_level_up(level: int, quiet: bool) -> void:
+	_hp_bar.set_level(level)
+	if quiet:
 		return
-	attack_damage += stats.attack_damage_per_level
-	_hp_bar.set_level(_new_level)
-	max_hp += stats.max_health_per_level
-	current_hp = min(max_hp, current_hp + stats.max_health_per_level)
-	health_changed.emit(current_hp, max_hp)
-	if not ProgressionManager.is_restoring:
-		# The perk picker (opened first, by PerkManager) says it itself.
-		if not PerkManager.is_picking():
-			Fx.float_text(self, "LEVEL UP!", Color(1.0, 0.85, 0.4), 2.8)
-		Fx.burst(&"level_up", global_position)
+	# The perk picker (opened on `leveled`, before this) says it itself.
+	if not PerkManager.is_picking():
+		Fx.float_text(self, "LEVEL UP!", Color(1.0, 0.85, 0.4), 2.8)
+	Fx.burst(&"level_up", global_position)
 
 
 ## Auto-attack and auto-build (feature 044): only when the player gave

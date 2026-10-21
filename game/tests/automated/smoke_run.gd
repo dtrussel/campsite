@@ -55,6 +55,7 @@ func _ready() -> void:
 	await _run_perk_07_scenario()
 	await _run_perk_review_scenario()
 	await _run_hero_health_scenario()
+	await _run_hero_progress_scenario()
 	await _run_hero_gather_scenario()
 	await _run_hero_attack_scenario()
 	SaveManager.delete_save()
@@ -2213,6 +2214,73 @@ func _check_hero_health(who: Hero) -> void:
 func _hero_id(who: Node) -> StringName:
 	var definition: HeroDefinition = who.get("hero") as HeroDefinition
 	return definition.id if definition != null else &"?"
+
+
+## Hero core 03: a level-up applies the stat bumps, then emits
+## `leveled(level)` once; the perk picker (player) and the auto-pick
+## (companion) come after it, and a restored save emits it quietly.
+func _run_hero_progress_scenario() -> void:
+	print("smoke: --- hero progress scenario ---")
+	for hero_id in [&"leo", &"nela"]:
+		GameManager.set_party(hero_id)
+		await _start_fresh_run()
+		PerkManager.auto_pick_seconds = 5.0  # keep the player's picker open
+		var player: Hero = get_tree().get_first_node_in_group("player") as Hero
+		var companion: Hero = get_tree().get_first_node_in_group("companions") as Hero
+		_check(player != null and companion != null, "party %s: both roles are Heroes" % hero_id)
+		if player == null or companion == null:
+			continue
+		for who in [player, companion]:
+			_check_hero_level_up(who as Hero)
+		PerkManager.close_picker()
+		# A restored save replays the level-up: stats and `leveled`, no picker.
+		await _start_fresh_run()
+		PerkManager.auto_pick_seconds = 5.0
+		player = get_tree().get_first_node_in_group("player") as Hero
+		var levels: Array[int] = []
+		player.leveled.connect(func(level: int) -> void: levels.append(level))
+		var before: int = player.max_hp
+		var stats: CharacterStatsDefinition = ProgressionManager.get_stats(player)
+		ProgressionManager.restore_xp(player, stats.xp_threshold_for_level(2))
+		_check(levels == [2] and player.max_hp == before + stats.max_health_per_level and not PerkManager.is_picking(),
+			"party %s: a restored level-up applies its stats with no picker (%s)" % [hero_id, levels])
+	GameManager.set_party(&"leo")
+
+
+## Levels `who` up once: max HP has risen by the per-level bump before
+## `leveled(2)` fires, and the perk manager (the player's picker, the
+## companion's own pick) reacts after the new HP is in.
+func _check_hero_level_up(who: Hero) -> void:
+	var as_player: bool = who.is_in_group("player")
+	var label: String = "%s as %s" % [_hero_id(who), "player" if as_player else "companion"]
+	var stats: CharacterStatsDefinition = ProgressionManager.get_stats(who)
+	var before: int = who.max_hp
+	var seen: Array = []  # [level, max_hp] at each `leveled`
+	var reacted: Array = []  # max_hp when the perk manager reacted
+	var on_leveled: Callable = func(level: int) -> void: seen.append([level, who.max_hp])
+	var on_picker: Callable = func(character: Node, _picker: PerkPicker) -> void:
+		if character == who:
+			reacted.append(who.max_hp)
+	var on_taken: Callable = func(character: Node, _perk: PerkDefinition) -> void:
+		if character == who:
+			reacted.append(who.max_hp)
+	who.leveled.connect(on_leveled)
+	PerkManager.picker_opened.connect(on_picker)
+	PerkManager.perk_taken.connect(on_taken)
+	ProgressionManager.award_xp(who, ProgressionManager.get_xp_to_next_level(who), &"test")
+	who.leveled.disconnect(on_leveled)
+	PerkManager.picker_opened.disconnect(on_picker)
+	PerkManager.perk_taken.disconnect(on_taken)
+	var raised: int = before + stats.max_health_per_level
+	_check(seen.size() == 1 and int(seen[0][0]) == 2, "%s: a level-up emits leveled(2) once (%s)" % [label, seen])
+	_check(seen.size() == 1 and int(seen[0][1]) == raised,
+		"%s: max HP rose before leveled fired (%d -> %s)" % [label, before, seen])
+	_check(reacted == [raised], "%s: the perk manager reacts with the new HP in (%s)" % [label, reacted])
+	if as_player:
+		_check(PerkManager.is_picking(), "%s: the picker opens on level-up" % label)
+	else:
+		_check(PerkManager.perks_of(who).size() == 1,
+			"%s: the companion picks a card by itself" % label)
 
 
 ## Hero core 04: both heroes gather, cancel and finish through the Hero
