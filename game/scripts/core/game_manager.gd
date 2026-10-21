@@ -41,7 +41,7 @@ var stats: Dictionary = {}
 var hero_id: StringName = &"leo"
 var companion_id: StringName = &"nela"
 ## Glow Shard drops (feature 036): kills since each mob type last
-## dropped, for the pity rule. Reset every run.
+## dropped, for the pity rule. Saved, and reset every run.
 var loot_misses: Dictionary = {}
 var loot_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
@@ -202,19 +202,58 @@ func record(stat: StringName, amount: int = 1) -> void:
 	stats[stat] = int(stats.get(stat, 0)) + amount
 
 
-## The reset list RunSession.reset still uses for the autoloads that
-## are not saving systems yet (run lifecycle 02 moves them over).
+## What RunSession.reset still resets outside the saving systems: build
+## mode (run lifecycle 04 retires this list).
 func reset_autoloads() -> void:
-	TimeManager.reset()
 	BuildManager.exit_build_mode()
-	ResourceManager.reset()
-	ProgressionManager.reset()
-	PerkManager.reset()
+
+
+## Saving system (RunSession): the run fields. The run's stats, the
+## chapter goal, the party and the shard pity counter (kills since each
+## mob type last dropped; saves from before it start it empty).
+func save_state() -> Dictionary:
+	var saved_stats: Dictionary = {}
+	for key in stats.keys():
+		saved_stats[String(key)] = stats[key]
+	var misses: Dictionary = {}
+	for id in loot_misses.keys():
+		misses[String(id)] = int(loot_misses[id])
+	return {
+		"nights_to_win": nights_to_win,
+		"party": {"hero": String(hero_id), "companion": String(companion_id)},
+		"stats": saved_stats,
+		"loot_misses": misses,
+	}
+
+
+## Saving system: takes the run fields back over a fresh run. Missing
+## keys keep the fresh values (and the current party and run length).
+func load_state(data: Dictionary) -> void:
+	if data.has("nights_to_win"):
+		nights_to_win = int(data["nights_to_win"])
+	if data.get("party") is Dictionary:
+		var party: Dictionary = SaveManager.party_of(data)
+		set_party(party["hero"], party["companion"])
+	var saved_stats: Variant = data.get("stats", {})
+	if saved_stats is Dictionary:
+		for key in (saved_stats as Dictionary).keys():
+			stats[StringName(key)] = int(saved_stats[key])
+	var misses: Variant = data.get("loot_misses", {})
+	if misses is Dictionary:
+		for id in (misses as Dictionary).keys():
+			loot_misses[StringName(id)] = int(misses[id])
+
+
+## Saving system: a fresh run's fields. Keeps the party and run length
+## (the next run starts from them); the loot rolls are reshuffled, and
+## RunSession then seeds them from the run config.
+func reset() -> void:
 	current_day = 1
 	is_camp_destroyed = false
 	end_reason = ""
 	end_trigger = &""
 	loot_misses = {}
+	loot_rng.randomize()
 	_reset_stats()
 
 
@@ -263,8 +302,9 @@ func _on_dawn_started(day_number: int) -> void:
 
 
 func _on_resource_changed(_id: StringName, _new_value: int, delta: int) -> void:
-	# Only count gathering; crafting outputs are counted separately.
-	if delta > 0 and run_state == RunState.PLAYING and not CraftingManager.is_crafting:
+	# Only count gathering; crafting outputs are counted separately, and
+	# the inventory a save loads back was counted when it was gathered.
+	if delta > 0 and run_state == RunState.PLAYING and not CraftingManager.is_crafting and not RunSession.is_restoring():
 		record(&"gathered", delta)
 
 

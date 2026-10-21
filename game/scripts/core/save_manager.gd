@@ -18,6 +18,9 @@ extends Node
 ## radius) and what each blueprint was paid with (perk cards). Not saved:
 ## resource nodes and pickups (they reset), plain torches (they burn out
 ## at the dawn the save is made on).
+## The run session gathers the save: the autoloads (time, the run fields
+## with the shard pity counter, resources, progression, perks) save
+## their own keys; this file still writes the world's part (snapshot).
 ## VERSION 2 (playtest 1, feature 044): four resources were cut and
 ## buildings carry their construction progress, so v1 saves are ignored.
 
@@ -120,11 +123,6 @@ func snapshot() -> Dictionary:
 	var sibling: Node = tree.get_first_node_in_group("companions")
 	if fire == null or player == null or sibling == null:
 		return {}
-	var inventory: Dictionary = {}
-	for definition in ResourceManager.get_definitions():
-		var count: int = ResourceManager.get_count(definition.id)
-		if count > 0:
-			inventory[String(definition.id)] = count
 	var buildings: Array = []
 	for node in tree.get_nodes_in_group(Building.BUILDINGS_GROUP):
 		var building: Building = node as Building
@@ -146,28 +144,16 @@ func snapshot() -> Dictionary:
 			entry["paid"] = paid
 		buildings.append(entry)
 	var lantern: MoonLantern = MoonLantern.find(tree)
-	var stats: Dictionary = {}
-	for key in GameManager.stats.keys():
-		stats[String(key)] = GameManager.stats[key]
 	return {
-		"nights_to_win": GameManager.nights_to_win,
-		"day": TimeManager.day_number,
-		"inventory": inventory,
 		"campfire": {"hp": fire.current_hp, "hearth": fire.has_hearth},
 		"buildings": buildings,
-		"party": {"hero": String(GameManager.hero_id), "companion": String(GameManager.companion_id)},
 		"player": {
-			"xp": ProgressionManager.get_xp(player),
 			"signature": bool(player.get("has_signature")),
-			"perks": _perk_ids(player),
 		},
 		"sibling": {
-			"xp": ProgressionManager.get_xp(sibling),
 			"signature": bool(sibling.get("has_signature")),
 			"task": int(sibling.get("current_task")),
-			"perks": _perk_ids(sibling),
 		},
-		"stats": stats,
 		"lantern": {"shards": lantern.shards if lantern != null else 0},
 		"torches": _torches(tree),
 	}
@@ -177,8 +163,6 @@ func snapshot() -> Dictionary:
 ## once the gameplay scene is ready, before the clock starts.
 func apply(data: Dictionary) -> void:
 	var tree: SceneTree = get_tree()
-	for key in data["inventory"].keys():
-		ResourceManager.add(StringName(key), int(data["inventory"][key]))
 	var fire: BaseCore = tree.get_first_node_in_group("base_core") as BaseCore
 	if fire != null:
 		if bool(data["campfire"].get("hearth", false)):
@@ -210,26 +194,12 @@ func apply(data: Dictionary) -> void:
 			building.call("_refresh_hp_label")
 	var player: Node = tree.get_first_node_in_group("player")
 	var sibling: Node = tree.get_first_node_in_group("companions")
-	ProgressionManager.restore_xp(player, int(data["player"]["xp"]))
-	ProgressionManager.restore_xp(sibling, int(data["sibling"]["xp"]))
-	# Saves from before perk cards have no "perks": the heroes hold none.
-	PerkManager.restore(player, _saved_perks(data["player"]))
-	PerkManager.restore(sibling, _saved_perks(data["sibling"]))
-	# The dawn autosave can land while the picker is open (the dawn's own
-	# level-up) or with level-ups queued behind it: deal what is owed once
-	# the camp is up. Saves from before perk cards keep holding none.
-	if data["player"].has("perks"):
-		PerkManager.top_up.call_deferred(player)
-	if data["sibling"].has("perks"):
-		PerkManager.top_up.call_deferred(sibling)
 	# Saves from before feature 034 name the upgrades "stick" / "slingshot".
 	if bool(data["player"].get("signature", data["player"].get("stick", false))):
 		player.call("apply_signature")
 	if bool(data["sibling"].get("signature", data["sibling"].get("slingshot", false))):
 		sibling.call("apply_signature")
 	sibling.call("set_task", int(data["sibling"].get("task", 0)))
-	for key in data["stats"].keys():
-		GameManager.stats[StringName(key)] = int(data["stats"][key])
 	var lantern: MoonLantern = MoonLantern.find(tree)
 	if lantern != null:
 		var saved: Variant = data.get("lantern", {})
@@ -237,11 +207,6 @@ func apply(data: Dictionary) -> void:
 	var torches: Variant = data.get("torches", [])
 	if torches is Array:
 		_restore_torches(tree, torches)
-
-
-## A hero's taken perk ids as strings, one per copy, in the order taken.
-func _perk_ids(character: Node) -> Array:
-	return PerkManager.perks_of(character).map(func(id: StringName) -> String: return String(id))
 
 
 ## The planted torches still burning, as {pos, dawns, radius}. A Glow
@@ -269,11 +234,6 @@ func _restore_torches(tree: SceneTree, torches: Array) -> void:
 		torch.global_position = Vector3(float(pos[0]), float(pos[1]), float(pos[2]))
 		torch.set("dawns_to_burn", int(entry["dawns"]))
 		torch.call("set_radius", float(entry.get("radius", torch.get("radius"))))
-
-
-func _saved_perks(hero: Dictionary) -> Array:
-	var saved: Variant = hero.get("perks", [])
-	return saved if saved is Array else []
 
 
 func _on_dawn_started(_day: int) -> void:

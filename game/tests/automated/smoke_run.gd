@@ -61,6 +61,7 @@ func _ready() -> void:
 	await _run_hero_gather_scenario()
 	await _run_hero_attack_scenario()
 	await _run_old_save_scenario()
+	await _run_lifecycle_02_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	Profile.delete()
@@ -1480,7 +1481,8 @@ func _run_perk_01_scenario() -> void:
 	player = get_tree().get_first_node_in_group("player")
 	_check(PerkManager.perks_of(player).is_empty(), "a new run starts with no perks")
 	var stats: CharacterStatsDefinition = ProgressionManager.get_stats(player)
-	ProgressionManager.restore_xp(player, stats.xp_threshold_for_level(2))
+	await _continue_with_xp(Party.PLAYER, stats.xp_threshold_for_level(2), _config(0.5))
+	player = Party.player_hero()
 	_check(ProgressionManager.get_level(player) == 2 and not PerkManager.is_picking(), "levelling up while restoring a save opens no picker")
 
 	# Nobody picks: the first card is taken after the timeout, through a hit-stop.
@@ -1676,10 +1678,11 @@ func _run_perk_06_scenario() -> void:
 
 	# Level-ups replayed from a save take no card and show no toast.
 	await _start_fresh_run()
-	hud = get_tree().get_first_node_in_group("hud")
 	companion = get_tree().get_first_node_in_group("companions")
 	var stats: CharacterStatsDefinition = ProgressionManager.get_stats(companion)
-	ProgressionManager.restore_xp(companion, stats.xp_threshold_for_level(3))
+	await _continue_with_xp(Party.COMPANION, stats.xp_threshold_for_level(3))
+	hud = get_tree().get_first_node_in_group("hud")
+	companion = get_tree().get_first_node_in_group("companions")
 	_check(ProgressionManager.get_level(companion) == 3 and PerkManager.perks_of(companion).is_empty()
 		and (hud.call("toasts") as Array).is_empty(), "a companion level-up while restoring a save takes no card")
 
@@ -1856,6 +1859,17 @@ func _continue_from(data: Dictionary, config: RunConfig = null) -> void:
 	_check(RunSession.continue_from(data, config if config != null else _config(), false),
 		"the run session takes the save to continue")
 	await _open_main()
+
+
+## Continues the camp from its own save with `xp` for the hero in `role`,
+## so its level-ups are replayed from the save. The save is made as if
+## from before perk cards, so Continue deals no card that is owed.
+func _continue_with_xp(role: StringName, xp: int, config: RunConfig = null) -> void:
+	var data: Dictionary = RunSession.snapshot()
+	(data[Party.SAVE_KEYS[role]] as Dictionary)["xp"] = xp
+	for key in Party.SAVE_KEYS.values():
+		(data[key] as Dictionary).erase("perks")
+	await _continue_from(SaveManager.parse(SaveManager.serialize(data)), config)
 
 
 ## The smoke run's config: the current party and run length, a fixed perk
@@ -2247,10 +2261,15 @@ func _run_hero_progress_scenario() -> void:
 		await _start_fresh_run(_config(5.0))
 		player = get_tree().get_first_node_in_group("player") as Hero
 		var levels: Array[int] = []
-		player.leveled.connect(func(level: int) -> void: levels.append(level))
+		var on_level: Callable = func(who: Node, level: int) -> void:
+			if Party.role_of(who) == Party.PLAYER:
+				levels.append(level)
 		var before: int = player.max_hp
 		var stats: CharacterStatsDefinition = ProgressionManager.get_stats(player)
-		ProgressionManager.restore_xp(player, stats.xp_threshold_for_level(2))
+		ProgressionManager.level_up.connect(on_level)
+		await _continue_with_xp(Party.PLAYER, stats.xp_threshold_for_level(2), _config(5.0))
+		ProgressionManager.level_up.disconnect(on_level)
+		player = Party.player_hero()
 		_check(levels == [2] and player.max_hp == before + stats.max_health_per_level and not PerkManager.is_picking(),
 			"party %s: a restored level-up applies its stats with no picker (%s)" % [hero_id, levels])
 	GameManager.set_party(&"leo")
@@ -2547,3 +2566,59 @@ func _run_old_save_scenario() -> void:
 	_check(lost.is_empty(), "saving the continued run keeps every field of the old save (changed: %s)" % [lost])
 	for node in get_tree().get_nodes_in_group(Building.BUILDINGS_GROUP) + get_tree().get_nodes_in_group("torches"):
 		node.queue_free()
+
+
+## Run lifecycle 02: the autoloads save themselves. A level-up just
+## before the dawn autosave still gives its card after Continue, the
+## shard pity counter survives Continue, and a new run starts with no
+## perk timer, deal, crafting state or loot rolls left from the last.
+func _run_lifecycle_02_scenario() -> void:
+	print("smoke: --- run lifecycle 02 scenario ---")
+	await _start_fresh_run(_config(5.0))  # the level-up opens the picker
+	var player: Hero = Party.player_hero()
+	var companion: Hero = Party.companion()
+	companion.set_physics_process(false)  # no kill moves the pity counter
+	ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"test")
+	_check(PerkManager.is_picking() and PerkManager.perks_of(player).is_empty(), "a level-up at dusk opens the picker")
+	GameManager.loot_misses = {&"shadow_imp": 3, &"mushroom_gremlin": 1}
+	var at_save: Dictionary = {}
+	var on_saved: Callable = func(day: int) -> void:
+		at_save.merge({"day": day, "level": ProgressionManager.get_level(player), "misses": GameManager.loot_misses.duplicate()})
+	SaveManager.saved.connect(on_saved)
+	for i in 3:  # day -> sunset -> night -> dawn: the autosave
+		TimeManager.skip_phase()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	SaveManager.saved.disconnect(on_saved)
+	var data: Dictionary = SaveManager.load_save()
+	_check(not at_save.is_empty() and not data.is_empty() and int(data["day"]) == 1,
+		"the dawn autosave is written with the card still owed (level %s)" % at_save.get("level", "?"))
+	if data.is_empty() or at_save.is_empty():
+		return
+	await _continue_from(data)
+	await get_tree().process_frame
+	player = Party.player_hero()
+	_check(ProgressionManager.get_level(player) == int(at_save["level"]) and int(at_save["level"]) >= 2
+		and PerkManager.perks_of(player).size() == ProgressionManager.get_level(player) - 1,
+		"after Continue the level-up still gives its card (level %d, %d cards)" % [ProgressionManager.get_level(player), PerkManager.perks_of(player).size()])
+	_check(GameManager.loot_misses == at_save["misses"], "the shard pity counter survives Continue (%s)" % [GameManager.loot_misses])
+
+	# Leftovers from this run's perks and crafting.
+	PerkManager.take(player, &"stand_firm")
+	PerkManager.clock = 999.0
+	CraftingManager.is_crafting = true
+	for i in 5:
+		PerkManager.rng.randi()
+		GameManager.loot_rng.randi()
+	await _start_fresh_run(_config(0.0, 7, 8))
+	player = Party.player_hero()
+	var deal: RandomNumberGenerator = RandomNumberGenerator.new()
+	deal.seed = 7
+	var loot: RandomNumberGenerator = RandomNumberGenerator.new()
+	loot.seed = 8
+	_check(PerkManager.perks_of(player).is_empty() and PerkManager.perks_of(Party.companion()).is_empty()
+		and not PerkManager.is_picking(), "a new run starts with no perks")
+	_check(PerkManager.clock < 5.0, "the perk clock starts again (%.1f s)" % PerkManager.clock)
+	_check(PerkManager.rng.state == deal.state and GameManager.loot_rng.state == loot.state,
+		"the perk deal and the loot rolls start from the new run's seeds")
+	_check(not CraftingManager.is_crafting and GameManager.loot_misses.is_empty(), "no crafting state or pity counter carries over")

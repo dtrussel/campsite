@@ -39,9 +39,11 @@ var _picker: PerkPicker = null
 var _picker_character: Node = null
 ## Level-ups that came while the picker was open, per character.
 var _pending: Dictionary = {}  # Node -> int
-## Seconds of unpaused, time-scaled play: the clock HeroHits stamps
-## hits with (Twin Strike's "recently").
+## Seconds of unpaused, time-scaled play this run: the clock HeroHits
+## stamps hits with (Twin Strike's "recently").
 var clock: float = 0.0
+## The heroes a loaded save may owe cards, dealt on restore_finished.
+var _owed: Array[Node] = []
 
 
 func _ready() -> void:
@@ -157,12 +159,49 @@ func top_up(character: Node) -> void:
 				return
 
 
-## Forgets every character's perks and closes the picker (new run).
+## Forgets every character's perks and closes the picker (new run; the
+## saving system's reset). The perk clock starts again and the deal is
+## reshuffled; RunSession then seeds it from the run config.
 func reset() -> void:
 	close_picker()
 	_taken.clear()
 	_pending.clear()
+	_owed.clear()
+	clock = 0.0
+	rng.randomize()
 	perks_changed.emit()
+
+
+## Saving system (RunSession): each hero's taken perk ids, one per copy
+## in the order taken, under its role's key ("player" / "sibling").
+func save_state() -> Dictionary:
+	var out: Dictionary = {}
+	for role in Party.SAVE_KEYS:
+		var hero: Node = Party.member(role)
+		if hero != null:
+			var ids: Array = perks_of(hero).map(func(id: StringName) -> String: return String(id))
+			out[Party.SAVE_KEYS[role]] = {"perks": ids}
+	return out
+
+
+## Saving system: gives each hero its saved perks back, quietly
+## (restore). Once RunSession.restore_finished fires, the cards still
+## owed are dealt (top_up): the dawn autosave can land while the picker
+## is open, or with level-ups queued behind it. Saves from before perk
+## cards have no "perks": the heroes hold none and are dealt none.
+func load_state(data: Dictionary) -> void:
+	for role in Party.SAVE_KEYS:
+		var hero: Node = Party.member(role)
+		if hero == null:
+			continue
+		var saved: Variant = data.get(Party.SAVE_KEYS[role], {})
+		var entry: Dictionary = saved if saved is Dictionary else {}
+		var ids: Variant = entry.get("perks", [])
+		restore(hero, ids if ids is Array else [])
+		if entry.has("perks"):
+			_owed.append(hero)
+	if not _owed.is_empty() and not RunSession.restore_finished.is_connected(_deal_owed):
+		RunSession.restore_finished.connect(_deal_owed)
 
 
 # --- Effect queries ----------------------------------------------------------------
@@ -279,7 +318,7 @@ func watch(hero: Hero) -> void:
 
 
 func _on_leveled(_new_level: int, character: Node) -> void:
-	if ProgressionManager.is_restoring or not is_instance_valid(character):
+	if RunSession.is_restoring() or not is_instance_valid(character):
 		return
 	HeroHits.cheer_up(character)  # before this level's card is taken
 	var role: StringName = Party.role_of(character)
@@ -321,7 +360,15 @@ func _list(character: Node) -> Array[StringName]:
 	return _taken[character]
 
 
+func _deal_owed() -> void:
+	var heroes: Array[Node] = _owed.duplicate()
+	_owed.clear()
+	for hero in heroes:
+		top_up(hero)
+
+
 func _on_character_exiting(character: Node) -> void:
+	_owed.erase(character)
 	_taken.erase(character)
 	_pending.erase(character)
 	perks_changed.emit()

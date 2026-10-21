@@ -53,6 +53,7 @@ func _ready() -> void:
 	_validate_key_art()
 	_validate_profile()
 	_validate_story_import()
+	_validate_saving_systems()
 	if _errors.is_empty():
 		print("validate_project: OK (%d files checked)" % files.size())
 		get_tree().quit(0)
@@ -547,3 +548,78 @@ func _import_old_story(seen: Array) -> void:
 func _remove_user_file(path: String) -> void:
 	if FileAccess.file_exists(path):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+## Run lifecycle 02: every autoload saving system saves, resets and
+## loads itself, with no gameplay scene. For each: set some state, save
+## it, reset (it reads as fresh), load the save (it reads as saved). The
+## two heroes are stand-ins in their role groups, registered again after
+## the reset as a new camp's heroes would be. The run state that is not
+## saved (the perk clock and deal, the crafting flag, the loot rolls)
+## must reset too.
+func _validate_saving_systems() -> void:
+	var systems: Array = RunSession.autoload_systems()
+	for system in [TimeManager, GameManager, ResourceManager, ProgressionManager, PerkManager, CraftingManager]:
+		if not systems.has(system):
+			_fail("RunSession does not list %s as a saving system" % system.name)
+	var stats: CharacterStatsDefinition = HeroRoster.get_hero(&"leo").stats
+	var hero: Node = Node.new()
+	hero.add_to_group("player")
+	var sibling: Node = Node.new()
+	sibling.add_to_group("companions")
+	add_child(hero)
+	add_child(sibling)
+	var register: Callable = func() -> void:
+		ProgressionManager.register_character(hero, stats)
+		ProgressionManager.register_character(sibling, stats)
+	for system in systems:
+		system.reset()
+	register.call()
+	var fresh: Dictionary = {}
+	for system in systems:
+		fresh[system] = system.save_state()
+	# Some state in every system.
+	TimeManager.day_number = 4
+	GameManager.record(&"kills", 5)
+	GameManager.loot_misses = {&"shadow_imp": 3}
+	ResourceManager.add(&"wood", 7)
+	ProgressionManager.award_xp(hero, ProgressionManager.get_xp_to_next_level(hero) + 3, &"test")
+	ProgressionManager.award_xp(sibling, 4, &"test")
+	PerkManager.take(hero, &"stand_firm")
+	PerkManager.take(sibling, &"quick_hands")
+	PerkManager.clock = 99.0
+	var deal_state: int = PerkManager.rng.state
+	var loot_state: int = GameManager.loot_rng.state
+	CraftingManager.is_crafting = true
+	var saved: Dictionary = {}
+	for system in systems:
+		saved[system] = system.save_state()
+		if saved[system] == fresh[system] and system != CraftingManager:
+			_fail("%s saves nothing of the state it was given: %s" % [system.name, saved[system]])
+	for system in systems:
+		system.reset()
+	register.call()
+	for system in systems:
+		if system.save_state() != fresh[system]:
+			_fail("%s keeps state across a reset: %s" % [system.name, system.save_state()])
+	if PerkManager.clock != 0.0 or PerkManager.rng.state == deal_state:
+		_fail("PerkManager: the perk clock or the deal survives a reset")
+	if GameManager.loot_rng.state == loot_state:
+		_fail("GameManager: the loot rolls survive a reset")
+	if CraftingManager.is_crafting:
+		_fail("CraftingManager: the crafting state survives a reset")
+	var whole: Dictionary = {}
+	for system in systems:
+		RunSession.merge_state(whole, saved[system])
+	for system in systems:
+		system.load_state(whole)
+	for system in systems:
+		if system.save_state() != saved[system]:
+			_fail("%s does not load what it saved: %s, not %s" % [system.name, system.save_state(), saved[system]])
+	if ProgressionManager.get_level(hero) != 2:
+		_fail("ProgressionManager: the loaded XP does not give the level back (%d)" % ProgressionManager.get_level(hero))
+	for system in systems:
+		system.load_state({})  # missing keys are tolerated
+		system.reset()
+	hero.free()
+	sibling.free()

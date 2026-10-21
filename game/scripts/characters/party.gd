@@ -19,6 +19,22 @@ const COMPANION: StringName = &"companion"
 ## The scene groups each role's hero joins (kept for the many callers
 ## that still look them up directly).
 const _GROUPS: Dictionary = {PLAYER: &"player", COMPANION: &"companions"}
+## Where each role's hero keeps its part of the save file (the companion
+## is "sibling", as saves have always named it).
+const SAVE_KEYS: Dictionary = {PLAYER: "player", COMPANION: "sibling"}
+
+
+## The node in `role`'s group: its hero, or a stand-in in that group
+## (the validator's saving-system check). Null when there is none. The
+## saving autoloads find each role's hero with it.
+static func member(role: StringName) -> Node:
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	if tree == null or not _GROUPS.has(role):
+		return null
+	for node in tree.get_nodes_in_group(_GROUPS[role]):
+		if not node.is_queued_for_deletion():
+			return node
+	return null
 
 
 ## The hero the player plays. Null outside a run.

@@ -40,6 +40,26 @@ func reset() -> void:
 			resource_changed.emit(id, 0, -previous)
 
 
+## Saving system (RunSession): the inventory, the items held only.
+func save_state() -> Dictionary:
+	var inventory: Dictionary = {}
+	for definition in _definitions:
+		var held: int = get_count(definition.id)
+		if held > 0:
+			inventory[String(definition.id)] = held
+	return {"inventory": inventory}
+
+
+## Saving system: adds the saved inventory to the (fresh) stash, up to
+## the stash caps.
+func load_state(data: Dictionary) -> void:
+	var inventory: Variant = data.get("inventory", {})
+	if not inventory is Dictionary:
+		return
+	for key in (inventory as Dictionary).keys():
+		add(StringName(key), int(inventory[key]))
+
+
 func get_definitions() -> Array[ResourceDefinition]:
 	return _definitions
 

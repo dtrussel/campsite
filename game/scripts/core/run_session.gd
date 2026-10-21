@@ -16,10 +16,13 @@ extends Node
 ##                               keys and tolerates missing ones;
 ##   reset()                     back to a fresh run.
 ## The session walks them in one declared order, saving_systems(): time
-## and the run fields, resources, progression, perks, then the world
-## objects, then the heroes. Systems not moved over yet are still reset
-## by GameManager.reset_autoloads and saved by SaveManager.snapshot /
-## apply (tickets 02 and 03 move them over).
+## and the run fields, resources, progression, perks (and the crafting
+## state, which only resets), then the world objects, then the heroes.
+## A hero's keys sit under "player" / "sibling" (Party.SAVE_KEYS), shared
+## by several systems; snapshot merges them key by key (merge_state).
+## What is not a saving system yet is still reset by
+## GameManager.reset_autoloads and saved by SaveManager.snapshot / apply
+## (ticket 03 moves the world over).
 
 ## A continued run is fully back: the save is applied and its follow-ups
 ## (the perk top-up) have run. Not emitted for a new run.
@@ -31,6 +34,8 @@ var config: RunConfig = null
 ## A save waiting for the gameplay scene (continue_from), applied by
 ## restore_pending.
 var _pending: Dictionary = {}
+## True while restore_pending loads the saving systems.
+var _restoring: bool = false
 
 
 ## Starts a new run from `run` (RunConfig.current() when null): resets
@@ -92,8 +97,30 @@ func snapshot() -> Dictionary:
 	if data.is_empty():
 		return {}
 	for system in saving_systems():
-		data.merge(system.save_state(), true)
+		merge_state(data, system.save_state())
 	return data
+
+
+## Merges one saving system's `part` into the save `into`: a dictionary
+## both hold (a hero's "player" entry) is merged key by key, anything
+## else is replaced. `part` is copied, never shared.
+static func merge_state(into: Dictionary, part: Dictionary) -> void:
+	for key in part.keys():
+		var value: Variant = part[key]
+		if into.get(key) is Dictionary and value is Dictionary:
+			merge_state(into[key], value)
+		elif value is Dictionary or value is Array:
+			into[key] = value.duplicate(true)
+		else:
+			into[key] = value
+
+
+## Whether a save is being loaded right now: level-ups replayed from it
+## still apply their stat bumps, but skip the fanfare and deal no card
+## (the perks come from the save; what is still owed is dealt once
+## restore_finished fires).
+func is_restoring() -> bool:
+	return _restoring
 
 
 ## Whether continue_from left a save waiting for the gameplay scene.
@@ -104,28 +131,36 @@ func has_pending() -> bool:
 ## Called by GameManager once the gameplay scene is ready. Applies the
 ## waiting save, if any: each saving system in order, then
 ## SaveManager.apply for the rest, then starts the clock at the morning
-## after the saved day, and emits restore_finished once the follow-ups
-## have run. False for a new run (nothing waiting).
+## after the saved day. restore_finished follows (deferred, once the
+## scene's run_started has gone out); its listeners are the follow-ups,
+## such as the perk top-up. False for a new run (nothing waiting).
 func restore_pending() -> bool:
 	if _pending.is_empty():
 		return false
 	var data: Dictionary = _pending
 	_pending = {}
+	_restoring = true
 	for system in saving_systems():
 		system.load_state(data)
 	# What is not a saving system yet (it comes last in the order: the
 	# world, then the heroes).
 	SaveManager.apply(data)
-	TimeManager.start_run(int(data["day"]) + 1)
-	# After the follow-ups SaveManager.apply defers (the perk top-up).
+	_restoring = false
+	TimeManager.start_run(TimeManager.day_number + 1)  # the saved day, loaded
 	_finish_restore.call_deferred()
 	return true
 
 
-## Time and the run fields, resources, progression and perks: the
-## autoloads that hold run state, in restore order.
+## The autoload saving systems, in restore order (the validator checks
+## each one on its own).
+func autoload_systems() -> Array:
+	return _autoload_systems()
+
+
+## Time and the run fields, resources, progression and perks, then the
+## crafting state: the autoloads that hold run state, in restore order.
 func _autoload_systems() -> Array:
-	return []
+	return [TimeManager, GameManager, ResourceManager, ProgressionManager, PerkManager, CraftingManager]
 
 
 ## The world objects (campfire, buildings and blueprints, torches, the

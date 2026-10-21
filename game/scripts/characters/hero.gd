@@ -302,7 +302,7 @@ func _swing(target: Node3D) -> void:
 # whatever order the autoloads connected in.
 
 ## The hero reached `level`, its stat bumps already applied. Also fires
-## while a save is restored (`ProgressionManager.is_restoring`).
+## while a save is restored (`RunSession.is_restoring()`).
 signal leveled(level: int)
 
 
@@ -327,7 +327,7 @@ func _on_progression_level_up(character: Node, level: int) -> void:
 	current_hp = mini(max_hp, current_hp + stats.max_health_per_level)
 	health_changed.emit(current_hp, max_hp)
 	leveled.emit(level)
-	_show_level_up(level, ProgressionManager.is_restoring)
+	_show_level_up(level, RunSession.is_restoring())
 
 
 ## Role hook: the level-up's feedback, after `leveled` (so the perk

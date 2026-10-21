@@ -34,13 +34,26 @@ func _ready() -> void:
 	reset()
 
 
-## Resets to the start of day 1 without emitting anything.
+## Resets to the start of day 1 without emitting anything (also the
+## saving system's reset).
 func reset() -> void:
 	is_running = false
 	hold_night = false
 	current_phase = Phase.DAY
 	remaining_seconds = day_seconds
 	day_number = 1
+
+
+## Saving system (RunSession): the day the save was made on (its dawn).
+func save_state() -> Dictionary:
+	return {"day": day_number}
+
+
+## Saving system: takes the saved day back, without starting the clock;
+## RunSession starts it at the morning after once the camp is rebuilt.
+func load_state(data: Dictionary) -> void:
+	if data.has("day"):
+		day_number = maxi(1, int(data["day"]))
 
 
 ## Starts ticking from the morning of `first_day` (1, or later when a

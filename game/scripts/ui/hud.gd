@@ -868,7 +868,7 @@ func _on_level_up(character: Node, new_level: int) -> void:
 	_refresh_progress(character)
 	if character == _companion:
 		_refresh_sibling()
-	elif character == _player and not ProgressionManager.is_restoring:
+	elif character == _player and not RunSession.is_restoring():
 		show_banner("Level up!", Color(1.0, 0.86, 0.45))
 
 
