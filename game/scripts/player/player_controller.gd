@@ -1,4 +1,4 @@
-extends CharacterBody3D
+extends Hero
 
 ## PlayerController
 ##
@@ -13,8 +13,9 @@ extends CharacterBody3D
 ## Paths come from the world's navigation mesh; WASD still works as a
 ## direct override and cancels the current command.
 ##
-## The played hero has health: mobs hurt them, they regenerate slowly
-## outside of night, eating berries heals, and reaching 0 HP ends the run.
+## The played hero's health lives in Hero: mobs hurt them, they
+## regenerate slowly outside of night, eating berries heals, and being
+## down ends the run (GameManager listens to `down_changed`).
 ##
 ## Feature 034: the body, stats and fighting style come from the party's
 ## HeroDefinition (Leo swings a stick; Nela shoots pebbles from range).
@@ -24,12 +25,10 @@ extends CharacterBody3D
 ## chains to the next one, then goes back to the interrupted gather.
 ## Any player command wins; the pause menu can switch it off.
 
-signal health_changed(current_hp: int, max_hp: int)
-signal knocked_out
 signal command_changed(command: int, target: Node)
 signal attacked(target: Node)
 
-enum PlayerState { IDLE, MOVING, GATHERING, KNOCKED_OUT }
+enum PlayerState { IDLE, MOVING, GATHERING }
 enum Command { NONE, MOVE, ATTACK, GATHER, CAMPFIRE, REPAIR, BUILD }
 
 const TORCH_SCENE: PackedScene = preload("res://scenes/buildings/Torch.tscn")
@@ -61,13 +60,6 @@ const AUTO_ATTACK_SCAN_SECONDS: float = 0.2
 @export var attack_damage: int = 4
 @export var attack_range: float = 2.0
 @export var attack_cooldown_seconds: float = 0.65
-@export var stats: CharacterStatsDefinition
-## The hero played; empty takes GameManager.party_hero().
-@export var hero: HeroDefinition
-
-@export var max_hp: int = 50
-@export var regen_per_second: float = 1.2
-@export var hurt_invulnerability_seconds: float = 0.6
 @export var heal_per_meal: int = 15
 @export var heal_per_snack: int = 35
 ## Half-size of the playable square around the campfire; keeps the boy
@@ -77,18 +69,13 @@ const AUTO_ATTACK_SCAN_SECONDS: float = 0.2
 @export var auto_attack: bool = true
 
 @onready var _interactor: Node = $GatherInteractor
-@onready var _visual: CharacterVisual = $Visual
 
-var current_hp: int = 0
-var is_knocked_out: bool = false
 var command: int = Command.NONE
 var command_target: Node3D = null
 
 var _state: int = PlayerState.IDLE
 var _active_node: ResourceNode = null
 var _attack_cooldown_remaining: float = 0.0
-var _invulnerable_remaining: float = 0.0
-var _regen_accumulator: float = 0.0
 var _move_goal: Vector3 = Vector3.ZERO
 var _repath_timer: float = 0.0
 var _repair_timer: float = 0.0
@@ -105,8 +92,16 @@ var _agent: NavigationAgent3D = null
 var _hp_bar: HealthBar3D = null
 
 
+func _init() -> void:
+	# The player's hero's health tuning (Hero holds the fields).
+	max_hp = 50
+	regen_per_second = 1.2
+	hurt_invulnerability_seconds = 0.6
+
+
 func _enter_tree() -> void:
 	# Before the Visual child's _ready builds the model.
+	# An empty `hero` takes GameManager.party_hero().
 	if hero == null:
 		hero = GameManager.party_hero()
 	if hero == null or is_in_group(HeroRoster.group_for(hero.id)):
@@ -138,7 +133,7 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _state == PlayerState.KNOCKED_OUT or BuildManager.is_in_build_mode():
+	if is_down() or BuildManager.is_in_build_mode():
 		return
 	if event.is_action_pressed("interact"):
 		if not try_feed_lantern():
@@ -230,50 +225,30 @@ func get_facing() -> Vector3:
 	return Vector3(sin(_visual.rotation.y), 0.0, cos(_visual.rotation.y))
 
 
-# --- Health ------------------------------------------------------------
+# --- Health (the role's part; see Hero) ------------------------------
 
-## Mobs call this. Returns early while briefly invulnerable after a hit
-## so a crowd of imps cannot delete the boy in one frame.
-func take_damage(amount: int, _source: Node = null) -> void:
-	if amount <= 0 or _state == PlayerState.KNOCKED_OUT:
-		return
-	if _invulnerable_remaining > 0.0:
-		return
-	_invulnerable_remaining = hurt_invulnerability_seconds
-	amount = HeroHits.damage_taken(self, amount)
-	current_hp = max(0, current_hp - amount)
-	health_changed.emit(current_hp, max_hp)
+func _show_hurt(amount: int) -> void:
 	Fx.flash(self)
 	Fx.float_text(self, "-%d" % amount, Color(1, 0.45, 0.4))
 	Fx.shake(0.18)
 	AudioManager.play_sfx(hero.hurt_sfx if hero != null else &"player_hurt", global_position)
-	if current_hp == 0:
-		_cancel_active_gather()
-		_set_command(Command.NONE, null)
-		_state = PlayerState.KNOCKED_OUT
-		is_knocked_out = true
-		velocity = Vector3.ZERO
-		_visual.play_final(&"death")
-		PlaytestLog.write("player_knocked_out day=%d" % TimeManager.day_number)
-		knocked_out.emit()
-	elif not _visual.is_in_action():
-		_visual.play_action(&"hit", 1.4)
 
 
-func heal(amount: int) -> void:
-	if amount <= 0 or _state == PlayerState.KNOCKED_OUT or current_hp >= max_hp:
+## Down: drop whatever the hero was doing. GameManager ends the run.
+func _on_down_changed(down: bool) -> void:
+	if not down:
 		return
-	current_hp = min(max_hp, current_hp + amount)
-	health_changed.emit(current_hp, max_hp)
+	_cancel_active_gather()
+	_set_command(Command.NONE, null)
+	PlaytestLog.write("player_knocked_out day=%d" % TimeManager.day_number)
 
 
 # --- Per-frame -----------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
 	_attack_cooldown_remaining = max(0.0, _attack_cooldown_remaining - delta)
-	_invulnerable_remaining = max(0.0, _invulnerable_remaining - delta)
-	_tick_regen(delta)
-	if _state == PlayerState.KNOCKED_OUT:
+	_tick_health(delta)
+	if is_down():
 		_build_beat.stop(_visual)
 		return
 	_tool_busy = false
@@ -420,7 +395,7 @@ func _set_command(new_command: int, target: Node3D) -> void:
 ## Build mode no longer blocks commands (the pointer and keys are off in
 ## it anyway), so the hero can go and build while the player places.
 func _can_command() -> bool:
-	return _state != PlayerState.KNOCKED_OUT
+	return not is_down()
 
 
 func _flat_distance(point: Vector3) -> float:
@@ -598,17 +573,6 @@ func try_use_bandage() -> bool:
 		return false
 	ResourceManager.spend(BANDAGE_ITEM_ID, 1)
 	return true
-
-
-func _tick_regen(delta: float) -> void:
-	if _state == PlayerState.KNOCKED_OUT or TimeManager.is_night() or current_hp >= max_hp:
-		_regen_accumulator = 0.0
-		return
-	_regen_accumulator += regen_per_second * delta
-	if _regen_accumulator >= 1.0:
-		var whole: int = int(_regen_accumulator)
-		_regen_accumulator -= whole
-		heal(whole)
 
 
 func _on_level_up(character: Node, _new_level: int) -> void:

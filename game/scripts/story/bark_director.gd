@@ -118,7 +118,7 @@ static func speaker_id(node: Node) -> StringName:
 func _speakers(role: String, subject: Node, trigger: StringName) -> Array:
 	var player: Node3D = _player()
 	var companion: Node3D = _companion()
-	var awake: bool = companion != null and not bool(companion.get("is_knocked_out"))
+	var awake: bool = companion != null and not (companion is Hero and (companion as Hero).is_down())
 	match role:
 		"hero":
 			return [player] if player != null else []
@@ -194,9 +194,9 @@ func _on_run_started() -> void:
 		if node.has_signal("health_changed") and not node.health_changed.is_connected(_on_health_changed):
 			node.health_changed.connect(_on_health_changed.bind(node))
 	var companion: Node = _companion()
-	if companion != null and companion.has_signal("knocked_out_changed") \
-			and not companion.knocked_out_changed.is_connected(_on_companion_knocked_out):
-		companion.knocked_out_changed.connect(_on_companion_knocked_out)
+	var companion_hero: Hero = companion as Hero
+	if companion_hero != null and not companion_hero.down_changed.is_connected(_on_companion_down_changed):
+		companion_hero.down_changed.connect(_on_companion_down_changed)
 	var lantern: MoonLantern = MoonLantern.find(get_tree())
 	if lantern != null:
 		_lantern_stage = lantern.stage
@@ -260,8 +260,8 @@ func _on_health_changed(current_hp: int, max_hp: int, node: Node) -> void:
 		bark(&"low_hp", node)
 
 
-func _on_companion_knocked_out(is_knocked_out: bool) -> void:
-	bark(&"companion_down" if is_knocked_out else &"companion_up")
+func _on_companion_down_changed(is_down: bool) -> void:
+	bark(&"companion_down" if is_down else &"companion_up")
 
 
 func _on_lantern_stage(stage: int, _max_stage: int) -> void:

@@ -435,8 +435,8 @@ func _update_chase_target() -> void:
 func _is_valid_character(node: Node3D) -> bool:
 	if node == null or not is_instance_valid(node) or not node.is_inside_tree():
 		return false
-	# Player and companions both expose an is_knocked_out property.
-	return node.get("is_knocked_out") != true
+	# A downed hero is left alone.
+	return not (node is Hero and (node as Hero).is_down())
 
 
 ## The strongest slow from lit torches and the Moon Lantern's ring.

@@ -310,8 +310,9 @@ func _hook_base_core() -> void:
 
 func _hook_player() -> void:
 	for node in get_tree().get_nodes_in_group("player"):
-		if node.has_signal("knocked_out") and not node.knocked_out.is_connected(_on_player_knocked_out):
-			node.knocked_out.connect(_on_player_knocked_out)
+		var player_hero: Hero = node as Hero
+		if player_hero != null and not player_hero.down_changed.is_connected(_on_player_down_changed):
+			player_hero.down_changed.connect(_on_player_down_changed)
 
 
 func _on_camp_destroyed() -> void:
@@ -322,5 +323,8 @@ func _on_camp_destroyed() -> void:
 	_end_run(false, "The campfire went out.", &"loss_fire")
 
 
-func _on_player_knocked_out() -> void:
+## The player's hero being down ends the run.
+func _on_player_down_changed(is_down: bool) -> void:
+	if not is_down:
+		return
 	_end_run(false, "You were knocked out.", &"loss_hero")
