@@ -24,7 +24,6 @@ var _failures: int = 0
 var _night1_save: Dictionary = {}
 
 const TEST_SAVE_PATH: String = "user://smoke_save.json"
-const TEST_STORY_PATH: String = "user://smoke_story.cfg"
 const TEST_PROFILE_PATH: String = "user://smoke_profile.json"
 
 
@@ -37,8 +36,6 @@ func _ready() -> void:
 	# Never touch a real player's autosave.
 	SaveManager.set_save_path(TEST_SAVE_PATH)
 	SaveManager.delete_save()
-	StoryLibrary.progress_path = TEST_STORY_PATH
-	StoryLibrary.forget_progress()
 	Profile.set_path(TEST_PROFILE_PATH)
 	Profile.delete()
 	await _run_story_scenario()
