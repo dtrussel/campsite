@@ -22,6 +22,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 PlaytestLog="*res://scripts/core/playtest_log.gd"
+Profile="*res://scripts/core/profile.gd"
 TimeManager="*res://scripts/core/time_manager.gd"
 ResourceManager="*res://scripts/core/resource_manager.gd"
 BuildManager="*res://scripts/core/build_manager.gd"

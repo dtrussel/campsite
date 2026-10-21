@@ -15,6 +15,8 @@ extends Node
 ## Exits 0 when clean, 1 otherwise.
 
 const SKIP_DIRS: Array[String] = ["res://.godot", "res://addons"]
+## The profile check's own file, never the player's profile.
+const TEST_PROFILE_PATH: String = "user://validate_profile.json"
 
 var _errors: PackedStringArray = PackedStringArray()
 
@@ -48,6 +50,7 @@ func _ready() -> void:
 			_fail("script does not compile: %s" % path)
 	_validate_data()
 	_validate_key_art()
+	_validate_profile()
 	if _errors.is_empty():
 		print("validate_project: OK (%d files checked)" % files.size())
 		get_tree().quit(0)
@@ -449,3 +452,47 @@ func _validate_barks(line_ids: Dictionary, hero_ids: Array[String]) -> void:
 			&"lantern_stage", &"companion_down", &"companion_up", &"danger_behind", &"boss", &"boss_lantern"]:
 		if not barks.triggers.has(trigger):
 			_fail("bark trigger '%s' is fired by BarkDirector but has no tuning" % trigger)
+
+
+## Profile ticket 01: the profile keeps keys across a reload, records
+## bests, loads a missing or corrupt file as empty and deletes cleanly.
+## It runs on its own file and points the profile back afterwards.
+func _validate_profile() -> void:
+	Profile.set_path(TEST_PROFILE_PATH)
+	Profile.delete()
+	if Profile.has_value("test.missing") or Profile.get_value("test.missing", 7) != 7:
+		_fail("Profile: a missing file does not load as empty")
+	Profile.set_value("test.word", "moon")
+	Profile.set_value("test.count", 3)
+	Profile.reload()
+	if not Profile.has_value("test.word") or Profile.get_value("test.word", "") != "moon":
+		_fail("Profile: a string does not survive a reload")
+	if int(Profile.get_value("test.count", 0)) != 3:
+		_fail("Profile: a number does not survive a reload")
+	if not Profile.record_best("test.best", 5):
+		_fail("Profile: a first best is not a record")
+	if not Profile.record_best("test.best", 8):
+		_fail("Profile: a higher best is not a record")
+	if Profile.record_best("test.best", 6) or Profile.record_best("test.best", 8):
+		_fail("Profile: a lower or equal best counts as a record")
+	Profile.reload()
+	if int(Profile.get_value("test.best", 0)) != 8:
+		_fail("Profile: the best is not 8 after a reload (%s)" % Profile.get_value("test.best", 0))
+	Profile.delete()
+	if Profile.has_value("test.word") or FileAccess.file_exists(TEST_PROFILE_PATH):
+		_fail("Profile: delete leaves keys or the file behind")
+	Profile.reload()
+	if Profile.has_value("test.word"):
+		_fail("Profile: deleted keys come back after a reload")
+	var corrupt: FileAccess = FileAccess.open(TEST_PROFILE_PATH, FileAccess.WRITE)
+	corrupt.store_string("{ not json [")
+	corrupt.close()
+	Profile.reload()
+	if Profile.has_value("test.word") or Profile.get_value("test.word", "none") != "none":
+		_fail("Profile: a corrupt file does not load as empty")
+	Profile.set_value("test.word", "sun")
+	Profile.reload()
+	if Profile.get_value("test.word", "") != "sun":
+		_fail("Profile: a corrupt file is not rewritten on the next write")
+	Profile.delete()
+	Profile.set_path(Profile.PROFILE_PATH)

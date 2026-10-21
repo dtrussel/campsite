@@ -25,6 +25,7 @@ var _night1_save: Dictionary = {}
 
 const TEST_SAVE_PATH: String = "user://smoke_save.json"
 const TEST_STORY_PATH: String = "user://smoke_story.cfg"
+const TEST_PROFILE_PATH: String = "user://smoke_profile.json"
 
 
 func _ready() -> void:
@@ -38,6 +39,8 @@ func _ready() -> void:
 	SaveManager.delete_save()
 	StoryLibrary.progress_path = TEST_STORY_PATH
 	StoryLibrary.forget_progress()
+	Profile.set_path(TEST_PROFILE_PATH)
+	Profile.delete()
 	await _run_story_scenario()
 	await _run_win_scenario()
 	await _run_loss_scenario()
@@ -57,6 +60,7 @@ func _ready() -> void:
 	await _run_hero_health_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
+	Profile.delete()
 	_finish()
 
 
