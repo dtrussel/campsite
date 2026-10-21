@@ -25,6 +25,8 @@ var _night1_save: Dictionary = {}
 
 const TEST_SAVE_PATH: String = "user://smoke_save.json"
 const TEST_PROFILE_PATH: String = "user://smoke_profile.json"
+## A save written by the build before the run session (run lifecycle 01).
+const OLD_SAVE_FIXTURE: String = "res://tests/fixtures/save_v2_day1.json"
 
 
 func _ready() -> void:
@@ -58,6 +60,7 @@ func _ready() -> void:
 	await _run_hero_progress_scenario()
 	await _run_hero_gather_scenario()
 	await _run_hero_attack_scenario()
+	await _run_old_save_scenario()
 	SaveManager.delete_save()
 	StoryLibrary.forget_progress()
 	Profile.delete()
@@ -79,9 +82,8 @@ func _run_blueprint_save_scenario() -> void:
 	await get_tree().process_frame
 	var hp_before: int = post.current_hp
 	var clip_before: float = float((post.get("_ghost_material") as ShaderMaterial).get_shader_parameter("clip_y"))
-	var data: Dictionary = SaveManager.snapshot()
-	GameManager.set("_pending_save", SaveManager.parse(SaveManager.serialize(data)))
-	await _start_fresh_run()
+	var data: Dictionary = RunSession.snapshot()
+	await _continue_from(SaveManager.parse(SaveManager.serialize(data)))
 	await get_tree().process_frame
 	var loaded: Building = null
 	for node in get_tree().get_nodes_in_group(Building.BLUEPRINT_GROUP):
@@ -301,8 +303,7 @@ func _run_story_scenario() -> void:
 	# Shards: a chance per kill with pity, per mob type (seeded).
 	var imp_def: MobDefinition = load("res://resources/mobs/shadow_imp.tres") as MobDefinition
 	var beast_def: MobDefinition = load("res://resources/mobs/bramble_beast.tres") as MobDefinition
-	GameManager.loot_misses = {}
-	GameManager.loot_rng.seed = 36
+	RunSession.reset(_config(0.0, 1, 36))
 	var hits: int = 0
 	var longest_dry: int = 0
 	var dry: int = 0
@@ -382,16 +383,14 @@ func _run_story_scenario() -> void:
 	_check(not is_instance_valid(gremlin) or gremlin.is_fleeing and gremlin.loot_amount == 0, "a gremlin turns back at the bright ring")
 	if is_instance_valid(gremlin):
 		gremlin.take_damage(999, player)
-	var data: Dictionary = SaveManager.snapshot()
+	var data: Dictionary = RunSession.snapshot()
 	_check(int(data["lantern"]["shards"]) == lantern.shards, "the save holds the lantern's shards")
 	var legacy: Dictionary = data.duplicate(true)
 	legacy.erase("lantern")
-	GameManager.set("_pending_save", SaveManager.parse(SaveManager.serialize(data)))
-	await _start_fresh_run()
+	await _continue_from(SaveManager.parse(SaveManager.serialize(data)))
 	lantern = MoonLantern.find(get_tree())
 	_check(lantern.is_full(), "Continue keeps the lantern lit (stage %d)" % lantern.stage)
-	GameManager.set("_pending_save", legacy)
-	await _start_fresh_run()
+	await _continue_from(legacy)
 	_check(MoonLantern.find(get_tree()).stage == 0, "older saves start the lantern dark")
 	GameManager.nights_to_win = 7
 	await _start_fresh_run()
@@ -1054,9 +1053,9 @@ func _run_continue_scenario() -> void:
 	_check(SaveManager.parse(SaveManager.serialize(data)).hash() == SaveManager.parse(SaveManager.serialize(data)).hash()
 		and not SaveManager.parse(SaveManager.serialize(data)).is_empty(), "save round-trips through JSON")
 
-	GameManager.nights_to_win = int(data["nights_to_win"])
-	GameManager.set("_pending_save", data)
-	await _start_fresh_run()
+	GameManager.nights_to_win = 7  # Continue takes the run length from the save
+	await _continue_from(data)
+	_check(GameManager.nights_to_win == int(data["nights_to_win"]), "continued at the saved run length (%d nights)" % GameManager.nights_to_win)
 	_check(TimeManager.day_number == 2 and TimeManager.current_phase == TimeManager.Phase.DAY, "continued at the morning of day 2")
 	_check(ResourceManager.get_count(&"wood") == int(data["inventory"].get("wood", 0)), "inventory restored")
 	var buildings: int = get_tree().get_nodes_in_group(Building.BUILDINGS_GROUP).size()
@@ -1138,17 +1137,14 @@ func _run_hero_scenario() -> void:
 		and (companion as Hero).get_attack_damage() == damage + 2, "the sturdy stick goes to Leo (the companion)")
 
 	# The save remembers the party; Continue plays Nela again.
-	var data: Dictionary = SaveManager.snapshot()
+	var data: Dictionary = RunSession.snapshot()
 	_check(String(data["party"]["hero"]) == "nela" and String(data["party"]["companion"]) == "leo", "the save holds the party")
 	var legacy: Dictionary = data.duplicate(true)
 	legacy.erase("party")
 	_check(SaveManager.party_of(legacy)["hero"] == &"leo", "older saves without a party are Leo with Nela")
 	table.queue_free()
-	GameManager.set_party(&"leo")
-	var party: Dictionary = SaveManager.party_of(SaveManager.parse(SaveManager.serialize(data)))
-	GameManager.set_party(party["hero"], party["companion"])
-	GameManager.set("_pending_save", data)
-	await _start_fresh_run()
+	GameManager.set_party(&"leo")  # Continue takes the party from the save
+	await _continue_from(data)
 	player = get_tree().get_first_node_in_group("player")
 	_check(player.is_in_group(HeroRoster.group_for(&"nela")) and bool(player.get("has_signature")),
 		"continued as Nela, slingshot and all")
@@ -1425,8 +1421,7 @@ func _run_boss_scenario() -> void:
 ## timeout, and the game returns to normal speed each time.
 func _run_perk_01_scenario() -> void:
 	print("smoke: --- perk 01 scenario ---")
-	await _start_fresh_run()
-	PerkManager.auto_pick_seconds = 5.0
+	await _start_fresh_run(_config(5.0))
 	var player: Node = get_tree().get_first_node_in_group("player")
 	var tree_node: ResourceNode = _find_resource_node(&"wood")
 	var base_seconds: float = tree_node.gather_seconds_for(player)
@@ -1481,8 +1476,7 @@ func _run_perk_01_scenario() -> void:
 		_check(ProgressionManager.get_level(player) == 3 and not PerkManager.is_picking(), "an empty pool skips the picker")
 
 	# A new run: level-ups replayed from a save never open the picker.
-	await _start_fresh_run()
-	PerkManager.auto_pick_seconds = 0.5
+	await _start_fresh_run(_config(0.5))
 	player = get_tree().get_first_node_in_group("player")
 	_check(PerkManager.perks_of(player).is_empty(), "a new run starts with no perks")
 	var stats: CharacterStatsDefinition = ProgressionManager.get_stats(player)
@@ -1632,9 +1626,7 @@ func _perk_04_finds(hero: Node3D, mob: Mob, reach: float) -> bool:
 ## toast, never the picker; its own pool's rules hold.
 func _run_perk_06_scenario() -> void:
 	print("smoke: --- perk 06 scenario ---")
-	await _start_fresh_run()
-	PerkManager.auto_pick_seconds = 5.0  # the player's level-up would open a picker
-	PerkManager.rng.seed = 6
+	await _start_fresh_run(_config(5.0, 6))  # the player's level-up would open a picker
 	var hud: Node = get_tree().get_first_node_in_group("hud")
 	var companion: Node = get_tree().get_first_node_in_group("companions")
 	var hero: HeroDefinition = companion.get("hero") as HeroDefinition
@@ -1703,11 +1695,10 @@ func _run_perk_02_scenario() -> void:
 	PerkManager.restore(player, [])  # forget the auto-picked card; take a known one
 	PerkManager.take(player, &"quick_hands")
 	PerkManager.take(sibling, &"quick_hands")
-	var data: Dictionary = SaveManager.snapshot()
+	var data: Dictionary = RunSession.snapshot()
 	_check(data["player"].get("perks", []) == ["quick_hands"] and data["sibling"].get("perks", []) == ["quick_hands"],
 		"the save lists each hero's perks")
-	GameManager.set("_pending_save", SaveManager.parse(SaveManager.serialize(data)))
-	await _start_fresh_run()
+	await _continue_from(SaveManager.parse(SaveManager.serialize(data)))
 	await get_tree().process_frame
 	player = get_tree().get_first_node_in_group("player")
 	sibling = get_tree().get_first_node_in_group("companions")
@@ -1718,11 +1709,10 @@ func _run_perk_02_scenario() -> void:
 		"a restored Quick Hands still speeds up gathering")
 
 	# A save from before perks: no "perks" keys at all.
-	data = SaveManager.snapshot()
+	data = RunSession.snapshot()
 	(data["player"] as Dictionary).erase("perks")
 	(data["sibling"] as Dictionary).erase("perks")
-	GameManager.set("_pending_save", SaveManager.parse(SaveManager.serialize(data)))
-	await _start_fresh_run()
+	await _continue_from(SaveManager.parse(SaveManager.serialize(data)))
 	await get_tree().process_frame
 	player = get_tree().get_first_node_in_group("player")
 	sibling = get_tree().get_first_node_in_group("companions")
@@ -1850,15 +1840,38 @@ func _bark_line(text: String, trigger: StringName, speaker: StringName) -> bool:
 	return false
 
 
-func _start_fresh_run() -> void:
+## A new run through the run session, from `config` (_config() when
+## null: the current party and run length, the smoke seeds, no picker).
+func _start_fresh_run(config: RunConfig = null) -> void:
+	await _close_main()
+	RunSession.start(config if config != null else _config(), false)
+	await _open_main()
+
+
+## Continues `data` through the run session, as Continue on the title
+## screen does: the party and run length come from the save, the seeds
+## and the auto-pick time from `config` (_config() when null).
+func _continue_from(data: Dictionary, config: RunConfig = null) -> void:
+	await _close_main()
+	_check(RunSession.continue_from(data, config if config != null else _config(), false),
+		"the run session takes the save to continue")
+	await _open_main()
+
+
+## The smoke run's config: the current party and run length, a fixed perk
+## deal and loot sequence (the same cards and drops every run), and level-
+## ups that take the first card at once unless `auto_pick_seconds` > 0.
+func _config(auto_pick_seconds: float = 0.0, perk_seed: int = 1, loot_seed: int = 1) -> RunConfig:
+	var config: RunConfig = RunConfig.current()
+	config.perk_auto_pick_seconds = auto_pick_seconds
+	config.perk_seed = perk_seed
+	config.loot_seed = loot_seed
+	return config
+
+
+func _close_main() -> void:
 	get_tree().paused = false
 	Engine.time_scale = 1.0
-	# Level-ups take the first perk card at once, so the picker never
-	# slows a scenario down. The perk scenarios turn it back on.
-	PerkManager.auto_pick_seconds = 0.0
-	# A fixed deal, so the cards taken (and their effects) are the same
-	# every run. Scenarios that need a particular deal reseed after this.
-	PerkManager.rng.seed = 1
 	if _main != null:
 		# Wait until the old camp is really gone: resuming from a physics-
 		# frame timer, one process frame can still run before it is freed.
@@ -1866,7 +1879,10 @@ func _start_fresh_run() -> void:
 		old.queue_free()
 		while is_instance_valid(old):
 			await get_tree().process_frame
-		GameManager.call("_reset_autoloads")
+		_main = null
+
+
+func _open_main() -> void:
 	_main = MAIN_SCENE.instantiate()
 	add_child(_main)
 	await get_tree().process_frame
@@ -1992,8 +2008,7 @@ func _check_perk_05_cheer_up(hero: Node3D, other: Node3D) -> void:
 ## back once a card is taken.
 func _run_perk_07_scenario() -> void:
 	print("smoke: --- perk 07 scenario ---")
-	await _start_fresh_run()
-	PerkManager.auto_pick_seconds = 5.0
+	await _start_fresh_run(_config(5.0))
 	var player: Node = get_tree().get_first_node_in_group("player")
 	var hud: Node = get_tree().get_first_node_in_group("hud")
 	var plate: Control = hud.get("_banner_plate") as Control
@@ -2019,7 +2034,7 @@ func _run_perk_07_scenario() -> void:
 ## the perks; and stacking Twin Strike copies multiply.
 func _run_perk_review_scenario() -> void:
 	print("smoke: --- perk review scenario ---")
-	await _start_fresh_run()
+	await _start_fresh_run(_config(5.0))
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	var companion: Node3D = get_tree().get_first_node_in_group("companions")
 	companion.set_physics_process(false)
@@ -2033,7 +2048,6 @@ func _run_perk_review_scenario() -> void:
 
 	# The dawn autosave lands while the picker is open, with one more
 	# level-up queued behind it, and the companion is a card short too.
-	PerkManager.auto_pick_seconds = 5.0
 	ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"test")
 	ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"test")
 	ProgressionManager.award_xp(companion, ProgressionManager.get_xp_to_next_level(companion), &"test")
@@ -2041,10 +2055,9 @@ func _run_perk_review_scenario() -> void:
 	PerkManager.restore(companion, PerkManager.perks_of(companion).slice(0, 1))
 	_check(ProgressionManager.get_level(player) == 3 and PerkManager.is_picking() and PerkManager.perks_of(player).is_empty()
 		and PerkManager.perks_of(companion).size() == 1, "saved mid-pick: the player holds 0 of 2 cards, the companion 1 of 2")
-	var data: Dictionary = SaveManager.snapshot()
+	var data: Dictionary = RunSession.snapshot()
 	PerkManager.close_picker()
-	GameManager.set("_pending_save", SaveManager.parse(SaveManager.serialize(data)))
-	await _start_fresh_run()
+	await _continue_from(SaveManager.parse(SaveManager.serialize(data)))
 	await get_tree().process_frame
 	await get_tree().process_frame
 	player = get_tree().get_first_node_in_group("player")
@@ -2099,13 +2112,12 @@ func _run_perk_review_scenario() -> void:
 	var ring: float = (torch.get_node("Radius") as Node3D).scale.x
 	var spot: Vector3 = torch.global_position
 	var site: Vector3 = blueprint.global_position
-	data = SaveManager.snapshot()
+	data = RunSession.snapshot()
 	var saved_torches: Array = data.get("torches", [])
 	_check(saved_torches.size() == 1, "the save keeps the Ember Heart torch still burning (%d)" % saved_torches.size())
 	torch.queue_free()
 	blueprint.queue_free()
-	GameManager.set("_pending_save", SaveManager.parse(SaveManager.serialize(data)))
-	await _start_fresh_run()
+	await _continue_from(SaveManager.parse(SaveManager.serialize(data)))
 	await get_tree().process_frame
 	player = get_tree().get_first_node_in_group("player")
 	var loaded_torch: Node3D = null
@@ -2222,8 +2234,7 @@ func _run_hero_progress_scenario() -> void:
 	print("smoke: --- hero progress scenario ---")
 	for hero_id in [&"leo", &"nela"]:
 		GameManager.set_party(hero_id)
-		await _start_fresh_run()
-		PerkManager.auto_pick_seconds = 5.0  # keep the player's picker open
+		await _start_fresh_run(_config(5.0))  # keep the player's picker open
 		var player: Hero = get_tree().get_first_node_in_group("player") as Hero
 		var companion: Hero = get_tree().get_first_node_in_group("companions") as Hero
 		_check(player != null and companion != null, "party %s: both roles are Heroes" % hero_id)
@@ -2233,8 +2244,7 @@ func _run_hero_progress_scenario() -> void:
 			_check_hero_level_up(who as Hero)
 		PerkManager.close_picker()
 		# A restored save replays the level-up: stats and `leveled`, no picker.
-		await _start_fresh_run()
-		PerkManager.auto_pick_seconds = 5.0
+		await _start_fresh_run(_config(5.0))
 		player = get_tree().get_first_node_in_group("player") as Hero
 		var levels: Array[int] = []
 		player.leveled.connect(func(level: int) -> void: levels.append(level))
@@ -2450,3 +2460,90 @@ func _check_hero_attack(who: Hero) -> void:
 		"%s: the %s makes damage %d and reach %.2f" % [label, definition.signature_label, who.get_attack_damage(), who.get_attack_range()])
 	who.apply_signature()
 	_check(who.get_attack_damage() == damage + definition.signature_damage_bonus, "%s: the signature applies once" % label)
+
+
+## Run lifecycle 01: a save written before the run session (VERSION 2,
+## checked in as a fixture) still continues with every field intact: the
+## camp, the heroes, their perks, the lantern and an Ember Heart torch.
+func _run_old_save_scenario() -> void:
+	print("smoke: --- old save scenario ---")
+	var data: Dictionary = SaveManager.parse(FileAccess.get_file_as_string(OLD_SAVE_FIXTURE))
+	_check(not data.is_empty(), "the old-format save fixture parses")
+	if data.is_empty():
+		return
+	# Earlier scenarios leave buildings and torches on the test root.
+	for node in get_tree().get_nodes_in_group(Building.BUILDINGS_GROUP) + get_tree().get_nodes_in_group("torches"):
+		node.queue_free()
+	await get_tree().process_frame
+	var finished: Array[int] = []
+	var on_finished: Callable = func() -> void: finished.append(TimeManager.day_number)
+	RunSession.restore_finished.connect(on_finished)
+	GameManager.set_party(&"nela")  # the save's party wins
+	GameManager.nights_to_win = 7
+	await _continue_from(data)
+	RunSession.restore_finished.disconnect(on_finished)
+	var player: Hero = get_tree().get_first_node_in_group("player") as Hero
+	var companion: Hero = get_tree().get_first_node_in_group("companions") as Hero
+	for hero in [player, companion]:
+		(hero as Node).set_physics_process(false)  # leave the blueprint half built
+	# The snapshot first, before anything in the camp moves.
+	var again: Dictionary = SaveManager.parse(SaveManager.serialize(RunSession.snapshot()))
+	_check(finished == [int(data["day"]) + 1], "the run session announces the finished restore once (%s)" % [finished])
+	_check(GameManager.is_playing() and TimeManager.day_number == int(data["day"]) + 1
+		and TimeManager.current_phase == TimeManager.Phase.DAY and GameManager.nights_to_win == int(data["nights_to_win"]),
+		"continued at the morning of day %d of %d" % [TimeManager.day_number, GameManager.nights_to_win])
+	var inventory: Dictionary = data["inventory"]
+	var counts_match: bool = true
+	for definition in ResourceManager.get_definitions():
+		counts_match = counts_match and ResourceManager.get_count(definition.id) == int(inventory.get(String(definition.id), 0))
+	_check(counts_match, "the inventory comes back (%s)" % [inventory])
+	var fire: BaseCore = _campfire()
+	_check(fire.current_hp == int(data["campfire"]["hp"]) and fire.has_hearth == bool(data["campfire"]["hearth"]),
+		"the campfire comes back (%d HP, hearth)" % fire.current_hp)
+	var built: Building = null
+	var blueprint: Building = null
+	for node in get_tree().get_nodes_in_group(Building.BUILDINGS_GROUP):
+		var building: Building = node as Building
+		if building.definition.id == &"wooden_fence":
+			built = building
+		elif building.definition.id == &"watch_post":
+			blueprint = building
+	var fence_entry: Dictionary = data["buildings"][0]
+	var post_entry: Dictionary = data["buildings"][1]
+	_check(get_tree().get_nodes_in_group(Building.BUILDINGS_GROUP).size() == 2 and built != null and built.is_built()
+		and built.current_hp == int(fence_entry["hp"]) and absf(built.global_rotation.y - float(fence_entry["yaw"])) < 0.01
+		and built.global_position.distance_to(Vector3(6, 0, 4)) < 0.01,
+		"the built fence comes back where it stood (%d HP)" % (built.current_hp if built != null else -1))
+	_check(blueprint != null and blueprint.is_blueprint() and is_equal_approx(blueprint.build_progress, float(post_entry["progress"]))
+		and blueprint.current_hp == int(post_entry["hp"]) and blueprint.global_position.distance_to(Vector3(-5, 0, 6)) < 0.01,
+		"the half-built watch post comes back as a blueprint at 50%")
+	_check(GameManager.hero_id == &"leo" and GameManager.companion_id == &"nela"
+		and player.is_in_group(HeroRoster.group_for(&"leo")), "the party comes back: Leo plays, Nela tags along")
+	_check(ProgressionManager.get_xp(player) == int(data["player"]["xp"]) and player.has_signature
+		and PerkManager.perks_of(player) == [&"ember_heart"], "Leo's XP, sturdy stick and Ember Heart come back")
+	_check(ProgressionManager.get_xp(companion) == int(data["sibling"]["xp"]) and not companion.has_signature
+		and PerkManager.perks_of(companion) == [&"quick_hands"]
+		and int(companion.get("current_task")) == int(data["sibling"]["task"]), "Nela's XP, Quick Hands and task come back")
+	_check(not PerkManager.is_picking(), "no card is owed, so no picker opens")
+	var stats_match: bool = true
+	for key in (data["stats"] as Dictionary).keys():
+		stats_match = stats_match and int(GameManager.stats.get(StringName(key), -1)) == int(data["stats"][key])
+	_check(stats_match, "the run stats come back")
+	_check(MoonLantern.find(get_tree()).shards == int(data["lantern"]["shards"]), "the Moon Lantern keeps its shards")
+	var torch_entry: Dictionary = data["torches"][0]
+	var torch: Node3D = null
+	for node in get_tree().get_nodes_in_group("torches"):
+		if (node as Node3D).global_position.distance_to(Vector3(3, 0, -2)) < 0.01:
+			torch = node as Node3D
+	_check(torch != null and int(torch.get("dawns_to_burn")) == int(torch_entry["dawns"])
+		and is_equal_approx(float(torch.get("radius")), float(torch_entry["radius"])),
+		"the Ember Heart torch comes back with its dawn left and its %.1f m ring" % float(torch_entry["radius"]))
+	# Saved again, every field of the old save is still there.
+	var lost: Array[String] = []
+	for key in data.keys():
+		var expected: Variant = int(data["day"]) + 1 if key == "day" else data[key]
+		if not again.has(key) or again[key] != expected:
+			lost.append(key)
+	_check(lost.is_empty(), "saving the continued run keeps every field of the old save (changed: %s)" % [lost])
+	for node in get_tree().get_nodes_in_group(Building.BUILDINGS_GROUP) + get_tree().get_nodes_in_group("torches"):
+		node.queue_free()

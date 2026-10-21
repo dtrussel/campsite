@@ -36,8 +36,6 @@ var end_reason: String = ""
 var end_trigger: StringName = &""
 ## Per-run counters for the end screen and the playtest log.
 var stats: Dictionary = {}
-## A save waiting to be applied once the gameplay scene is ready.
-var _pending_save: Dictionary = {}
 ## The party: the played hero and the companion (HeroRoster ids). Kept
 ## between runs so the hero select screen opens on the last pick.
 var hero_id: StringName = &"leo"
@@ -147,41 +145,29 @@ func open_hero_select(nights: int) -> void:
 	get_tree().change_scene_to_file(HERO_SELECT_SCENE)
 
 
-## Resets every autoload and loads the gameplay scene. `nights` picks
-## the run length (3 or 7 from the title screen); 0 keeps the current
-## one (Again / restart). `hero` sets the party (empty keeps it). A new
-## run replaces any autosave.
+## A new run through the RunSession: resets every autoload and loads
+## the gameplay scene. `nights` picks the run length (3 or 7 from the
+## title screen); 0 keeps the current one (Again / restart). `hero` sets
+## the party (empty keeps it). A new run replaces any autosave.
 func start_run(nights: int = 0, hero: StringName = &"", companion: StringName = &"") -> void:
+	var run: RunConfig = RunConfig.current()
 	if nights > 0:
-		nights_to_win = nights
+		run.nights_to_win = nights
 	if hero != &"":
-		set_party(hero, companion)
-	_pending_save = {}
-	SaveManager.delete_save()
-	get_tree().paused = false
-	_reset_autoloads()
-	LoadingScreen.load_scene(GAME_SCENE)  # key art while the camp loads (feature 029)
+		run.hero_id = hero
+		run.companion_id = companion
+	RunSession.start(run)
 
 
-## Resumes the autosaved run at the morning after its last dawn.
-## False if there is no usable save.
+## Resumes the autosaved run at the morning after its last dawn, through
+## the RunSession. False if there is no usable save.
 func continue_run() -> bool:
-	var data: Dictionary = SaveManager.load_save()
-	if data.is_empty():
-		return false
-	nights_to_win = int(data["nights_to_win"])
-	var party: Dictionary = SaveManager.party_of(data)
-	set_party(party["hero"], party["companion"])
-	get_tree().paused = false
-	_reset_autoloads()
-	_pending_save = data
-	LoadingScreen.load_scene(GAME_SCENE)
-	return true
+	return RunSession.continue_from(SaveManager.load_save())
 
 
 func go_to_title() -> void:
 	get_tree().paused = false
-	_reset_autoloads()
+	RunSession.reset()
 	run_state = RunState.MENU
 	get_tree().change_scene_to_file(TITLE_SCENE)
 
@@ -191,15 +177,11 @@ func on_game_scene_ready() -> void:
 	run_state = RunState.PLAYING
 	_hook_base_core()
 	_hook_player()
-	if _pending_save.is_empty():
+	if RunSession.restore_pending():
+		PlaytestLog.write("run_continued nights_to_win=%d day=%d" % [nights_to_win, TimeManager.day_number])
+	else:
 		TimeManager.start_run()
 		PlaytestLog.write("run_started nights_to_win=%d" % nights_to_win)
-	else:
-		var data: Dictionary = _pending_save
-		_pending_save = {}
-		SaveManager.apply(data)
-		TimeManager.start_run(int(data["day"]) + 1)
-		PlaytestLog.write("run_continued nights_to_win=%d day=%d" % [nights_to_win, TimeManager.day_number])
 	run_started.emit()
 
 
@@ -220,7 +202,9 @@ func record(stat: StringName, amount: int = 1) -> void:
 	stats[stat] = int(stats.get(stat, 0)) + amount
 
 
-func _reset_autoloads() -> void:
+## The reset list RunSession.reset still uses for the autoloads that
+## are not saving systems yet (run lifecycle 02 moves them over).
+func reset_autoloads() -> void:
 	TimeManager.reset()
 	BuildManager.exit_build_mode()
 	ResourceManager.reset()

@@ -1,0 +1,86 @@
+{
+	"buildings": [
+		{
+			"hp": 46,
+			"id": "wooden_fence",
+			"pos": [
+				6,
+				0,
+				4
+			],
+			"progress": 1,
+			"yaw": 0.299999982118607
+		},
+		{
+			"hp": 48,
+			"id": "watch_post",
+			"paid": {
+				"scrap": 2,
+				"wood": 5
+			},
+			"pos": [
+				-5,
+				0,
+				6
+			],
+			"progress": 0.5,
+			"yaw": 0.600000023841858
+		}
+	],
+	"campfire": {
+		"hearth": true,
+		"hp": 216
+	},
+	"day": 1,
+	"inventory": {
+		"berries": 4,
+		"scrap": 3,
+		"wood": 7
+	},
+	"lantern": {
+		"shards": 2
+	},
+	"nights_to_win": 3,
+	"party": {
+		"companion": "nela",
+		"hero": "leo"
+	},
+	"player": {
+		"perks": [
+			"ember_heart"
+		],
+		"signature": true,
+		"xp": 33
+	},
+	"sibling": {
+		"perks": [
+			"quick_hands"
+		],
+		"signature": false,
+		"task": 2,
+		"xp": 32
+	},
+	"stats": {
+		"built": 0,
+		"crafted": 2,
+		"gathered": 17,
+		"kills": 5,
+		"lantern_shards": 2,
+		"nights_survived": 0,
+		"repairs": 0,
+		"shards": 0,
+		"torches_placed": 1
+	},
+	"torches": [
+		{
+			"dawns": 1,
+			"pos": [
+				3,
+				0,
+				-2
+			],
+			"radius": 4.9
+		}
+	],
+	"version": 2
+}

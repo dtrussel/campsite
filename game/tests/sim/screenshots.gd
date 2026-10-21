@@ -309,7 +309,7 @@ func _ready() -> void:
 	main.queue_free()
 	await get_tree().process_frame
 	await get_tree().process_frame
-	GameManager.call("_reset_autoloads")
+	RunSession.reset()
 	GameManager.set_party(&"nela")
 	main = load("res://scenes/main/Main.tscn").instantiate()
 	add_child(main)
@@ -331,7 +331,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	# Feature 038: the Moon-Eater on Chapter 2's last night.
 	get_tree().paused = false
-	GameManager.call("_reset_autoloads")
+	RunSession.reset()
 	GameManager.set_party(&"leo")
 	GameManager.nights_to_win = 7
 	main = load("res://scenes/main/Main.tscn").instantiate()

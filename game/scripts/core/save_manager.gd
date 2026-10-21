@@ -96,7 +96,7 @@ static func party_of(data: Dictionary) -> Dictionary:
 
 ## Writes the current camp now (the dawn autosave calls this).
 func save_now() -> bool:
-	var snapshot: Dictionary = snapshot()
+	var snapshot: Dictionary = RunSession.snapshot()
 	if snapshot.is_empty():
 		return false
 	var file: FileAccess = FileAccess.open(_save_path, FileAccess.WRITE)
@@ -110,7 +110,9 @@ func save_now() -> bool:
 	return true
 
 
-## The camp as plain data (ints, floats, strings, arrays, dictionaries).
+## The camp as plain data (ints, floats, strings, arrays, dictionaries):
+## the part not yet saved by a saving system. RunSession.snapshot adds
+## theirs; save through that.
 func snapshot() -> Dictionary:
 	var tree: SceneTree = get_tree()
 	var fire: BaseCore = tree.get_first_node_in_group("base_core") as BaseCore
@@ -171,8 +173,8 @@ func snapshot() -> Dictionary:
 	}
 
 
-## Rebuilds the camp from a snapshot. Called by GameManager once the
-## gameplay scene is ready, before the clock starts.
+## Rebuilds the camp from a snapshot. Called by RunSession.restore_pending
+## once the gameplay scene is ready, before the clock starts.
 func apply(data: Dictionary) -> void:
 	var tree: SceneTree = get_tree()
 	for key in data["inventory"].keys():
