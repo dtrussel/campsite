@@ -21,8 +21,8 @@ live in `docs/`, and work is tracked as local markdown issues in
 
 ## Workflow
 
-Matt Pocock's skills (`mattpocock-skills`) are enabled in
-`.claude/settings.json`.
+Matt Pocock's skills are vendored as project skills in `.claude/skills/`
+(update with `tools/sync_skills.sh`).
 
 - **Larger work:** align with `/grill-with-docs`, write it up with
   `/to-spec`, split it with `/to-tickets`, then build it with

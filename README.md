@@ -222,7 +222,9 @@ Start here if you are a new contributor or coding agent:
 ## Development workflow
 
 - Coding agents use [Matt Pocock's skills](https://github.com/mattpocock/skills),
-  enabled for this project in `.claude/settings.json`. Larger work goes
+  vendored as project skills in `.claude/skills/` so they load in every
+  session, cloud or local (`tools/sync_skills.sh` updates them, pinned in
+  `.claude/skills/UPSTREAM`). Larger work goes
   `/grill-with-docs` → `/to-spec` → `/to-tickets` → `/implement`.
 - Work is tracked as local markdown issues in `.scratch/<feature-slug>/`
   (a `spec.md` plus one file per ticket in `issues/`). See
