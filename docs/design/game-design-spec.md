@@ -87,6 +87,86 @@ story ([spec](../../.scratch/endless-mode/spec.md)).
 
 ![An endless run's end screen with a new record](screenshots/endless-new-record.png)
 
+### Ranger's Journal and Camp Badges (feature 041)
+
+A reason to play again: a **profile** that remembers what a player has
+done across runs, tells Mum's story in journal pages, and unlocks small
+things ([spec](../../.scratch/journal-badges/spec.md)). The profile
+(`user://profile.json`) is never deleted when a run ends. Unlocks are
+sideways (a chapter, tints) or small (one starting perk), so a new
+player is never far behind.
+
+- **Chapter 2 lock:** on the title, Chapter 2 "Into the Hollow" is
+  locked ("Locked - win Chapter 1 first") until Chapter 1 is won. A
+  player whose old `story.cfg` shows Chapter 2 already started or
+  finished gets it unlocked on first launch, and debug builds and
+  builds with the `playtest` feature tag open every chapter.
+- **Last hero:** hero select opens on the hero picked last time, after
+  a restart too.
+- **Camp Badges:** 15 Scout-style milestones, earned once and kept for
+  good, announced with a small "Badge earned: X!" toast:
+
+  | Badge | How to earn |
+  |---|---|
+  | First Night | Survive your first night. |
+  | Night Owl | Survive 5 nights in one run. |
+  | Fire Keeper | Win a run without the campfire ever dropping below half. |
+  | Gremlin Catcher | Catch 10 Mushroom Gremlins in total. |
+  | Builder | Build 50 buildings in total. |
+  | Lantern Lighter | Light the Moon Lantern all the way. |
+  | Chapter 1 | Win Chapter 1: The Dark Moon. |
+  | Chapter 2 | Win Chapter 2: Into the Hollow. |
+  | Both Heroes | Win a run as Leo and a run as Nela. |
+  | Torch Bearer | Plant 5 torches in one run. |
+  | Shard Seeker | Find 25 Glow Shards in total. |
+  | Gatherer | Gather 500 resources in total. |
+  | Crafter | Craft 20 things in total. |
+  | Trapper | Snap 10 traps on monsters in total. |
+  | Monster Chaser | Chase off 100 night monsters in total. |
+
+  "In total" badges count across runs, a quit run included; they are
+  checked live during play and again when a run ends.
+- **Journal pages:** 12 short pages by Mum (the words are in
+  [`story.md`](story.md), "Mum's journal"). The seven dawn notes are
+  pages, found when their card plays. Three more come from the **day
+  chest**: in half the runs a chest appears beside a lane at the map
+  edge on one of the run's days (never two in a run, not even after
+  Continue), with a banner; walking up opens it and finds the next
+  page, and it fades at nightfall if no one opens it. The last two are
+  given by badges (Gremlin Catcher, Lantern Lighter).
+- **The scrapbook:** the title's **Journal** button opens it, with two
+  tabs. **Badges** is a 5 &times; 3 grid: earned badges in colour,
+  locked ones as brass silhouettes, each with how to earn it.
+  **Journal** is a book (a placeholder frame until the team's art):
+  the page list on the left (unfound pages show "? ? ?" and how
+  they're found), the open page on the right with Mum's face, her
+  words and the sketch.
+- **Cosmetic tints:** badges unlock tints only (hats and capes wait for
+  art), picked in a row under the goal on hero select; locked swatches
+  are dimmed and name their badge. Outfits tint the hero's clothes,
+  not the head or hair, one pick per hero: Ranger (default), Moss
+  (First Night), Ember (Fire Keeper), Dusk (Night Owl), Moonlight
+  (Lantern Lighter), Mushroom (Gremlin Catcher). Tent colours: Canvas
+  (default), Berry (Builder), Pine (Chapter 1), Night Sky (Chapter 2),
+  Sunrise (Both Heroes).
+- **Starting perks:** once a badge unlocks one, hero select shows a
+  "Start with:" row (None, or an unlocked card), and a new run starts
+  with that perk card already taken (never added again on Continue):
+  Quick Hands (Gatherer), Builder's Knack (Builder), Ember Heart
+  (Torch Bearer). The row is hidden until one is unlocked.
+- **Delete profile:** under the pause menu's settings, it asks for
+  confirmation, then forgets badges, pages, unlocks, records, picks
+  and the story beats seen (Chapter 2 locks again). Audio, look and
+  auto-attack settings are kept, and so is the run save.
+
+![The title with Chapter 2 locked](screenshots/journal-title-chapter2-locked.png)
+
+![The title with Chapter 2 unlocked](screenshots/journal-title-chapter2-unlocked.png)
+
+![The scrapbook's Badges tab](screenshots/journal-scrapbook-badges.png)
+
+![The scrapbook's Journal tab](screenshots/journal-scrapbook-journal.png)
+
 ## C. Player character &mdash; the Boy
 
 **Identity:** brave but small. Fast and flexible. Resourceful rather than

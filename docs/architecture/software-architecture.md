@@ -92,6 +92,7 @@ Each autoload is a single small node script registered in
 | `SaveManager`        | The save file only: path, version, JSON read and write, parse checks, delete. |
 | `RunSession`         | One run's lifecycle: start, continue, reset, the dawn autosave, `restore_finished` (see H). |
 | `Profile`            | Keeps a player's progress across runs (see "Profile" under H). |
+| `Badges`             | Camp Badges: checks them live and at a run's end, keeps them in the profile, toasts (see "Camp Badges" under H). |
 
 ### Autoload contract
 
@@ -547,8 +548,8 @@ session, must continue with every field intact (smoke).
 ### Profile
 
 The run save holds one run; the **profile** holds what a player keeps
-across runs (story beats seen, chapters won, records and, later,
-badges). It is the `Profile` autoload (`game/scripts/core/profile.gd`)
+across runs (story beats seen, chapters won, records, badges, journal
+pages and unlocks). It is the `Profile` autoload (`game/scripts/core/profile.gd`)
 on its own file, `user://profile.json`, which a run ending never deletes.
 
 - **Interface:** `get_value(key, fallback)`, `set_value(key, value)`
@@ -567,6 +568,15 @@ on its own file, `user://profile.json`, which a run ending never deletes.
   writes the hero to `endless.best_hero`; `GameManager.new_record`
   tells the end screen, and `endless_best_text()` is the line the title
   and end screen show.
+- **Chapters and the last hero:** `record_chapter_won(chapter)` (from
+  `GameManager._end_run`) writes `chapters.c<n>.won`; winning Chapter 1
+  sets `chapters.c2.unlocked`, which `is_chapter_unlocked(2)` reads for
+  the title's lock. `unlock_all_chapters` (debug builds, the `playtest`
+  feature tag) opens every chapter; tests clear it. `GameManager`
+  keeps the hero picked in `begin_chapter` (`record_hero_pick`), and
+  hero select opens on `GameManager.last_hero_pick()`.
+- **Delete profile:** the pause menu's Delete profile button asks
+  through a ConfirmationDialog, then calls `delete()`.
 - **The old `story.cfg`:** imported once, when a profile that has never
   been created loads. Seen beats are copied, and a seen `intro.c2` or
   `ending.c2` sets `chapters.c2.unlocked`. The import note survives
@@ -587,6 +597,44 @@ runs: `totals.<stat>` (added to as stats are recorded) and
 `heroes.won.<id>`. The run stats some badges need are
 `gremlins_caught`, `fire_low_pct` (the fire's lowest HP, in %) and
 `lantern_lit`.
+
+### Journal, scrapbook and unlocks
+
+What the profile unlocks (journal badges 03&ndash;06). Each is a small
+static class over profile keys, with no autoload and no run state, so
+Delete profile resets it and a run never saves it.
+
+- **Journal pages:** `JournalPage` `.tres` in
+  `game/resources/story/journal/` (file order is journal order). A dawn
+  page names its note line (`note_id`) and reads the text, face and
+  sketch from it; a badge page names its `badge`. `Journal`
+  (`game/scripts/meta/journal.gd`) keeps found pages as
+  `journal.<id>`: dawn pages are found when the HUD plays their card
+  (`find_notes_on`), a badge page reads as found while its badge is
+  earned, and `next_chest_page()` is what a day chest holds.
+- **The day chest:** `RunConfig` rolls `day_chest_day` (50%, else 0).
+  `GameManager` holds and saves it, so Continue never rolls again; on
+  that day `DayChest.place` (`game/scripts/world/day_chest.gd`) puts it
+  beside a lane at the map edge. It reuses the Storage Crate model
+  until there's art.
+- **The scrapbook:** `Scrapbook` (`game/scripts/ui/scrapbook.gd`,
+  `scenes/ui/Scrapbook.tscn`), an overlay the title adds over itself;
+  tabs are added with `add_tab(name, page)`. Badges is its own grid;
+  Journal is `JournalBook` (`game/scripts/ui/journal_book.gd`).
+- **Cosmetic tints:** `Cosmetics` (`game/scripts/meta/cosmetics.gd`)
+  lists outfit and tent tints with the badge that unlocks each, and
+  keeps the picks as `cosmetics.outfit.<hero>` and `cosmetics.tent`. A
+  pick whose badge is gone reads as the default. The tint goes through
+  `Stylize`'s `style_tint`, on the hero's outfit mesh only
+  (`HeroDefinition.outfit_mesh`, via `CharacterVisual`) and on the node
+  in group `tent`.
+- **Starting perks:** `StartingPerks`
+  (`game/scripts/meta/starting_perks.gd`) lists the shared perk cards
+  a run may start with and their badges, and keeps the pick as
+  `perks.starting`. `RunConfig.starting_perk` carries it; `GameManager`
+  hands it to `PerkManager.take_starting` when a new run's scene is
+  ready (never on Continue), and the run save keeps it with the hero's
+  perks.
 
 ## I. Testing strategy
 

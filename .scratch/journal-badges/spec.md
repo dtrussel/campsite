@@ -1,6 +1,6 @@
 # Ranger's Journal and Camp Badges
 
-Status: ready-for-agent
+Status: done
 
 From the 2026-10 brainstorm, planned as feature 041 and never started. Triaged on 2026-10-20 and split into tickets in `issues/`; the `Blocked by:` lines give the order.
 
@@ -50,15 +50,15 @@ Give players a reason to play again: a persistent profile that remembers achieve
 
 ## Acceptance criteria
 
-- [ ] `tools/check.sh` reports validate OK and smoke PASSED.
-- [ ] Smoke: win Chapter 1 → the profile records the chapter and the badge → the title shows Chapter 2 unlocked; this survives a restart of the game.
-- [ ] Smoke: a missing or corrupt profile loads as empty without errors.
-- [ ] Smoke: a day chest gives a page, and the page shows in the scrapbook.
-- [ ] Screenshots: the scrapbook's Badges and Journal tabs; the title with Chapter 2 locked and unlocked.
+- [x] `tools/check.sh` reports validate OK and smoke PASSED.
+- [x] Smoke: win Chapter 1 → the profile records the chapter and the badge → the title shows Chapter 2 unlocked; this survives a restart of the game.
+- [x] Smoke: a missing or corrupt profile loads as empty without errors.
+- [x] Smoke: a day chest gives a page, and the page shows in the scrapbook.
+- [x] Screenshots: the scrapbook's Badges and Journal tabs; the title with Chapter 2 locked and unlocked.
 
 ## Decisions so far
 
-- **From the 2026-10 brainstorm.** The user chose story (B) and choices / meta (C), with an **adventure** tone (see `docs/design/story.md`), and asked for the roadmap first. This folder is a plan only: nothing is built yet.
+- **From the 2026-10 brainstorm.** The user chose story (B) and choices / meta (C), with an **adventure** tone (see `docs/design/story.md`), and asked for the roadmap first. This folder started as a plan only; it was built in tickets 01&ndash;07 (2026-10-21).
 - **The profile is separate from the run save** and never deleted by a run ending. Deleting it is a Settings button that asks for confirmation.
 - **Unlocks are mostly sideways** (cosmetics, story, modes) or small starting perks, so a new player isn't far behind.
 - **Chapter 2 unlock for existing players** (decided 2026-10-20): when the profile is first created, Chapter 2 is unlocked if the imported `story.cfg` shows Chapter 2 was already started or finished (`intro.c2` or `ending.c2` seen; `story.cfg` never recorded a Chapter 1 win, corrected 2026-10-21), or in playtest and debug builds. New players get the lock.
@@ -79,3 +79,9 @@ None.
   - Only the starting-perks ticket waits on perk cards.
 
 - **2026-10-21, architecture review:** now blocked by profile and run-lifecycle (the user chose to do the refactors first). The profile store and the `story.cfg` import moved to `.scratch/profile/`; ticket 01 shrinks to the chapter lock, the last-hero pick and the Delete-profile button.
+
+- **2026-10-21, done:** every ticket (01&ndash;07) is done; feature 041 is set to done in the roadmap.
+  - The acceptance criteria are met: the smoke `chapter lock scenario` (Chapter 1 win, unlock, restart), `badges scenario` (winning Chapter 1 earns the Chapter 1 badge; badges survive a restart) and `journal scenario` (chest page shown in the Journal tab). A missing or corrupt profile is checked by the validator's profile check (from the profile spec), not the smoke test.
+  - Screenshots in `docs/design/screenshots/`: `journal-scrapbook-badges.png`, `journal-scrapbook-journal.png`, `journal-title-chapter2-locked.png`, `journal-title-chapter2-unlocked.png`.
+  - Docs: a "Ranger's Journal and Camp Badges" section in the game design spec, the journal, scrapbook and unlocks in the architecture doc, glossary entries for Scrapbook and Unlock. `story.md` already had the pages (ticket 04).
+  - Left for people: `.scratch/hand-play-backlog/issues/09-scrapbook-and-day-chest.md` (the scrapbook with a kid, and the day chest's stand-in Storage Crate model in play). Follow-ups once there is art: the journal's book frame, badge icons, hats and capes; and the `playtest` feature tag on the export preset if testers should get every chapter.

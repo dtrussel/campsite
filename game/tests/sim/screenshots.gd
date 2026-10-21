@@ -39,6 +39,23 @@ func _ready() -> void:
 	_shot("01a_scrapbook_journal")
 	Profile.delete()
 	title.queue_free()
+	# Journal badges 07: the title with Chapter 2 locked (a new player in
+	# a release build), then unlocked once Chapter 1 is won.
+	var debug_unlock: bool = Profile.unlock_all_chapters
+	Profile.unlock_all_chapters = false
+	var locked_title: Node = load("res://scenes/ui/TitleScreen.tscn").instantiate()
+	add_child(locked_title)
+	await _settle(0.5)
+	_shot("01_title_chapter2_locked")
+	locked_title.queue_free()
+	Profile.record_chapter_won(1)
+	var unlocked_title: Node = load("res://scenes/ui/TitleScreen.tscn").instantiate()
+	add_child(unlocked_title)
+	await _settle(0.5)
+	_shot("01_title_chapter2_unlocked")
+	unlocked_title.queue_free()
+	Profile.delete()
+	Profile.unlock_all_chapters = debug_unlock
 	SaveManager.delete_save()
 	# Features 029-030: the loading screens, one per painting.
 	for i in LoadingScreen.SCREENS.size():
