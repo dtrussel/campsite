@@ -6,12 +6,12 @@
 script = ExtResource("1_def")
 id = &"sturdy_stick"
 display_name = "Sturdy Stick"
-description = "An iron-bound stick for Leo: +2 attack for the rest of the run. Once per run."
+description = "An iron-bound stick for Leo: +2 attack for the rest of the run. Tier 1 of his tool, once per run."
 inputs = {
 &"wood": 4,
 &"scrap": 2
 }
-effect = &"sturdy_stick"
+effect = &"tool_tier"
 station = &"table"
 icon_name = "stick"
 xp_reward = 8

@@ -1,9 +1,21 @@
-[gd_resource type="Resource" script_class="HeroDefinition" load_steps=5 format=3 uid="uid://b0campsiteheronela"]
+[gd_resource type="Resource" script_class="HeroDefinition" load_steps=7 format=3 uid="uid://b0campsiteheronela"]
 
 [ext_resource type="Script" path="res://scripts/characters/hero_definition.gd" id="1_def"]
 [ext_resource type="Texture2D" path="res://assets/icons/portrait_nela.png" id="2_portrait"]
 [ext_resource type="PackedScene" path="res://assets/custom/nela.glb" id="3_model"]
 [ext_resource type="Resource" uid="uid://b0campsitestatssibling" path="res://resources/progression/sibling_stats.tres" id="4_stats"]
+
+[ext_resource type="Script" path="res://scripts/characters/tool_tier.gd" id="5_tier"]
+
+[sub_resource type="Resource" id="tier_1"]
+script = ExtResource("5_tier")
+recipe = &"slingshot"
+label = "Slingshot"
+icon = "slingshot"
+damage_bonus = 0
+range_factor = 1.6
+companion_range_factor = 2.0
+effects = Array[StringName]([])
 
 [resource]
 script = ExtResource("1_def")
@@ -42,12 +54,7 @@ companion_attack_range = 2.0
 attack_cooldown = 0.75
 companion_attack_cooldown = 0.75
 ranged = true
-signature_recipe = &"slingshot"
-signature_label = "Slingshot"
-signature_icon = "slingshot"
-signature_damage_bonus = 0
-signature_range_factor = 1.6
-companion_signature_range_factor = 2.0
+signature_tiers = Array[ExtResource("5_tier")]([SubResource("tier_1")])
 rating_health = 2
 rating_power = 2
 rating_reach = 3
