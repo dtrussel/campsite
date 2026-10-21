@@ -9,6 +9,7 @@ extends Node
 ## hit on a burning mob starts the burn over (it never stacks).
 ##
 ##   Burn.ignite(mob)          # from Hero.on_attack_hit
+##   Burn.splash(mob)          # the Blaze Stick: the mobs beside it too
 ##   Burn.on(mob)              # the mob's burn, or null
 
 const NODE_NAME: String = "Burn"
@@ -16,6 +17,9 @@ const DAMAGE: int = 1
 const TICK_SECONDS: float = 1.0
 const SECONDS: float = 3.0
 const TICKS: int = 3
+## How close (flat metres) a mob must stand to a burning hit's target for
+## the Blaze Stick's burn to splash onto it.
+const SPLASH_RADIUS: float = 1.6
 
 ## Ticks dealt since the burn (re)started.
 var ticks: int = 0
@@ -38,6 +42,23 @@ static func ignite(target: Node) -> Burn:
 	burn._elapsed = 0.0
 	burn.ticks = 0
 	return burn
+
+
+## Sets every living mob within SPLASH_RADIUS of `target` burning (not
+## `target` itself). Returns how many caught.
+static func splash(target: Node3D) -> int:
+	if target == null or not is_instance_valid(target) or not target.is_inside_tree():
+		return 0
+	var caught: int = 0
+	for node in target.get_tree().get_nodes_in_group("mobs"):
+		var mob: Node3D = node as Node3D
+		if mob == null or mob == target or not is_instance_valid(mob):
+			continue
+		var offset: Vector3 = mob.global_position - target.global_position
+		offset.y = 0.0
+		if offset.length() <= SPLASH_RADIUS and ignite(mob) != null:
+			caught += 1
+	return caught
 
 
 ## The burn on `target`, or null.

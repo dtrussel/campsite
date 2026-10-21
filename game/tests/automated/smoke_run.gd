@@ -2647,13 +2647,38 @@ func _run_tool_tiers_scenario() -> void:
 		_check(mob.current_hp == burnt, "Leo as %s: and then it is out" % role)
 		mob.free()
 
+		# Tier 3, the Blaze Stick: a hit's burn splashes onto a mob right
+		# next to the target, but not onto one further away.
+		var blaze: CraftingRecipe = _recipe(&"blaze_stick")
+		ResourceManager.add(&"glow_shards", 4)
+		shards = ResourceManager.get_count(&"glow_shards")
+		_check(blaze != null and CraftingManager.is_offered(blaze) and CraftingManager.craft(blaze, null) and leo.tool_tier == 3
+			and ResourceManager.get_count(&"glow_shards") == shards - 4 and leo.get_attack_damage() == damage + 2,
+			"Leo as %s: the Blaze Stick is tier 3 and spends 4 Glow Shards" % role)
+		var target: Mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 0))
+		var beside: Mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 1.0))
+		var away: Mob = _spawn_mob(beast_def, spot + Vector3(1.5, 0, 4.0))
+		for each in [target, beside, away]:
+			(each as Mob).set_physics_process(false)
+		await get_tree().process_frame
+		var beside_hp: int = beside.current_hp
+		HeroHits.strike(leo, target, leo.get_attack_damage())
+		_check(Burn.on(target) != null and Burn.on(beside) != null and Burn.on(away) == null and beside.current_hp == beside_hp,
+			"Leo as %s: the Blaze Stick's burn splashes onto the mob beside the target, not the one further off" % role)
+		await _wait(Burn.SECONDS + 0.5)
+		_check(beside_hp - beside.current_hp == Burn.TICKS * Burn.DAMAGE,
+			"Leo as %s: the splashed burn ticks 3 times (%d HP)" % [role, beside_hp - beside.current_hp])
+		for each in [target, beside, away]:
+			(each as Mob).free()
+
 		# The personal light: off by day, on at night, not inside a torch.
 		leo.call("_update_tool_light")
 		_check(not leo.is_tool_light_on(), "Leo as %s: no tool light by day" % role)
 		while not TimeManager.is_night():
 			TimeManager.skip_phase()
 		leo.call("_update_tool_light")
-		_check(leo.is_tool_light_on(), "Leo as %s: the Ember Stick lights him at night" % role)
+		_check(leo.is_tool_light_on() and leo.get_tool_light_range() > Hero.TOOL_LIGHT_RANGE,
+			"Leo as %s: the Blaze Stick lights him at night, a little wider (%.1f m)" % [role, leo.get_tool_light_range()])
 		var torch: Torch = Torch.SCENE.instantiate() as Torch
 		get_tree().current_scene.add_child(torch)
 		torch.global_position = leo.global_position
@@ -2666,11 +2691,11 @@ func _run_tool_tiers_scenario() -> void:
 		# The save holds the tier; Continue brings Leo back at tier 2.
 		var data: Dictionary = SaveManager.parse(SaveManager.serialize(RunSession.snapshot()))
 		var key: String = leo.save_key()
-		_check(int((data[key] as Dictionary).get("tier", -1)) == 2, "Leo as %s: the save holds tier 2" % role)
+		_check(int((data[key] as Dictionary).get("tier", -1)) == 3, "Leo as %s: the save holds tier 3" % role)
 		await _continue_from(data)
 		leo = HeroRoster.node_for(get_tree(), &"leo") as Hero
-		_check(leo.tool_tier == 2 and leo.get_attack_damage() == damage + 2 and leo.has_tool_effect(&"burn"),
-			"Leo as %s: Continue brings back the Ember Stick" % role)
+		_check(leo.tool_tier == 3 and leo.get_attack_damage() == damage + 2 and leo.has_tool_effect(&"burn_splash"),
+			"Leo as %s: Continue brings back the Blaze Stick" % role)
 		# An old save: `signature: true` and no tier is tier 1.
 		(data[key] as Dictionary).erase("tier")
 		(data[key] as Dictionary)["signature"] = true
