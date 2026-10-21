@@ -40,14 +40,13 @@ Give players a reason to play again: a persistent profile that remembers achieve
   Endless mode is unlocked by the true ending itself (042), not through the profile.
 
 ### Systems touched
-- New: `scripts/core/profile_manager.gd` (an autoload, the same JSON helpers as `save_manager.gd`), `scripts/meta/badge_definition.gd` with `resources/badges/*.tres`, `resources/story/journal/*.tres`, `scripts/ui/scrapbook.gd` with `scenes/ui/Scrapbook.tscn`, and `scripts/world/day_chest.gd`.
+- New (the profile itself, and the `story.cfg` import, come from `.scratch/profile/`): `scripts/meta/badge_definition.gd` with `resources/badges/*.tres`, `resources/story/journal/*.tres`, `scripts/ui/scrapbook.gd` with `scenes/ui/Scrapbook.tscn`, and `scripts/world/day_chest.gd`.
 - `scripts/core/game_manager.gd`: `stats` and `record()` feed badge checks at the end of a run and live; `run_ended` updates the profile. New stats are needed: gremlins caught, the fire's lowest HP (Fire Keeper), and whether the Moon Lantern was lit (`MoonLantern.is_full()`, Lantern Lighter).
 - `scripts/ui/title_screen.gd`: the Journal button, Chapter 2 locked until unlocked, and a badge toast.
 - `scripts/ui/hero_select.gd`: an outfit picker row, and the saved last pick.
-- `scripts/story/story_library.gd`: `story.cfg` is folded into the profile once.
 
 ### Depends on
-035, 036 and 038 (done). Perk cards (039) only gates the starting-perks ticket.
+035, 036 and 038 (done), plus **profile** (the store and the `story.cfg` import) and **run-lifecycle** (new run stats save and reset in one place). Perk cards (039) only gates the starting-perks ticket.
 
 ## Acceptance criteria
 
@@ -64,7 +63,7 @@ Give players a reason to play again: a persistent profile that remembers achieve
 - **Unlocks are mostly sideways** (cosmetics, story, modes) or small starting perks, so a new player isn't far behind.
 - **Chapter 2 unlock for existing players** (decided 2026-10-20): when the profile is first created, Chapter 2 is unlocked if `story.cfg` shows a Chapter 1 win, or in playtest and debug builds. New players get the lock.
 - **Cosmetics are tints only** (decided 2026-10-20). Hats and capes are a follow-up once there's art.
-- **`story.cfg` merges into the profile** (decided 2026-10-20), with a one-time import, so the profile is the single place progress lives.
+- **`story.cfg` merges into the profile** (decided 2026-10-20), with a one-time import, so the profile is the single place progress lives. Since 2026-10-21 the store and the import are built by the profile spec; this spec adds its keys and the UI.
 
 ## Open questions
 
@@ -79,3 +78,4 @@ None.
   - The stats three badges need aren't tracked yet; that's noted above.
   - Only the starting-perks ticket waits on perk cards.
 
+- **2026-10-21, architecture review:** now blocked by profile and run-lifecycle (the user chose to do the refactors first). The profile store and the `story.cfg` import moved to `.scratch/profile/`; ticket 01 shrinks to the chapter lock, the last-hero pick and the Delete-profile button.

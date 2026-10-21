@@ -52,5 +52,5 @@ If your output contradicts an existing ADR, surface it explicitly rather than si
 
 ## Campsite notes
 
-- `GLOSSARY.md` does not exist yet. Until it does, the game's vocabulary (heroes, mobs, places, the Moon Lantern and the Moon-Eater) is defined in `docs/design/story.md` and `docs/design/game-design-spec.md`. Read those, and lift terms from them when `/domain-modeling` starts the glossary.
+- `GLOSSARY.md` holds the code-facing terms (hero, role, party, run state, run session, profile). The story and world vocabulary (mobs, places, the Moon Lantern and the Moon-Eater) is still defined in `docs/design/story.md` and `docs/design/game-design-spec.md`.
 - ADRs live in `docs/adr/`, numbered `0001-slug.md`.

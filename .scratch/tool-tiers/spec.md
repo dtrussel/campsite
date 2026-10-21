@@ -30,7 +30,7 @@ Turn the one-off signature crafts into a small upgrade path, and give Glow Shard
 - `scripts/core/save_manager.gd`: `signature` becomes a tier int, and old booleans map to tier 1.
 
 ### Depends on
-036 (the shard economy, done). It reuses the damage, reach and bounce hooks that perk cards (039) adds, so it starts after perk cards ticket 05.
+036 (the shard economy, done). It reuses the damage, reach and bounce hooks that perk cards (039) adds, so it starts after perk cards ticket 05. It also waits on **hero-core** (`.scratch/hero-core/`), so the tier effects are written once in the shared Hero module instead of in both controllers.
 
 ## Acceptance criteria
 
@@ -61,3 +61,4 @@ None.
   - The spec's Resin and Mushroom parts contradicted 044; they are removed above.
   - Ticket 04 (Leo's tier 3) is `needs-info`: the plan names only two Leo crafts (Sturdy Stick, Ember Stick) against Nela's three.
 
+- **2026-10-21, architecture review:** now blocked by hero-core (the user chose to do the refactor first). Ticket 01 carries the new `Blocked by:`; the rest follow from 01. With hero-core in, "works as the player's hero and as the companion" comes from the shared attack, not from two edits.

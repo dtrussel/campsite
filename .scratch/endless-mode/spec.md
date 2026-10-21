@@ -18,15 +18,15 @@ An optional post-story mode, "How long can you last?", for players who finished 
 - The best-nights record and its hero are kept locally, and the end screen shows "New record!". Autosave and Continue work as now, with the Continue label showing "Night N".
 
 ### Systems touched
-`scripts/core/game_manager.gd` (a separate `endless` flag; `nights_to_win` stays 7 so the chapter logic still works), `scripts/mobs/mob_spawner.gd` (scaling), `scripts/story/story_library.gd` (`story.cfg`, for the record), `scripts/ui/title_screen.gd`, and `scripts/ui/end_screen.gd`.
+`scripts/core/game_manager.gd` (a separate `endless` flag; `nights_to_win` stays 7 so the chapter logic still works), `scripts/mobs/mob_spawner.gd` (scaling), the profile (`.scratch/profile/`, for the record), `scripts/ui/title_screen.gd`, and `scripts/ui/end_screen.gd`.
 
 ### Depends on
-038/043 (the true ending, done). Not 041: until the profile exists, the record lives in `story.cfg`, and 041 moves it into the profile. Tool tiers (040) only adds a second shard use.
+038/043 (the true ending, done). **Profile** (the record's home) and **run-lifecycle** (the `endless` flag is saved and reset as run state) come first. Not 041 (journal badges). Tool tiers (040) only adds a second shard use.
 
 ## Acceptance criteria
 
 - [ ] `tools/check.sh` reports validate OK and smoke PASSED.
-- [ ] Smoke: an endless run passes night 8 without a win; mob HP scales; a loss records the best nights and the hero, and they survive a restart.
+- [ ] Smoke: an endless run passes night 8 without a win; mob HP scales; a loss records the best nights and the hero in the profile, and they survive a restart.
 
 ## Decisions so far
 
@@ -34,7 +34,7 @@ An optional post-story mode, "How long can you last?", for players who finished 
 - **Optional and last.** Feature 020 did not choose endless mode, so it only comes once the story is done.
 - **Local record only** (decided 2026-10-20): best nights and the hero, on the end screen and the title. No leaderboard; online is out of scope (`requirements.md`).
 - **A separate `endless` flag, not `nights_to_win = 0`** (decided 2026-10-20). A 0 would break the first-dawn win check, `chapter()`, the moon rows on the HUD and end screen, hero select's "Survive N nights" and the Continue subtitle.
-- **The record goes in `story.cfg` for now** (decided 2026-10-20), so endless doesn't wait for 041.
+- **The record goes in the profile** (decided 2026-10-21, replacing "in `story.cfg` for now" from 2026-10-20), so it is written to its final home once.
 
 ## Open questions
 
@@ -49,3 +49,4 @@ None.
   - The true-ending gate already exists, so the 041 dependency is dropped.
   - The spec's "true ending (041)" and the `nights_to_win = 0` idea were stale; both are fixed above.
 
+- **2026-10-21, architecture review:** now blocked by profile and run-lifecycle (the user chose to do the refactors first). The record moves from `story.cfg` to the profile; ticket 01 carries the new `Blocked by:` and ticket 03 says where the record goes.

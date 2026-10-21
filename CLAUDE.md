@@ -51,5 +51,5 @@ The five default roles (`needs-triage`, `needs-info`, `ready-for-agent`,
 
 ### Domain docs
 
-Single-context: `GLOSSARY.md` at the root (not yet created) and
+Single-context: `GLOSSARY.md` at the root and
 `docs/adr/`. See `docs/agents/domain.md`.
