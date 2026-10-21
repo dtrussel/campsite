@@ -8,6 +8,8 @@ extends CanvasLayer
 ## Feature 035: a win opens the chapter's ending storybook first and
 ## shows the stats after; a defeat says why, as a voiced story line.
 ## Feature 043: in Chapter 2, Mum walks into the camp before the book.
+## Endless mode 03: an endless run says how far it got, and "New
+## record!" when it beat the best.
 
 var _root: Control = null
 var _title: Label = null
@@ -16,6 +18,7 @@ var _stars: HBoxContainer = null
 var _stats_row: HBoxContainer = null
 var _log_path: Label = null
 var _story: VBoxContainer = null
+var _record: Label = null
 
 
 func _ready() -> void:
@@ -37,6 +40,9 @@ func _ready() -> void:
 	_title = UiKit.title("", 58)
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_title)
+	_record = UiKit.label("", 26, UiKit.COLOR_GOLD)
+	_record.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(_record)
 	_story = UiKit.vbox(6)
 	_story.custom_minimum_size = Vector2(620, 0)
 	column.add_child(_story)
@@ -105,6 +111,17 @@ func _story_lines(won: bool) -> Array:
 	return beat.lines_for(GameManager.hero_id) if beat != null else []
 
 
+## The endless line under the title ("You lasted to night 9. New
+## record!"), or "" for a story run.
+func record_text() -> String:
+	if not GameManager.endless:
+		return ""
+	var lasted: String = "You lasted to night %d." % GameManager.current_day
+	if GameManager.new_record:
+		return lasted + "  New record!"
+	return "%s  %s" % [lasted, GameManager.endless_best_text()]
+
+
 func story_text() -> String:
 	var out: PackedStringArray = PackedStringArray()
 	for line in _story_lines(GameManager.run_state == GameManager.RunState.WON):
@@ -126,6 +143,8 @@ func _show_summary(won: bool) -> void:
 		fire.modulate = Color(0.45, 0.45, 0.55)
 		_badge.add_child(fire)
 	_title.text = "YOU WIN!" if won else "OH NO!"
+	_record.text = record_text()
+	_record.visible = _record.text != ""
 	_title.add_theme_color_override("font_color", UiKit.COLOR_GOLD if won else Color(0.9, 0.35, 0.3))
 	var stats: Dictionary = GameManager.stats
 	for child in _stars.get_children():

@@ -55,6 +55,38 @@ the cast, the creatures' place in it, the named places and Mum's notes.
 4. Survive stronger nights (more mobs, new mob types).
 5. Explore deeper forest areas (further from camp, higher reward / risk).
 
+### Endless mode (feature 042)
+
+"How long can you last?" An optional mode for players who finished the
+story ([spec](../../.scratch/endless-mode/spec.md)).
+
+- **Unlock:** the title shows **Endless** once the true ending has been
+  seen. It starts a Chapter 2 run (hero select reads "Endless: how long
+  can you last by the campfire?") with no intro.
+- **The nights never end:** dawn 7 is no win, and there is no Moon-Eater
+  and no eyes at the treeline. It ends only when the campfire goes out
+  or the hero is knocked out. Autosave and Continue work as in the
+  chapters; the title's Continue reads "Hero - Endless, night N".
+- **Shards:** the Moon Lantern starts lit, so Glow Shards go to Glow
+  Lanterns and tool tiers.
+- **Tougher nights:** wave sizes keep growing past their lists as in the
+  chapters. On top of that, each night after 7 gives mobs **+10% HP**
+  (`MobSpawner.hp_multiplier`; an imp has 14 HP on night 9 against 12),
+  and turns one imp into a beast and one into a gremlin, so heavy and
+  sneaky mobs make up a growing share of each wave (55% on night 10
+  against 37% on night 7). There are no new mob types, and the story
+  chapters are unchanged.
+- **The record:** when an endless run ends, the night it ended on and
+  the hero are kept in the profile (`endless.best_nights`,
+  `endless.best_hero`) if it beats the best so far; an equal run is not
+  a record. The end screen reads "You lasted to night N." and adds
+  "New record!" or the best so far. The title shows the best under the
+  Endless button ("Best: night 12 - Nela"). The record is local only.
+
+![The title with the Endless button and its record](screenshots/endless-title.png)
+
+![An endless run's end screen with a new record](screenshots/endless-new-record.png)
+
 ## C. Player character &mdash; the Boy
 
 **Identity:** brave but small. Fast and flexible. Resourceful rather than

@@ -18,3 +18,4 @@ The checks the archived features (000&ndash;048, in `docs/history/features/`) co
 4. `issues/04-editor-look-and-sound.md`: watch-and-listen checks in the editor.
 5. `issues/05-windows-build.md`: the exported build on Windows, with a real GPU.
 6. `issues/06-perk-cards-feel.md`: whether perk cards (039) are worth picking.
+7. `issues/07-endless-run-length.md`: how long an endless run (042) lasts, and whether its rising pressure feels fair.

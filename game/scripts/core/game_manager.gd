@@ -42,6 +42,9 @@ var end_reason: String = ""
 ## Which story beat the end screen shows: &"win", &"loss_fire" or
 ## &"loss_hero".
 var end_trigger: StringName = &""
+## True when the run that just ended beat the endless record, so the
+## end screen says "New record!" (endless mode 03).
+var new_record: bool = false
 ## Per-run counters for the end screen and the playtest log.
 var stats: Dictionary = {}
 ## The party: the played hero and the companion (HeroRoster ids). The
@@ -308,6 +311,7 @@ func reset() -> void:
 	is_camp_destroyed = false
 	end_reason = ""
 	end_trigger = &""
+	new_record = false
 	loot_misses = {}
 	loot_rng.randomize()
 	_reset_stats()
@@ -338,6 +342,8 @@ func _end_run(won: bool, reason: String, trigger: StringName) -> void:
 	end_reason = reason
 	if won:
 		Profile.record_chapter_won(chapter())
+	if endless:
+		_record_endless()
 	end_trigger = trigger
 	TimeManager.stop()
 	BuildManager.exit_build_mode()
@@ -345,6 +351,25 @@ func _end_run(won: bool, reason: String, trigger: StringName) -> void:
 	run_ended.emit(won, reason)
 	# Freeze the world behind the end screen.
 	get_tree().paused = true
+
+
+## An endless run is over: keeps the night it ended on, and its hero,
+## as the record when it beats the best so far.
+func _record_endless() -> void:
+	new_record = Profile.record_best(Profile.ENDLESS_BEST_NIGHTS, current_day)
+	if new_record:
+		Profile.set_value(Profile.ENDLESS_BEST_HERO, String(hero_id))
+		PlaytestLog.write("endless_record nights=%d hero=%s" % [current_day, hero_id])
+
+
+## The endless record as the title and end screen show it ("Best: night
+## 9 - Leo"), or "" when there is none yet.
+func endless_best_text() -> String:
+	var nights: int = int(Profile.get_value(Profile.ENDLESS_BEST_NIGHTS, 0))
+	if nights <= 0:
+		return ""
+	var hero: HeroDefinition = HeroRoster.get_hero(StringName(String(Profile.get_value(Profile.ENDLESS_BEST_HERO, ""))))
+	return "Best: night %d - %s" % [nights, hero.display_name if hero != null else "?"]
 
 
 func _on_day_started(day_number: int) -> void:
