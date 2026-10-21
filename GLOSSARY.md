@@ -8,7 +8,8 @@ The words this project uses for its own concepts. Use them in code, tickets and 
 - **Role:** how a hero is being played, either **the player's hero** (driven by input and pointer commands) or **the companion** (driven by its task AI). Each role adds only what differs: the player's hero ends the run when it is down, and the companion revives at dawn.
 - **Party:** the two heroes of a run, and who plays which role. Ask the party for "the player's hero", "the companion" or "the other hero" instead of looking heroes up by group name.
 - **Down:** a hero at 0 HP. *Avoid:* "knocked out" in new code.
-- **Signature tool:** a hero's crafted tool (the Big Stick, the Slingshot). Tool tiers upgrade it.
+- **Signature tool:** a hero's crafted tool (Leo's stick, Nela's sling).
+- **Tool tier:** one step of a hero's signature tool, crafted at the Crafting Table in order (tier 1: the Sturdy Stick or the Slingshot; up to tier 3). *Avoid:* "upgrade level".
 - **Perk:** a card picked at level-up that changes a hero's stats or hits.
 
 ## Runs

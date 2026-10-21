@@ -210,6 +210,21 @@ func _ready() -> void:
 	await _settle(0.3)
 	_shot("04e_table_recipes")
 	get_tree().get_first_node_in_group("crafting_panel").close()
+	# Tool tiers (040): Leo owns the Ember Stick, so the Blaze Stick
+	# (tier 3) is offered; then the HUD attack slot's three tier pips.
+	(player as Hero).set_tool_tier(2, true)
+	for item in [&"scrap", &"clay", &"glow_shards"]:
+		ResourceManager.add(item, 6)
+	await _settle(0.3)
+	get_tree().get_first_node_in_group("crafting_panel").open()
+	await _settle(0.3)
+	_shot("04e2_tier_3_available")
+	get_tree().get_first_node_in_group("crafting_panel").close()
+	# Raised directly: crafting it gives XP, and the level-up picker
+	# would cover the HUD.
+	(player as Hero).set_tool_tier(3, true)
+	await _settle(0.5)
+	_shot("04e3_tier_pips")
 	player.global_position = Vector3(0.5, 0, 2.2)
 	BuildManager.enter_build_mode(BuildManager.get_definition(&"glow_lantern"))
 	await _settle(0.4)

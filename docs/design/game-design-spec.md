@@ -91,8 +91,10 @@ the "Choose your hero" screen. Today the heroes are **Leo** (a melee
 stick-fighter: tough, hits hard, short reach) and **Nela** (a slinger:
 shoots pebbles from range, less health). The hero not picked comes along
 as the AI companion and takes tasks as described below. A hero plays the
-same way in either role, and keeps their signature craft: the Sturdy
-Stick upgrades Leo, the Slingshot upgrades Nela. With more heroes, the
+same way in either role, and keeps their signature tool path (see
+[Tool tiers](#tool-tiers-feature-040)): the Sturdy, Ember and Blaze
+Sticks for Leo, the Slingshot, Double Sling and Glow Sling for Nela.
+With more heroes, the
 screen gets a second step to pick the companion. The autosave remembers
 the party, so Continue skips the screen.
 
@@ -180,9 +182,9 @@ Pine trees give wood, and mushroom patches are now only scenery.
 | Wood        | Common   | 20  | Trees and pines | Every building, torches, Feed the Fire, repairs, table crafts |
 | Stone       | Common   | 20  | Rocks | Watch Post, Crate, Table, Reinforced Wall, Stone Hearth |
 | Berries     | Common   | 20  | Berry bushes | Eat (R), Berry Snack, Bandage |
-| Clay        | Uncommon | 20  | Clay pits in the NE and SW corners | Reinforced Wall, Stone Hearth |
-| Scrap       | Rare     | 20  | Junk piles near the E and S spawn lanes | Trap, Lantern, Table, Sturdy Stick, Slingshot, Trap Refill |
-| Glow Shards | Rare     | 10  | Imps (40% chance per kill, with pity) and every bramble beast | Glow Lantern, the Moon Lantern |
+| Clay        | Uncommon | 20  | Clay pits in the NE and SW corners | Reinforced Wall, Stone Hearth, tier 3 tools |
+| Scrap       | Rare     | 20  | Junk piles near the E and S spawn lanes | Trap, Lantern, Table, every tool tier, Trap Refill |
+| Glow Shards | Rare     | 10  | Imps (40% chance per kill, with pity) and every bramble beast | Glow Lantern, the Moon Lantern, tier 2 and 3 tools |
 
 Each Storage Crate adds another cap's worth. The crafted items (Torch,
 Berry Snack and Bandage) have no cap.
@@ -217,7 +219,7 @@ These are stored as `ResourceDefinition` `.tres` files; see the architecture doc
 | Wooden Fence   | Cheap barrier; blocks or slows mobs. 3 Wood.                 |
 | Watch Post     | Elevated post; companions can guard from here. 5 Wood + 2 Stone. |
 | Storage Crate  | *(019)* +20 stash cap per resource (caps start at 20). 4 Wood + 2 Stone. |
-| Crafting Table | *(019)* A second crafting station with the Sturdy Stick, Slingshot, Bandage and Trap Refill. 4 Wood + 2 Stone + 1 Scrap. |
+| Crafting Table | *(019)* A second crafting station with the heroes' tool tiers (040), Bandage and Trap Refill. 4 Wood + 2 Stone + 1 Scrap. |
 | Reinforced Wall | *(019)* 150 HP, three times a fence. 3 Stone + 2 Clay + 1 Wood. |
 | Snap Trap      | *(017)* Snaps the first imp on it: 10 damage, held 2.5 s; 3 snaps. 3 Wood + 1 Scrap. |
 | Glow Lantern   | *(017)* A torch that never burns out: slows and zaps imps within 5 m. 2 Glow Shards + 1 Scrap + 2 Wood. |
@@ -299,12 +301,50 @@ gather it left. A player command or WASD always wins. The pause menu's
 | Berry Snack | Campfire | 3 Berries | A snack (R: +35 HP) |
 | Stone Hearth | Campfire | 5 Clay + 4 Stone | Campfire +75 max HP, fully healed; once per run |
 | Bandage | Table | 2 Berries + 1 Wood | X next to the companion: +25 HP, or a revive |
-| Sturdy Stick | Table | 4 Wood + 2 Scrap | Leo +2 attack; once per run |
-| Slingshot | Table | 3 Wood + 2 Scrap | Nela's range; once per run |
+| Sturdy Stick | Table | 4 Wood + 2 Scrap | Leo's tool tier 1 (see below) |
+| Ember Stick | Table | 3 Wood + 2 Scrap + 2 Glow Shards | Leo's tier 2 |
+| Blaze Stick | Table | 3 Scrap + 3 Clay + 4 Glow Shards | Leo's tier 3 |
+| Slingshot | Table | 3 Wood + 2 Scrap | Nela's tool tier 1 (see below) |
+| Double Sling | Table | 3 Wood + 2 Scrap + 2 Glow Shards | Nela's tier 2 |
+| Glow Sling | Table | 3 Scrap + 3 Clay + 4 Glow Shards | Nela's tier 3 |
 | Trap Refill | Table | 1 Wood + 1 Scrap | Restores a Snap Trap |
 
 These numbers live in the `CraftingRecipe` resources
 (`game/resources/recipes/`).
+
+### Tool tiers (feature 040)
+
+![The Crafting Table with Leo's Blaze Stick (tier 3) on offer](screenshots/tool-tiers-crafting.png)
+
+Each hero has a signature tool that upgrades in three tiers, crafted at
+the Crafting Table one tier at a time. A tier is listed once the hero
+owns the tier before it (tier 1 always is), and it works for the hero as
+the played hero and as the companion. Tiers are per run, like every
+craft, and owned tiers add up: tier 3 keeps tier 2's effect.
+
+| Hero | Tier | Tool | Effect |
+|------|------|------|--------|
+| Leo | 1 | Sturdy Stick | +2 attack. |
+| Leo | 2 | Ember Stick | Hits leave a burn (1 damage/s for 3 s; a new hit restarts it). A small personal light at night (3 m), off inside a torch's light, with no mob slow. |
+| Leo | 3 | Blaze Stick | The burn also splashes onto every mob within 1.6 m of the target (burn only, no hit damage). The light reaches 4.2 m. |
+| Nela | 1 | Slingshot | Reach &times;1.6 (&times;2.0 as the companion). |
+| Nela | 2 | Double Sling | Every 3rd shot fires a second pebble at the same target. |
+| Nela | 3 | Glow Sling | A pebble pierces on to the next mob in its line (within 3 m) and lights the target for 1.5 s. |
+
+- **The shard trade-off.** Tiers 2 and 3 cost 6 Glow Shards between
+  them, per hero, and every shard spent there is one the Moon Lantern
+  doesn't get (it needs 11 in Chapter 1).
+- **The HUD** draws one small ember pip per owned tier under the attack
+  slot:
+
+  ![Leo's attack slot with three tier pips](screenshots/tool-tiers-hud-pips.png)
+
+- The tiers are data on the hero (`HeroDefinition.signature_tiers`, one
+  `ToolTier` each: recipe, label, damage bonus, range factors and
+  effects), and every tier recipe uses the one `tool_tier` effect, so a
+  new hero brings their own path. The save stores the tier as an int;
+  older saves' `signature: true` (or `stick` / `slingshot`) load as
+  tier 1.
 
 ### Prototype subset
 
