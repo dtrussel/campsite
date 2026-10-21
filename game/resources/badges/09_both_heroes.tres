@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="BadgeDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/meta/badge_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"both_heroes"
+display_name = "Both Heroes"
+how_to_earn = "Win a run as Leo and a run as Nela."
+icon = "portrait_nela"
+condition = &"win_each_hero"
+amount = 1

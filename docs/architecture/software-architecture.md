@@ -564,6 +564,20 @@ on its own file, `user://profile.json`, which a run ending never deletes.
 - **Not here:** device settings (audio, look, auto-attack) stay in
   `user://settings.cfg`, so deleting a profile never resets them.
 
+### Camp Badges
+
+Milestones the profile keeps for good (journal badges 02). Each is a
+`BadgeDefinition` `.tres` in `game/resources/badges/` (icon, name,
+how-to-earn text, and a condition: `run_stat`, `total`, `win` or
+`win_each_hero`). The `Badges` autoload (`game/scripts/meta/badges.gd`)
+checks them live on `GameManager.stat_recorded` during play and again
+on `run_ended`, keeps earned ones as `badges.<id>`, and shows a HUD
+toast once per badge. It also keeps what counting badges need across
+runs: `totals.<stat>` (added to as stats are recorded) and
+`heroes.won.<id>`. The run stats some badges need are
+`gremlins_caught`, `fire_low_pct` (the fire's lowest HP, in %) and
+`lantern_lit`.
+
 ## I. Testing strategy
 
 Detailed plan in

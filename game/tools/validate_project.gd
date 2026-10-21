@@ -130,6 +130,7 @@ func _validate_data() -> void:
 	_validate_perks()
 	_validate_hero_perks()
 	_validate_perk_problems()
+	_validate_badges()
 	_validate_audio()
 	_validate_story()
 
@@ -267,6 +268,26 @@ func _validate_heroes(recipe_ids: Dictionary) -> void:
 			_fail("%s is a tool tier recipe, but no hero's tier names it" % recipe.resource_path)
 	if HeroRoster.all().size() < 2:
 		_fail("the roster needs at least two heroes (a hero and a companion)")
+
+
+## Camp badges (journal badges 02): every badge has an icon, a name,
+## how-to-earn text and a known condition (BadgeDefinition.problems),
+## ids are unique, and Badges loaded them all.
+func _validate_badges() -> void:
+	var badge_ids: Dictionary = {}
+	var badges: Array[Resource] = DefinitionLoader.load_all(Badges.BADGES_DIR)
+	for res in badges:
+		var badge: BadgeDefinition = res as BadgeDefinition
+		if badge == null:
+			_fail("%s is not a BadgeDefinition" % res.resource_path)
+			continue
+		_check_id(badge.id, badge.resource_path, badge_ids)
+		for problem in badge.problems():
+			_fail("%s %s" % [badge.resource_path, problem])
+	if badges.size() < 12:
+		_fail("only %d badges in %s (about 15 planned)" % [badges.size(), Badges.BADGES_DIR])
+	if badges.size() != Badges.definitions().size():
+		_fail("Badges loaded %d badges, %s has %d" % [Badges.definitions().size(), Badges.BADGES_DIR, badges.size()])
 
 
 ## Perk cards: every perk has an icon, a name, a line of text and a

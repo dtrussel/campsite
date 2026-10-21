@@ -17,6 +17,9 @@ signal camp_destroyed
 signal companion_task_changed(companion: Node, task: int)
 signal run_started
 signal run_ended(won: bool, reason: String)
+## A run stat was recorded or set; `amount` is how much it went up
+## (Badges counts and checks on it).
+signal stat_recorded(stat: StringName, amount: int)
 
 enum RunState { MENU, PLAYING, WON, LOST }
 
@@ -226,6 +229,15 @@ func is_playing() -> bool:
 
 func record(stat: StringName, amount: int = 1) -> void:
 	stats[stat] = int(stats.get(stat, 0)) + amount
+	stat_recorded.emit(stat, amount)
+
+
+## Sets a run stat that is a level, not a count (nights survived, the
+## fire's lowest HP), and announces how much it went up.
+func set_stat(stat: StringName, value: int) -> void:
+	var old: int = int(stats.get(stat, 0))
+	stats[stat] = value
+	stat_recorded.emit(stat, value - old)
 
 
 ## The party a save was made with: {"hero", "companion"} as ids. Saves
@@ -302,6 +314,11 @@ func _reset_stats() -> void:
 		&"repairs": 0,
 		&"shards": 0,
 		&"nights_survived": 0,
+		&"gremlins_caught": 0,
+		# The campfire's lowest HP this run, in % (Fire Keeper badge).
+		&"fire_low_pct": 100,
+		# 1 once the Moon Lantern is fully lit (Lantern Lighter badge).
+		&"lantern_lit": 0,
 	}
 
 
@@ -329,7 +346,7 @@ func _on_day_started(day_number: int) -> void:
 func _on_dawn_started(day_number: int) -> void:
 	if run_state != RunState.PLAYING:
 		return
-	stats[&"nights_survived"] = day_number
+	set_stat(&"nights_survived", day_number)
 	PlaytestLog.write("night_survived night=%d" % day_number)
 	if day_number >= nights_to_win and not endless:
 		if int(stats.get(&"boss_calmed", 0)) > 0:
@@ -367,6 +384,16 @@ func _hook_base_core() -> void:
 	for node in get_tree().get_nodes_in_group("base_core"):
 		if node.has_signal("destroyed") and not node.destroyed.is_connected(_on_camp_destroyed):
 			node.destroyed.connect(_on_camp_destroyed)
+		var fire: BaseCore = node as BaseCore
+		if fire != null and not fire.damaged.is_connected(_on_camp_damaged):
+			fire.damaged.connect(_on_camp_damaged.bind(fire))
+
+
+## Keeps the fire's lowest HP this run, in % of its max.
+func _on_camp_damaged(hp: int, fire: BaseCore) -> void:
+	var pct: int = int(floor(100.0 * hp / maxf(1.0, fire.get_max_hp())))
+	if pct < int(stats.get(&"fire_low_pct", 100)):
+		set_stat(&"fire_low_pct", pct)
 
 
 func _hook_player() -> void:

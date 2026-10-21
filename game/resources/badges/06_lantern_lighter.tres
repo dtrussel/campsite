@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="BadgeDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/meta/badge_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"lantern_lighter"
+display_name = "Lantern Lighter"
+how_to_earn = "Light the Moon Lantern all the way."
+icon = "lantern"
+condition = &"run_stat"
+stat = &"lantern_lit"
+amount = 1
