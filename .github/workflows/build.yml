@@ -59,8 +59,8 @@ jobs:
             templates/windows_release_x86_64.exe templates/windows_release_x86_64_console.exe -d "$dest"
           rm /tmp/godot.zip /tmp/templates.tpz
 
-      - name: Checks (import, validate, smoke run)
-        run: GODOT="$HOME/godot/godot" tools/check.sh
+      - name: Checks (import, validate, smoke run, slowed smoke, selftest)
+        run: GODOT="$HOME/godot/godot" SMOKE_FRAME_DELAY=40 tools/check.sh
 
       - name: Export and package (Linux self-test, Windows)
         run: GODOT="$HOME/godot/godot" tools/export_playtest.sh

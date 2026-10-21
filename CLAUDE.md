@@ -33,6 +33,8 @@ Matt Pocock's skills (`mattpocock-skills`) are enabled in
   under `## Comments`. Keep `docs/` (design, roadmap, `art/README.md`)
   in sync when the work changes them.
 - **Small fixes:** these need no spec or ticket; a commit is enough.
+- **After a push:** check CI on the head commit before reporting the
+  work done. A local green `tools/check.sh` does not cover the export.
 - **Features 000–048:** they are archived, read-only, in
   `docs/history/features/`.
 

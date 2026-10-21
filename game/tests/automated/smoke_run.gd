@@ -942,6 +942,18 @@ func _check_bramble_beast(player: Node3D) -> void:
 	await _wait(0.2)
 
 
+## The layer a just-started action plays on, read on the first physics
+## frame the animation tree shows it (it updates on physics frames). A
+## fixed frame count can outlast the whole short swing on a slow machine.
+func _first_action_layer(visual: CharacterVisual) -> String:
+	for i in 30:
+		await get_tree().physics_frame
+		var layer: String = visual.active_action_layer()
+		if layer != "":
+			return layer
+	return ""
+
+
 ## Feature 023: actions layer over locomotion. While Leo runs, a swing
 ## plays on the upper body and the legs keep running; standing still it
 ## plays on the whole body.
@@ -954,15 +966,11 @@ func _check_animation_layers(player: Node3D) -> void:
 	_check(visual.is_moving() and float(tree.get("parameters/loco/blend_position")) > 1.0,
 		"running blends the locomotion (%.1f)" % float(tree.get("parameters/loco/blend_position")))
 	visual.play_action(&"attack", 1.9)
-	await get_tree().physics_frame  # the tree updates on physics frames
-	await get_tree().physics_frame
-	_check(visual.active_action_layer() == "upper", "a swing while running plays on the upper body")
+	_check(await _first_action_layer(visual) == "upper", "a swing while running plays on the upper body")
 	player.stop_commands()
 	await _wait(0.8)
 	visual.play_action(&"attack", 1.9)
-	await get_tree().physics_frame
-	await get_tree().physics_frame
-	_check(not visual.is_moving() and visual.active_action_layer() == "full", "a swing standing still plays on the whole body")
+	_check(not visual.is_moving() and await _first_action_layer(visual) == "full", "a swing standing still plays on the whole body")
 	await _wait(0.6)
 
 	# Feature 024: footsteps, swaying foliage, day ambience.
@@ -1936,10 +1944,12 @@ func _campfire() -> BaseCore:
 	return get_tree().get_first_node_in_group("base_core") as BaseCore
 
 
-## Waits `game_seconds` of game time at the test speed. It uses SPEED,
-## not Engine.time_scale, which a hit-stop briefly lowers.
+## Waits `game_seconds` of game time, counted by the same frame deltas
+## the game runs on. A real-time wait (`game_seconds / SPEED` of wall
+## clock) ends early on a slow machine, where fewer frames fit in it;
+## this one also stretches with a hit-stop or the perk picker's slow-down.
 func _wait(game_seconds: float) -> void:
-	await get_tree().create_timer(game_seconds / SPEED, true, false, true).timeout
+	await get_tree().create_timer(game_seconds, true, false, false).timeout
 
 
 func _check(condition: bool, label: String) -> void:
