@@ -236,16 +236,36 @@ func _fail(message: String) -> void:
 	_errors.append(message)
 
 
-## Feature 034: every hero on the select screen is complete, and its
-## signature recipe exists.
+## Feature 034: every hero on the select screen is complete. Tool tiers:
+## each of its tiers points to an existing tool-tier recipe, and every
+## tool-tier recipe belongs to exactly one hero's tier.
 func _validate_heroes(recipe_ids: Dictionary) -> void:
+	var tier_recipes: Dictionary = {}
 	var hero_ids: Dictionary = {}
 	for hero in HeroRoster.all():
 		_check_id(hero.id, hero.resource_path, hero_ids)
 		if hero.model_scene == null or hero.stats == null or hero.portrait == null:
 			_fail("%s needs a model, stats and a portrait" % hero.resource_path)
-		if hero.signature_recipe != &"" and not recipe_ids.has(hero.signature_recipe):
-			_fail("%s has unknown signature recipe '%s'" % [hero.resource_path, hero.signature_recipe])
+		for n in range(1, hero.tier_count() + 1):
+			var tier: ToolTier = hero.tier(n)
+			if tier == null or tier.recipe == &"":
+				_fail("%s: tool tier %d is empty" % [hero.resource_path, n])
+				continue
+			var recipe: CraftingRecipe = load(recipe_ids[tier.recipe]) as CraftingRecipe if recipe_ids.has(tier.recipe) else null
+			if recipe == null:
+				_fail("%s: tool tier %d has unknown recipe '%s'" % [hero.resource_path, n, tier.recipe])
+			elif recipe.effect != CraftingRecipe.EFFECT_TOOL_TIER:
+				_fail("%s: tool tier %d's recipe '%s' needs the tool_tier effect" % [hero.resource_path, n, tier.recipe])
+			if tier_recipes.has(tier.recipe):
+				_fail("%s: recipe '%s' is already a tool tier of %s" % [hero.resource_path, tier.recipe, tier_recipes[tier.recipe]])
+			tier_recipes[tier.recipe] = hero.id
+			for effect in tier.effects:
+				if not ToolTier.EFFECTS.has(effect):
+					_fail("%s: tool tier %d has unknown effect '%s'" % [hero.resource_path, n, effect])
+	for id in recipe_ids.keys():
+		var recipe: CraftingRecipe = load(recipe_ids[id]) as CraftingRecipe
+		if recipe != null and recipe.effect == CraftingRecipe.EFFECT_TOOL_TIER and not tier_recipes.has(id):
+			_fail("%s is a tool tier recipe, but no hero's tier names it" % recipe.resource_path)
 	if HeroRoster.all().size() < 2:
 		_fail("the roster needs at least two heroes (a hero and a companion)")
 

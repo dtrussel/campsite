@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="CraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/crafting/crafting_recipe.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"glow_sling"
+display_name = "Glow Sling"
+description = "Nela's slingshot with clay pebbles baked round glowing shards: each pebble flies on through its target to the next mob in line, and lights up what it hits. Needs the Double Sling."
+inputs = {
+&"scrap": 3,
+&"clay": 3,
+&"glow_shards": 4
+}
+effect = &"tool_tier"
+station = &"table"
+icon_name = "slingshot"
+xp_reward = 16
+sort_order = 122

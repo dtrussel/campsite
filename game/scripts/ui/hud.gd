@@ -159,7 +159,7 @@ func _build_top(root: Control) -> void:
 	moons.alignment = BoxContainer.ALIGNMENT_CENTER
 	moons.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	moons.add_theme_constant_override("separation", 3 if GameManager.nights_to_win <= 4 else 1)
-	moons.tooltip_text = "Nights to survive"
+	moons.tooltip_text = "Endless: the nights never end" if GameManager.endless else "Nights to survive"
 	moons.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_child(moons)
 	var moon_size: float = 24.0 if GameManager.nights_to_win <= 4 else 15.0
@@ -697,6 +697,7 @@ func _refresh_slots() -> void:
 		return
 	var cooldown: float = (_player as Hero).get_attack_cooldown_ratio() if _player is Hero else 0.0
 	(_slots[&"attack"] as HudWidgets.AbilitySlot).set_state(true, "", cooldown)
+	(_slots[&"attack"] as HudWidgets.AbilitySlot).pips = (_player as Hero).tool_tier if _player is Hero else 0
 	(_slots[&"gather"] as HudWidgets.AbilitySlot).set_state(true)
 	var torches: int = ResourceManager.get_count(&"torch")
 	(_slots[&"torch"] as HudWidgets.AbilitySlot).set_state(torches > 0, str(torches) if torches > 0 else "")

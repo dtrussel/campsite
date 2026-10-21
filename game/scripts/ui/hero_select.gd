@@ -85,7 +85,9 @@ func _build_header() -> void:
 	heading.add_theme_constant_override("outline_size", 9)
 	ribbon_plate.add_child(heading)
 
-	var goal: Label = UiKit.label("Survive %d nights by the campfire" % GameManager.nights_to_win, 18, UiKit.COLOR_GOLD_LIGHT)
+	var goal_text: String = "Endless: how long can you last by the campfire?" if GameManager.endless \
+		else "Survive %d nights by the campfire" % GameManager.nights_to_win
+	var goal: Label = UiKit.label(goal_text, 18, UiKit.COLOR_GOLD_LIGHT)
 	goal.add_theme_font_override("font", Fx.bold_font())
 	goal.add_theme_constant_override("outline_size", 6)
 	goal.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
@@ -171,7 +173,8 @@ func _card(hero: HeroDefinition, index: int) -> Button:
 	var signature: HBoxContainer = HBoxContainer.new()
 	signature.add_theme_constant_override("separation", 6)
 	signature.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var icon_path: String = "res://assets/icons/%s.png" % hero.signature_icon
+	var first: ToolTier = hero.tier(1)
+	var icon_path: String = "res://assets/icons/%s.png" % (first.icon if first != null else "")
 	if ResourceLoader.exists(icon_path):
 		var icon: TextureRect = TextureRect.new()
 		icon.texture = load(icon_path) as Texture2D
@@ -179,7 +182,7 @@ func _card(hero: HeroDefinition, index: int) -> Button:
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		signature.add_child(icon)
-	var craft: Label = UiKit.label("Craft: %s" % hero.signature_label, 14, UiKit.COLOR_GOLD_LIGHT)
+	var craft: Label = UiKit.label("Craft: %s" % (first.label if first != null else "-"), 14, UiKit.COLOR_GOLD_LIGHT)
 	craft.add_theme_font_override("font", Fx.bold_font())
 	signature.add_child(craft)
 	signature.tooltip_text = "Signature craft at the Crafting Table"
