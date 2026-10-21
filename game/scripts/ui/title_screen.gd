@@ -9,7 +9,8 @@ extends Control
 ## nights, feature 035), then the hero select screen (feature 034);
 ## Continue (shown
 ## when there is an autosave) resumes the saved run, with its party, at
-## its next morning.
+## its next morning. Once the true ending has been seen, Endless
+## ("How long can you last?") starts a Chapter 2 run with no last night.
 
 const BACKDROP: Script = preload("res://scripts/ui/title_backdrop.gd")
 
@@ -65,8 +66,12 @@ func _ready() -> void:
 		play.custom_minimum_size = Vector2(300, 72)
 		play.add_theme_font_size_override("font_size", 30)
 		var saved_hero: HeroDefinition = HeroRoster.get_hero(GameManager.party_of(save)["hero"])
-		play.tooltip_text = "%s - night %d of %d" % [saved_hero.display_name if saved_hero != null else "Leo",
-			int(save["day"]) + 1, int(save["nights_to_win"])]
+		var hero_name: String = saved_hero.display_name if saved_hero != null else "Leo"
+		var night: int = int(save["day"]) + 1
+		if bool(save.get("endless", false)):
+			play.tooltip_text = "%s - Endless, night %d" % [hero_name, night]
+		else:
+			play.tooltip_text = "%s - night %d of %d" % [hero_name, night, int(save["nights_to_win"])]
 		buttons.add_child(play)
 	var lengths: HBoxContainer = HBoxContainer.new()
 	lengths.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -89,6 +94,12 @@ func _ready() -> void:
 		slot.add_child(subtitle)
 		if play == null:
 			play = start
+	if StoryLibrary.has_seen(StoryLibrary.TRUE_ENDING):
+		var endless: Button = HudWidgets.icon_button("moon", "Endless", _on_endless, Color(0.7, 0.8, 1.0))
+		endless.custom_minimum_size = Vector2(250, 56)
+		endless.tooltip_text = "How long can you last? The Moon Lantern starts lit, and the nights never end."
+		buttons.add_child(endless)
+		buttons.position.y -= endless.custom_minimum_size.y + 10.0  # room for the extra row
 	var small: HBoxContainer = HBoxContainer.new()
 	small.alignment = BoxContainer.ALIGNMENT_CENTER
 	small.add_theme_constant_override("separation", 12)
@@ -118,6 +129,10 @@ func _ready() -> void:
 
 func _on_play(nights: int) -> void:
 	GameManager.open_hero_select(nights)
+
+
+func _on_endless() -> void:
+	GameManager.open_hero_select(7, true)
 
 
 func _on_continue() -> void:

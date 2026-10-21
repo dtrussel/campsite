@@ -103,13 +103,15 @@ func _on_night_started(day_number: int) -> void:
 		_show_eyes()
 
 
-## The night the Moon-Eater comes: Chapter 2's last.
+## The night the Moon-Eater comes: Chapter 2's last (never in endless).
 func is_boss_night(night: int) -> bool:
-	return boss_definition != null and GameManager.chapter() == 2 and night == GameManager.nights_to_win
+	return boss_definition != null and GameManager.chapter() == 2 and not GameManager.endless \
+		and night == GameManager.nights_to_win
 
 
 func _eyes_night(night: int) -> bool:
-	return boss_definition != null and GameManager.chapter() == 2 and night >= eyes_from_night and night < GameManager.nights_to_win
+	return boss_definition != null and GameManager.chapter() == 2 and not GameManager.endless \
+		and night >= eyes_from_night and night < GameManager.nights_to_win
 
 
 func _show_eyes() -> void:

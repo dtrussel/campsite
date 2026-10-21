@@ -159,7 +159,7 @@ func _build_top(root: Control) -> void:
 	moons.alignment = BoxContainer.ALIGNMENT_CENTER
 	moons.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	moons.add_theme_constant_override("separation", 3 if GameManager.nights_to_win <= 4 else 1)
-	moons.tooltip_text = "Nights to survive"
+	moons.tooltip_text = "Endless: the nights never end" if GameManager.endless else "Nights to survive"
 	moons.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_child(moons)
 	var moon_size: float = 24.0 if GameManager.nights_to_win <= 4 else 15.0
