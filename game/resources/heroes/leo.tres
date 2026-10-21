@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="HeroDefinition" load_steps=8 format=3 uid="uid://b0campsiteheroleo"]
+[gd_resource type="Resource" script_class="HeroDefinition" load_steps=9 format=3 uid="uid://b0campsiteheroleo"]
 
 [ext_resource type="Script" path="res://scripts/characters/hero_definition.gd" id="1_def"]
 [ext_resource type="Texture2D" path="res://assets/icons/portrait_leo.png" id="2_portrait"]
@@ -26,6 +26,16 @@ damage_bonus = 0
 range_factor = 1.0
 companion_range_factor = 1.0
 effects = Array[StringName]([&"burn", &"night_light"])
+
+[sub_resource type="Resource" id="tier_3"]
+script = ExtResource("5_tier")
+recipe = &"blaze_stick"
+label = "Blaze Stick"
+icon = "stick"
+damage_bonus = 0
+range_factor = 1.0
+companion_range_factor = 1.0
+effects = Array[StringName]([&"burn_splash", &"bright_light"])
 
 [resource]
 script = ExtResource("1_def")
@@ -64,7 +74,7 @@ companion_attack_range = 2.0
 attack_cooldown = 0.65
 companion_attack_cooldown = 0.75
 ranged = false
-signature_tiers = Array[ExtResource("5_tier")]([SubResource("tier_1"), SubResource("tier_2")])
+signature_tiers = Array[ExtResource("5_tier")]([SubResource("tier_1"), SubResource("tier_2"), SubResource("tier_3")])
 rating_health = 3
 rating_power = 3
 rating_reach = 1

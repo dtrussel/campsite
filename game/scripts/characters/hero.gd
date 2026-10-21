@@ -186,6 +186,9 @@ var has_signature: bool:
 const DOUBLE_SHOT_EVERY: int = 3
 ## The second pebble of a double shot leaves this long after the first.
 const DOUBLE_SHOT_GAP_SECONDS: float = 0.08
+## The night light's reach in metres, and with a `bright_light` tier.
+const TOOL_LIGHT_RANGE: float = 3.0
+const TOOL_LIGHT_BRIGHT_RANGE: float = 4.2
 
 ## The small personal light an owned `night_light` tier gives at night.
 var _tool_light: OmniLight3D = null
@@ -291,6 +294,12 @@ func has_tool_effect(effect: StringName) -> bool:
 	return false
 
 
+## How far the tool's night light reaches: a little further with a
+## `bright_light` tier (the Blaze Stick).
+func get_tool_light_range() -> float:
+	return TOOL_LIGHT_BRIGHT_RANGE if has_tool_effect(&"bright_light") else TOOL_LIGHT_RANGE
+
+
 ## True while the Ember Stick's personal light is lit.
 func is_tool_light_on() -> bool:
 	return _tool_light != null and _tool_light.visible
@@ -298,10 +307,13 @@ func is_tool_light_on() -> bool:
 
 ## HeroHits.strike calls this for every hit the hero lands (a swing, a
 ## Big Swing extra, a pebble, a Ricochet bounce), after the damage: the
-## tool's on-hit effects (the Ember Stick's burn).
+## tool's on-hit effects (the Ember Stick's burn, and the Blaze Stick's
+## splash onto the mobs beside the target).
 func on_attack_hit(target: Node, _damage: int) -> void:
 	if has_tool_effect(&"burn"):
 		Burn.ignite(target)
+		if has_tool_effect(&"burn_splash") and target is Node3D:
+			Burn.splash(target as Node3D)
 
 
 ## Reads reach and cooldown from the definition for this role: the
@@ -333,11 +345,11 @@ func _update_tool_light() -> void:
 		_tool_light.name = "ToolLight"
 		_tool_light.light_color = Color(1.0, 0.62, 0.3)
 		_tool_light.light_energy = 1.2
-		_tool_light.omni_range = 3.0
 		_tool_light.position = Vector3(0, 1.1, 0)
 		add_child(_tool_light)
 	if _tool_light != null:
 		_tool_light.visible = lit
+		_tool_light.omni_range = get_tool_light_range()
 
 
 func _near_torch() -> bool:
