@@ -26,7 +26,6 @@ extends Hero
 ## Any player command wins; the pause menu can switch it off.
 
 signal command_changed(command: int, target: Node)
-signal attacked(target: Node)
 
 enum Command { NONE, MOVE, ATTACK, GATHER, CAMPFIRE, REPAIR, BUILD }
 
@@ -56,9 +55,6 @@ const AUTO_ATTACK_SCAN_SECONDS: float = 0.2
 @export var acceleration: float = 30.0
 @export var friction: float = 30.0
 
-@export var attack_damage: int = 4
-@export var attack_range: float = 2.0
-@export var attack_cooldown_seconds: float = 0.65
 @export var heal_per_meal: int = 15
 @export var heal_per_snack: int = 35
 ## Half-size of the playable square around the campfire; keeps the boy
@@ -72,7 +68,6 @@ const AUTO_ATTACK_SCAN_SECONDS: float = 0.2
 var command: int = Command.NONE
 var command_target: Node3D = null
 
-var _attack_cooldown_remaining: float = 0.0
 var _move_goal: Vector3 = Vector3.ZERO
 var _repath_timer: float = 0.0
 var _repair_timer: float = 0.0
@@ -82,9 +77,6 @@ var _tool_busy: bool = false
 var _auto_scan_timer: float = 0.0
 ## The gather auto-attack interrupted, resumed once no mob is near.
 var _resume_node: ResourceNode = null
-## Crafting Table upgrade (features 019, 034): the hero's signature
-## (Leo's Sturdy Stick, Nela's Slingshot), once per run.
-var has_signature: bool = false
 var _agent: NavigationAgent3D = null
 var _hp_bar: HealthBar3D = null
 
@@ -106,8 +98,7 @@ func _enter_tree() -> void:
 	add_to_group(HeroRoster.group_for(hero.id))
 	stats = hero.stats
 	move_speed = hero.move_speed
-	attack_range = hero.attack_range
-	attack_cooldown_seconds = hero.attack_cooldown
+	_read_attack_tuning()
 	HeroBody.apply(self, hero)
 
 
@@ -207,12 +198,6 @@ func stop_commands() -> void:
 	_set_command(Command.NONE, null)
 
 
-## The reach of an attack now: attack_range after perks (Eagle Eye).
-## Use this, not attack_range, wherever the reach matters.
-func get_attack_range() -> float:
-	return attack_range * PerkManager.multiplier(self, &"attack_range")
-
-
 ## How close a mob must be for auto-attack to go for it.
 func auto_attack_radius() -> float:
 	return maxf(get_attack_range() * 1.3, 3.5)
@@ -243,7 +228,7 @@ func _on_down_changed(down: bool) -> void:
 # --- Per-frame -----------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
-	_attack_cooldown_remaining = max(0.0, _attack_cooldown_remaining - delta)
+	_tick_attack(delta)
 	_tick_health(delta)
 	if is_down():
 		_build_beat.stop(_visual)
@@ -303,8 +288,8 @@ func _tick_command(delta: float) -> Vector3:
 				return Vector3.ZERO
 			if _flat_distance(command_target.global_position) <= get_attack_range():
 				_visual.face(command_target.global_position - global_position, delta)
-				if _attack_cooldown_remaining <= 0.0:
-					_perform_attack(command_target)
+				if is_attack_ready():
+					attack(command_target)
 				return Vector3.ZERO
 			_repath_timer -= delta
 			if _repath_timer <= 0.0:
@@ -399,28 +384,27 @@ func _is_attackable(target: Variant) -> bool:
 	return is_instance_valid(target) and (target as Node).is_in_group("mobs")
 
 
-# --- Actions ---------------------------------------------------------------
+# --- Attack (the role's part; see Hero) ------------------------------
 
-func _perform_attack(target: Node3D) -> void:
-	_attack_cooldown_remaining = attack_cooldown_seconds
-	_visual.play_action(&"attack", 1.5)
-	attacked.emit(target)
-	if hero != null and hero.ranged:
-		PebbleShot.fire(self, target, attack_damage)
-		return
+## The player's hero is attacking while it has an attack command,
+## walking to the target included (the pointer's range ring shows then).
+func is_attacking() -> bool:
+	return command == Command.ATTACK
+
+
+## The hit feel: the swing lands after a wind-up, only if the target is
+## still in reach (x1.4), then the hit-stop.
+func _swing(target: Node3D) -> void:
 	var tween: Tween = create_tween()
 	tween.tween_interval(ATTACK_WINDUP)
 	tween.tween_callback(func() -> void:
 		if _is_attackable(target) and _flat_distance(target.global_position) <= get_attack_range() * 1.4:
-			# Big Swing: the swing carries on to the next mob.
-			var extra: Array[Node3D] = HeroHits.extra_targets(self, target, &"melee")
-			HeroHits.strike(self, target, attack_damage)
-			Fx.burst(&"hit", target.global_position + Vector3(0, 0.7, 0))
-			for other in extra:
-				HeroHits.strike(self, other, attack_damage)
-				Fx.burst(&"hit", other.global_position + Vector3(0, 0.7, 0))
+			_land_swing(target, &"hit")
 			Fx.hit_stop()
 	)
+
+
+# --- Actions ---------------------------------------------------------------
 
 
 ## E next to the Moon Lantern hands over the stash's Glow Shards
@@ -459,7 +443,7 @@ func _on_interactor_exited(node: ResourceNode) -> void:
 
 ## Space: swing at the nearest imp in range (keyboard shortcut).
 func _try_attack() -> void:
-	if is_gathering() or _attack_cooldown_remaining > 0.0:
+	if is_gathering() or not is_attack_ready():
 		return
 	var target: Node3D = nearest_mob(get_attack_range() * 1.2)
 	if target == null:
@@ -501,18 +485,6 @@ func _try_eat_berries() -> void:
 	heal(amount)
 	Fx.float_text(self, "+%d HP" % amount, Color(0.5, 1, 0.5))
 	Fx.burst(&"heal", global_position)
-
-
-## The hero's signature upgrade: Sturdy Stick (more damage) or
-## Slingshot (more reach), for the rest of the run.
-func apply_signature() -> void:
-	if has_signature or hero == null:
-		return
-	has_signature = true
-	attack_damage += hero.signature_damage_bonus
-	attack_range *= hero.signature_range_factor
-	Fx.float_text(self, "%s!" % hero.signature_label.to_upper(), Color(1.0, 0.85, 0.4), 2.8)
-	Fx.burst(&"level_up", global_position)
 
 
 ## X: bandage the companion when they are close and hurt (or knocked out).

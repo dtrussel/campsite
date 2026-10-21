@@ -695,8 +695,8 @@ func _process(_delta: float) -> void:
 func _refresh_slots() -> void:
 	if _player == null or not is_instance_valid(_player):
 		return
-	var cooldown: float = float(_player.get("_attack_cooldown_remaining")) / maxf(float(_player.attack_cooldown_seconds), 0.01)
-	(_slots[&"attack"] as HudWidgets.AbilitySlot).set_state(true, "", clampf(cooldown, 0.0, 1.0))
+	var cooldown: float = (_player as Hero).get_attack_cooldown_ratio() if _player is Hero else 0.0
+	(_slots[&"attack"] as HudWidgets.AbilitySlot).set_state(true, "", cooldown)
 	(_slots[&"gather"] as HudWidgets.AbilitySlot).set_state(true)
 	var torches: int = ResourceManager.get_count(&"torch")
 	(_slots[&"torch"] as HudWidgets.AbilitySlot).set_state(torches > 0, str(torches) if torches > 0 else "")

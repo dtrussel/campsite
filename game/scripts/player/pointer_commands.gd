@@ -252,8 +252,9 @@ func _make_range_ring() -> MeshInstance3D:
 func _update_range_ring() -> void:
 	if _range_ring == null or _player == null:
 		return
-	var attacking: bool = int(_player.get("command")) == 2  # Command.ATTACK
-	_range_ring.visible = (attacking or _hover_kind == Hover.MOB) and not (_player is Hero and (_player as Hero).is_down())
+	var hero: Hero = _player as Hero
+	var attacking: bool = hero != null and hero.is_attacking()
+	_range_ring.visible = (attacking or _hover_kind == Hover.MOB) and not (hero != null and hero.is_down())
 	# The reach can grow during a run (the Slingshot, Eagle Eye).
 	var grow: float = _player_reach() / float(_range_ring.get_meta(&"reach", 1.0))
 	_range_ring.scale = Vector3(grow, 0.05, grow)
@@ -261,9 +262,7 @@ func _update_range_ring() -> void:
 
 ## The player's attack reach now, perks included.
 func _player_reach() -> float:
-	if _player.has_method("get_attack_range"):
-		return float(_player.call("get_attack_range"))
-	return float(_player.get("attack_range"))
+	return (_player as Hero).get_attack_range() if _player is Hero else 1.0
 
 
 func _spawn_marker(position: Vector3, color: Color) -> void:
