@@ -1292,7 +1292,7 @@ func _run_hero_scenario() -> void:
 	var imp_hp: int = imp.current_hp
 	(player as Hero).attack(imp)
 	_check(imp.current_hp == imp_hp, "the pebble has not landed yet")
-	await _wait(PebbleShot.FLIGHT_SECONDS + 0.2)
+	await _wait_until(func() -> bool: return not is_instance_valid(imp) or imp.current_hp < imp_hp, PebbleShot.FLIGHT_SECONDS + 1.0)
 	_check(not is_instance_valid(imp) or imp.current_hp < imp_hp, "Nela's pebble hit the imp 3.5 m away")
 	if is_instance_valid(imp):
 		imp.take_damage(999, player)
@@ -2112,6 +2112,21 @@ func _wait(game_seconds: float) -> void:
 	await get_tree().create_timer(game_seconds, true, false, false).timeout
 
 
+## Waits frame by frame until `condition` holds, for at most
+## `game_seconds` of game time; returns whether it held. For an event a
+## tween or a physics tick brings (a pebble landing, a glow fading): a
+## fixed _wait just past it can end in the same long frame, before the
+## tween steps (timers run first), and a longer one can outlast what
+## the event leaves behind (a 1.5 s glow).
+func _wait_until(condition: Callable, game_seconds: float) -> bool:
+	var timer: SceneTreeTimer = get_tree().create_timer(game_seconds, true, false, false)
+	while not condition.call():
+		if timer.time_left <= 0.0:
+			return false
+		await get_tree().process_frame
+	return true
+
+
 func _check(condition: bool, label: String) -> void:
 	if condition:
 		print("smoke: ok   - " + label)
@@ -2852,15 +2867,17 @@ func _run_double_sling_scenario() -> void:
 		await get_tree().process_frame
 		var hp: Array[int] = [front.current_hp, behind.current_hp, aside.current_hp]
 		_check(_pebbles_from(nela, front) == 1, "Nela as %s: the Glow Sling's shot is one pebble" % role)
-		await _wait(PebbleShot.FLIGHT_SECONDS + 0.15)
+		# Polled, not a fixed wait: the glow is read the frame the hit lands.
+		await _wait_until(func() -> bool: return front.current_hp < hp[0], PebbleShot.FLIGHT_SECONDS + 1.0)
 		_check(front.current_hp < hp[0] and GlowMark.on(front) != null,
 			"Nela as %s: the Glow Sling's pebble hits and lights its target" % role)
-		await _wait(PebbleShot.FLIGHT_SECONDS + 0.3)
+		# Every pebble down (the pierce's included) before reading who it hit.
+		await _wait_until(func() -> bool: return _pebble_count() == 0, 2.0 * PebbleShot.FLIGHT_SECONDS + 1.0)
 		_check(behind.current_hp < hp[1] and aside.current_hp == hp[2],
 			"Nela as %s: the pebble pierces on to the mob behind, not the one aside (%d, %d HP lost)"
 				% [role, hp[1] - behind.current_hp, hp[2] - aside.current_hp])
-		await _wait(GlowMark.SECONDS + 0.2)
-		_check(GlowMark.on(front) == null, "Nela as %s: the glow fades" % role)
+		_check(await _wait_until(func() -> bool: return GlowMark.on(front) == null, GlowMark.SECONDS + 1.0),
+			"Nela as %s: the glow fades" % role)
 		for each in [front, behind, aside]:
 			(each as Mob).free()
 		table.queue_free()
