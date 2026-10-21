@@ -53,7 +53,6 @@ func _ready() -> void:
 	_definitions.sort_custom(func(a: PerkDefinition, b: PerkDefinition) -> bool: return String(a.id) < String(b.id))
 	for perk in _definitions:
 		_by_id[perk.id] = perk
-	ProgressionManager.level_up.connect(_on_level_up)
 
 
 func _process(delta: float) -> void:
@@ -267,8 +266,16 @@ func _on_picker_closed(perk: PerkDefinition, character: Node) -> void:
 		_pending.erase(character)
 
 
-func _on_level_up(character: Node, _new_level: int) -> void:
-	if ProgressionManager.is_restoring or character == null:
+## Reacts to `hero`'s level-ups: each hero calls it once, from
+## `Hero._setup_progress`. `leveled` fires after the stat bumps, so the
+## picker opens with the new HP already shown.
+func watch(hero: Hero) -> void:
+	if hero != null and not hero.leveled.is_connected(_on_leveled):
+		hero.leveled.connect(_on_leveled.bind(hero))
+
+
+func _on_leveled(_new_level: int, character: Node) -> void:
+	if ProgressionManager.is_restoring or not is_instance_valid(character):
 		return
 	HeroHits.cheer_up(character)  # before this level's card is taken
 	if character.is_in_group("player"):

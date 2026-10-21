@@ -100,13 +100,7 @@ func _ready() -> void:
 		move_speed = hero.companion_move_speed
 		_attack_range = hero.companion_attack_range
 		_attack_cooldown = hero.companion_attack_cooldown
-	if stats != null:
-		_current_attack_damage = stats.base_attack_damage
-		max_hp = stats.base_max_health
-	current_hp = max_hp
-	ProgressionManager.register_character(self, stats)
-	if not ProgressionManager.level_up.is_connected(_on_level_up):
-		ProgressionManager.level_up.connect(_on_level_up)
+	_setup_progress()
 	TimeManager.dawn_started.connect(_on_dawn_started)
 	_hp_bar = HealthBar3D.attach(self, 2.2, "hero", 1.1)
 	health_changed.connect(func(hp: int, max_value: int) -> void: _hp_bar.set_value(hp, max_value))
@@ -438,15 +432,15 @@ func _attack_mob(mob: Node3D) -> void:
 		Fx.burst(&"sparkle", other.global_position + Vector3(0, 0.7, 0))
 
 
-func _on_level_up(character: Node, _new_level: int) -> void:
-	if character != self or stats == null:
-		return
-	_current_attack_damage += stats.attack_damage_per_level
-	_hp_bar.set_level(_new_level)
-	max_hp += stats.max_health_per_level
-	current_hp = min(max_hp, current_hp + stats.max_health_per_level)
-	health_changed.emit(current_hp, max_hp)
-	if not ProgressionManager.is_restoring:
+# --- Progress (the role's part; see Hero) ----------------------------
+
+func _add_attack_damage(amount: int, base: bool) -> void:
+	_current_attack_damage = amount if base else _current_attack_damage + amount
+
+
+func _show_level_up(level: int, quiet: bool) -> void:
+	_hp_bar.set_level(level)
+	if not quiet:
 		Fx.float_text(self, "LEVEL UP!", Color(1.0, 0.85, 0.4), 2.7)
 
 

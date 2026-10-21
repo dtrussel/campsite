@@ -139,7 +139,49 @@ func _on_down_changed(_is_down: bool) -> void:
 
 
 # --- Progress ------------------------------------------------------------
-# hero-core 03: stats from the definition, level-up and `leveled`.
+# Stats from the definition, the level-up stat bumps, then `leveled`.
+# The perk manager listens to `leveled` (not ProgressionManager's raw
+# level-up), so the picker always opens after the new HP is applied,
+# whatever order the autoloads connected in.
+
+## The hero reached `level`, its stat bumps already applied. Also fires
+## while a save is restored (`ProgressionManager.is_restoring`).
+signal leveled(level: int)
+
+
+## The role calls this once in `_ready`: sets max HP and attack damage
+## from the stats, fills HP and registers with ProgressionManager.
+func _setup_progress() -> void:
+	if stats != null:
+		max_hp = stats.base_max_health
+		_add_attack_damage(stats.base_attack_damage, true)
+	current_hp = max_hp
+	ProgressionManager.register_character(self, stats)
+	if not ProgressionManager.level_up.is_connected(_on_progression_level_up):
+		ProgressionManager.level_up.connect(_on_progression_level_up)
+	PerkManager.watch(self)
+
+
+func _on_progression_level_up(character: Node, level: int) -> void:
+	if character != self or stats == null:
+		return
+	_add_attack_damage(stats.attack_damage_per_level, false)
+	max_hp += stats.max_health_per_level
+	current_hp = mini(max_hp, current_hp + stats.max_health_per_level)
+	health_changed.emit(current_hp, max_hp)
+	leveled.emit(level)
+	_show_level_up(level, ProgressionManager.is_restoring)
+
+
+## Role hook: sets (`base`) or raises the attack damage the role holds.
+func _add_attack_damage(_amount: int, _base: bool) -> void:
+	pass
+
+
+## Role hook: the level-up's feedback, after `leveled` (so the perk
+## picker is already open). `quiet` while a save is restored.
+func _show_level_up(_level: int, _quiet: bool) -> void:
+	pass
 
 
 # --- Gathering and shared queries ----------------------------------------
