@@ -1210,9 +1210,17 @@ func _run_bark_scenario() -> void:
 	var imp: Mob = _spawn_mob(imp_def, player.global_position - facing * 3.0)
 	await get_tree().process_frame
 	_check(director.danger_behind(), "an imp 3 m behind the player counts as danger")
-	await _wait(BarkDirector.DANGER_POLL_SECONDS + 0.3)
-	_check(SpeechBubble.on(companion) != null and _bark_line(SpeechBubble.on(companion).text, &"danger_behind", &"nela"),
-		"Nela warns: behind you!")
+	# Wait for the director's next poll in game time, frame by frame: on a
+	# slow machine one frame can cover a whole poll interval, so a fixed
+	# real-time wait can end on the frame before the poll runs.
+	var warned: Callable = func() -> bool:
+		var said: SpeechBubble = SpeechBubble.on(companion)
+		return said != null and _bark_line(said.text, &"danger_behind", &"nela")
+	var waited: float = 0.0
+	while not warned.call() and waited < BarkDirector.DANGER_POLL_SECONDS * 4.0:
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	_check(warned.call(), "Nela warns: behind you! (%.1fs)" % waited)
 	director.clock += 30.0
 	companion.call("take_damage", 9999)
 	_check(_bark_line(SpeechBubble.on(player).text, &"companion_down", &"leo"), "Leo calls out when Nela is knocked out")
