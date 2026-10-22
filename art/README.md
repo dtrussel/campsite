@@ -55,6 +55,11 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 - **Material names** ending in `_painted` get Godot's painted style
   (`scripts/utilities/stylize.gd`). The hero and shadow profiles also add an
   ink outline.
+- **Tints:** `style_tint` metadata (`Stylize.TINT_META`) on a mesh or a
+  parent multiplies its albedo, painted materials included. The badge
+  cosmetics use it (`scripts/meta/cosmetics.gd`): a hero's outfit mesh
+  (`HeroDefinition.outfit_mesh`) and the tent. Keep tints light, since
+  they colour the whole texture.
 - **Emissive** flat materials (eyes, wand star, embers) render unshaded.
 - **Triangle budgets:** imps ≤ 12k; the hero kids ≤ 40k (about 35k: body and clothes ~18–20k, head and ears ~4.5k, hair ~9–10k, each prop ~1.5k; Godot makes distance LODs on import), trees ≤ 5.2k (M8: about 4k of it is scattered leaves; pines 3.6k, berry bush 4.5k), props ≤ 1.5k. The kids bake at 1024 (they are under 100 px on screen) and export WebP textures.
 - **High-to-low bake:** the kid scripts build dense meshes (voxel cloth with folds, the 100-ring head loft, per-vertex colours) and `chibi.lowpoly(mesh, tris)` decimates each one to its budget while keeping a dense copy. `paint_bake.paint(mesh, high=copy)` paints the look on the dense copy (so stripes, folds, AO and the face stay crisp), then transfers it onto the low mesh with a selected-to-active colour bake. `HIGH_POLY=1` skips the decimation, to compare.

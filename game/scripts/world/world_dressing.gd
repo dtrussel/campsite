@@ -3,8 +3,8 @@ extends Node3D
 ## WorldDressing
 ##
 ## Builds the non-interactive art around the play area at load time,
-## deterministically (fixed seed), following the map plan in WorldLayout
-## (feature 032): a camp yard in a forest clearing, four themed groves
+## deterministically (fixed seed), following the map plan in WorldLayout:
+## a camp yard in a forest clearing, four themed groves
 ## in the corners between the mob lanes, footpaths out to them and the
 ## old road south. It builds:
 ##   - the painted ground's paths and grove grounds (via WorldLayout),
@@ -15,7 +15,7 @@ extends Node3D
 ##     the woodcutters' stumps and woodpile, the old stump's fairy ring,
 ##   - a forest wall that matches the grove behind it, with gaps where
 ##     the mob lanes come in (dead trees and jack-o'-lanterns there),
-##   - the camp props and the feature 031 homestead decor.
+##   - the camp props and the homestead decor.
 ## Nothing here affects gameplay except the colliders of the tent,
 ## woodpile, stall, well and pond. Solid decor stays off the mob lanes.
 
@@ -116,7 +116,7 @@ func _tuft_color() -> Color:
 
 ## Five blades fanning out and curving over (about 0.3-0.45 m
 ## tall); each blade is three tapering segments, so tufts read as
-## painted blades instead of flat cards (feature 031 M6).
+## painted blades instead of flat cards.
 func _make_tuft_mesh() -> ArrayMesh:
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -151,7 +151,7 @@ func on_path(p: Vector2, margin: float = 0.0) -> bool:
 	return WorldLayout.on_path(p, margin)
 
 
-# --- Wildflowers (feature 031) ---------------------------------------------
+# --- Wildflowers ---------------------------------------------
 
 const FLOWER_COLORS: Array = [Color(1.0, 0.82, 0.2), Color(1.0, 0.9, 0.35), Color(0.98, 0.97, 0.92)]
 const LUPINE_COLORS: Array = [Color(0.6, 0.44, 0.92), Color(0.76, 0.5, 0.9), Color(0.5, 0.42, 0.86)]
@@ -399,6 +399,10 @@ func _build_haunted_edges() -> void:
 
 func _build_camp() -> void:
 	var tent: Node3D = _spawn_model("custom/tent.glb", Vector3(-3.4, 0, -2.7), 1.25, deg_to_rad(125.0))
+	if tent != null:
+		# The badge-unlocked tent colour (Cosmetics), styled a frame later.
+		tent.set_meta(Stylize.TINT_META, Cosmetics.tent_tint())
+		tent.add_to_group(&"tent")
 	_add_blocker(tent, Vector3(2.8, 2.0, 2.4))
 	var logs: Node3D = _spawn_model("custom/woodpile.glb", Vector3(3.0, 0, -2.5), 1.0, deg_to_rad(-25.0))
 	_add_blocker(logs, Vector3(1.3, 0.8, 0.8))
@@ -418,7 +422,7 @@ func _build_camp() -> void:
 			lantern.add_child(light)
 
 
-## Feature 031: the cozy decor of concept 01/02. Feature 032: lantern
+## The cozy decor of concept 01/02. Lantern
 ## posts mark where the footpaths and the road leave the yard; flower
 ## bushes ring the yard between them. Warm lights in the lantern posts
 ## and inside the tent make the night pools of light of concept 03.
@@ -446,7 +450,7 @@ func _build_homestead(tent: Node3D) -> void:
 		tent.add_child(_warm_light(Vector3(-0.55, 0.5, 0.0), 0.8, 2.6))
 
 
-# --- Groves (feature 032) ----------------------------------------------------
+# --- Groves ----------------------------------------------------
 
 func _build_groves() -> void:
 	_build_pine_grove()
@@ -757,10 +761,8 @@ func _spawn_model(path: String, position: Vector3, uniform_scale: float, yaw: fl
 	node.position = position
 	node.rotation.y = yaw
 	node.scale = Vector3.ONE * uniform_scale
-	if path.contains("hill") or path.contains("mountain"):
-		node.set_meta(Stylize.TINT_META, Stylize.TINT_FOLIAGE)
-	elif path.contains("rock"):
-		node.set_meta(Stylize.TINT_META, Stylize.TINT_ROCK)
+	# Rocks and hills keep their painted colours: a flat tint would wash
+	# out the hand-painted texture.
 	if (path.contains("tree_") or path.contains("pine_") or path.contains("bush")) and not path.contains("dead"):
 		node.set_meta(Stylize.FOLIAGE_META, true)
 	add_child(node)

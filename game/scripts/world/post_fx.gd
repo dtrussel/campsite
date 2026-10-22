@@ -3,13 +3,13 @@ extends CanvasLayer
 
 ## PostFx
 ##
-## The full-screen look pass of feature 031: tilt-shift blur, warm
+## The full-screen look pass: tilt-shift blur, warm
 ## split-tone grade and vignette (`shaders/post_tiltshift.gdshader`).
 ## It sits below every UI layer, so menus and the HUD stay sharp. In a
 ## run it follows TimeManager and cools the grade at night; the title
 ## backdrop passes a fixed `night_amount`. The blur has three levels in
 ## the pause menu, Off / Soft / Strong (saved in user://settings.cfg,
-## section "video"); Soft is the default since playtest 1 (044). The
+## section "video"); Soft is the default. The
 ## camera moves the crisp band with its zoom (`set_focus_center`).
 
 const SHADER: Shader = preload("res://shaders/post_tiltshift.gdshader")
@@ -20,7 +20,7 @@ const NIGHT_AMOUNT: Dictionary = {0: 0.0, 1: 0.45, 2: 1.0, 3: 0.25}
 
 enum Blur { OFF, SOFT, STRONG }
 const BLUR_NAMES: PackedStringArray = ["Off", "Soft", "Strong"]
-## level -> shader parameters (Strong is the feature 031 look).
+## level -> shader parameters (Strong is the heaviest blur).
 const BLUR_PARAMS: Dictionary = {
 	Blur.SOFT: {"max_radius": 3.5, "focus_band": 0.2, "falloff": 0.45, "bottom_boost": 1.0, "haze": 0.02},
 	Blur.STRONG: {"max_radius": 7.0, "focus_band": 0.12, "falloff": 0.32, "bottom_boost": 1.2, "haze": 0.04},
@@ -34,7 +34,7 @@ var _material: ShaderMaterial = null
 var _tween: Tween = null
 
 
-## The saved blur level. A pre-044 `tilt_shift = false` reads as Off.
+## The saved blur level. An older `tilt_shift = false` setting reads as Off.
 static func blur_level() -> int:
 	var config: ConfigFile = ConfigFile.new()
 	if config.load(SETTINGS_PATH) != OK:

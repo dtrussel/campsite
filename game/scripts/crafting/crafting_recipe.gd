@@ -7,18 +7,21 @@ extends Resource
 ## of `output_id`. Stored as a .tres file under res://resources/recipes/.
 ## Loaded once at startup by CraftingManager.
 ##
-## A recipe can instead have an `effect` on the camp (feature 017):
+## A recipe can instead have an `effect` on the camp:
 ##   &"feed_fire"    - heals the campfire (only while it is damaged)
 ##   &"stone_hearth" - upgrades the campfire (once per run)
-##   &"sturdy_stick" - Leo hits harder (once per run; feature 019)
-##   &"slingshot"    - Nela attacks from further away (once per run)
+##   &"tool_tier"    - the next tier of a hero's signature tool (Leo's
+##                     Sturdy Stick, then Ember Stick; Nela's Slingshot).
+##                     The hero whose `signature_tiers` names this recipe
+##                     gets it, once the tier before it is owned.
 ##   &"trap_refill"  - every Snap Trap gets all its snaps back
 ## `station` is where it is made: the campfire, or a Crafting Table
 ## (which must be built first).
 ## Effect recipes may leave `output_id` empty; `icon_name` (an icon in
 ## res://assets/icons/) is shown as their result in the crafting panel.
 
-const EFFECTS: Array[StringName] = [&"feed_fire", &"stone_hearth", &"sturdy_stick", &"slingshot", &"trap_refill"]
+const EFFECT_TOOL_TIER: StringName = &"tool_tier"
+const EFFECTS: Array[StringName] = [&"feed_fire", &"stone_hearth", EFFECT_TOOL_TIER, &"trap_refill"]
 const STATION_CAMPFIRE: StringName = &"campfire"
 const STATION_TABLE: StringName = &"table"
 

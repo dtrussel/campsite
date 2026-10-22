@@ -3,8 +3,8 @@ extends RefCounted
 
 ## BuildingSaves
 ##
-## The saving system for the camp's buildings and blueprints (run
-## lifecycle 03): lists them for the save file ("buildings") and rebuilds
+## The saving system for the camp's buildings and blueprints:
+## lists them for the save file ("buildings") and rebuilds
 ## them on Continue. Each building writes and reads its own line
 ## (Building.save_entry / Building.rebuild). Destroyed ones are left out.
 

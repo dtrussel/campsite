@@ -36,6 +36,9 @@ const PICKUP_SCENE: PackedScene = preload("res://scenes/world/ItemPickup.tscn")
 @export var hp_bar_height: float = 1.75
 
 var current_hp: int = 0
+## Set by the spawner before the mob enters the tree: endless nights
+## past the story make mobs tougher (1 = the definition's HP).
+var hp_multiplier: float = 1.0
 var state: int = State.MOVING_TO_TARGET
 
 var _base: Node3D = null
@@ -46,7 +49,7 @@ var _last_damage_source: Node = null
 var _knockback: Vector3 = Vector3.ZERO
 var _spawn_remaining: float = 0.0
 var _stun_remaining: float = 0.0
-# Thief state (feature 021).
+# Thief state.
 var loot_id: StringName = &""
 var loot_amount: int = 0
 var is_fleeing: bool = false
@@ -61,7 +64,7 @@ var _hp_bar: HealthBar3D = null
 func _ready() -> void:
 	add_to_group("mobs")
 	if definition != null:
-		current_hp = definition.max_hp
+		current_hp = max_hp()
 	else:
 		push_warning("Mob '%s' has no definition" % name)
 		current_hp = 1
@@ -76,10 +79,20 @@ func _ready() -> void:
 	_play_spawn_fx.call_deferred()
 
 
+## Full health: the definition's HP times hp_multiplier.
+func max_hp() -> int:
+	return maxi(1, roundi(definition.max_hp * hp_multiplier)) if definition != null else 1
+
+
 func _play_spawn_fx() -> void:
 	Fx.burst(definition.spawn_burst if definition != null else &"shadow_spawn", global_position)
 	if _visual != null and _base != null:
 		_visual.face_instantly(_base.global_position - global_position)
+
+
+## True while the mob still has HP left.
+func is_alive() -> bool:
+	return current_hp > 0
 
 
 func take_damage(amount: int, source: Node = null) -> void:
@@ -89,7 +102,7 @@ func take_damage(amount: int, source: Node = null) -> void:
 		_last_damage_source = source
 	current_hp = max(0, current_hp - amount)
 	if _hp_bar != null and definition != null:
-		_hp_bar.set_value(current_hp, definition.max_hp)
+		_hp_bar.set_value(current_hp, max_hp())
 	Fx.flash(self, Color(1, 1, 1, 0.8))
 	Fx.float_text(self, "-%d" % amount, Color(1, 0.95, 0.6), 1.2)
 	if _visual != null and current_hp > 0 and _spawn_remaining <= 0.0 and not _visual.is_in_action():
@@ -112,6 +125,8 @@ func _die() -> void:
 	collision_mask = 0
 	_award_kill_xp()
 	GameManager.record(&"kills")
+	if definition != null and definition.steals_resources:
+		GameManager.record(&"gremlins_caught")
 	_maybe_drop_loot()
 	defeated.emit(self)
 	if _hp_bar != null:
@@ -255,7 +270,7 @@ func is_stunned() -> bool:
 
 
 ## Loot for young players: a chance per kill, with pity so a dry spell
-## never lasts long (feature 036, GameManager.roll_loot).
+## never lasts long (GameManager.roll_loot).
 func _maybe_drop_loot() -> void:
 	if definition == null or definition.drop_item == &"":
 		return
@@ -299,10 +314,12 @@ func _physics_process(delta: float) -> void:
 		_tick_thief(delta)
 		return
 
-	# Drop an attack target that has been destroyed.
-	if _attack_target != null and not is_instance_valid(_attack_target):
+	# Drop an attack target that has been destroyed. A freed object reads
+	# as null, so only is_instance_valid can tell.
+	if not is_instance_valid(_attack_target):
 		_attack_target = null
-		state = State.MOVING_TO_TARGET
+		if state == State.ATTACKING:
+			state = State.MOVING_TO_TARGET
 
 	_update_chase_target()
 
@@ -368,15 +385,20 @@ func _try_attack(target: Node) -> void:
 	if _visual != null:
 		_visual.play_action(&"attack", 1.3)
 	if definition.attack_hit_delay > 0.0:
-		# Telegraphed (feature 026): the blow lands at the clip's impact.
+		# Telegraphed: the blow lands at the clip's impact.
 		get_tree().create_timer(definition.attack_hit_delay, false).timeout.connect(_land_attack.bind(target))
 	else:
 		_land_attack(target)
 	_attack_cooldown_remaining = definition.attack_cooldown_seconds
 
 
-func _land_attack(target: Node) -> void:
-	if state == State.DYING or not is_instance_valid(target) or not target.has_method("take_damage"):
+## `target` is untyped: a telegraphed blow lands after a delay, and by
+## then the target may have been freed, which a typed parameter rejects.
+func _land_attack(target_or_freed: Variant) -> void:
+	if state == State.DYING or not is_instance_valid(target_or_freed):
+		return
+	var target: Node = target_or_freed as Node
+	if target == null or not target.has_method("take_damage"):
 		return
 	var delayed: bool = definition.attack_hit_delay > 0.0
 	if delayed:
@@ -397,7 +419,7 @@ func _land_attack(target: Node) -> void:
 	if target is Building:
 		damage = int(round(damage * definition.building_damage_multiplier))
 	target.take_damage(damage, self)
-	# A beast that flattens a building beats its chest (feature 026).
+	# A beast that flattens a building beats its chest.
 	if delayed and target is Building and (target as Building).current_hp <= 0 and _visual != null:
 		_visual.play_action(&"roar", 1.2)
 
@@ -454,8 +476,8 @@ func _torch_slow_factor() -> float:
 ## The nearest standing building a siege mob should tear down (traps
 ## are flat on the ground and ignored). Sticks with its current one.
 func _find_siege_target() -> Node3D:
-	var current: Building = _attack_target as Building
-	if current != null and is_instance_valid(current) and current.current_hp > 0 and current.collision_layer != 0:
+	var current: Building = _attack_target as Building if is_instance_valid(_attack_target) else null
+	if current != null and current.current_hp > 0 and current.collision_layer != 0:
 		return current
 	var best: Node3D = null
 	var best_d: float = INF

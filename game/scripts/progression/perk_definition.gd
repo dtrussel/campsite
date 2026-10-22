@@ -3,7 +3,7 @@ extends Resource
 
 ## PerkDefinition
 ##
-## One perk card (perk cards, .scratch/perk-cards). On each level-up the
+## One perk card. On each level-up the
 ## player's hero picks 1 of 3 cards (PerkPicker); PerkManager keeps what
 ## each character has taken and answers the gameplay hooks. Stored as a
 ## .tres under res://resources/perks/, the same pattern as HeroDefinition.

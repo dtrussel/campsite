@@ -1,6 +1,6 @@
 extends Node
 
-## Captures a filmstrip of animation frames for review (feature 023):
+## Captures a filmstrip of animation frames for review:
 ## Leo running while he swings (upper-body layer), then turning sharply
 ## (lean). Needs a real renderer, e.g. under xvfb-run:
 ##   xvfb-run -a godot --path game --rendering-driver opengl3 \
@@ -62,7 +62,7 @@ func _shot(label: String) -> void:
 	print("anim_frames: ", label)
 
 
-## Feature 026: the Bramble Beast rising, stomping to a fence, slamming
+## The Bramble Beast rising, stomping to a fence, slamming
 ## it and collapsing. Pass `beast` after the output dir.
 func _beast_frames(player: Node3D) -> void:
 	for layer in get_tree().root.find_children("*", "CanvasLayer", true, false):
@@ -95,7 +95,7 @@ func _beast_frames(player: Node3D) -> void:
 		_shot("beast_death_%d" % i)
 
 
-## Feature 027: the Mushroom Gremlin popping up, sneaking to the campfire,
+## The Mushroom Gremlin popping up, sneaking to the campfire,
 ## grabbing loot, scurrying off, and plopping over when caught. Pass
 ## `gremlin` after the output dir.
 func _gremlin_frames(player: Node3D) -> void:
@@ -141,7 +141,7 @@ func _gremlin_frames(player: Node3D) -> void:
 	_shot("gremlin_face_0")
 
 
-## Feature 028: the Shadow Imp rising, running at Leo, swiping, and a
+## The Shadow Imp rising, running at Leo, swiping, and a
 ## still facing the camera. Pass `imp` after the output dir.
 func _imp_frames(player: Node3D) -> void:
 	for layer in get_tree().root.find_children("*", "CanvasLayer", true, false):

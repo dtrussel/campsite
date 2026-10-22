@@ -112,6 +112,27 @@ before it says they found a page. These are the source of truth.
 | C2 n5 | worried | Something big in the Hollow eats light to keep warm. |
 | C2 n6 | proud | Light the lantern all the way. The big one is just lonely. |
 
+### Mum's journal (041)
+
+Twelve pages, kept in the profile once found and read in the
+scrapbook's Journal tab (`game/resources/story/journal/`, in file
+order). The seven dawn notes above are pages too, found when their
+card plays; the page reads the note's line, so the table above stays
+the source. The other five are new:
+
+| Page | Found | Face | Words |
+|---|---|---|---|
+| 1 Ranger's log | day chest | smile | New post: the camp by the Hollow Wood. / The kids love it already. |
+| 3 The rangers' map | day chest | curious | An old map shows a stone lantern here. / The first rangers lit it every night. |
+| 6 Lost and found | day chest | curious | A toy boat, a mitten, an old signpost. / The woods keep what people lose. |
+| 8 Little collectors | Gremlin Catcher badge | laugh | A gremlin took my spoon, then gave it back! / They don't steal. They collect. |
+| 11 Moonlight | Lantern Lighter badge | proud | With the lantern lit, the shadows go still. / Like cats curled up by a warm fire. |
+
+A **day chest** comes in half the runs, on one of the run's days, at
+the map edge beside a lane. Walking up to it opens it: it holds the
+first chest page not yet found (then the first dawn note not yet
+found), and is gone at nightfall if no one opens it.
+
 ## Run structure: chapters
 
 The two run lengths become chapters of one story.

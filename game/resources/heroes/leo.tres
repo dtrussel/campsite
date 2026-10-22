@@ -1,9 +1,47 @@
-[gd_resource type="Resource" script_class="HeroDefinition" load_steps=5 format=3 uid="uid://b0campsiteheroleo"]
+[gd_resource type="Resource" script_class="HeroDefinition" load_steps=9 format=3 uid="uid://b0campsiteheroleo"]
 
 [ext_resource type="Script" path="res://scripts/characters/hero_definition.gd" id="1_def"]
 [ext_resource type="Texture2D" path="res://assets/icons/portrait_leo.png" id="2_portrait"]
 [ext_resource type="PackedScene" path="res://assets/custom/leo.glb" id="3_model"]
 [ext_resource type="Resource" uid="uid://b0campsitestatsplayer" path="res://resources/progression/player_stats.tres" id="4_stats"]
+
+[ext_resource type="Script" path="res://scripts/characters/tool_tier.gd" id="5_tier"]
+
+[sub_resource type="Resource" id="tier_1"]
+script = ExtResource("5_tier")
+recipe = &"sturdy_stick"
+label = "Sturdy Stick"
+icon = "stick"
+damage_bonus = 2
+range_factor = 1.0
+companion_range_factor = 1.0
+effects = Array[StringName]([])
+
+[sub_resource type="Resource" id="tier_2"]
+script = ExtResource("5_tier")
+recipe = &"ember_stick"
+label = "Ember Stick"
+icon = "stick"
+damage_bonus = 0
+range_factor = 1.0
+companion_range_factor = 1.0
+effects = Array[StringName]([&"burn", &"night_light"])
+burn_damage = 1
+burn_tick_seconds = 1.0
+burn_ticks = 3
+light_range = 3.0
+
+[sub_resource type="Resource" id="tier_3"]
+script = ExtResource("5_tier")
+recipe = &"blaze_stick"
+label = "Blaze Stick"
+icon = "stick"
+damage_bonus = 0
+range_factor = 1.0
+companion_range_factor = 1.0
+effects = Array[StringName]([&"burn_splash", &"bright_light"])
+burn_splash_radius = 1.6
+light_range = 4.2
 
 [resource]
 script = ExtResource("1_def")
@@ -32,6 +70,7 @@ clips = {
 reference_speed = 7.0
 step_distance = 1.1
 capsule_height = 1.2
+outfit_mesh = "Leo"
 tool_hidden_parts = PackedStringArray("Leo_Stick")
 hurt_sfx = &"player_hurt"
 stats = ExtResource("4_stats")
@@ -42,12 +81,7 @@ companion_attack_range = 2.0
 attack_cooldown = 0.65
 companion_attack_cooldown = 0.75
 ranged = false
-signature_recipe = &"sturdy_stick"
-signature_label = "Sturdy Stick"
-signature_icon = "stick"
-signature_damage_bonus = 2
-signature_range_factor = 1.0
-companion_signature_range_factor = 1.0
+signature_tiers = Array[ExtResource("5_tier")]([SubResource("tier_1"), SubResource("tier_2"), SubResource("tier_3")])
 rating_health = 3
 rating_power = 3
 rating_reach = 1

@@ -2,7 +2,7 @@ extends Node
 
 ## RunSession
 ##
-## One run's lifecycle (run lifecycle spec): start a run from a
+## One run's lifecycle: start a run from a
 ## RunConfig, continue one from saved data, reset, and announce when a
 ## restore has finished. GameManager's start_run / continue_run /
 ## go_to_title (the title, hero select, pause and end screens) come
@@ -55,17 +55,17 @@ func _ready() -> void:
 ## scene, which then starts the clock at day 1.
 func start(run: RunConfig = null, open_scene: bool = true) -> void:
 	run = run if run != null else RunConfig.current()
-	_use_party(run, run.hero_id, run.companion_id, run.nights_to_win)
+	_use_party(run, run.hero_id, run.companion_id, run.nights_to_win, run.endless)
 	_pending = {}
 	SaveManager.delete_save()
 	get_tree().paused = false
 	reset(run)
 	if open_scene:
-		LoadingScreen.load_scene(GameManager.GAME_SCENE)  # key art while the camp loads (feature 029)
+		LoadingScreen.load_scene(GameManager.GAME_SCENE)  # key art while the camp loads
 
 
 ## Continues the run `data` was saved from (SaveManager.load_save or
-## parse): the party and run length come from the save, the seeds and
+## parse): the party, run length and endless flag come from the save, the seeds and
 ## the auto-pick time from `run` (fresh ones when null). The save is
 ## applied once the gameplay scene is ready, at the morning after its
 ## day. False (and nothing changes) when `data` is empty.
@@ -74,7 +74,7 @@ func continue_from(data: Dictionary, run: RunConfig = null, open_scene: bool = t
 		return false
 	run = run if run != null else RunConfig.current()
 	var party: Dictionary = GameManager.party_of(data)
-	_use_party(run, party["hero"], party["companion"], int(data["nights_to_win"]))
+	_use_party(run, party["hero"], party["companion"], int(data["nights_to_win"]), bool(data.get("endless", false)))
 	get_tree().paused = false
 	reset(run)
 	_pending = data
@@ -94,6 +94,7 @@ func reset(run: RunConfig = null) -> void:
 	PerkManager.auto_pick_seconds = config.perk_auto_pick_seconds
 	PerkManager.rng.seed = config.perk_seed
 	GameManager.loot_rng.seed = config.loot_seed
+	GameManager.day_chest_day = config.day_chest_day
 
 
 ## Every saving system, in the one declared restore order: the autoloads
@@ -190,12 +191,14 @@ func _world_systems() -> Array:
 	return out
 
 
-func _use_party(run: RunConfig, hero: StringName, companion: StringName, nights: int) -> void:
+func _use_party(run: RunConfig, hero: StringName, companion: StringName, nights: int, endless: bool) -> void:
 	GameManager.nights_to_win = nights
+	GameManager.endless = endless
 	GameManager.set_party(hero, companion)
 	run.hero_id = GameManager.hero_id
 	run.companion_id = GameManager.companion_id
 	run.nights_to_win = nights
+	run.endless = endless
 
 
 func _finish_restore() -> void:

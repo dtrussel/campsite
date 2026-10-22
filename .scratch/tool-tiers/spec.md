@@ -1,6 +1,6 @@
 # Tool tiers
 
-Status: ready-for-agent
+Status: done
 
 From the 2026-10 brainstorm, planned as feature 040 and never started. Triaged on 2026-10-20 and split into tickets in `issues/`; the `Blocked by:` lines give the order.
 
@@ -15,7 +15,8 @@ Turn the one-off signature crafts into a small upgrade path, and give Glow Shard
 - **Leo:**
   - Stick;
   - **Sturdy Stick** (today, +2 damage);
-  - **Ember Stick** (hits leave a short burn: 1 damage/s for 3 s, and the stick gives a small personal light at night, with no mob slow).
+  - **Ember Stick** (hits leave a short burn: 1 damage/s for 3 s, and the stick gives a small personal light at night, with no mob slow);
+  - **Blaze Stick** (the burn also splashes onto mobs right next to the target, and the light grows a little; decided 2026-10-21).
 - **Nela:**
   - Slingshot (today, more reach);
   - **Double Sling** (every 3rd shot fires two pebbles);
@@ -34,11 +35,11 @@ Turn the one-off signature crafts into a small upgrade path, and give Glow Shard
 
 ## Acceptance criteria
 
-- [ ] `tools/check.sh` reports validate OK and smoke PASSED.
-- [ ] Validate: every hero's tiers point to existing recipes.
-- [ ] Smoke: craft tiers 1 → 2 → 3 for both heroes in either role; each effect fires (the burn ticks, the double shot, the pierce hits two mobs in a line).
-- [ ] Smoke: an old save with `signature: true` loads as tier 1.
-- [ ] Screenshots: the crafting panel with tier 3 available, and the HUD tier pip.
+- [x] `tools/check.sh` reports validate OK and smoke PASSED.
+- [x] Validate: every hero's tiers point to existing recipes.
+- [x] Smoke: craft tiers 1 → 2 → 3 for both heroes in either role; each effect fires (the burn ticks, the double shot, the pierce hits two mobs in a line).
+- [x] Smoke: an old save with `signature: true` loads as tier 1.
+- [x] Screenshots: the crafting panel with tier 3 available, and the HUD tier pip.
 
 ## Decisions so far
 
@@ -62,3 +63,7 @@ None.
   - Ticket 04 (Leo's tier 3) is `needs-info`: the plan names only two Leo crafts (Sturdy Stick, Ember Stick) against Nela's three.
 
 - **2026-10-21, architecture review:** now blocked by hero-core (the user chose to do the refactor first). Ticket 01 carries the new `Blocked by:`; the rest follow from 01. With hero-core in, "works as the player's hero and as the companion" comes from the shared attack, not from two edits.
+
+- **2026-10-21, done:** all five tickets are done. Leo's path is Sturdy &rarr; Ember &rarr; Blaze Stick and Nela's Slingshot &rarr; Double &rarr; Glow Sling, with the effects in the shared Hero module. Docs, screenshots and roadmap 040 are updated (ticket 05); whether the shard trade-off feels fair is on the hand-play backlog (07).
+
+- **2026-10-21, code review:** the effects' numbers moved out of `Burn`, `GlowMark`, `Hero` and `PebbleShot` into `ToolTier` exports (burn damage/tick/ticks, with the burn's length derived as ticks &times; tick; splash radius; light range; double-shot rhythm and gap; pierce reach and width; glow time, reach and brightness), set in `leo.tres` / `nela.tres` and read through `Hero.tool_effect_tier(effect)`; the validator checks them (`ToolTier.problems`). `Mob.is_alive()` replaces the `current_hp <= 0` duck checks, and `Hero.tier_of_recipe` keeps CraftingManager from reaching through `holder.hero`. Behaviour is unchanged.

@@ -3,9 +3,9 @@ extends PanelContainer
 
 ## StoryCard
 ##
-## The dawn card (feature 035): a small campcraft plate down the left
+## The dawn card: a small campcraft plate down the left
 ## edge of the HUD where the played hero and the companion talk about the night
-## (and read a page of Mum's notebook they found, feature 046),
+## (and read a page of Mum's notebook they found),
 ## with a hint about the Moon Lantern underneath. It never pauses the
 ## game: it plays the voiced lines one after another, then fades by
 ## itself (or on a click).
@@ -68,7 +68,7 @@ static func line_row(line: Dictionary, text_size: int, portrait_size: float, cen
 	words.add_theme_constant_override("outline_size", 6)
 	words.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
 	column.add_child(words)
-	# Mum's note comes with her sketch, a taped scrap of her notebook (047).
+	# Mum's note comes with her sketch, a taped scrap of her notebook.
 	var sketch_path: String = String(line.get("sketch", ""))
 	if sketch_path != "" and ResourceLoader.exists(sketch_path):
 		var sketch: TextureRect = TextureRect.new()

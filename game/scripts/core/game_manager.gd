@@ -5,18 +5,24 @@ extends Node
 ## Top-level coordinator. Owns the run lifecycle (title -> playing ->
 ## won / lost -> restart), the win and lose rules, the per-run stats
 ## shown on the end screen, and dispatches companion-task hotkeys.
-## Also holds the party (feature 034): which hero the player plays and
+## Also holds the party: which hero the player plays and
 ## which one is the AI companion, picked on the hero select screen.
-## The run lengths are the story's chapters (feature 035): 3 nights is
+## The run lengths are the story's chapters: 3 nights is
 ## Chapter 1, 7 nights is Chapter 2, and each opens with its intro.
-## Chapter 2's last night lasts until the Moon-Eater is calmed (feature
-## 038); its dawn is the win.
+## Chapter 2's last night lasts until the Moon-Eater is calmed;
+## its dawn is the win.
 
 signal day_number_changed(new_day: int)
 signal camp_destroyed
 signal companion_task_changed(companion: Node, task: int)
 signal run_started
 signal run_ended(won: bool, reason: String)
+## A run stat was recorded or set; `amount` is how much it went up
+## (Badges counts and checks on it).
+signal stat_recorded(stat: StringName, amount: int)
+## This run's DayChest was placed at the map edge (the HUD says so).
+## Typed Node3D: an autoload naming DayChest here makes a load cycle.
+signal day_chest_placed(chest: Node3D)
 
 enum RunState { MENU, PLAYING, WON, LOST }
 
@@ -26,6 +32,13 @@ const HERO_SELECT_SCENE: String = "res://scenes/ui/HeroSelect.tscn"
 
 ## Surviving this many nights wins the run.
 @export var nights_to_win: int = 3
+## The chance a run rolls a day chest (RunConfig.roll_day_chest).
+@export_range(0.0, 1.0) var day_chest_chance: float = 0.5
+## Endless mode (unlocked by the true ending): a Chapter 2 run
+## (nights_to_win stays 7, so chapter() and the moon rows still read
+## right) that has no win and no Moon-Eater. Kept between runs like the
+## run length; the chapter buttons clear it.
+var endless: bool = false
 
 var current_day: int = 1
 var is_camp_destroyed: bool = false
@@ -34,16 +47,24 @@ var end_reason: String = ""
 ## Which story beat the end screen shows: &"win", &"loss_fire" or
 ## &"loss_hero".
 var end_trigger: StringName = &""
+## True when the run that just ended beat the endless record, so the
+## end screen says "New record!".
+var new_record: bool = false
 ## Per-run counters for the end screen and the playtest log.
 var stats: Dictionary = {}
-## The party: the played hero and the companion (HeroRoster ids). Kept
-## between runs so the hero select screen opens on the last pick.
+## The party: the played hero and the companion (HeroRoster ids). The
+## last hero picked is also kept in the profile (record_hero_pick), so
+## hero select opens on it after a restart too.
 var hero_id: StringName = &"leo"
 var companion_id: StringName = &"nela"
-## Glow Shard drops (feature 036): kills since each mob type last
+## Glow Shard drops: kills since each mob type last
 ## dropped, for the pity rule. Saved, and reset every run.
 var loot_misses: Dictionary = {}
 var loot_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+## The day this run's day chest appears, or 0 for
+## none: from the run config, and saved, so a continued run never rolls
+## a second one.
+var day_chest_day: int = 0
 
 
 func _ready() -> void:
@@ -66,7 +87,7 @@ func _run_selftest() -> void:
 	var recipes: int = CraftingManager.get_recipes().size()
 	var scene: PackedScene = load(GAME_SCENE) as PackedScene
 	var instance: Node = scene.instantiate() if scene != null else null
-	# Floors, not exact counts: the six gathered resources (Playtest 1),
+	# Floors, not exact counts: the six gathered resources,
 	# the camp's first buildings and a recipe.
 	var ok: bool = items >= 6 and buildings >= 2 and recipes >= 1 and instance != null
 	print("selftest: items=%d buildings=%d recipes=%d main_scene=%s -> %s" % [
@@ -119,8 +140,10 @@ func chapter() -> int:
 
 
 ## The intro pages a new game opens with. Every new game plays them
-## (Esc skips); Continue and Restart never do.
+## (Esc skips); Continue, Restart and endless runs never do.
 func intro_pages() -> Array:
+	if endless:
+		return []  # endless comes after the story: straight to the camp
 	return StoryLibrary.find(&"intro", chapter())
 
 
@@ -128,6 +151,7 @@ func intro_pages() -> Array:
 ## screen), then the run.
 func begin_chapter(hero: StringName, companion: StringName = &"") -> void:
 	set_party(hero, companion)
+	record_hero_pick(hero_id)
 	var key: String = "intro.c%d" % chapter()
 	var pages: Array = intro_pages()
 	if pages.is_empty():
@@ -140,9 +164,24 @@ func begin_chapter(hero: StringName, companion: StringName = &"") -> void:
 		start_run())
 
 
-## Title screen Play: pick the run length, then the hero.
-func open_hero_select(nights: int) -> void:
+## Keeps the hero picked on hero select in the profile, so hero select
+## opens on it next time, after a restart too.
+func record_hero_pick(hero: StringName) -> void:
+	Profile.set_value(Profile.LAST_HERO, String(hero))
+
+
+## The hero hero select opens on: the last pick kept in the profile,
+## else the current party's hero.
+func last_hero_pick() -> StringName:
+	var last: StringName = StringName(String(Profile.get_value(Profile.LAST_HERO, "")))
+	return last if HeroRoster.has_hero(last) else hero_id
+
+
+## Title screen Play: pick the run length (or Endless, as Chapter 2),
+## then the hero.
+func open_hero_select(nights: int, endless_run: bool = false) -> void:
 	nights_to_win = nights
+	endless = endless_run
 	get_tree().paused = false
 	get_tree().change_scene_to_file(HERO_SELECT_SCENE)
 
@@ -183,8 +222,17 @@ func on_game_scene_ready() -> void:
 		PlaytestLog.write("run_continued nights_to_win=%d day=%d" % [nights_to_win, TimeManager.day_number])
 	else:
 		TimeManager.start_run()
+		_give_starting_perk()
 		PlaytestLog.write("run_started nights_to_win=%d" % nights_to_win)
 	run_started.emit()
+
+
+## A new run's starting perk: the run config's,
+## if a badge has unlocked it.
+func _give_starting_perk() -> void:
+	var perk: StringName = RunSession.config.starting_perk if RunSession.config != null else &""
+	if perk != &"" and StartingPerks.is_unlocked(perk):
+		PerkManager.take_starting(Party.player_hero(), perk)
 
 
 ## Whether this kill drops the mob's loot: its drop chance, with a
@@ -202,10 +250,19 @@ func is_playing() -> bool:
 
 func record(stat: StringName, amount: int = 1) -> void:
 	stats[stat] = int(stats.get(stat, 0)) + amount
+	stat_recorded.emit(stat, amount)
+
+
+## Sets a run stat that is a level, not a count (nights survived, the
+## fire's lowest HP), and announces how much it went up.
+func set_stat(stat: StringName, value: int) -> void:
+	var old: int = int(stats.get(stat, 0))
+	stats[stat] = value
+	stat_recorded.emit(stat, value - old)
 
 
 ## The party a save was made with: {"hero", "companion"} as ids. Saves
-## from before feature 034 have no "party" and are Leo with Nela.
+## from before hero select have no "party" and are Leo with Nela.
 static func party_of(data: Dictionary) -> Dictionary:
 	var party: Dictionary = data.get("party", {}) if data.get("party") is Dictionary else {}
 	return {
@@ -215,8 +272,9 @@ static func party_of(data: Dictionary) -> Dictionary:
 
 
 ## Saving system (RunSession): the run fields. The run's stats, the
-## chapter goal, the party and the shard pity counter (kills since each
-## mob type last dropped; saves from before it start it empty).
+## chapter goal and endless flag, the party, the shard pity counter (kills since each
+## mob type last dropped; saves from before it start it empty) and the
+## day chest's day.
 func save_state() -> Dictionary:
 	var saved_stats: Dictionary = {}
 	for key in stats.keys():
@@ -226,17 +284,23 @@ func save_state() -> Dictionary:
 		misses[String(id)] = int(loot_misses[id])
 	return {
 		"nights_to_win": nights_to_win,
+		"endless": endless,
 		"party": {"hero": String(hero_id), "companion": String(companion_id)},
 		"stats": saved_stats,
 		"loot_misses": misses,
+		"day_chest_day": day_chest_day,
 	}
 
 
 ## Saving system: takes the run fields back over a fresh run. Missing
-## keys keep the fresh values (and the current party and run length).
+## keys keep the fresh values (and the current party, run length and
+## endless flag; saves from before endless mode are story runs, as
+## RunSession.continue_from sets them).
 func load_state(data: Dictionary) -> void:
 	if data.has("nights_to_win"):
 		nights_to_win = int(data["nights_to_win"])
+	if data.has("endless"):
+		endless = bool(data["endless"])
 	if data.get("party") is Dictionary:
 		var party: Dictionary = party_of(data)
 		set_party(party["hero"], party["companion"])
@@ -244,20 +308,23 @@ func load_state(data: Dictionary) -> void:
 	if saved_stats is Dictionary:
 		for key in (saved_stats as Dictionary).keys():
 			stats[StringName(key)] = int(saved_stats[key])
+	# Saves from before the day chest have had their chance: none.
+	day_chest_day = int(data.get("day_chest_day", 0))
 	var misses: Variant = data.get("loot_misses", {})
 	if misses is Dictionary:
 		for id in (misses as Dictionary).keys():
 			loot_misses[StringName(id)] = int(misses[id])
 
 
-## Saving system: a fresh run's fields. Keeps the party and run length
-## (the next run starts from them); the loot rolls are reshuffled, and
-## RunSession then seeds them from the run config.
+## Saving system: a fresh run's fields. Keeps the party, run length and
+## endless flag (the next run starts from them); the loot rolls are
+## reshuffled, and RunSession then seeds them from the run config.
 func reset() -> void:
 	current_day = 1
 	is_camp_destroyed = false
 	end_reason = ""
 	end_trigger = &""
+	new_record = false
 	loot_misses = {}
 	loot_rng.randomize()
 	_reset_stats()
@@ -273,6 +340,11 @@ func _reset_stats() -> void:
 		&"repairs": 0,
 		&"shards": 0,
 		&"nights_survived": 0,
+		&"gremlins_caught": 0,
+		# The campfire's lowest HP this run, in % (Fire Keeper badge).
+		&"fire_low_pct": 100,
+		# 1 once the Moon Lantern is fully lit (Lantern Lighter badge).
+		&"lantern_lit": 0,
 	}
 
 
@@ -281,6 +353,10 @@ func _end_run(won: bool, reason: String, trigger: StringName) -> void:
 		return
 	run_state = RunState.WON if won else RunState.LOST
 	end_reason = reason
+	if won:
+		Profile.record_chapter_won(chapter())
+	if endless:
+		new_record = EndlessRecord.submit(current_day, hero_id)
 	end_trigger = trigger
 	TimeManager.stop()
 	BuildManager.exit_build_mode()
@@ -293,14 +369,18 @@ func _end_run(won: bool, reason: String, trigger: StringName) -> void:
 func _on_day_started(day_number: int) -> void:
 	current_day = day_number
 	day_number_changed.emit(current_day)
+	if is_playing() and day_number == day_chest_day:
+		var chest: DayChest = DayChest.place(get_tree(), Journal.next_chest_page())
+		if chest != null:
+			day_chest_placed.emit(chest)
 
 
 func _on_dawn_started(day_number: int) -> void:
 	if run_state != RunState.PLAYING:
 		return
-	stats[&"nights_survived"] = day_number
+	set_stat(&"nights_survived", day_number)
 	PlaytestLog.write("night_survived night=%d" % day_number)
-	if day_number >= nights_to_win:
+	if day_number >= nights_to_win and not endless:
 		if int(stats.get(&"boss_calmed", 0)) > 0:
 			_end_run(true, "You calmed the Moon-Eater!", &"win")
 		else:
@@ -336,6 +416,16 @@ func _hook_base_core() -> void:
 	for node in get_tree().get_nodes_in_group("base_core"):
 		if node.has_signal("destroyed") and not node.destroyed.is_connected(_on_camp_destroyed):
 			node.destroyed.connect(_on_camp_destroyed)
+		var fire: BaseCore = node as BaseCore
+		if fire != null and not fire.damaged.is_connected(_on_camp_damaged):
+			fire.damaged.connect(_on_camp_damaged.bind(fire))
+
+
+## Keeps the fire's lowest HP this run, in % of its max.
+func _on_camp_damaged(hp: int, fire: BaseCore) -> void:
+	var pct: int = int(floor(100.0 * hp / maxf(1.0, fire.get_max_hp())))
+	if pct < int(stats.get(&"fire_low_pct", 100)):
+		set_stat(&"fire_low_pct", pct)
 
 
 func _hook_player() -> void:

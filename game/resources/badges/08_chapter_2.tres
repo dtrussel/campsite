@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="BadgeDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/meta/badge_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"chapter_2"
+display_name = "Chapter 2"
+how_to_earn = "Win Chapter 2: Into the Hollow."
+icon = "tower"
+condition = &"win"
+amount = 1
+chapter = 2

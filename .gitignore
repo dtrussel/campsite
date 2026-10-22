@@ -33,6 +33,7 @@ override.cfg
 .env.local
 
 # Tooling caches
+.claude/worktrees/
 node_modules/
 __pycache__/
 *.pyc

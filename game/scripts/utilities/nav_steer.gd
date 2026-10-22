@@ -4,8 +4,8 @@ extends RefCounted
 ## NavSteer
 ##
 ## Path following on the world's navigation mesh, shared by the hero
-## and (since playtest 1, feature 044) the companion, who used to walk
-## in straight lines and could get stuck behind a prop.
+## and the companion, so neither walks in a straight line into a prop
+## and gets stuck behind it.
 
 
 ## A NavigationAgent3D tuned for the kids, added as a child of `body`.

@@ -9,18 +9,18 @@ extends RefCounted
 ## ending) as "story.<beat>" keys in the Profile, so an intro plays once
 ## per chapter.
 ##
-## Voice files (feature 035): res://assets/audio/voice/<line id>.ogg
+## Voice files: res://assets/audio/voice/<line id>.ogg
 ## (or .wav / .mp3). A line without a file is shown as text only.
 
 const BEATS_DIR: String = "res://resources/story/"
 const VOICE_DIR: String = "res://assets/audio/voice/"
 const VOICE_EXTENSIONS: Array[String] = ["ogg", "wav", "mp3"]
-## Mum's portraits, cut from the team's character sheet (feature 043,
-## art/ui/story_art.py): mum.png, and mum_<face>.png per expression.
+## Mum's portraits, cut from the team's character sheet
+## (art/ui/story_art.py): mum.png, and mum_<face>.png per expression.
 const MUM_PORTRAIT: String = "res://assets/ui/story/mum.png"
 const MUM_FACES: Array[String] = ["smile", "curious", "laugh", "surprised", "worried", "proud"]
 const CHAPTER_NAMES: Dictionary = {1: "The Dark Moon", 2: "Into the Hollow"}
-## Seen once Chapter 2's ending has played: Mum is home (feature 043).
+## Seen once Chapter 2's ending has played: Mum is home.
 const TRUE_ENDING: String = "ending.c2"
 
 static var _beats: Array = []
@@ -79,7 +79,7 @@ static func speaker_portrait(speaker: String, face: String = "") -> Texture2D:
 		if not ResourceLoader.exists(path):
 			path = MUM_PORTRAIT
 		return load(path) as Texture2D if ResourceLoader.exists(path) else null
-	# The kids' painted expressions (feature 047), where the team has drawn
+	# The kids' painted expressions, where the team has drawn
 	# that one; otherwise the hero's own portrait.
 	if face != "" and ResourceLoader.exists(hero_face_path(speaker, face)):
 		return load(hero_face_path(speaker, face)) as Texture2D

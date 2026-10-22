@@ -6,12 +6,15 @@ extends Node3D
 ## Lives in the world scene. On TimeManager.night_started, spawns a
 ## wave of mobs from this node's Marker3D children (random pick per
 ## spawn). Stops if BaseCore is destroyed. A wave is `get_wave_size()`
-## imps with `get_heavy_count()` heavy mobs (Bramble Beasts, feature
-## 018) mixed into its second half and `get_sneak_count()` thieves
-## (Mushroom Gremlins, feature 021) in its first half.
-## Feature 038: Chapter 2's last night is the Moon-Eater with a small
+## imps with `get_heavy_count()` heavy mobs (Bramble Beasts)
+## mixed into its second half and `get_sneak_count()` thieves
+## (Mushroom Gremlins) in its first half.
+## Chapter 2's last night is the Moon-Eater with a small
 ## escort, its eyes watch from the treeline the nights before, and it
 ## summons imp packs through summon() (never past mob_cap).
+## Endless: each night past nights_to_win gives mobs
+## `endless_hp_per_night` more HP and turns one imp into a heavy and one
+## into a thief, so the tough ones take a growing share of the wave.
 
 signal wave_started(night_number: int, mob_count: int)
 signal wave_ended
@@ -27,18 +30,20 @@ signal mob_spawned(mob: Node3D, definition: MobDefinition)
 @export var heavy_definition: MobDefinition
 @export var heavy_counts: PackedInt32Array = PackedInt32Array([0, 1, 2])
 @export var heavy_per_night_extra: int = 1
-## Thieves (Mushroom Gremlins, feature 021) per night, mixed into the
+## Thieves (Mushroom Gremlins) per night, mixed into the
 ## first half so they sneak in while the imps keep the kids busy.
 @export var sneak_definition: MobDefinition
 @export var sneak_counts: PackedInt32Array = PackedInt32Array([0, 1, 1])
 @export var sneak_per_night_extra: int = 1
-## The Moon-Eater (feature 038): the last night of Chapter 2 is the boss
+## The Moon-Eater: the last night of Chapter 2 is the boss
 ## and `boss_escort` imps; from `eyes_from_night` its eyes watch from
 ## the treeline. It rises at the spawn point named `boss_spawn_point`.
 @export var boss_definition: MobDefinition
 @export var boss_escort: int = 4
 @export var eyes_from_night: int = 5
 @export var boss_spawn_point: StringName = &"SpawnPointN"
+## Endless: extra HP per night past nights_to_win (0.1 = +10% each).
+@export var endless_hp_per_night: float = 0.1
 ## Summons never push the mobs on the field past this.
 @export var mob_cap: int = 14
 @export var spawn_interval_seconds: float = 5.5
@@ -103,13 +108,15 @@ func _on_night_started(day_number: int) -> void:
 		_show_eyes()
 
 
-## The night the Moon-Eater comes: Chapter 2's last.
+## The night the Moon-Eater comes: Chapter 2's last (never in endless).
 func is_boss_night(night: int) -> bool:
-	return boss_definition != null and GameManager.chapter() == 2 and night == GameManager.nights_to_win
+	return boss_definition != null and GameManager.chapter() == 2 and not GameManager.endless \
+		and night == GameManager.nights_to_win
 
 
 func _eyes_night(night: int) -> bool:
-	return boss_definition != null and GameManager.chapter() == 2 and night >= eyes_from_night and night < GameManager.nights_to_win
+	return boss_definition != null and GameManager.chapter() == 2 and not GameManager.endless \
+		and night >= eyes_from_night and night < GameManager.nights_to_win
 
 
 func _show_eyes() -> void:
@@ -126,25 +133,46 @@ func _boss_point() -> Vector3:
 	return point.global_position if point != null else _pick_spawn_position()
 
 
+## Imps on a night (in endless, less the ones turned into heavies and
+## thieves).
 func get_wave_size(night: int) -> int:
 	if wave_sizes.is_empty():
 		return 3
 	var index: int = night - 1
+	var imps: int
 	if index < wave_sizes.size():
-		return wave_sizes[max(0, index)]
-	return wave_sizes[wave_sizes.size() - 1] + per_night_extra * (index - wave_sizes.size() + 1)
+		imps = wave_sizes[max(0, index)]
+	else:
+		imps = wave_sizes[wave_sizes.size() - 1] + per_night_extra * (index - wave_sizes.size() + 1)
+	return maxi(0, imps - _endless_bonus(heavy_definition, night) - _endless_bonus(sneak_definition, night))
 
 
 func get_heavy_count(night: int) -> int:
 	if heavy_definition == null:
 		return 0
-	return _count_for(heavy_counts, heavy_per_night_extra, night)
+	return _count_for(heavy_counts, heavy_per_night_extra, night) + _endless_bonus(heavy_definition, night)
 
 
 func get_sneak_count(night: int) -> int:
 	if sneak_definition == null:
 		return 0
-	return _count_for(sneak_counts, sneak_per_night_extra, night)
+	return _count_for(sneak_counts, sneak_per_night_extra, night) + _endless_bonus(sneak_definition, night)
+
+
+## Nights past the story's last in an endless run (0 otherwise).
+func endless_nights_past(night: int) -> int:
+	return maxi(0, night - GameManager.nights_to_win) if GameManager.endless else 0
+
+
+## What a mob's HP is multiplied by on `night`: 1 in the story chapters.
+func hp_multiplier(night: int) -> float:
+	return 1.0 + endless_hp_per_night * endless_nights_past(night)
+
+
+## Imps turned into one `definition` each (heavy or thief) in endless:
+## one a night past the story, if that kind is set.
+func _endless_bonus(definition: MobDefinition, night: int) -> int:
+	return endless_nights_past(night) if definition != null else 0
 
 
 func _count_for(counts: PackedInt32Array, extra: int, night: int) -> int:
@@ -201,6 +229,8 @@ func _spawn_one(definition: MobDefinition) -> void:
 	if parent == null:
 		return
 	var instance: Node = definition.get_scene().instantiate()
+	if instance is Mob:
+		(instance as Mob).hp_multiplier = hp_multiplier(TimeManager.day_number)
 	var mob: Node3D = instance as Node3D
 	if mob == null:
 		instance.queue_free()
@@ -218,7 +248,7 @@ func _spawn_one(definition: MobDefinition) -> void:
 			_queue.clear())
 
 
-## The Moon-Eater's summons (feature 038): up to `count` of `definition`
+## The Moon-Eater's summons: up to `count` of `definition`
 ## from random lanes, never past mob_cap. They count toward the wave.
 ## Returns how many came.
 func summon(definition: MobDefinition, count: int) -> int:

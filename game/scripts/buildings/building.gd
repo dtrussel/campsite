@@ -9,17 +9,17 @@ extends StaticBody3D
 ## (mobs) and Phase 4 (companion repair) can wire in without touching
 ## any building scene.
 ##
-## Playtest 1 (feature 044): construction. BuildManager places a
+## Construction. BuildManager places a
 ## building as a *blueprint* (start_as_blueprint() before it enters the
 ## tree): a see-through blue ghost of the finished shape on a staked-out
-## site with a pile of materials (feature 045), and a progress bar. It
+## site with a pile of materials, and a progress bar. It
 ## does nothing yet. The hero (and the companion on its Repair task)
 ## walks over and hammers it up with add_build_progress(): the solid
 ## building rises inside the ghost from the bottom up while the pile
 ## shrinks, and complete_construction() then switches it on with a pop.
 ## Subclasses switch themselves on in _on_built(), not _ready().
 ##
-## Saving (run lifecycle 03): save_entry() is a building's line in the
+## Saving: save_entry() is a building's line in the
 ## save file and rebuild() puts one back, with the legacy fallbacks;
 ## BuildingSaves lists them for the run session.
 
@@ -71,7 +71,7 @@ var _hp_bar: HealthBar3D = null
 var build_progress: float = 1.0
 var _construction_damage: int = 0
 var _build_bar: HealthBar3D = null
-## Blueprint dressing (feature 045): the ghost copy of Visual, the
+## Blueprint dressing: the ghost copy of Visual, the
 ## staked site with its material pile, and Visual's cut-off materials.
 var _ghost: Node3D = null
 var _ghost_material: ShaderMaterial = null
@@ -266,7 +266,7 @@ func _enter_blueprint(progress: float) -> void:
 	_refresh_construction.call_deferred()
 
 
-## The ghost, the cut-off solid materials and the site (feature 045).
+## The ghost, the cut-off solid materials and the site.
 func _dress_blueprint() -> void:
 	var visual: Node3D = get_node_or_null("Visual") as Node3D
 	if visual == null:
@@ -388,7 +388,7 @@ func _site_box(box_size: Vector3, color: Color) -> MeshInstance3D:
 	return mesh
 
 
-## Feature 045: the finish. The ghost fades, the site sinks away, the
+## The finish. The ghost fades, the site sinks away, the
 ## solid building gets its own materials back and bounces.
 func _undress_blueprint() -> void:
 	for entry in _restore_materials:
@@ -416,7 +416,7 @@ func _undress_blueprint() -> void:
 		pop.tween_property(visual, "scale", Vector3.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
-## A builder's hammer lands (BuildBeat, feature 045): a squash on the
+## A builder's hammer lands (BuildBeat): a squash on the
 ## solid part, a flash on the ghost, and chips (with their knock).
 func on_build_hit() -> void:
 	if not is_inside_tree():

@@ -3,7 +3,7 @@ extends Node3D
 
 ## MumArrival
 ##
-## The true ending in the camp (feature 043, docs/design/story.md):
+## The true ending in the camp (docs/design/story.md):
 ## after the last night of Chapter 2, Mum walks out of the woods to the
 ## kids, waves, and they cheer. Then the ending storybook opens. It
 ## runs while the world is paused behind the end screen, and a click,

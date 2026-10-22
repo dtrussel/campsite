@@ -2,7 +2,7 @@ extends Node
 
 ## SaveManager
 ##
-## The save file itself (feature 020, run lifecycle spec): its path and
+## The save file itself: its path and
 ## version, writing and reading it as JSON, the parse checks and delete.
 ## It knows nothing of what is in a run: every part of the save is
 ## written and read by its own saving system, and RunSession gathers
@@ -12,7 +12,7 @@ extends Node
 ##
 ## Saves are versioned: a different version or a damaged file is
 ## ignored (Continue is hidden), never half-loaded.
-## VERSION 2 (playtest 1, feature 044): four resources were cut and
+## VERSION 2: four resources were cut and
 ## buildings carry their construction progress, so v1 saves are ignored.
 ## Later additions (the party, the Moon Lantern's shards, perk cards,
 ## torches, paid costs, the pity counter) kept VERSION 2: a save without

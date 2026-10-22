@@ -12,17 +12,34 @@ extends Node
 ##    that does not load (parse errors, broken references, cycles).
 ## 2. Checks data integrity: ids are set and unique, scene paths
 ##    resolve, and every cost / recipe input refers to a real item.
+## 3. Fails on comments that name work items (feature numbers, tickets,
+##    .scratch paths), which docs/architecture/coding-standards.md
+##    leaves to the commit log.
 ## Exits 0 when clean, 1 otherwise.
 
 const SKIP_DIRS: Array[String] = ["res://.godot", "res://addons"]
 ## The profile check's own file, never the player's profile.
 const TEST_PROFILE_PATH: String = "user://validate_profile.json"
 const TEST_OLD_STORY_PATH: String = "user://validate_story.cfg"
+## Where the issue tracker keeps one folder per feature slug, so "<slug> NN"
+## or "<slug> spec" in a comment reads as a work-item reference.
+const SCRATCH_DIR: String = "res://../.scratch"
+## Work-item references a comment must not carry; a bare zero-padded 0NN
+## is a feature number. Case-insensitive, matched over each run of
+## consecutive comment lines so a reference wrapped onto two still counts.
+const WORK_ITEM_PATTERNS: Array[String] = [
+	"\\bfeatures?\\s+\\d{3}\\b",
+	"\\btickets?\\s+#?\\d+\\b",
+	"\\.scratch/",
+	"\\bplaytest[ -]\\d+\\b",
+	"\\bPR\\s*#\\d+",
+	"(?<![\\w/.])0\\d\\d(?![\\w/-])",
+]
 
 var _errors: PackedStringArray = PackedStringArray()
 
 
-## Feature 029: the boot splash exists and the loading screen builds.
+## The boot splash exists and the loading screen builds.
 func _validate_key_art() -> void:
 	var splash: String = String(ProjectSettings.get_setting("application/boot_splash/image", ""))
 	if splash == "" or not FileAccess.file_exists(splash):
@@ -40,6 +57,26 @@ func _validate_key_art() -> void:
 		screen.free()
 
 
+## The export presets tools/export_playtest.sh builds carry the
+## "playtest" feature tag, so playtest builds open every chapter.
+func _validate_export_presets() -> void:
+	var presets: ConfigFile = ConfigFile.new()
+	if presets.load("res://export_presets.cfg") != OK:
+		_fail("export_presets.cfg missing or unreadable")
+		return
+	var found: Dictionary = {}
+	for section in presets.get_sections():
+		if section.begins_with("preset.") and not section.ends_with(".options"):
+			var preset_name: String = String(presets.get_value(section, "name", ""))
+			found[preset_name] = true
+			var features: PackedStringArray = String(presets.get_value(section, "custom_features", "")).split(",", false)
+			if not "playtest" in features:
+				_fail("export preset '%s' lacks the playtest feature tag" % preset_name)
+	for needed in ["Windows Desktop", "Linux"]:
+		if not found.has(needed):
+			_fail("export preset '%s' (tools/export_playtest.sh) is missing" % needed)
+
+
 func _ready() -> void:
 	var files: PackedStringArray = PackedStringArray()
 	_collect("res://", files)
@@ -51,11 +88,13 @@ func _ready() -> void:
 			_fail("script does not compile: %s" % path)
 	_validate_data()
 	_validate_key_art()
+	_validate_export_presets()
 	_validate_profile()
 	_validate_story_import()
 	_validate_saving_systems()
 	_validate_run_lifecycle_contract()
 	_validate_rebuild_missing_keys()
+	_validate_comments(files)
 	if _errors.is_empty():
 		print("validate_project: OK (%d files checked)" % files.size())
 		get_tree().quit(0)
@@ -98,7 +137,7 @@ func _validate_data() -> void:
 		if mob.drop_item != &"" and mob.drop_chance <= 0.0 and mob.drop_pity <= 0:
 			_fail("%s has a drop_item but can never drop it" % mob.resource_path)
 		if mob.is_boss:
-			# Feature 038: a boss runs BossController and is never farmed.
+			# A boss runs BossController and is never farmed.
 			var boss_scene: PackedScene = mob.get_scene()
 			var boss: Node = boss_scene.instantiate() if boss_scene != null else null
 			if not boss is BossController:
@@ -130,6 +169,8 @@ func _validate_data() -> void:
 	_validate_perks()
 	_validate_hero_perks()
 	_validate_perk_problems()
+	_validate_badges()
+	_validate_journal()
 	_validate_audio()
 	_validate_story()
 
@@ -235,18 +276,96 @@ func _fail(message: String) -> void:
 	_errors.append(message)
 
 
-## Feature 034: every hero on the select screen is complete, and its
-## signature recipe exists.
+## Every hero on the select screen is complete. Tool tiers:
+## each of its tiers points to an existing tool-tier recipe, and every
+## tool-tier recipe belongs to exactly one hero's tier.
 func _validate_heroes(recipe_ids: Dictionary) -> void:
+	var tier_recipes: Dictionary = {}
 	var hero_ids: Dictionary = {}
 	for hero in HeroRoster.all():
 		_check_id(hero.id, hero.resource_path, hero_ids)
 		if hero.model_scene == null or hero.stats == null or hero.portrait == null:
 			_fail("%s needs a model, stats and a portrait" % hero.resource_path)
-		if hero.signature_recipe != &"" and not recipe_ids.has(hero.signature_recipe):
-			_fail("%s has unknown signature recipe '%s'" % [hero.resource_path, hero.signature_recipe])
+		for n in range(1, hero.tier_count() + 1):
+			var tier: ToolTier = hero.tier(n)
+			if tier == null or tier.recipe == &"":
+				_fail("%s: tool tier %d is empty" % [hero.resource_path, n])
+				continue
+			var recipe: CraftingRecipe = load(recipe_ids[tier.recipe]) as CraftingRecipe if recipe_ids.has(tier.recipe) else null
+			if recipe == null:
+				_fail("%s: tool tier %d has unknown recipe '%s'" % [hero.resource_path, n, tier.recipe])
+			elif recipe.effect != CraftingRecipe.EFFECT_TOOL_TIER:
+				_fail("%s: tool tier %d's recipe '%s' needs the tool_tier effect" % [hero.resource_path, n, tier.recipe])
+			if tier_recipes.has(tier.recipe):
+				_fail("%s: recipe '%s' is already a tool tier of %s" % [hero.resource_path, tier.recipe, tier_recipes[tier.recipe]])
+			tier_recipes[tier.recipe] = hero.id
+			for effect in tier.effects:
+				if not ToolTier.EFFECTS.has(effect):
+					_fail("%s: tool tier %d has unknown effect '%s'" % [hero.resource_path, n, effect])
+			for problem in tier.problems():
+				_fail("%s: tool tier %d %s" % [hero.resource_path, n, problem])
+	for id in recipe_ids.keys():
+		var recipe: CraftingRecipe = load(recipe_ids[id]) as CraftingRecipe
+		if recipe != null and recipe.effect == CraftingRecipe.EFFECT_TOOL_TIER and not tier_recipes.has(id):
+			_fail("%s is a tool tier recipe, but no hero's tier names it" % recipe.resource_path)
 	if HeroRoster.all().size() < 2:
 		_fail("the roster needs at least two heroes (a hero and a companion)")
+
+
+## Camp badges: every badge has an icon, a name,
+## how-to-earn text and a known condition (BadgeDefinition.problems),
+## ids are unique, and Badges loaded them all.
+func _validate_badges() -> void:
+	var badge_ids: Dictionary = {}
+	var badges: Array[Resource] = DefinitionLoader.load_all(Badges.BADGES_DIR)
+	for res in badges:
+		var badge: BadgeDefinition = res as BadgeDefinition
+		if badge == null:
+			_fail("%s is not a BadgeDefinition" % res.resource_path)
+			continue
+		_check_id(badge.id, badge.resource_path, badge_ids)
+		for problem in badge.problems():
+			_fail("%s %s" % [badge.resource_path, problem])
+	if badges.size() < 12:
+		_fail("only %d badges in %s (about 15 planned)" % [badges.size(), Badges.BADGES_DIR])
+	for problem in StartingPerks.problems():
+		_fail("StartingPerks %s" % problem)
+	if badges.size() != Badges.definitions().size():
+		_fail("Badges loaded %d badges, %s has %d" % [Badges.definitions().size(), Badges.BADGES_DIR, badges.size()])
+	# Every cosmetic tint is unlocked by a real badge.
+	for badge_id in Cosmetics.badges_named():
+		if not badge_ids.has(badge_id):
+			_fail("Cosmetics names unknown badge '%s'" % badge_id)
+
+
+## Mum's journal has 10-12 sound pages
+## (JournalPage.problems) with unique ids, and every note on a dawn
+## card is one of them, so it is collected when the card plays.
+func _validate_journal() -> void:
+	var page_ids: Dictionary = {}
+	var files: Array[Resource] = DefinitionLoader.load_all(Journal.PAGES_DIR)
+	for res in files:
+		var page: JournalPage = res as JournalPage
+		if page == null:
+			_fail("%s is not a JournalPage" % res.resource_path)
+			continue
+		_check_id(page.id, page.resource_path, page_ids)
+		for problem in page.problems():
+			_fail("%s %s" % [page.resource_path, problem])
+	if files.size() < 10 or files.size() > 12:
+		_fail("Mum's journal has %d pages in %s (10-12 planned)" % [files.size(), Journal.PAGES_DIR])
+	if files.size() != Journal.pages().size():
+		_fail("Journal loaded %d pages, %s has %d" % [Journal.pages().size(), Journal.PAGES_DIR, files.size()])
+	var chest_pages: int = 0
+	for page in Journal.pages():
+		chest_pages += 1 if page.found_in == &"chest" else 0
+	if chest_pages == 0:
+		_fail("no journal page is found in a day chest")
+	for res in StoryLibrary.all():
+		for line in (res as StoryBeat).lines:
+			var line_id: String = String((line as Dictionary).get("id", ""))
+			if String((line as Dictionary).get("speaker", "")) == "note" and Journal.page_for_note(line_id) == null:
+				_fail("Mum's note %s is on no journal page" % line_id)
 
 
 ## Perk cards: every perk has an icon, a name, a line of text and a
@@ -268,7 +387,7 @@ func _validate_perks() -> void:
 		_fail("no perk is offered to every hero (the shared pool is empty)")
 
 
-## Perk cards 04: each hero has at least two cards of their own, and no
+## Each hero has at least two cards of their own, and no
 ## hero is dealt another hero's, as the player or as the companion.
 ## Asks PerkManager.offer itself, with a stand-in for each hero, so a
 ## broken pool filter fails here. As the companion, no player-only card
@@ -336,7 +455,7 @@ func _probe_perk(kind: StringName) -> PerkDefinition:
 	return perk
 
 
-## Feature 035: every story beat is complete and readable, each
+## Every story beat is complete and readable, each
 ## chapter has its intro, dawn cards and ending, every hero has lines,
 ## and every voice file belongs to a line. Lines still waiting for a
 ## recording are counted, not failed.
@@ -418,7 +537,7 @@ func _validate_story() -> void:
 	print("validate_project: story %d beats, %d lines, %d barks, %d voiced" % [beat_ids.size(), story_lines, line_ids.size() - story_lines, voiced])
 
 
-## The siblings' barks (feature 037): known triggers and roles, at least
+## The siblings' barks: known triggers and roles, at least
 ## two lines per hero for every trigger, lines of 1-30 characters, ids
 ## unique among all story lines, and no placeholders (barks are voiced).
 ## `line_ids` gets the bark ids, so voice files can match them.
@@ -459,7 +578,7 @@ func _validate_barks(line_ids: Dictionary, hero_ids: Array[String]) -> void:
 			_fail("bark trigger '%s' is fired by BarkDirector but has no tuning" % trigger)
 
 
-## Profile ticket 01: the profile keeps keys across a reload, records
+## The profile keeps keys across a reload, records
 ## bests, loads a missing or corrupt file as empty and deletes cleanly.
 ## It runs on its own file and points the profile back afterwards.
 func _validate_profile() -> void:
@@ -503,7 +622,7 @@ func _validate_profile() -> void:
 	Profile.set_path(Profile.PROFILE_PATH)
 
 
-## Profile ticket 02: an old story.cfg is imported into a new profile
+## An old story.cfg is imported into a new profile
 ## once. Its seen beats read as seen, a seen Chapter 2 intro or true
 ## ending sets the Chapter 2 unlocked flag, and after delete the import
 ## never runs again. Runs on its own files; the old file stays on disk.
@@ -552,7 +671,7 @@ func _remove_user_file(path: String) -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 
-## Run lifecycle 02: every autoload saving system saves, resets and
+## Every autoload saving system saves, resets and
 ## loads itself, with no gameplay scene. For each: set some state, save
 ## it, reset (it reads as fresh), load the save (it reads as saved). The
 ## two heroes are stand-ins in their role groups, registered again after
@@ -627,8 +746,7 @@ func _validate_saving_systems() -> void:
 	sibling.free()
 
 
-## Run lifecycle 04: the old lifecycle is gone. The save manager only
-## handles the file, so it names no game system that holds run state,
+## The save manager only handles the file, so it names no game system that holds run state,
 ## and the game manager keeps no reset list of its own (the run
 ## session resets every saving system).
 func _validate_run_lifecycle_contract() -> void:
@@ -643,10 +761,77 @@ func _validate_run_lifecycle_contract() -> void:
 		_fail("SaveManager still gathers the run itself; RunSession.snapshot does")
 
 
-## Review fixes: a saved building or torch entry with a missing key
+## A saved building or torch entry with a missing key
 ## (no position) is skipped on load, not an error.
 func _validate_rebuild_missing_keys() -> void:
 	if Building.rebuild({"id": "wooden_fence", "hp": 3}, self) != null:
 		_fail("Building.rebuild builds an entry with no position")
 	if Torch.rebuild({"dawns": 1}, self) != null:
 		_fail("Torch.rebuild builds an entry with no position")
+
+
+func _validate_comments(files: PackedStringArray) -> void:
+	var patterns: Array[String] = WORK_ITEM_PATTERNS.duplicate()
+	var slugs: PackedStringArray = PackedStringArray()
+	for slug in DirAccess.get_directories_at(ProjectSettings.globalize_path(SCRATCH_DIR)):
+		slugs.append(slug.replace("-", "[ -]"))
+	if not slugs.is_empty():
+		patterns.append("\\b(?:%s)\\s+(?:\\d{2}|spec)\\b" % "|".join(slugs))
+	var regex: RegEx = RegEx.create_from_string("(?i)(?:%s)" % ")|(?:".join(patterns))
+	for path in files:
+		if not path.ends_with(".gd"):
+			continue
+		var comments: Dictionary = _comments_by_line(FileAccess.get_file_as_string(path))
+		var block: String = ""
+		var starts: Array[int] = []
+		var lines: Array[int] = []
+		for line in comments.keys() + [-2]:
+			if not lines.is_empty() and line != lines[-1] + 1:
+				for found in regex.search_all(block):
+					var at: int = starts.bsearch(found.get_start(), true)
+					if at == starts.size() or starts[at] > found.get_start():
+						at -= 1
+					_fail("%s:%d: comment names a work item ('%s'); say what the code does or why" % [path.trim_prefix("res://"), lines[at], found.get_string()])
+				block = ""
+				starts.clear()
+				lines.clear()
+			if line >= 0:
+				starts.append(block.length())
+				lines.append(line)
+				block += String(comments[line]) + " "
+
+
+## Each line's comment text (without the leading #s), keyed by its 1-based
+## line number in order. A # inside a string literal is not a comment.
+func _comments_by_line(source: String) -> Dictionary:
+	var comments: Dictionary = {}
+	var open_quote: String = ""
+	var line_number: int = 0
+	for line in source.split("\n"):
+		line_number += 1
+		if open_quote == "" and not line.contains("#"):
+			if not (line.contains("\"\"\"") or line.contains("'''")):
+				continue
+		var i: int = 0
+		while i < line.length():
+			var c: String = line[i]
+			if open_quote != "":
+				if c == "\\":
+					i += 2
+					continue
+				if line.substr(i, open_quote.length()) == open_quote:
+					i += open_quote.length()
+					open_quote = ""
+					continue
+				i += 1
+			elif c == "#":
+				comments[line_number] = line.substr(i).lstrip("#").strip_edges()
+				break
+			elif c == "\"" or c == "'":
+				open_quote = c.repeat(3) if line.substr(i, 3) == c.repeat(3) else c
+				i += open_quote.length()
+			else:
+				i += 1
+		if open_quote.length() == 1:
+			open_quote = ""
+	return comments

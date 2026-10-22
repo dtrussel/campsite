@@ -1,3 +1,4 @@
+class_name TitleScreen
 extends Control
 
 ## TitleScreen
@@ -6,14 +7,25 @@ extends Control
 ## under a LoL-client-style menu - gold Cinzel logo, hextech buttons,
 ## and a How-to-play panel. Two Play buttons pick a fresh run: Chapter
 ## 1 "The Dark Moon" (3 nights) or Chapter 2 "Into the Hollow" (7
-## nights, feature 035), then the hero select screen (feature 034);
+## nights), then the hero select screen;
 ## Continue (shown
 ## when there is an autosave) resumes the saved run, with its party, at
-## its next morning.
+## its next morning. Chapter 2 is locked until Chapter 1 is won
+## (Profile.is_chapter_unlocked).
+## Once the true ending has been seen, Endless ("How long can you
+## last?") starts a Chapter 2 run with no last night; under it, the
+## best endless run so far.
+## Journal opens the scrapbook over the title.
 
 const BACKDROP: Script = preload("res://scripts/ui/title_backdrop.gd")
+const SCRAPBOOK_SCENE: PackedScene = preload("res://scenes/ui/Scrapbook.tscn")
 
 var _controls_panel: Control = null
+## The Play button of each chapter, by chapter number.
+var _chapter_buttons: Dictionary = {}
+var _journal_button: Button = null
+var _continue_caption: Label = null
+var _scrapbook: Scrapbook = null
 
 
 func _ready() -> void:
@@ -65,9 +77,23 @@ func _ready() -> void:
 		play.custom_minimum_size = Vector2(300, 72)
 		play.add_theme_font_size_override("font_size", 30)
 		var saved_hero: HeroDefinition = HeroRoster.get_hero(GameManager.party_of(save)["hero"])
-		play.tooltip_text = "%s - night %d of %d" % [saved_hero.display_name if saved_hero != null else "Leo",
-			int(save["day"]) + 1, int(save["nights_to_win"])]
-		buttons.add_child(play)
+		var hero_name: String = saved_hero.display_name if saved_hero != null else "Leo"
+		var night: int = int(save["day"]) + 1
+		var caption: String = ""
+		if bool(save.get("endless", false)):
+			caption = "Endless  -  Night %d" % night
+		else:
+			caption = "Night %d of %d" % [night, int(save["nights_to_win"])]
+		play.tooltip_text = "%s - %s" % [hero_name, caption]
+		var continue_slot: VBoxContainer = UiKit.vbox(2)
+		continue_slot.add_child(play)
+		_continue_caption = UiKit.label(caption, 15, UiKit.COLOR_GOLD_LIGHT)
+		_continue_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_continue_caption.add_theme_constant_override("outline_size", 6)
+		_continue_caption.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
+		continue_slot.add_child(_continue_caption)
+		buttons.add_child(continue_slot)
+		buttons.position.y -= 22.0  # room for the caption
 	var lengths: HBoxContainer = HBoxContainer.new()
 	lengths.alignment = BoxContainer.ALIGNMENT_CENTER
 	lengths.add_theme_constant_override("separation", 12)
@@ -82,16 +108,45 @@ func _ready() -> void:
 		start.add_theme_font_size_override("font_size", 21)
 		start.tooltip_text = "Survive %d nights, then choose your hero. The game saves every morning." % nights
 		slot.add_child(start)
-		var subtitle: Label = UiKit.label("Chapter %d  -  %d nights" % [chapter, nights], 15, UiKit.COLOR_GOLD_LIGHT)
+		_chapter_buttons[chapter] = start
+		var unlocked: bool = Profile.is_chapter_unlocked(chapter)
+		var caption: String = "Chapter %d  -  %d nights" % [chapter, nights]
+		if not unlocked:
+			start.disabled = true
+			start.focus_mode = Control.FOCUS_NONE
+			start.tooltip_text = "Win Chapter %d to unlock this chapter." % (chapter - 1)
+			caption = "Locked  -  win Chapter %d first" % (chapter - 1)
+		var subtitle: Label = UiKit.label(caption, 15, UiKit.COLOR_GOLD_LIGHT)
 		subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		subtitle.add_theme_constant_override("outline_size", 6)
 		subtitle.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
 		slot.add_child(subtitle)
 		if play == null:
 			play = start
+	if StoryLibrary.has_seen(StoryLibrary.TRUE_ENDING):
+		var endless: Button = HudWidgets.icon_button("moon", "Endless", _on_endless, Color(0.7, 0.8, 1.0))
+		endless.custom_minimum_size = Vector2(250, 56)
+		endless.tooltip_text = "How long can you last? The Moon Lantern starts lit, and the nights never end."
+		var best: String = EndlessRecord.best_text()
+		var endless_slot: VBoxContainer = UiKit.vbox(2)
+		endless_slot.add_child(endless)
+		buttons.add_child(endless_slot)
+		var extra: float = endless.custom_minimum_size.y + 10.0
+		if best != "":
+			endless.tooltip_text += "\n" + best
+			var record: Label = UiKit.label(best, 15, UiKit.COLOR_GOLD_LIGHT)
+			record.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			record.add_theme_constant_override("outline_size", 6)
+			record.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
+			endless_slot.add_child(record)
+			extra += 22.0
+		buttons.position.y -= extra  # room for the extra row
 	var small: HBoxContainer = HBoxContainer.new()
 	small.alignment = BoxContainer.ALIGNMENT_CENTER
 	small.add_theme_constant_override("separation", 12)
+	_journal_button = HudWidgets.icon_button("trophy", "Journal", _on_journal, UiKit.COLOR_GOLD_LIGHT)
+	_journal_button.tooltip_text = "Your scrapbook: the Camp Badges you have earned, and how to earn the rest."
+	small.add_child(_journal_button)
 	small.add_child(HudWidgets.icon_button("help", "", _on_toggle_controls))
 	small.add_child(HudWidgets.icon_button("close", "", _on_quit, Color(1.0, 0.45, 0.4)))
 	buttons.add_child(small)
@@ -116,8 +171,45 @@ func _ready() -> void:
 	play.grab_focus()
 
 
+## The Play button that starts chapter (1 or 2), or null.
+func chapter_button(chapter: int) -> Button:
+	return _chapter_buttons.get(chapter) as Button
+
+
+## The caption under Continue naming the saved run's next night, or null with no save.
+func continue_caption() -> Label:
+	return _continue_caption
+
+
+func journal_button() -> Button:
+	return _journal_button
+
+
+## The open scrapbook, or null.
+func scrapbook() -> Scrapbook:
+	return _scrapbook if is_instance_valid(_scrapbook) else null
+
+
+func _on_journal() -> void:
+	if scrapbook() != null:
+		return
+	_scrapbook = SCRAPBOOK_SCENE.instantiate() as Scrapbook
+	_scrapbook.closed.connect(_on_scrapbook_closed)
+	add_child(_scrapbook)
+
+
+func _on_scrapbook_closed() -> void:
+	_scrapbook.queue_free()
+	_scrapbook = null
+	_journal_button.grab_focus()
+
+
 func _on_play(nights: int) -> void:
 	GameManager.open_hero_select(nights)
+
+
+func _on_endless() -> void:
+	GameManager.open_hero_select(7, true)
 
 
 func _on_continue() -> void:

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="JournalPage" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/story/journal_page.gd" id="1_page"]
+
+[resource]
+script = ExtResource("1_page")
+id = &"little_collectors"
+title = "Little collectors"
+found_in = &"badge"
+badge = &"gremlin_catcher"
+words = "A gremlin took my spoon, then gave it back!
+They don't steal. They collect."
+face = "laugh"

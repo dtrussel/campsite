@@ -3,7 +3,7 @@ extends RefCounted
 
 ## UiKit
 ##
-## The game's "campcraft" UI look (feature 033), matching the golden
+## The game's "campcraft" UI look, matching the golden
 ## diorama art direction: dark walnut plates with a brass rim and corner
 ## rivets, cream canvas for tabs, badges and banners, ember and moon-blue
 ## accents. Cinzel display type for titles, Nunito Sans for body text.
@@ -360,7 +360,7 @@ static func controls_grid() -> GridContainer:
 	return grid
 
 
-## Fills "{hero}" and "{companion}" with the party's names (feature 034).
+## Fills "{hero}" and "{companion}" with the party's names.
 static func party_text(text: String) -> String:
 	if not "{" in text:
 		return text

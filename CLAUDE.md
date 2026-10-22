@@ -18,6 +18,9 @@ live in `docs/`, and work is tracked as local markdown issues in
   [`docs/design/art-direction.md`](docs/design/art-direction.md) for the
   look.
 - **Story content:** [`docs/design/story.md`](docs/design/story.md).
+- **Writing tests** (the tdd skill, smoke or validator checks):
+  [`docs/testing/test-strategy.md`](docs/testing/test-strategy.md),
+  under "Writing smoke and validator checks".
 
 ## Workflow
 

@@ -3,7 +3,7 @@ extends CanvasLayer
 
 ## LoadingScreen
 ##
-## The team's key art (feature 029) shown while the camp loads after
+## The team's key art shown while the camp loads after
 ## Play / Continue / Again, instead of a frozen frame. It sits on the
 ## root (so it survives the scene change), loads the gameplay scene on a
 ## background thread, swaps it in, and fades away once the camp has had
@@ -16,7 +16,7 @@ const MIN_SECONDS: float = 1.2
 const FADE_IN: float = 0.2
 const FADE_OUT: float = 0.35
 
-## The team's paintings (features 029-030, 047), each with tips that fit it:
+## The team's paintings, each with tips that fit it:
 ## [art, [[tip, icon], ...]]. Short, simple words for young players.
 const SCREENS: Array = [
 	["res://assets/ui/key_art.webp", [
@@ -24,7 +24,7 @@ const SCREENS: Array = [
 		["Hurt? Press R to eat berries and heal.", "res://assets/icons/berries.png"],
 		["Keep the campfire burning all night long!", "res://assets/icons/campfire.png"],
 	]],
-	# Feature 047: the two storybook paintings that give nothing away.
+	# The two storybook paintings that give nothing away.
 	["res://assets/ui/story/story_c1_1.webp", [
 		["Mum left pages from her notebook. Look for them at dawn.", "res://assets/icons/tent.png"],
 		["Keep the fire burning, no matter what.", "res://assets/icons/campfire.png"],

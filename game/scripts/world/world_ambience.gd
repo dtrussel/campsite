@@ -3,7 +3,7 @@ extends Node3D
 
 ## WorldAmbience
 ##
-## Small living touches over the play area (feature 024):
+## Small living touches over the play area:
 ##   day   - autumn leaves drifting down across the meadow, pollen motes
 ##           floating around the camp;
 ##   night - fireflies wandering low over the grass, twinkling.

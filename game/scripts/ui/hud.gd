@@ -2,7 +2,7 @@ extends CanvasLayer
 
 ## HUD
 ##
-## In-game HUD in the campcraft style (feature 033), built in code
+## In-game HUD in the campcraft style, built in code
 ## from HudWidgets:
 ##   top centre    - one slim strip: nights-to-win moons, the day dial
 ##                   medallion, campfire HP; an imp tag hangs under the
@@ -12,17 +12,17 @@ extends CanvasLayer
 ##   bottom centre - the played hero: portrait + level, HP and XP bars, and the
 ##                   action bar (Space attack, E gather, Q torch, R eat,
 ##                   C craft, B build) with counts and cooldowns
-##   left, under the companion - the dawn story card (feature 035), out
+##   left, under the companion - the dawn story card, out
 ##                   of the way of the camp; left of the top strip, the
-##                   Moon Lantern dial (feature 036)
-##   under the top strip - the boss bar while the Moon-Eater stands
-##                   (feature 038), with a thin bar for its lantern reach
+##                   Moon Lantern dial
+##   under the top strip - the boss bar while the Moon-Eater stands,
+##                   with a thin bar for its lantern reach
 ##   right, under the tray - toasts (HudToast): short notes such as the
 ##                   companion's perk card, clear of the banner and the
 ##                   story card; the perk picker covers them
 ## Everything is signal-driven except the clock, cooldown and imp count,
 ## which tick in _process. Names and portraits come from the party
-## (GameManager.party_hero / party_companion, feature 034).
+## (GameManager.party_hero / party_companion).
 
 const _BANNER_SECONDS: float = 3.5
 const _PHASE_COLOR_DAY: Color = Color(1, 0.95, 0.8)
@@ -59,7 +59,7 @@ var _banner: Label = null
 var _banner_plate: PanelContainer = null
 var _banner_tween: Tween = null
 ## A line under the banner: what a creature is, the first time one shows
-## up in a run (feature 046).
+## up in a run.
 var _banner_sub: Label = null
 var _banner_sub_plate: PanelContainer = null
 ## The banner's faded-in alpha; it is drawn at zero while the perk
@@ -130,6 +130,8 @@ func _ready() -> void:
 	TimeManager.dawn_started.connect(_on_dawn_started)
 	TimeManager.day_started.connect(_on_day_started)
 	CraftingManager.crafted.connect(_on_crafted)
+	Badges.badge_earned.connect(_on_badge_earned)
+	GameManager.day_chest_placed.connect(_on_day_chest_placed)
 	_hook_world.call_deferred()
 	_refresh_tray()
 
@@ -159,7 +161,7 @@ func _build_top(root: Control) -> void:
 	moons.alignment = BoxContainer.ALIGNMENT_CENTER
 	moons.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	moons.add_theme_constant_override("separation", 3 if GameManager.nights_to_win <= 4 else 1)
-	moons.tooltip_text = "Nights to survive"
+	moons.tooltip_text = "Endless: the nights never end" if GameManager.endless else "Nights to survive"
 	moons.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_child(moons)
 	var moon_size: float = 24.0 if GameManager.nights_to_win <= 4 else 15.0
@@ -446,7 +448,7 @@ func _build_banner(root: Control) -> void:
 	_banner_sub_plate.add_child(_banner_sub)
 
 
-## The Moon-Eater's health under the top strip (feature 038), and a thin
+## The Moon-Eater's health under the top strip, and a thin
 ## moon-coloured bar for how long the kids have while it holds the
 ## lantern. Hidden until a boss rises.
 func _build_boss_bar(root: Control) -> void:
@@ -521,7 +523,7 @@ func _build_story_host(root: Control) -> void:
 
 
 ## Shows a story card (dawn talk, first shard). A card that is still
-## talking is never cut short (feature 046): the new one waits for it
+## talking is never cut short: the new one waits for it
 ## and null is returned.
 func show_story(beat: StoryBeat, hint: String = "") -> StoryCard:
 	if beat == null:
@@ -548,6 +550,19 @@ func _build_toast_stack(root: Control) -> void:
 	_toast_stack.alignment = BoxContainer.ALIGNMENT_BEGIN
 	_anchor(_toast_stack, Control.PRESET_TOP_RIGHT, Vector2(-10, _TOAST_Y))
 	root.add_child(_toast_stack)
+
+
+func _on_badge_earned(badge: BadgeDefinition) -> void:
+	show_toast("Badge earned: %s!" % badge.display_name, badge.icon)
+
+
+func _on_day_chest_placed(chest: Node3D) -> void:
+	show_banner("A chest by the trees!", UiKit.COLOR_MOON.lightened(0.4), "Find it before night")
+	(chest as DayChest).opened.connect(_on_day_chest_opened)
+
+
+func _on_day_chest_opened(page: JournalPage) -> void:
+	show_toast("Mum's journal: %s!" % page.title, "crate", UiKit.COLOR_MOON.lightened(0.5))
 
 
 ## Shows a toast under the tray; the newest goes at the bottom. With
@@ -697,6 +712,7 @@ func _refresh_slots() -> void:
 		return
 	var cooldown: float = (_player as Hero).get_attack_cooldown_ratio() if _player is Hero else 0.0
 	(_slots[&"attack"] as HudWidgets.AbilitySlot).set_state(true, "", cooldown)
+	(_slots[&"attack"] as HudWidgets.AbilitySlot).pips = (_player as Hero).tool_tier if _player is Hero else 0
 	(_slots[&"gather"] as HudWidgets.AbilitySlot).set_state(true)
 	var torches: int = ResourceManager.get_count(&"torch")
 	(_slots[&"torch"] as HudWidgets.AbilitySlot).set_state(torches > 0, str(torches) if torches > 0 else "")
@@ -956,7 +972,9 @@ func _on_dawn_started(day_number: int) -> void:
 	show_banner("Good morning!", _PHASE_COLOR_DAWN)
 	# The winning dawn ends the run; its story is the ending book.
 	if GameManager.is_playing():
-		show_story(StoryLibrary.first(&"dawn", GameManager.chapter(), day_number), _lantern_hint())
+		var beat: StoryBeat = StoryLibrary.first(&"dawn", GameManager.chapter(), day_number)
+		show_story(beat, _lantern_hint())
+		Journal.find_notes_on(beat)  # Mum's note on the card is a journal page too
 
 
 func _on_crafted(recipe: CraftingRecipe, _crafter: Node) -> void:

@@ -3,10 +3,11 @@ extends RefCounted
 
 ## HeroBody
 ##
-## Dresses a role shell (PlayerBoy.tscn or Sibling.tscn) as a hero
-## (feature 034): the Visual's model, scale and clips, and the collision
-## capsule. Called from the shell's _enter_tree, before the Visual child
-## builds its model in its own _ready.
+## Dresses a role shell (PlayerBoy.tscn or Sibling.tscn) as a hero:
+## the Visual's model, scale and clips, the badge outfit
+## tint the hero wears (Cosmetics), and the collision capsule. Called
+## from the shell's _enter_tree, before the Visual child builds its
+## model in its own _ready.
 
 
 static func apply(character: Node3D, hero: HeroDefinition) -> void:
@@ -19,6 +20,8 @@ static func apply(character: Node3D, hero: HeroDefinition) -> void:
 		visual.reference_speed = hero.reference_speed
 		visual.step_distance = hero.step_distance
 		visual.tool_hidden_parts = hero.tool_hidden_parts
+		visual.outfit_mesh = hero.outfit_mesh
+		visual.outfit_tint = Cosmetics.outfit_tint(hero.id)
 	var collision: CollisionShape3D = character.get_node_or_null("Collision") as CollisionShape3D
 	if collision != null and collision.shape is CapsuleShape3D:
 		var capsule: CapsuleShape3D = (collision.shape as CapsuleShape3D).duplicate() as CapsuleShape3D

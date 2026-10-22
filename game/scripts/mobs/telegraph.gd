@@ -3,7 +3,7 @@ extends Node3D
 
 ## Telegraph
 ##
-## A warning drawn on the ground before a big blow lands (feature 038):
+## A warning drawn on the ground before a big blow lands:
 ## an outline of the area, and a fill that grows to the edge over the
 ## windup. The blow lands when the fill reaches the outline, so kids
 ## who step out of it in time are safe. A full circle is a stomp ring;

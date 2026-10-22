@@ -8,7 +8,7 @@ extends Node3D
 ## `burn_damage` every `burn_interval_seconds`. Burns out at the next
 ## dawn, so torches are a per-night consumable.
 ##
-## The Ember Heart perk (perk cards, ticket 03): a torch its holder
+## The Ember Heart perk: a torch its holder
 ## plants lasts one more dawn and its radius, ring and light grow by the
 ## perk's `value`. See kindle(). Such a torch outlives the dawn autosave,
 ## so the save keeps it (save_entry / rebuild, listed by TorchSaves).
@@ -112,7 +112,7 @@ func _on_dawn_started(_day_number: int) -> void:
 		snuff()
 
 
-## Goes out: at dawn, or blown out by the Moon-Eater (feature 038).
+## Goes out: at dawn, or blown out by the Moon-Eater.
 func snuff() -> void:
 	if _is_burning_out:
 		return

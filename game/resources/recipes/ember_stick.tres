@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="CraftingRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/crafting/crafting_recipe.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"ember_stick"
+display_name = "Ember Stick"
+description = "Leo's stick, tipped with glowing shards: his hits leave a burn (1 damage a second for 3 s), and it lights his way at night. Needs the Sturdy Stick."
+inputs = {
+&"wood": 3,
+&"scrap": 2,
+&"glow_shards": 2
+}
+effect = &"tool_tier"
+station = &"table"
+icon_name = "stick"
+xp_reward = 12
+sort_order = 111

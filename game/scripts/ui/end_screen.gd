@@ -5,9 +5,13 @@ extends CanvasLayer
 ## Shown when GameManager ends the run: victory after the final dawn,
 ## or defeat when the campfire goes out or the boy is knocked out.
 ## Summarises the run and points testers at the playtest log.
-## Feature 035: a win opens the chapter's ending storybook first and
+## A win opens the chapter's ending storybook first and
 ## shows the stats after; a defeat says why, as a voiced story line.
-## Feature 043: in Chapter 2, Mum walks into the camp before the book.
+## In Chapter 2, Mum walks into the camp before the book.
+## An endless run says how far it got, and "New record!" when it beat
+## the best. Under the stats, the Camp Badges this run earned: the win
+## badges are awarded as the run ends, after the HUD is paused and
+## hidden under this screen, so this is where they are seen.
 
 var _root: Control = null
 var _title: Label = null
@@ -16,6 +20,10 @@ var _stars: HBoxContainer = null
 var _stats_row: HBoxContainer = null
 var _log_path: Label = null
 var _story: VBoxContainer = null
+var _record: Label = null
+var _badges_row: HBoxContainer = null
+## The badges earned since this screen's run began, in order.
+var _earned: Array[BadgeDefinition] = []
 
 
 func _ready() -> void:
@@ -37,6 +45,9 @@ func _ready() -> void:
 	_title = UiKit.title("", 58)
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_title)
+	_record = UiKit.label("", 26, UiKit.COLOR_GOLD)
+	_record.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(_record)
 	_story = UiKit.vbox(6)
 	_story.custom_minimum_size = Vector2(620, 0)
 	column.add_child(_story)
@@ -51,6 +62,10 @@ func _ready() -> void:
 	_stats_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_stats_row.add_theme_constant_override("separation", 28)
 	column.add_child(_stats_row)
+	_badges_row = HBoxContainer.new()
+	_badges_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_badges_row.add_theme_constant_override("separation", 18)
+	column.add_child(_badges_row)
 	var buttons: HBoxContainer = HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	buttons.add_theme_constant_override("separation", 12)
@@ -64,7 +79,9 @@ func _ready() -> void:
 	_log_path.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_log_path)
 	_root.visible = false
+	add_to_group("end_screen")
 	GameManager.run_ended.connect(_on_run_ended)
+	Badges.badge_earned.connect(_on_badge_earned)
 
 
 func _on_run_ended(won: bool, _reason: String) -> void:
@@ -74,7 +91,7 @@ func _on_run_ended(won: bool, _reason: String) -> void:
 	if pages.is_empty():
 		_root.visible = true
 		return
-	# The true ending (feature 043): Mum walks out of the woods first.
+	# The true ending: Mum walks out of the woods first.
 	var player: Node3D = get_tree().get_first_node_in_group("player") as Node3D
 	if GameManager.chapter() == 2 and player != null and ResourceLoader.exists(MumArrival.MODEL_PATH):
 		var arrival: MumArrival = MumArrival.play(get_tree().current_scene, player.global_position)
@@ -84,6 +101,27 @@ func _on_run_ended(won: bool, _reason: String) -> void:
 		_root.visible = true
 		if GameManager.chapter() == 2:
 			StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING))
+
+
+## The names of the badges this run earned, as the end screen lists them.
+func badges_text() -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	for badge in _earned:
+		out.append(badge.display_name)
+	return out
+
+
+func _on_badge_earned(badge: BadgeDefinition) -> void:
+	_earned.append(badge)
+	_show_badges()
+
+
+func _show_badges() -> void:
+	for child in _badges_row.get_children():
+		child.queue_free()
+	_badges_row.visible = not _earned.is_empty()
+	for badge in _earned:
+		_badges_row.add_child(HudWidgets.icon_count(badge.icon_texture(), "trophy", badge.display_name, 34.0))
 
 
 ## The line under the title on a defeat: why the run ended ("The dark
@@ -103,6 +141,17 @@ func _story_lines(won: bool) -> Array:
 		return []
 	var beat: StoryBeat = StoryLibrary.first(GameManager.end_trigger, GameManager.chapter())
 	return beat.lines_for(GameManager.hero_id) if beat != null else []
+
+
+## The endless line under the title ("You lasted to night 9. New
+## record!"), or "" for a story run.
+func record_text() -> String:
+	if not GameManager.endless:
+		return ""
+	var lasted: String = "You lasted to night %d." % GameManager.current_day
+	if GameManager.new_record:
+		return lasted + "  New record!"
+	return "%s  %s" % [lasted, EndlessRecord.best_text()]
 
 
 func story_text() -> String:
@@ -126,6 +175,8 @@ func _show_summary(won: bool) -> void:
 		fire.modulate = Color(0.45, 0.45, 0.55)
 		_badge.add_child(fire)
 	_title.text = "YOU WIN!" if won else "OH NO!"
+	_record.text = record_text()
+	_record.visible = _record.text != ""
 	_title.add_theme_color_override("font_color", UiKit.COLOR_GOLD if won else Color(0.9, 0.35, 0.3))
 	var stats: Dictionary = GameManager.stats
 	for child in _stars.get_children():
@@ -144,4 +195,5 @@ func _show_summary(won: bool) -> void:
 	if player != null:
 		_stats_row.add_child(HudWidgets.icon_count(GameManager.party_hero().portrait, "",
 			"Lv %d" % ProgressionManager.get_level(player)))
+	_show_badges()
 	_log_path.text = PlaytestLog.get_absolute_path()

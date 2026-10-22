@@ -35,3 +35,5 @@ Used by `/wayfinder`. The **map** is a file with one **child** file per ticket.
 - A spec carries a `Status:` line too. A feature is done when every ticket is `Status: done` (or `wontfix`). Then set the spec to `Status: done`, and update the feature's row in `docs/roadmap/roadmap.md`.
 - Tickets that need a person (hand play, a kid playtest, a Windows build) are `ready-for-human`. The standing list is `.scratch/hand-play-backlog/`.
 - Features 000&ndash;048 predate this tracker. Their five-file folders are archived, read-only, in `docs/history/features/`. Link to them for background, but don't edit them.
+- **Building tickets in parallel** (`/implement-spec`): when the integration branch hasn't moved since an implementer merged it in, its branch fast-forwards onto a tree `tools/check.sh` already passed, so fast-forward it directly. Send a merger, which runs the checks again, only for a true merge.
+- **Hand-play ticket numbers** are claimed at merge, not when drafting: tickets built in parallel draft theirs as `NN-slug.md`, and whoever merges gives it the next free number in `.scratch/hand-play-backlog/issues/` and lists it in that spec.

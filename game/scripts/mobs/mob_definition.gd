@@ -8,7 +8,7 @@ extends Resource
 
 @export var id: StringName = &""
 @export var display_name: String = ""
-## What it is, in the story's words (feature 046): shown under its
+## What it is, in the story's words: shown under its
 ## warning banner the first time one shows up in a run.
 @export_multiline var description: String = ""
 @export var max_hp: int = 6
@@ -26,8 +26,8 @@ extends Resource
 @export var prefers_buildings: bool = false
 ## Attack damage multiplier against buildings (not the campfire).
 @export var building_damage_multiplier: float = 1.0
-## Seconds from the start of the attack clip to the moment it lands
-## (feature 026). 0 = damage on the first frame (imps, gremlins). With a
+## Seconds from the start of the attack clip to the moment it lands.
+## 0 = damage on the first frame (imps, gremlins). With a
 ## delay, the attack is telegraphed: kids who step out of reach during
 ## the windup are not hit (buildings and the campfire always are).
 @export var attack_hit_delay: float = 0.0
@@ -36,7 +36,7 @@ extends Resource
 @export var impact_burst: StringName = &""
 ## How far hits push this mob back (0 = immovable, 1 = an imp).
 @export var knockback_scale: float = 1.0
-## Thieves (Mushroom Gremlin, feature 021) ignore everyone, run to the
+## Thieves (Mushroom Gremlin) ignore everyone, run to the
 ## camp's stash (a Storage Crate, else the campfire), grab up to
 ## `steal_amount` of the most plentiful resource and run back to the
 ## forest. Caught, they drop the loot; escaped, it is gone.
@@ -45,17 +45,17 @@ extends Resource
 ## Fx.burst kinds (and sounds) for rising out of the ground and dying.
 @export var spawn_burst: StringName = &"shadow_spawn"
 @export var death_burst: StringName = &"shadow_death"
-## Loot (feature 036): each kill leaves a `drop_item` pickup (Glow
+## Loot: each kill leaves a `drop_item` pickup (Glow
 ## Shards) with `drop_chance`; after `drop_pity` kills of this type in a
 ## row without one, the next is sure to drop (0 = no pity). Counted per
 ## mob type, so beast kills never shift the imp drops.
 @export var drop_item: StringName = &""
 @export_range(0.0, 1.0) var drop_chance: float = 0.0
 @export var drop_pity: int = 0
-## Shadow creatures take light damage inside the Moon Lantern's ring
-## (feature 036); everything is slowed there.
+## Shadow creatures take light damage inside the Moon Lantern's ring;
+## everything is slowed there.
 @export var hurt_by_moonlight: bool = false
-## A boss (the Moon-Eater, feature 038): the HUD shows its health in
+## A boss (the Moon-Eater): the HUD shows its health in
 ## the boss bar, and it rises at the spawner's boss spawn point.
 @export var is_boss: bool = false
 @export var ui_color: Color = Color(0.6, 0.4, 0.7, 1)

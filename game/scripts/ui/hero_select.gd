@@ -2,7 +2,7 @@ extends Control
 
 ## HeroSelect
 ##
-## "Choose your hero" (feature 034), between the title screen's run
+## "Choose your hero", between the title screen's run
 ## length buttons and the loading screen. The roster's heroes stand by
 ## the fire (HeroStage); one wood card per hero shows their portrait,
 ## name, a line about them, health / power / reach pips and their
@@ -11,6 +11,9 @@ extends Control
 ## are more heroes. Start begins the run; Back returns to the title.
 ##
 ## Keys: Left / Right (or A / D) pick, Enter starts, Esc goes back.
+##
+## Under the goal, the badge cosmetics (OutfitRow) and, once a badge
+## has unlocked one, the starting perk pick (StartingPerkRow).
 
 const STAGE: Script = preload("res://scripts/ui/hero_stage.gd")
 const CARD_SIZE: Vector2 = Vector2(320, 200)
@@ -24,6 +27,10 @@ var _glows: Array[Panel] = []
 var _companion_portrait: TextureRect = null
 var _companion_name: Label = null
 var _start: Button = null
+var _outfit_row: OutfitRow = null
+## The starting perk row, or null when no badge has unlocked a starting
+## perk yet.
+var starting_perk_row: StartingPerkRow = null
 
 
 func _ready() -> void:
@@ -50,13 +57,16 @@ func _ready() -> void:
 	add_child(shade)
 
 	_build_header()
+	_build_outfit_row()
 	_build_cards()
 	_build_footer()
+	_build_starting_perk_row()
 
 	var heroes: Array[HeroDefinition] = HeroRoster.all()
 	var start_index: int = 0
+	var last: StringName = GameManager.last_hero_pick()
 	for i in heroes.size():
-		if heroes[i].id == GameManager.hero_id:
+		if heroes[i].id == last:
 			start_index = i
 	select(start_index, false)
 	_start.grab_focus()
@@ -84,7 +94,9 @@ func _build_header() -> void:
 	heading.add_theme_constant_override("outline_size", 9)
 	ribbon_plate.add_child(heading)
 
-	var goal: Label = UiKit.label("Survive %d nights by the campfire" % GameManager.nights_to_win, 18, UiKit.COLOR_GOLD_LIGHT)
+	var goal_text: String = "Endless: how long can you last by the campfire?" if GameManager.endless \
+		else "Survive %d nights by the campfire" % GameManager.nights_to_win
+	var goal: Label = UiKit.label(goal_text, 18, UiKit.COLOR_GOLD_LIGHT)
 	goal.add_theme_font_override("font", Fx.bold_font())
 	goal.add_theme_constant_override("outline_size", 6)
 	goal.add_theme_color_override("font_outline_color", UiKit.COLOR_INK)
@@ -170,7 +182,8 @@ func _card(hero: HeroDefinition, index: int) -> Button:
 	var signature: HBoxContainer = HBoxContainer.new()
 	signature.add_theme_constant_override("separation", 6)
 	signature.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var icon_path: String = "res://assets/icons/%s.png" % hero.signature_icon
+	var first: ToolTier = hero.tier(1)
+	var icon_path: String = "res://assets/icons/%s.png" % (first.icon if first != null else "")
 	if ResourceLoader.exists(icon_path):
 		var icon: TextureRect = TextureRect.new()
 		icon.texture = load(icon_path) as Texture2D
@@ -178,7 +191,7 @@ func _card(hero: HeroDefinition, index: int) -> Button:
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		signature.add_child(icon)
-	var craft: Label = UiKit.label("Craft: %s" % hero.signature_label, 14, UiKit.COLOR_GOLD_LIGHT)
+	var craft: Label = UiKit.label("Craft: %s" % (first.label if first != null else "-"), 14, UiKit.COLOR_GOLD_LIGHT)
 	craft.add_theme_font_override("font", Fx.bold_font())
 	signature.add_child(craft)
 	signature.tooltip_text = "Signature craft at the Crafting Table"
@@ -263,6 +276,25 @@ func select(index: int, cheer: bool = true) -> void:
 	_companion_portrait.texture = companion.portrait
 	_companion_name.text = companion.display_name
 	_stage.call("select", selected, cheer)
+	_outfit_row.set_hero(heroes[selected].id)
+
+
+## The swatch for outfit `id` (tests).
+func outfit_button(id: StringName) -> Button:
+	return _outfit_row.outfit_button(id)
+
+
+## The swatch for tent colour `id` (tests).
+func tent_button(id: StringName) -> Button:
+	return _outfit_row.tent_button(id)
+
+
+func _build_outfit_row() -> void:
+	_outfit_row = OutfitRow.new()
+	_center_top(_outfit_row, 128)
+	add_child(_outfit_row)
+	_outfit_row.outfit_picked.connect(func(hero_id: StringName) -> void:
+		_stage.call("set_outfit_tint", selected, Cosmetics.outfit_tint(hero_id)))
 
 
 func selected_hero() -> HeroDefinition:
@@ -294,6 +326,22 @@ func _on_start() -> void:
 
 func _on_back() -> void:
 	GameManager.go_to_title()
+
+
+func _build_starting_perk_row() -> void:
+	if not StartingPerkRow.is_wanted():
+		return
+	starting_perk_row = StartingPerkRow.new()
+	_center_top(starting_perk_row, 178)
+	add_child(starting_perk_row)
+
+
+## Picks the perk card the next run starts with (&"" for none).
+func pick_starting_perk(id: StringName) -> void:
+	if starting_perk_row != null:
+		starting_perk_row.pick(id)
+	else:
+		StartingPerks.choose(id)
 
 
 func _center_top(control: Control, y: float) -> void:

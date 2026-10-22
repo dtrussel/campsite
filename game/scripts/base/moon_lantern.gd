@@ -3,7 +3,7 @@ extends Node3D
 
 ## MoonLantern
 ##
-## The old stone lantern by the tent (feature 036, docs/design/story.md).
+## The old stone lantern by the tent (docs/design/story.md).
 ## The kids rebuild it with Glow Shards, the pieces of the moon's light:
 ## stand next to it and press E to hand over the shards in the stash.
 ## Each stage lights a bigger safe ring around the camp (radius 4 -> 9 m):
@@ -12,11 +12,13 @@ extends Node3D
 ##
 ## Chapter 1 has 3 stages, Chapter 2 has 6 (`costs_chapter_*`, shards
 ## per stage). The model is the team's sheet built in Blender
-## (feature 047, art/props/camp.py moon_lantern): the shards stack up
+## (art/props/camp.py moon_lantern): the shards stack up
 ## inside its glass, the core glows and the carved crescent lights up.
 ##
-## A saving system (run lifecycle 03): its shards go in the save file
-## under "lantern" (saves from before feature 036 start it dark).
+## A saving system: its shards go in the save file
+## under "lantern" (saves without it start it dark). An
+## endless run starts with it fully lit, so its shards go to Glow
+## Lanterns.
 
 signal stage_changed(stage: int, max_stage: int)
 signal shards_delivered(amount: int)
@@ -69,6 +71,7 @@ static func find(tree: SceneTree) -> MoonLantern:
 func _ready() -> void:
 	add_to_group(GROUP)
 	_build_model()
+	shards = _fresh_shards()
 	_refresh(false)
 
 
@@ -160,6 +163,8 @@ func deliver(from: Node3D = null) -> int:
 	Fx.burst(&"shard", global_position + Vector3(0, 1.6, 0))
 	shards_delivered.emit(amount)
 	_refresh(true)
+	if is_full():
+		GameManager.set_stat(&"lantern_lit", 1)
 	return amount
 
 
@@ -180,13 +185,17 @@ func load_state(data: Dictionary) -> void:
 	restore(int((saved as Dictionary).get("shards", 0)) if saved is Dictionary else 0)
 
 
-## A fresh run's lantern: dark.
+## A fresh run's lantern: dark, or fully lit in endless.
 func reset() -> void:
-	restore(0)
+	restore(_fresh_shards())
 
 
-## Loses `count` stages of light (the Moon-Eater swallowed them,
-## feature 038). Returns how many it lost.
+func _fresh_shards() -> int:
+	return shards_for_max() if GameManager.endless else 0
+
+
+## Loses `count` stages of light (the Moon-Eater swallowed them).
+## Returns how many it lost.
 func lose_stages(count: int) -> int:
 	var keep: int = maxi(0, stage - count)
 	var lost: int = stage - keep
@@ -388,7 +397,7 @@ static func _crescent_texture() -> ImageTexture:
 
 
 ## Named like the painted assets, so Stylize gives it the same painted
-## shading and ink line as the 031 props.
+## shading and ink line as the painted props.
 func _material(color: Color) -> StandardMaterial3D:
 	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.albedo_color = color

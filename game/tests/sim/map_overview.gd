@@ -1,7 +1,7 @@
 extends Node
 
-## Renders bird's-eye views of the whole map for layout review (feature
-## 032): a straight-down orthographic plan and two high oblique views,
+## Renders bird's-eye views of the whole map for layout review:
+## a straight-down orthographic plan and two high oblique views,
 ## in daylight, with the HUD and post effects hidden. Needs a real
 ## renderer, e.g. under xvfb-run:
 ##   godot --path . res://tests/sim/map_overview.tscn -- <out_dir>/

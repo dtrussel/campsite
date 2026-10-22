@@ -55,6 +55,121 @@ the cast, the creatures' place in it, the named places and Mum's notes.
 4. Survive stronger nights (more mobs, new mob types).
 5. Explore deeper forest areas (further from camp, higher reward / risk).
 
+### Endless mode (feature 042)
+
+"How long can you last?" An optional mode for players who finished the
+story ([spec](../../.scratch/endless-mode/spec.md)).
+
+- **Unlock:** the title shows **Endless** once the true ending has been
+  seen. It starts a Chapter 2 run (hero select reads "Endless: how long
+  can you last by the campfire?") with no intro.
+- **The nights never end:** dawn 7 is no win, and there is no Moon-Eater
+  and no eyes at the treeline. It ends only when the campfire goes out
+  or the hero is knocked out. Autosave and Continue work as in the
+  chapters; the title shows "Endless - Night N" under Continue.
+- **Shards:** the Moon Lantern starts lit, so Glow Shards go to Glow
+  Lanterns and tool tiers.
+- **Tougher nights:** wave sizes keep growing past their lists as in the
+  chapters. On top of that, each night after 7 gives mobs **+10% HP**
+  (`MobSpawner.hp_multiplier`; an imp has 14 HP on night 9 against 12),
+  and turns one imp into a beast and one into a gremlin, so heavy and
+  sneaky mobs make up a growing share of each wave (55% on night 10
+  against 37% on night 7). There are no new mob types, and the story
+  chapters are unchanged.
+- **The record:** when an endless run ends, the night it ended on and
+  the hero are kept in the profile (`endless.best_nights`,
+  `endless.best_hero`) if it beats the best so far; an equal run is not
+  a record. The end screen reads "You lasted to night N." and adds
+  "New record!" or the best so far. The title shows the best under the
+  Endless button ("Best: night 12 - Nela"). The record is local only.
+
+![The title with the Endless button and its record](screenshots/endless-title.png)
+
+![An endless run's end screen with a new record](screenshots/endless-new-record.png)
+
+### Ranger's Journal and Camp Badges (feature 041)
+
+A reason to play again: a **profile** that remembers what a player has
+done across runs, tells Mum's story in journal pages, and unlocks small
+things ([spec](../../.scratch/journal-badges/spec.md)). The profile
+(`user://profile.json`) is never deleted when a run ends. Unlocks are
+sideways (a chapter, tints) or small (one starting perk), so a new
+player is never far behind.
+
+- **Chapter 2 lock:** on the title, Chapter 2 "Into the Hollow" is
+  locked ("Locked - win Chapter 1 first") until Chapter 1 is won. A
+  player whose old `story.cfg` shows Chapter 2 already started or
+  finished gets it unlocked on first launch, and debug builds and
+  builds with the `playtest` feature tag open every chapter.
+- **Last hero:** hero select opens on the hero picked last time, after
+  a restart too.
+- **Camp Badges:** 15 Scout-style milestones, earned once and kept for
+  good, announced with a small "Badge earned: X!" toast. The end screen
+  lists the badges the run earned, so the win badges, earned as the run
+  ends, are seen there:
+
+  | Badge | How to earn |
+  |---|---|
+  | First Night | Survive your first night. |
+  | Night Owl | Survive 5 nights in one run. |
+  | Fire Keeper | Win a run without the campfire ever dropping below half. |
+  | Gremlin Catcher | Catch 10 Mushroom Gremlins in total. |
+  | Builder | Build 50 buildings in total. |
+  | Lantern Lighter | Light the Moon Lantern all the way. |
+  | Chapter 1 | Win Chapter 1: The Dark Moon. |
+  | Chapter 2 | Win Chapter 2: Into the Hollow. |
+  | Both Heroes | Win a run as Leo and a run as Nela. |
+  | Torch Bearer | Plant 5 torches in one run. |
+  | Shard Seeker | Find 25 Glow Shards in total. |
+  | Gatherer | Gather 500 resources in total. |
+  | Crafter | Craft 20 things in total. |
+  | Trapper | Snap 10 traps on monsters in total. |
+  | Monster Chaser | Chase off 100 night monsters in total. |
+
+  "In total" badges count across runs, a quit run included; they are
+  checked live during play and again when a run ends.
+- **Journal pages:** 12 short pages by Mum (the words are in
+  [`story.md`](story.md), "Mum's journal"). The seven dawn notes are
+  pages, found when their card plays. Three more come from the **day
+  chest**: in half the runs a chest appears beside a lane at the map
+  edge on one of the run's days (never two in a run, not even after
+  Continue), with a banner; walking up opens it and finds the next
+  page, and it fades at nightfall if no one opens it. The last two are
+  given by badges (Gremlin Catcher, Lantern Lighter).
+- **The scrapbook:** the title's **Journal** button opens it, with two
+  tabs. **Badges** is a 5 &times; 3 grid: earned badges in colour,
+  locked ones as brass silhouettes, each with how to earn it.
+  **Journal** is a book (a placeholder frame until the team's art):
+  the page list on the left (unfound pages show "? ? ?" and how
+  they're found), the open page on the right with Mum's face, her
+  words and the sketch.
+- **Cosmetic tints:** badges unlock tints only (hats and capes wait for
+  art), picked in a row under the goal on hero select; locked swatches
+  are dimmed and name their badge. Outfits tint the hero's clothes,
+  not the head or hair, one pick per hero: Ranger (default), Moss
+  (First Night), Ember (Fire Keeper), Dusk (Night Owl), Moonlight
+  (Lantern Lighter), Mushroom (Gremlin Catcher). Tent colours: Canvas
+  (default), Berry (Builder), Pine (Chapter 1), Night Sky (Chapter 2),
+  Sunrise (Both Heroes).
+- **Starting perks:** once a badge unlocks one, hero select shows a
+  "Start with:" row (None, or an unlocked card), and a new run starts
+  with that perk card already taken (never added again on Continue):
+  Quick Hands (Gatherer), Builder's Knack (Builder), Ember Heart
+  (Torch Bearer). The row is hidden until one is unlocked.
+- **Delete profile:** under the pause menu's settings, it asks for
+  confirmation, saying plainly that it erases all progress, then
+  forgets badges, pages, unlocks, records, picks and the story beats
+  seen (Chapter 2 and Endless lock again, the intros play again). Audio, look and
+  auto-attack settings are kept, and so is the run save.
+
+![The title with Chapter 2 locked](screenshots/journal-title-chapter2-locked.png)
+
+![The title with Chapter 2 unlocked](screenshots/journal-title-chapter2-unlocked.png)
+
+![The scrapbook's Badges tab](screenshots/journal-scrapbook-badges.png)
+
+![The scrapbook's Journal tab](screenshots/journal-scrapbook-journal.png)
+
 ## C. Player character &mdash; the Boy
 
 **Identity:** brave but small. Fast and flexible. Resourceful rather than
@@ -91,8 +206,10 @@ the "Choose your hero" screen. Today the heroes are **Leo** (a melee
 stick-fighter: tough, hits hard, short reach) and **Nela** (a slinger:
 shoots pebbles from range, less health). The hero not picked comes along
 as the AI companion and takes tasks as described below. A hero plays the
-same way in either role, and keeps their signature craft: the Sturdy
-Stick upgrades Leo, the Slingshot upgrades Nela. With more heroes, the
+same way in either role, and keeps their signature tool path (see
+[Tool tiers](#tool-tiers-feature-040)): the Sturdy, Ember and Blaze
+Sticks for Leo, the Slingshot, Double Sling and Glow Sling for Nela.
+With more heroes, the
 screen gets a second step to pick the companion. The autosave remembers
 the party, so Continue skips the screen.
 
@@ -180,9 +297,9 @@ Pine trees give wood, and mushroom patches are now only scenery.
 | Wood        | Common   | 20  | Trees and pines | Every building, torches, Feed the Fire, repairs, table crafts |
 | Stone       | Common   | 20  | Rocks | Watch Post, Crate, Table, Reinforced Wall, Stone Hearth |
 | Berries     | Common   | 20  | Berry bushes | Eat (R), Berry Snack, Bandage |
-| Clay        | Uncommon | 20  | Clay pits in the NE and SW corners | Reinforced Wall, Stone Hearth |
-| Scrap       | Rare     | 20  | Junk piles near the E and S spawn lanes | Trap, Lantern, Table, Sturdy Stick, Slingshot, Trap Refill |
-| Glow Shards | Rare     | 10  | Imps (40% chance per kill, with pity) and every bramble beast | Glow Lantern, the Moon Lantern |
+| Clay        | Uncommon | 20  | Clay pits in the NE and SW corners | Reinforced Wall, Stone Hearth, tier 3 tools |
+| Scrap       | Rare     | 20  | Junk piles near the E and S spawn lanes | Trap, Lantern, Table, every tool tier, Trap Refill |
+| Glow Shards | Rare     | 10  | Imps (40% chance per kill, with pity) and every bramble beast | Glow Lantern, the Moon Lantern, tier 2 and 3 tools |
 
 Each Storage Crate adds another cap's worth. The crafted items (Torch,
 Berry Snack and Bandage) have no cap.
@@ -217,7 +334,7 @@ These are stored as `ResourceDefinition` `.tres` files; see the architecture doc
 | Wooden Fence   | Cheap barrier; blocks or slows mobs. 3 Wood.                 |
 | Watch Post     | Elevated post; companions can guard from here. 5 Wood + 2 Stone. |
 | Storage Crate  | *(019)* +20 stash cap per resource (caps start at 20). 4 Wood + 2 Stone. |
-| Crafting Table | *(019)* A second crafting station with the Sturdy Stick, Slingshot, Bandage and Trap Refill. 4 Wood + 2 Stone + 1 Scrap. |
+| Crafting Table | *(019)* A second crafting station with the heroes' tool tiers (040), Bandage and Trap Refill. 4 Wood + 2 Stone + 1 Scrap. |
 | Reinforced Wall | *(019)* 150 HP, three times a fence. 3 Stone + 2 Clay + 1 Wood. |
 | Snap Trap      | *(017)* Snaps the first imp on it: 10 damage, held 2.5 s; 3 snaps. 3 Wood + 1 Scrap. |
 | Glow Lantern   | *(017)* A torch that never burns out: slows and zaps imps within 5 m. 2 Glow Shards + 1 Scrap + 2 Wood. |
@@ -299,12 +416,53 @@ gather it left. A player command or WASD always wins. The pause menu's
 | Berry Snack | Campfire | 3 Berries | A snack (R: +35 HP) |
 | Stone Hearth | Campfire | 5 Clay + 4 Stone | Campfire +75 max HP, fully healed; once per run |
 | Bandage | Table | 2 Berries + 1 Wood | X next to the companion: +25 HP, or a revive |
-| Sturdy Stick | Table | 4 Wood + 2 Scrap | Leo +2 attack; once per run |
-| Slingshot | Table | 3 Wood + 2 Scrap | Nela's range; once per run |
+| Sturdy Stick | Table | 4 Wood + 2 Scrap | Leo's tool tier 1 (see below) |
+| Ember Stick | Table | 3 Wood + 2 Scrap + 2 Glow Shards | Leo's tier 2 |
+| Blaze Stick | Table | 3 Scrap + 3 Clay + 4 Glow Shards | Leo's tier 3 |
+| Slingshot | Table | 3 Wood + 2 Scrap | Nela's tool tier 1 (see below) |
+| Double Sling | Table | 3 Wood + 2 Scrap + 2 Glow Shards | Nela's tier 2 |
+| Glow Sling | Table | 3 Scrap + 3 Clay + 4 Glow Shards | Nela's tier 3 |
 | Trap Refill | Table | 1 Wood + 1 Scrap | Restores a Snap Trap |
 
 These numbers live in the `CraftingRecipe` resources
 (`game/resources/recipes/`).
+
+### Tool tiers (feature 040)
+
+![The Crafting Table with Leo's Blaze Stick (tier 3) on offer](screenshots/tool-tiers-crafting.png)
+
+Each hero has a signature tool that upgrades in three tiers, crafted at
+the Crafting Table one tier at a time. A tier is listed once the hero
+owns the tier before it (tier 1 always is), and it works for the hero as
+the played hero and as the companion. Tiers are per run, like every
+craft, and owned tiers add up: tier 3 keeps tier 2's effect.
+
+| Hero | Tier | Tool | Effect |
+|------|------|------|--------|
+| Leo | 1 | Sturdy Stick | +2 attack. |
+| Leo | 2 | Ember Stick | Hits leave a burn (1 damage/s for 3 s; a new hit restarts it). A small personal light at night (3 m), off inside a torch's light, with no mob slow. |
+| Leo | 3 | Blaze Stick | The burn also splashes onto every mob within 1.6 m of the target (burn only, no hit damage). The light reaches 4.2 m. |
+| Nela | 1 | Slingshot | Reach &times;1.6 (&times;2.0 as the companion). |
+| Nela | 2 | Double Sling | Every 3rd shot fires a second pebble at the same target. |
+| Nela | 3 | Glow Sling | A pebble pierces on to the next mob in its line (within 3 m) and lights the target for 1.5 s. |
+
+These numbers are each tier's `ToolTier` fields in `leo.tres` and
+`nela.tres`.
+
+- **The shard trade-off.** Tiers 2 and 3 cost 6 Glow Shards between
+  them, per hero, and every shard spent there is one the Moon Lantern
+  doesn't get (it needs 11 in Chapter 1).
+- **The HUD** draws one small ember pip per owned tier under the attack
+  slot:
+
+  ![Leo's attack slot with three tier pips](screenshots/tool-tiers-hud-pips.png)
+
+- The tiers are data on the hero (`HeroDefinition.signature_tiers`, one
+  `ToolTier` each: recipe, label, damage bonus, range factors and
+  effects), and every tier recipe uses the one `tool_tier` effect, so a
+  new hero brings their own path. The save stores the tier as an int;
+  older saves' `signature: true` (or `stick` / `slingshot`) load as
+  tier 1.
 
 ### Prototype subset
 

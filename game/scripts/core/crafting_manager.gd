@@ -51,8 +51,20 @@ func get_recipes() -> Array[CraftingRecipe]:
 	return _recipes
 
 
+## Whether the crafting panel lists `recipe` now. A tool tier is listed
+## once its hero is in the camp and owns the tier before it (tier 1
+## always); every other recipe always is.
+func is_offered(recipe: CraftingRecipe) -> bool:
+	if recipe == null:
+		return false
+	if recipe.effect != CraftingRecipe.EFFECT_TOOL_TIER:
+		return true
+	var holder: Hero = _tier_owner(recipe.id)
+	return holder != null and holder.tool_tier >= holder.tier_of_recipe(recipe.id) - 1
+
+
 func can_craft(recipe: CraftingRecipe) -> bool:
-	if recipe == null or not ResourceManager.can_afford(recipe.inputs) or not _effect_possible(recipe.effect):
+	if recipe == null or not ResourceManager.can_afford(recipe.inputs) or not _effect_possible(recipe):
 		return false
 	if recipe.output_id != &"" and ResourceManager.room_for(recipe.output_id) < recipe.output_amount:
 		return false
@@ -70,7 +82,7 @@ func craft(recipe: CraftingRecipe, crafter: Node) -> bool:
 	if not ResourceManager.spend_costs(recipe.inputs):
 		return false
 	if recipe.effect != &"":
-		_apply_effect(recipe.effect)
+		_apply_effect(recipe)
 	if recipe.output_id != &"":
 		is_crafting = true
 		ResourceManager.add(recipe.output_id, recipe.output_amount)
@@ -89,9 +101,9 @@ func _campfire() -> BaseCore:
 
 
 ## Whether an effect recipe can do anything right now (no wasted wood on
-## a full campfire, and the hearth only once).
-func _effect_possible(effect: StringName) -> bool:
-	match effect:
+## a full campfire, the hearth only once, a tool tier only as the next).
+func _effect_possible(recipe: CraftingRecipe) -> bool:
+	match recipe.effect:
 		&"":
 			return true
 		&"feed_fire":
@@ -100,10 +112,10 @@ func _effect_possible(effect: StringName) -> bool:
 		&"stone_hearth":
 			var fire: BaseCore = _campfire()
 			return fire != null and not fire.has_hearth and not fire.is_destroyed
-		&"sturdy_stick", &"slingshot":
-			# A hero's signature, whichever role the hero plays (feature 034).
-			var owner: Node = _signature_owner(effect)
-			return owner != null and not bool(owner.get("has_signature"))
+		CraftingRecipe.EFFECT_TOOL_TIER:
+			# A hero's next tool tier, whichever role the hero plays.
+			var holder: Hero = _tier_owner(recipe.id)
+			return holder != null and holder.tool_tier == holder.tier_of_recipe(recipe.id) - 1
 		&"trap_refill":
 			for trap in get_tree().get_nodes_in_group(SnapTrap.GROUP):
 				if (trap as SnapTrap).needs_refill():
@@ -112,18 +124,21 @@ func _effect_possible(effect: StringName) -> bool:
 	return false
 
 
-## The hero in the camp whose signature recipe is `effect`.
-func _signature_owner(effect: StringName) -> Node:
+## The hero in the camp one of whose tool tiers `recipe_id` makes.
+func _tier_owner(recipe_id: StringName) -> Hero:
 	for hero in HeroRoster.all():
-		if hero.signature_recipe == effect:
-			return HeroRoster.node_for(get_tree(), hero.id)
+		if hero.tier_of_recipe(recipe_id) > 0:
+			var node: Hero = HeroRoster.node_for(get_tree(), hero.id) as Hero
+			return node if node != null and node.hero != null else null
 	return null
 
 
-func _apply_effect(effect: StringName) -> void:
+func _apply_effect(recipe: CraftingRecipe) -> void:
+	var effect: StringName = recipe.effect
 	match effect:
-		&"sturdy_stick", &"slingshot":
-			_signature_owner(effect).call("apply_signature")
+		CraftingRecipe.EFFECT_TOOL_TIER:
+			var holder: Hero = _tier_owner(recipe.id)
+			holder.set_tool_tier(holder.tier_of_recipe(recipe.id))
 			return
 		&"trap_refill":
 			for trap in get_tree().get_nodes_in_group(SnapTrap.GROUP):

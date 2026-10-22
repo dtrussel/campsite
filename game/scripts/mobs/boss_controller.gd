@@ -3,7 +3,7 @@ extends Mob
 
 ## BossController
 ##
-## The Moon-Eater (feature 038, docs/design/story.md): the final night
+## The Moon-Eater (docs/design/story.md): the final night
 ## of Chapter 2. A huge, sad golem of planks and stones that swallowed
 ## the moon's light. It is never killed, only calmed: at 0 HP it lets
 ## the moon go and shrinks into a small warm golem by the fire, and the
@@ -112,10 +112,6 @@ func _exit_tree() -> void:
 	if _held_night:
 		TimeManager.hold_night = false
 		_held_night = false
-
-
-func max_hp() -> int:
-	return definition.max_hp if definition != null else 1
 
 
 func hp_ratio() -> float:

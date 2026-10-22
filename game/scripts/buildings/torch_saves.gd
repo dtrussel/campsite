@@ -3,7 +3,7 @@ extends RefCounted
 
 ## TorchSaves
 ##
-## The saving system for planted torches (run lifecycle 03): lists the
+## The saving system for planted torches: lists the
 ## ones still burning for the save file ("torches") and plants them again
 ## on Continue. At the dawn autosave only Ember Heart torches are left
 ## (plain ones burn out at that dawn). Each torch writes and reads its

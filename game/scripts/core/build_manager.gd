@@ -10,7 +10,7 @@ extends Node
 ## spawns the real building. Stays in build mode after a placement so
 ## the player can drop several buildings in a row.
 ##
-## Playtest 1 (feature 044): a placed building is a *blueprint* (see
+## A placed building is a *blueprint* (see
 ## Building) that the hero walks over to and hammers up; XP comes when
 ## it is finished (`building_completed`). Clicking an unstarted
 ## blueprint in build mode takes it back with a full refund.
@@ -69,7 +69,7 @@ func clear_cost_cache() -> void:
 
 
 ## What `definition` costs now: its `cost`, less the party's perks. The
-## Builder's Knack perk (perk cards, ticket 03) takes its `value` in Wood
+## Builder's Knack perk takes its `value` in Wood
 ## off, never below 0; an item that drops to 0 is left out. Spending,
 ## refunds, can-afford checks and the HUD's build menu all go through it.
 func cost_of(definition: BuildingDefinition) -> Dictionary:
