@@ -12,17 +12,35 @@ extends Node
 ##    that does not load (parse errors, broken references, cycles).
 ## 2. Checks data integrity: ids are set and unique, scene paths
 ##    resolve, and every cost / recipe input refers to a real item.
+## 3. Fails on comments that name work items (feature numbers, tickets,
+##    .scratch paths), which docs/architecture/coding-standards.md
+##    leaves to the commit log.
 ## Exits 0 when clean, 1 otherwise.
 
 const SKIP_DIRS: Array[String] = ["res://.godot", "res://addons"]
 ## The profile check's own file, never the player's profile.
 const TEST_PROFILE_PATH: String = "user://validate_profile.json"
 const TEST_OLD_STORY_PATH: String = "user://validate_story.cfg"
+## Where the issue tracker keeps one folder per feature slug, so "<slug> NN"
+## or "<slug> spec" in a comment reads as a work-item reference.
+const SCRATCH_DIR: String = "res://../.scratch"
+## Work-item references a comment must not carry; a bare zero-padded 0NN
+## is a feature number. Case-insensitive, matched over each run of
+## consecutive comment lines so a reference wrapped onto two still counts.
+const WORK_ITEM_PATTERNS: Array[String] = [
+	"\\bfeatures?\\s+\\d{3}\\b",
+	"\\btickets?\\s+#?\\d+\\b",
+	"\\.scratch/",
+	"\\bplaytest[ -]\\d+\\b",
+	"\\bPR\\s*#\\d+",
+	"(?<![\\w/.])0\\d\\d(?![\\w/-])",
+]
+const COMMENT_CHECK_SKIPS_SMOKE_TESTS_MID_SPLIT: Array[String] = ["res://tests/automated"]
 
 var _errors: PackedStringArray = PackedStringArray()
 
 
-## Feature 029: the boot splash exists and the loading screen builds.
+## The boot splash exists and the loading screen builds.
 func _validate_key_art() -> void:
 	var splash: String = String(ProjectSettings.get_setting("application/boot_splash/image", ""))
 	if splash == "" or not FileAccess.file_exists(splash):
@@ -77,6 +95,7 @@ func _ready() -> void:
 	_validate_saving_systems()
 	_validate_run_lifecycle_contract()
 	_validate_rebuild_missing_keys()
+	_validate_comments(files)
 	if _errors.is_empty():
 		print("validate_project: OK (%d files checked)" % files.size())
 		get_tree().quit(0)
@@ -119,7 +138,7 @@ func _validate_data() -> void:
 		if mob.drop_item != &"" and mob.drop_chance <= 0.0 and mob.drop_pity <= 0:
 			_fail("%s has a drop_item but can never drop it" % mob.resource_path)
 		if mob.is_boss:
-			# Feature 038: a boss runs BossController and is never farmed.
+			# A boss runs BossController and is never farmed.
 			var boss_scene: PackedScene = mob.get_scene()
 			var boss: Node = boss_scene.instantiate() if boss_scene != null else null
 			if not boss is BossController:
@@ -258,7 +277,7 @@ func _fail(message: String) -> void:
 	_errors.append(message)
 
 
-## Feature 034: every hero on the select screen is complete. Tool tiers:
+## Every hero on the select screen is complete. Tool tiers:
 ## each of its tiers points to an existing tool-tier recipe, and every
 ## tool-tier recipe belongs to exactly one hero's tier.
 func _validate_heroes(recipe_ids: Dictionary) -> void:
@@ -369,7 +388,7 @@ func _validate_perks() -> void:
 		_fail("no perk is offered to every hero (the shared pool is empty)")
 
 
-## Perk cards 04: each hero has at least two cards of their own, and no
+## Each hero has at least two cards of their own, and no
 ## hero is dealt another hero's, as the player or as the companion.
 ## Asks PerkManager.offer itself, with a stand-in for each hero, so a
 ## broken pool filter fails here. As the companion, no player-only card
@@ -437,7 +456,7 @@ func _probe_perk(kind: StringName) -> PerkDefinition:
 	return perk
 
 
-## Feature 035: every story beat is complete and readable, each
+## Every story beat is complete and readable, each
 ## chapter has its intro, dawn cards and ending, every hero has lines,
 ## and every voice file belongs to a line. Lines still waiting for a
 ## recording are counted, not failed.
@@ -519,7 +538,7 @@ func _validate_story() -> void:
 	print("validate_project: story %d beats, %d lines, %d barks, %d voiced" % [beat_ids.size(), story_lines, line_ids.size() - story_lines, voiced])
 
 
-## The siblings' barks (feature 037): known triggers and roles, at least
+## The siblings' barks: known triggers and roles, at least
 ## two lines per hero for every trigger, lines of 1-30 characters, ids
 ## unique among all story lines, and no placeholders (barks are voiced).
 ## `line_ids` gets the bark ids, so voice files can match them.
@@ -560,7 +579,7 @@ func _validate_barks(line_ids: Dictionary, hero_ids: Array[String]) -> void:
 			_fail("bark trigger '%s' is fired by BarkDirector but has no tuning" % trigger)
 
 
-## Profile ticket 01: the profile keeps keys across a reload, records
+## The profile keeps keys across a reload, records
 ## bests, loads a missing or corrupt file as empty and deletes cleanly.
 ## It runs on its own file and points the profile back afterwards.
 func _validate_profile() -> void:
@@ -604,7 +623,7 @@ func _validate_profile() -> void:
 	Profile.set_path(Profile.PROFILE_PATH)
 
 
-## Profile ticket 02: an old story.cfg is imported into a new profile
+## An old story.cfg is imported into a new profile
 ## once. Its seen beats read as seen, a seen Chapter 2 intro or true
 ## ending sets the Chapter 2 unlocked flag, and after delete the import
 ## never runs again. Runs on its own files; the old file stays on disk.
@@ -653,7 +672,7 @@ func _remove_user_file(path: String) -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 
-## Run lifecycle 02: every autoload saving system saves, resets and
+## Every autoload saving system saves, resets and
 ## loads itself, with no gameplay scene. For each: set some state, save
 ## it, reset (it reads as fresh), load the save (it reads as saved). The
 ## two heroes are stand-ins in their role groups, registered again after
@@ -728,8 +747,7 @@ func _validate_saving_systems() -> void:
 	sibling.free()
 
 
-## Run lifecycle 04: the old lifecycle is gone. The save manager only
-## handles the file, so it names no game system that holds run state,
+## The save manager only handles the file, so it names no game system that holds run state,
 ## and the game manager keeps no reset list of its own (the run
 ## session resets every saving system).
 func _validate_run_lifecycle_contract() -> void:
@@ -744,10 +762,77 @@ func _validate_run_lifecycle_contract() -> void:
 		_fail("SaveManager still gathers the run itself; RunSession.snapshot does")
 
 
-## Review fixes: a saved building or torch entry with a missing key
+## A saved building or torch entry with a missing key
 ## (no position) is skipped on load, not an error.
 func _validate_rebuild_missing_keys() -> void:
 	if Building.rebuild({"id": "wooden_fence", "hp": 3}, self) != null:
 		_fail("Building.rebuild builds an entry with no position")
 	if Torch.rebuild({"dawns": 1}, self) != null:
 		_fail("Torch.rebuild builds an entry with no position")
+
+
+func _validate_comments(files: PackedStringArray) -> void:
+	var patterns: Array[String] = WORK_ITEM_PATTERNS.duplicate()
+	var slugs: PackedStringArray = PackedStringArray()
+	for slug in DirAccess.get_directories_at(ProjectSettings.globalize_path(SCRATCH_DIR)):
+		slugs.append(slug.replace("-", "[ -]"))
+	if not slugs.is_empty():
+		patterns.append("\\b(?:%s)\\s+(?:\\d{2}|spec)\\b" % "|".join(slugs))
+	var regex: RegEx = RegEx.create_from_string("(?i)(?:%s)" % ")|(?:".join(patterns))
+	for path in files:
+		if not path.ends_with(".gd") or COMMENT_CHECK_SKIPS_SMOKE_TESTS_MID_SPLIT.any(func(dir: String) -> bool: return path.begins_with(dir + "/")):
+			continue
+		var comments: Dictionary = _comments_by_line(FileAccess.get_file_as_string(path))
+		var block: String = ""
+		var starts: Array[int] = []
+		var lines: Array[int] = []
+		for line in comments.keys() + [-2]:
+			if not lines.is_empty() and line != lines[-1] + 1:
+				for found in regex.search_all(block):
+					var at: int = starts.bsearch(found.get_start(), true)
+					if at == starts.size() or starts[at] > found.get_start():
+						at -= 1
+					_fail("%s:%d: comment names a work item ('%s'); say what the code does or why" % [path.trim_prefix("res://"), lines[at], found.get_string()])
+				block = ""
+				starts.clear()
+				lines.clear()
+			if line >= 0:
+				starts.append(block.length())
+				lines.append(line)
+				block += String(comments[line]) + " "
+
+
+## Each line's comment text (without the leading #s), keyed by its 1-based
+## line number in order. A # inside a string literal is not a comment.
+func _comments_by_line(source: String) -> Dictionary:
+	var comments: Dictionary = {}
+	var open_quote: String = ""
+	var line_number: int = 0
+	for line in source.split("\n"):
+		line_number += 1
+		if open_quote == "" and not line.contains("#"):
+			if not (line.contains("\"\"\"") or line.contains("'''")):
+				continue
+		var i: int = 0
+		while i < line.length():
+			var c: String = line[i]
+			if open_quote != "":
+				if c == "\\":
+					i += 2
+					continue
+				if line.substr(i, open_quote.length()) == open_quote:
+					i += open_quote.length()
+					open_quote = ""
+					continue
+				i += 1
+			elif c == "#":
+				comments[line_number] = line.substr(i).lstrip("#").strip_edges()
+				break
+			elif c == "\"" or c == "'":
+				open_quote = c.repeat(3) if line.substr(i, 3) == c.repeat(3) else c
+				i += open_quote.length()
+			else:
+				i += 1
+		if open_quote.length() == 1:
+			open_quote = ""
+	return comments

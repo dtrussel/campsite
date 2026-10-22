@@ -3,8 +3,8 @@ extends RefCounted
 
 ## HeroBody
 ##
-## Dresses a role shell (PlayerBoy.tscn or Sibling.tscn) as a hero
-## (feature 034): the Visual's model, scale and clips, the badge outfit
+## Dresses a role shell (PlayerBoy.tscn or Sibling.tscn) as a hero:
+## the Visual's model, scale and clips, the badge outfit
 ## tint the hero wears (Cosmetics), and the collision capsule. Called
 ## from the shell's _enter_tree, before the Visual child builds its
 ## model in its own _ready.

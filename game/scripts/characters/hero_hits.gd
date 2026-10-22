@@ -3,8 +3,8 @@ extends RefCounted
 
 ## HeroHits
 ##
-## Where a hero's hits and hurts meet the perk cards (perk cards,
-## .scratch/perk-cards, ticket 04). Both heroes go through here, whether
+## Where a hero's hits and hurts meet the perk cards.
+## Both heroes go through here, whether
 ## the player plays them (PlayerController) or they tag along
 ## (Companion), so a perk works the same either way:
 ##
@@ -14,9 +14,9 @@ extends RefCounted
 ##
 ## Every melee swing, pebble and pebble bounce deals its damage through
 ## strike(), and so through damage_factor(): the one place a per-target
-## damage multiplier goes (Twin Strike, ticket 05).
+## damage multiplier goes (Twin Strike).
 ##
-## The sibling cards (ticket 05) need "the other hero": the companion for
+## The sibling cards need "the other hero": the companion for
 ## the player, the player for the companion (Party.other()). "A mob the
 ## other hero is hitting" means one the other hero struck within
 ## TWIN_STRIKE_SECONDS of game time. strike() stamps each hero hit on the

@@ -3,7 +3,7 @@ extends RefCounted
 
 ## BarkLibrary
 ##
-## Finds the siblings' barks (feature 037) in res://resources/barks/.
+## Finds the siblings' barks in res://resources/barks/.
 ## A bark is picked at random among a speaker's lines for a trigger,
 ## never the same line twice in a row.
 

@@ -3,7 +3,7 @@ extends Resource
 
 ## AudioLibrary
 ##
-## Data for every sound the game plays (feature 016). One-shots are
+## Data for every sound the game plays. One-shots are
 ## found by naming convention: `<sfx_dir>/<id>_<n>.ogg` for n = 1, 2, ...
 ## (AudioManager picks a random variant), so adding a variant is just
 ## dropping in a file. This resource holds the tuning: per-id volume,
@@ -21,7 +21,7 @@ const MAX_VARIANTS: int = 8
 @export var pitch_jitter: float = 0.08
 @export var music_day: AudioStream = null
 @export var music_night: AudioStream = null
-## The Moon-Eater's fight (feature 038).
+## The Moon-Eater's fight.
 @export var music_boss: AudioStream = null
 @export var ambience_day: AudioStream = null
 @export var ambience_night: AudioStream = null

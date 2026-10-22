@@ -3,7 +3,7 @@ extends RefCounted
 
 ## BuildBeat
 ##
-## The hammering rhythm builders share (feature 045): the hero on a BUILD
+## The hammering rhythm builders share: the hero on a BUILD
 ## command and the companion on its Repair task. With the hammer out it
 ## loops two overhead blows, then fetches the next plank (or fiddles a
 ## peg in), and calls Building.on_build_hit() on each blow's impact

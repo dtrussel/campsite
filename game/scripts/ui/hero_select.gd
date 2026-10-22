@@ -2,7 +2,7 @@ extends Control
 
 ## HeroSelect
 ##
-## "Choose your hero" (feature 034), between the title screen's run
+## "Choose your hero", between the title screen's run
 ## length buttons and the loading screen. The roster's heroes stand by
 ## the fire (HeroStage); one wood card per hero shows their portrait,
 ## name, a line about them, health / power / reach pips and their

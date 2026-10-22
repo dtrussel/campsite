@@ -3,8 +3,8 @@ extends RefCounted
 
 ## HudWidgets
 ##
-## Hand-drawn (Control._draw) HUD pieces in the campcraft style
-## (feature 033): wood, brass and canvas, matching UiKit.
+## Hand-drawn (Control._draw) HUD pieces in the campcraft style:
+## wood, brass and canvas, matching UiKit.
 ##   StatBar     - rounded bar in a warm trough: gradient fill, sheen,
 ##                 damage trail, brass ticks, optional text
 ##   Portrait    - round character portrait, brass ring, canvas level badge
@@ -285,7 +285,7 @@ class DayClock extends Control:
 
 ## Vector pictograms for a text-light, kid-friendly UI. Drawn in code,
 ## so they scale crisply and need no image assets.
-## The Moon Lantern's light (feature 036): a dark moon that fills slice
+## The Moon Lantern's light: a dark moon that fills slice
 ## by slice, one per lantern stage.
 class LanternDial extends Control:
 	var stage: int = 0

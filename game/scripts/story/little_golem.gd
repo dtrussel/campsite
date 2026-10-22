@@ -3,8 +3,8 @@ extends Node3D
 
 ## LittleGolem
 ##
-## What is left of the Moon-Eater once it lets the moon go (feature 047,
-## art/characters/little_golem.py, after the team's sheet): a knee-high
+## What is left of the Moon-Eater once it lets the moon go
+## (art/characters/little_golem.py, after the team's sheet): a knee-high
 ## golem of planks and round stones with big amber eyes and a warm
 ## crescent window in its chest. It climbs out of the Moon-Eater's heap in
 ## the true ending (MoonEaterVisual), curls up by the campfire, and sits

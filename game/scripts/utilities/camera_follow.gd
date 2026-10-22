@@ -5,11 +5,11 @@ extends Node3D
 ## LoL-style camera rig: a fixed, north-up, steep angle that smoothly
 ## follows the boy. The mouse wheel zooms between `min_zoom` and
 ## `max_zoom`; Fx.shake() adds decaying trauma for hit feedback.
-## A narrow lens from further back (feature 031) flattens perspective
+## A narrow lens from further back flattens perspective
 ## toward the miniature-diorama look of the concept art. Zooming in
 ## past the default also lowers the angle (to `close_pitch_degrees`)
 ## and lifts the aim a little, so a close view looks across the camp
-## rather than down on it (playtest 1, feature 044).
+## rather than down on it.
 
 @export var target_path: NodePath
 @export var smoothing: float = 6.0

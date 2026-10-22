@@ -5,12 +5,12 @@ extends Node
 ## Top-level coordinator. Owns the run lifecycle (title -> playing ->
 ## won / lost -> restart), the win and lose rules, the per-run stats
 ## shown on the end screen, and dispatches companion-task hotkeys.
-## Also holds the party (feature 034): which hero the player plays and
+## Also holds the party: which hero the player plays and
 ## which one is the AI companion, picked on the hero select screen.
-## The run lengths are the story's chapters (feature 035): 3 nights is
+## The run lengths are the story's chapters: 3 nights is
 ## Chapter 1, 7 nights is Chapter 2, and each opens with its intro.
-## Chapter 2's last night lasts until the Moon-Eater is calmed (feature
-## 038); its dawn is the win.
+## Chapter 2's last night lasts until the Moon-Eater is calmed;
+## its dawn is the win.
 
 signal day_number_changed(new_day: int)
 signal camp_destroyed
@@ -57,7 +57,7 @@ var stats: Dictionary = {}
 ## hero select opens on it after a restart too.
 var hero_id: StringName = &"leo"
 var companion_id: StringName = &"nela"
-## Glow Shard drops (feature 036): kills since each mob type last
+## Glow Shard drops: kills since each mob type last
 ## dropped, for the pity rule. Saved, and reset every run.
 var loot_misses: Dictionary = {}
 var loot_rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -87,7 +87,7 @@ func _run_selftest() -> void:
 	var recipes: int = CraftingManager.get_recipes().size()
 	var scene: PackedScene = load(GAME_SCENE) as PackedScene
 	var instance: Node = scene.instantiate() if scene != null else null
-	# Floors, not exact counts: the six gathered resources (Playtest 1),
+	# Floors, not exact counts: the six gathered resources,
 	# the camp's first buildings and a recipe.
 	var ok: bool = items >= 6 and buildings >= 2 and recipes >= 1 and instance != null
 	print("selftest: items=%d buildings=%d recipes=%d main_scene=%s -> %s" % [
@@ -262,7 +262,7 @@ func set_stat(stat: StringName, value: int) -> void:
 
 
 ## The party a save was made with: {"hero", "companion"} as ids. Saves
-## from before feature 034 have no "party" and are Leo with Nela.
+## from before hero select have no "party" and are Leo with Nela.
 static func party_of(data: Dictionary) -> Dictionary:
 	var party: Dictionary = data.get("party", {}) if data.get("party") is Dictionary else {}
 	return {

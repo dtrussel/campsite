@@ -3,7 +3,7 @@ extends Control
 
 ## PerkPicker
 ##
-## The level-up card picker (perk cards, .scratch/perk-cards): up to
+## The level-up card picker: up to
 ## three wood plate cards, each with its key cap, icon, name and one
 ## line. Pick by clicking a card or pressing 1/2/3. It never pauses the
 ## game: while it is open the game runs at SLOW_FACTOR speed, and after

@@ -5,9 +5,9 @@ extends CanvasLayer
 ## Shown when GameManager ends the run: victory after the final dawn,
 ## or defeat when the campfire goes out or the boy is knocked out.
 ## Summarises the run and points testers at the playtest log.
-## Feature 035: a win opens the chapter's ending storybook first and
+## A win opens the chapter's ending storybook first and
 ## shows the stats after; a defeat says why, as a voiced story line.
-## Feature 043: in Chapter 2, Mum walks into the camp before the book.
+## In Chapter 2, Mum walks into the camp before the book.
 ## An endless run says how far it got, and "New record!" when it beat
 ## the best. Under the stats, the Camp Badges this run earned: the win
 ## badges are awarded as the run ends, after the HUD is paused and
@@ -91,7 +91,7 @@ func _on_run_ended(won: bool, _reason: String) -> void:
 	if pages.is_empty():
 		_root.visible = true
 		return
-	# The true ending (feature 043): Mum walks out of the woods first.
+	# The true ending: Mum walks out of the woods first.
 	var player: Node3D = get_tree().get_first_node_in_group("player") as Node3D
 	if GameManager.chapter() == 2 and player != null and ResourceLoader.exists(MumArrival.MODEL_PATH):
 		var arrival: MumArrival = MumArrival.play(get_tree().current_scene, player.global_position)

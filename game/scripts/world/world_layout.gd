@@ -3,7 +3,7 @@ extends RefCounted
 
 ## WorldLayout
 ##
-## The map's plan (feature 032), in one place so the dressing, the
+## The map's plan, in one place so the dressing, the
 ## ground shader and the resource placement agree. The camp sits in a
 ## forest clearing. The four mob lanes run in along the axes as open,
 ## trodden corridors. The four corners between them are themed groves,

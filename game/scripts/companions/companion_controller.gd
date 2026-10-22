@@ -8,11 +8,11 @@ extends Hero
 ## Mobs can hurt companions (health lives in Hero); a downed companion
 ## stays down until the next dawn, then gets back up at full health.
 ##
-## Feature 034: the companion is a hero too (Nela, or Leo when the
+## The companion is a hero too (Nela, or Leo when the
 ## player plays Nela). Body, stats, speed, reach and fighting style come
 ## from the party's HeroDefinition; `definition` keeps the task tuning.
 ##
-## Playtest 1 (feature 044): every task walks along the navigation mesh
+## Every task walks along the navigation mesh
 ## (NavSteer) instead of a straight line, and a watchdog re-paths,
 ## sidesteps or finally hops her free when she is pressed against a prop.
 
@@ -36,7 +36,7 @@ var current_task: int = Task.IDLE
 var _player: Node3D = null
 var _base_core: Node3D = null
 var _repair_timer: float = 0.0
-## The hammering rhythm while building or repairing (feature 045).
+## The hammering rhythm while building or repairing.
 var _build_beat: BuildBeat = BuildBeat.new()
 var _tool_busy: bool = false
 var move_speed: float = 4.8
@@ -264,7 +264,7 @@ func _tick_gather_nearest() -> void:
 	_walk_to(target.global_position)
 
 
-## Builds waiting blueprints first (feature 044), then fixes the most
+## Builds waiting blueprints first, then fixes the most
 ## damaged structure (the campfire first when it is low), fighting any
 ## imp that comes within reach. With nothing to do, or no wood left,
 ## the companion guards the camp instead.
@@ -299,7 +299,7 @@ func _tick_repair(delta: float) -> void:
 			_build_beat.swing(_visual)
 
 
-# --- Walking (feature 044: nav paths and a stuck watchdog) -------------
+# --- Walking (nav paths and a stuck watchdog) -------------------------
 
 ## Walks along the nav path toward `goal`. If the companion barely moves
 ## for STUCK_REPATH_SECONDS it re-paths and sidesteps; after

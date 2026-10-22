@@ -109,7 +109,12 @@
 - Multi-paragraph docstrings are not used. One-line `##` above a public
   method is fine when the contract is non-obvious.
 - Do **not** add comments that reference task IDs, PRs, or commit
-  history. Those belong in the commit log.
+  history. Those belong in the commit log. `tools/check.sh` enforces
+  this for `.gd` files: `game/tools/validate_project.gd` fails, with
+  `file:line`, on a comment that names a feature number (`feature 034`,
+  a bare `034`), a ticket (`ticket 05`, `perk cards 04`, `hero-core
+  spec`), a `.scratch/` path or a `playtest 1`-style marker. Point at a
+  design doc instead when the reader needs more.
 
 ## Error handling
 

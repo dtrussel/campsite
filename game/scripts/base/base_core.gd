@@ -8,7 +8,7 @@ extends StaticBody3D
 ## campfire as a visual-only object; this script wires up health and
 ## the matching signals.
 ##
-## A saving system (run lifecycle 03): its HP and hearth go in the save
+## A saving system: its HP and hearth go in the save
 ## file under "campfire".
 
 signal damaged(new_hp: int)
@@ -18,7 +18,7 @@ signal destroyed
 @export var max_hp: int = 150
 ## HP restored by one hammer tap or one "Feed the fire".
 @export var repair_per_tap: int = 20
-## Stone Hearth upgrade (feature 017): extra max HP and the clay ring.
+## Stone Hearth upgrade: extra max HP and the clay ring.
 @export var hearth_bonus_hp: int = 75
 
 const HEARTH_SCENE: String = "res://assets/custom/hearth_ring.glb"

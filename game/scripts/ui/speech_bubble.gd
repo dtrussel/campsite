@@ -3,7 +3,7 @@ extends Node3D
 
 ## SpeechBubble
 ##
-## A sibling's bark over their head (feature 037). The node itself is an
+## A sibling's bark over their head. The node itself is an
 ## anchor above the hero's health bar; the bubble is drawn on screen
 ## (a parchment card with an ink rim and a tail), following the anchor
 ## every frame, so it stays crisp and readable through the tilt-shift

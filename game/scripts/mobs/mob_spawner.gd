@@ -6,10 +6,10 @@ extends Node3D
 ## Lives in the world scene. On TimeManager.night_started, spawns a
 ## wave of mobs from this node's Marker3D children (random pick per
 ## spawn). Stops if BaseCore is destroyed. A wave is `get_wave_size()`
-## imps with `get_heavy_count()` heavy mobs (Bramble Beasts, feature
-## 018) mixed into its second half and `get_sneak_count()` thieves
-## (Mushroom Gremlins, feature 021) in its first half.
-## Feature 038: Chapter 2's last night is the Moon-Eater with a small
+## imps with `get_heavy_count()` heavy mobs (Bramble Beasts)
+## mixed into its second half and `get_sneak_count()` thieves
+## (Mushroom Gremlins) in its first half.
+## Chapter 2's last night is the Moon-Eater with a small
 ## escort, its eyes watch from the treeline the nights before, and it
 ## summons imp packs through summon() (never past mob_cap).
 ## Endless: each night past nights_to_win gives mobs
@@ -30,12 +30,12 @@ signal mob_spawned(mob: Node3D, definition: MobDefinition)
 @export var heavy_definition: MobDefinition
 @export var heavy_counts: PackedInt32Array = PackedInt32Array([0, 1, 2])
 @export var heavy_per_night_extra: int = 1
-## Thieves (Mushroom Gremlins, feature 021) per night, mixed into the
+## Thieves (Mushroom Gremlins) per night, mixed into the
 ## first half so they sneak in while the imps keep the kids busy.
 @export var sneak_definition: MobDefinition
 @export var sneak_counts: PackedInt32Array = PackedInt32Array([0, 1, 1])
 @export var sneak_per_night_extra: int = 1
-## The Moon-Eater (feature 038): the last night of Chapter 2 is the boss
+## The Moon-Eater: the last night of Chapter 2 is the boss
 ## and `boss_escort` imps; from `eyes_from_night` its eyes watch from
 ## the treeline. It rises at the spawn point named `boss_spawn_point`.
 @export var boss_definition: MobDefinition
@@ -248,7 +248,7 @@ func _spawn_one(definition: MobDefinition) -> void:
 			_queue.clear())
 
 
-## The Moon-Eater's summons (feature 038): up to `count` of `definition`
+## The Moon-Eater's summons: up to `count` of `definition`
 ## from random lanes, never past mob_cap. They count toward the wave.
 ## Returns how many came.
 func summon(definition: MobDefinition, count: int) -> int:

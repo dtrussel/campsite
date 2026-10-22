@@ -13,7 +13,7 @@ extends Node3D
 ##   visual.play_action(&"attack")    # one-shot, returns length
 ##   visual.face(direction, delta)    # smooth turn toward a direction
 ##
-## Feature 023: animation is layered with an AnimationTree built in code:
+## Animation is layered with an AnimationTree built in code:
 ##
 ##   BlendSpace1D "loco" (idle . walk . run by speed) -> TimeScale
 ##     -> OneShot "upper" (spine, chest, head and arms only)
@@ -32,7 +32,7 @@ const UPPER_BONES: Array[String] = ["spine", "chest", "head", "upperarm.l", "low
 const MAX_LEAN: float = 0.17  # radians (~10 degrees) into a turn
 const LEAN_PER_TURN_RATE: float = 0.045
 
-## Hand tools (feature 045): key -> model, held on TOOL_BONE.
+## Hand tools: key -> model, held on TOOL_BONE.
 const TOOLS: Dictionary = {&"hammer": preload("res://assets/custom/hammer.glb")}
 const TOOL_BONE: String = "handslot.r"
 ## Tool models have the grip at the origin, the handle up +Y and the
@@ -72,10 +72,10 @@ const TOOL_SCALE: float = 1.9
 ## Speed (m/s) at which the walk clip plays fully; running takes over
 ## above about twice this. Only used when there is a &"walk" clip.
 @export var walk_speed: float = 1.6
-## Lean into turns (feature 023).
+## Lean into turns.
 @export var lean: bool = true
 ## Fx.burst kind puffed at the feet every `step_distance` metres while
-## running (feature 024); empty = none.
+## running; empty = none.
 @export var footstep_dust: StringName = &""
 @export var step_distance: float = 1.1
 ## Model parts put away while a hand tool is out (Leo's stick, Nela's
@@ -408,7 +408,7 @@ func _filter_upper_body(shot: AnimationNodeOneShot) -> void:
 
 
 ## Swaps the locomotion clip for another role in `clips` (e.g. the
-## Mushroom Gremlin's &"flee" scurry, feature 027); &"move" restores it.
+## Mushroom Gremlin's &"flee" scurry); &"move" restores it.
 ## Does nothing if the model has no such clip.
 func set_move_clip(state: StringName) -> void:
 	if _move_anim == null or _get_clip(state) == null:

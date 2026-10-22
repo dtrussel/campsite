@@ -3,7 +3,7 @@ extends RefCounted
 
 ## HeroRoster
 ##
-## The playable heroes in select-screen order (feature 034). Adding a
+## The playable heroes in select-screen order. Adding a
 ## hero is one .tres in res://resources/heroes/ plus one line here.
 ## Each hero in the world joins the group "hero_<id>", so recipes and
 ## saves can find a hero whichever role it plays.

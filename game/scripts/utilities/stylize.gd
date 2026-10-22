@@ -28,13 +28,13 @@ const PAINTED_SUFFIX: String = "_painted"
 ## (Cosmetics: hero outfits, tent colours) tint through it.
 const TINT_META: StringName = &"style_tint"
 ## Meta on a model (or any ancestor) whose painted meshes sway in the
-## wind: trees, pines and bushes (feature 024).
+## wind: trees, pines and bushes.
 const FOLIAGE_META: StringName = &"foliage"
 const FOLIAGE_SHADER: Shader = preload("res://shaders/painted_foliage.gdshader")
-## Painted props, buildings and characters (feature 031 M4): wrap-lit,
+## Painted props, buildings and characters: wrap-lit,
 ## matte, soft rim, plus sunny tops, contact shade and texel detail.
 const PAINTED_SHADER: Shader = preload("res://shaders/painted_prop.gdshader")
-## Thin warm ink line on painted props (feature 031 M4, HD-2D target).
+## Thin warm ink line on painted props (HD-2D target).
 const PROP_OUTLINE_COLOR: Color = Color(0.2, 0.12, 0.07)
 const PROP_OUTLINE_THICKNESS: float = 0.011
 

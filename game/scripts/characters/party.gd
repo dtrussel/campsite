@@ -3,7 +3,7 @@ extends RefCounted
 
 ## Party
 ##
-## Who is who in the running camp (hero-core spec): the player's hero,
+## Who is who in the running camp: the player's hero,
 ## the companion, each one's other hero, and a hero's role. Use it
 ## instead of looking heroes up by group name. It reads the live scene,
 ## so after a hero swap (a new run) it names the new heroes.

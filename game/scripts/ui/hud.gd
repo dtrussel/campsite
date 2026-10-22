@@ -2,7 +2,7 @@ extends CanvasLayer
 
 ## HUD
 ##
-## In-game HUD in the campcraft style (feature 033), built in code
+## In-game HUD in the campcraft style, built in code
 ## from HudWidgets:
 ##   top centre    - one slim strip: nights-to-win moons, the day dial
 ##                   medallion, campfire HP; an imp tag hangs under the
@@ -12,17 +12,17 @@ extends CanvasLayer
 ##   bottom centre - the played hero: portrait + level, HP and XP bars, and the
 ##                   action bar (Space attack, E gather, Q torch, R eat,
 ##                   C craft, B build) with counts and cooldowns
-##   left, under the companion - the dawn story card (feature 035), out
+##   left, under the companion - the dawn story card, out
 ##                   of the way of the camp; left of the top strip, the
-##                   Moon Lantern dial (feature 036)
-##   under the top strip - the boss bar while the Moon-Eater stands
-##                   (feature 038), with a thin bar for its lantern reach
+##                   Moon Lantern dial
+##   under the top strip - the boss bar while the Moon-Eater stands,
+##                   with a thin bar for its lantern reach
 ##   right, under the tray - toasts (HudToast): short notes such as the
 ##                   companion's perk card, clear of the banner and the
 ##                   story card; the perk picker covers them
 ## Everything is signal-driven except the clock, cooldown and imp count,
 ## which tick in _process. Names and portraits come from the party
-## (GameManager.party_hero / party_companion, feature 034).
+## (GameManager.party_hero / party_companion).
 
 const _BANNER_SECONDS: float = 3.5
 const _PHASE_COLOR_DAY: Color = Color(1, 0.95, 0.8)
@@ -59,7 +59,7 @@ var _banner: Label = null
 var _banner_plate: PanelContainer = null
 var _banner_tween: Tween = null
 ## A line under the banner: what a creature is, the first time one shows
-## up in a run (feature 046).
+## up in a run.
 var _banner_sub: Label = null
 var _banner_sub_plate: PanelContainer = null
 ## The banner's faded-in alpha; it is drawn at zero while the perk
@@ -448,7 +448,7 @@ func _build_banner(root: Control) -> void:
 	_banner_sub_plate.add_child(_banner_sub)
 
 
-## The Moon-Eater's health under the top strip (feature 038), and a thin
+## The Moon-Eater's health under the top strip, and a thin
 ## moon-coloured bar for how long the kids have while it holds the
 ## lantern. Hidden until a boss rises.
 func _build_boss_bar(root: Control) -> void:
@@ -523,7 +523,7 @@ func _build_story_host(root: Control) -> void:
 
 
 ## Shows a story card (dawn talk, first shard). A card that is still
-## talking is never cut short (feature 046): the new one waits for it
+## talking is never cut short: the new one waits for it
 ## and null is returned.
 func show_story(beat: StoryBeat, hint: String = "") -> StoryCard:
 	if beat == null:

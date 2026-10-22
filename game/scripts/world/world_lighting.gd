@@ -4,7 +4,7 @@ extends Node
 ##
 ## Blends sun, ambient light, sky and fog between four hand-picked
 ## palettes as TimeManager changes phase: golden-hour day (strong low
-## sun, low warm ambient so shadows read warm brown, feature 031 M4), orange-pink sunset,
+## sun, low warm ambient so shadows read warm brown), orange-pink sunset,
 ## blue moonlit night (the campfire becomes the key light), and a soft
 ## dawn. Transitions tween over the phase so the sky visibly turns.
 

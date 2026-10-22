@@ -3,7 +3,7 @@ extends Node
 
 ## BarkDirector
 ##
-## Lets the siblings talk during a run (feature 037): it listens to the
+## Lets the siblings talk during a run: it listens to the
 ## game's events, picks who speaks (keyed by who is played), shows the
 ## line in a SpeechBubble and plays its recording, or a chirp until the
 ## recordings arrive. Cooldowns keep it from chattering: one shared gap
@@ -231,7 +231,7 @@ func _hook_mob(node: Node) -> void:
 		boss.phase_changed.connect(_on_boss_phase.bind(boss))
 
 
-## The Moon-Eater reaches for the lantern (feature 038).
+## The Moon-Eater reaches for the lantern.
 func _on_boss_phase(_phase: int, boss: BossController) -> void:
 	if boss.is_draining():
 		bark(&"boss_lantern")
@@ -241,7 +241,7 @@ func _on_mob_stole(_mob: Node3D, _item_id: StringName, _amount: int) -> void:
 	bark(&"thief")
 
 
-## A gremlin made it back to the woods with its loot (feature 046).
+## A gremlin made it back to the woods with its loot.
 func _on_mob_escaped(_mob: Node3D, _item_id: StringName, _amount: int) -> void:
 	bark(&"thief_escaped")
 

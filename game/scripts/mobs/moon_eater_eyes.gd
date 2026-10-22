@@ -3,7 +3,7 @@ extends Node3D
 
 ## MoonEaterEyes
 ##
-## The Moon-Eater watching from the treeline (feature 038): on the
+## The Moon-Eater watching from the treeline: on the
 ## nights before it comes (Chapter 2, from night 5) a pair of big pale
 ## eyes glows out in the dark woods. They blink and drift slowly. The spawner adds them at nightfall and calls
 ## leave() at dawn. They do nothing else.

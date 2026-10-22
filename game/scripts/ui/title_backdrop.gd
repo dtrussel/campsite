@@ -5,9 +5,9 @@ extends Node3D
 ## Live 3D scene behind the title menu: the camp at dusk, the boy and
 ## his sibling sitting by the fire, shadow minions lurking at the tree
 ## line, and a slow orbiting camera. Once the story's true ending has
-## been seen, Mum is home and sits by the fire too (feature 043). Purely decorative - no gameplay
+## been seen, Mum is home and sits by the fire too. Purely decorative - no gameplay
 ## nodes, so nothing here reacts to input or the run state. The hero
-## select screen (HeroStage, feature 034) reuses it with its own heroes
+## select screen (HeroStage) reuses it with its own heroes
 ## and camera.
 
 const GROUND_MATERIAL: Material = preload("res://assets/materials/painted_ground.tres")
@@ -55,7 +55,7 @@ func _ready() -> void:
 			mum.position = Vector3(0.9, 0, -1.8)
 			add_child(mum)
 			mum.face_instantly(-mum.position)
-			# The little golem from the true ending, warm by the fire (047).
+			# The little golem from the true ending, warm by the fire.
 			var golem: LittleGolem = LittleGolem.new()
 			golem.name = "LittleGolem"
 			golem.scale = Vector3.ONE * 0.8
@@ -141,7 +141,7 @@ func _build_environment() -> void:
 	sun.light_energy = dusk["sun_energy"]
 	sun.shadow_enabled = true
 	add_child(sun)
-	# Feature 031: the same tilt-shift and warm grade as in a run, at dusk.
+	# The same tilt-shift and warm grade as in a run, at dusk.
 	var post: PostFx = PostFx.new()
 	post.follow_time = false
 	post.night_amount = 0.4

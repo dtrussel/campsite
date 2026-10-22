@@ -3,7 +3,7 @@ extends RefCounted
 
 ## Repair
 ##
-## Shared rules for fixing damaged structures (feature 017). Anything
+## Shared rules for fixing damaged structures. Anything
 ## in the "repairable" group (placed buildings and the campfire) exposes
 ## get_missing_hp(), repair(amount) and repair_per_tap. One "tap" of
 ## the hammer costs a piece of wood, restores repair_per_tap HP and

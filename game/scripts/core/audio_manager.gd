@@ -2,16 +2,16 @@ extends Node
 
 ## AudioManager
 ##
-## Plays every sound in the game (feature 016):
+## Plays every sound in the game:
 ## - one-shots via play_sfx(id, position): 3D when a position is given,
 ##   flat on the UI bus for UI ids; a random variant and a little pitch
 ##   jitter each time. Fx.burst() calls this, so every particle burst
 ##   has a matching sound for free.
 ## - music and ambience: a day and a night "mood", crossfaded when
 ##   TimeManager changes phase, with win / lose stingers at run end.
-## - voiced story lines (feature 035) on their own Voice bus: one at a
+## - voiced story lines on their own Voice bus: one at a
 ##   time, a new line cuts the last one off.
-## - sibling barks (feature 037) on the Voice bus too, on their own
+## - sibling barks on the Voice bus too, on their own
 ##   player: a recording when there is one, else a per-speaker chirp.
 ##   A bark never cuts off a story line.
 ## - volume settings (Music, SFX) saved to user://settings.cfg.
@@ -160,7 +160,7 @@ func is_voice_playing() -> bool:
 
 
 ## Crossfades music and ambience to a mood: &"day", &"night", &"boss"
-## (the Moon-Eater, feature 038), or &"" (silence).
+## (the Moon-Eater), or &"" (silence).
 func set_mood(new_mood: StringName) -> void:
 	if new_mood == mood:
 		return

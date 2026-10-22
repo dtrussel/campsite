@@ -3,7 +3,7 @@ extends Building
 
 ## StorageCrate
 ##
-## A big lidded chest (feature 019). Each one standing in the camp
+## A big lidded chest. Each one standing in the camp
 ## raises every resource's stash cap by its base amount (see
 ## ResourceManager.get_cap). Losing it lowers the cap again, but items
 ## already above the new cap are kept.
