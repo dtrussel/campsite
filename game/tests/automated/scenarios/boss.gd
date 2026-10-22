@@ -32,8 +32,10 @@ func _run_boss_scenario() -> void:
 	await get_tree().process_frame
 	_check(get_tree().get_nodes_in_group("moon_eater_eyes").size() == 1, "night 5: its eyes watch from the treeline")
 	TimeManager.skip_phase()
-	await _wait(2.0)
-	_check(get_tree().get_nodes_in_group("moon_eater_eyes").is_empty(), "the eyes fade at dawn")
+	# Polled: the fade is a 1.5 s tween, and a fixed wait just past it can
+	# end in a long frame before the tween's last step frees the eyes.
+	_check(await _wait_until(func() -> bool: return get_tree().get_nodes_in_group("moon_eater_eyes").is_empty(), 3.0),
+		"the eyes fade at dawn")
 
 	# Night 7, with the lantern fully lit.
 	var lantern: MoonLantern = MoonLantern.find(get_tree())
