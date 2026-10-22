@@ -17,6 +17,9 @@ set -euo pipefail
 GODOT="${GODOT:-godot}"
 GAME_DIR="$(cd "$(dirname "$0")/../game" && pwd)"
 LOG_DIR="$(mktemp -d)"
+# Each run gets its own user:// (saves, profile), so runs in parallel
+# worktrees never read each other's files.
+export XDG_DATA_HOME="$LOG_DIR/data"
 
 expected="$(cat "$(dirname "$0")/godot_version.txt")"
 actual="$("$GODOT" --version | cut -d. -f1-3)"

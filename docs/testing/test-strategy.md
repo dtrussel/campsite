@@ -69,6 +69,20 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
 - Headless tests run as **scenes**, not `-s` scripts, because `-s`
   runs without autoloads.
 
+## Writing smoke and validator checks
+
+- **Seams:** a ticket's smoke and validator checkboxes are its agreed
+  seams. Test there; the tdd skill's "confirm the seams with the user"
+  is already done when the ticket is `ready-for-agent`.
+- **Wait on a condition, not a duration.** A check that follows
+  something in flight (a pebble's tween, a burn's ticks, a fade) waits
+  with `await _wait_until(func() -> bool: return <condition>, <game seconds>)` and
+  asserts on its result. A fixed `_wait()` started beside a tween races
+  it: Godot runs timers before tweens, so one long frame lets the timer
+  win, and CI's slowed smoke goes red while the local run stays green.
+- `tools/check.sh` gives every run its own `user://`, so parallel runs
+  (one per worktree) never share save or profile files.
+
 ## Tools and conventions
 
 - Manual smoke tests are run inside the Godot editor with **F5**.
