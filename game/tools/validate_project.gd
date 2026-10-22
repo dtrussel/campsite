@@ -35,7 +35,6 @@ const WORK_ITEM_PATTERNS: Array[String] = [
 	"\\bPR\\s*#\\d+",
 	"(?<![\\w/.])0\\d\\d(?![\\w/-])",
 ]
-const COMMENT_CHECK_SKIPS_SMOKE_TESTS_MID_SPLIT: Array[String] = ["res://tests/automated"]
 
 var _errors: PackedStringArray = PackedStringArray()
 
@@ -780,7 +779,7 @@ func _validate_comments(files: PackedStringArray) -> void:
 		patterns.append("\\b(?:%s)\\s+(?:\\d{2}|spec)\\b" % "|".join(slugs))
 	var regex: RegEx = RegEx.create_from_string("(?i)(?:%s)" % ")|(?:".join(patterns))
 	for path in files:
-		if not path.ends_with(".gd") or COMMENT_CHECK_SKIPS_SMOKE_TESTS_MID_SPLIT.any(func(dir: String) -> bool: return path.begins_with(dir + "/")):
+		if not path.ends_with(".gd"):
 			continue
 		var comments: Dictionary = _comments_by_line(FileAccess.get_file_as_string(path))
 		var block: String = ""
