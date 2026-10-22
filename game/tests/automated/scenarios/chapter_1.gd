@@ -770,9 +770,13 @@ func _check_bramble_beast(player: Node3D) -> void:
 	beast.set("_attack_cooldown_remaining", 0.0)
 	var before: int = fence.current_hp
 	beast.call("_try_attack", fence)
-	await _wait(beast_def.attack_hit_delay * 0.5)
-	_check(fence.current_hp == before, "the slam has not landed during the windup")
-	await _wait(beast_def.attack_hit_delay * 0.5 + 0.25)
+	# Timed in game time, frame by frame: a fixed wait half-way through the
+	# windup can end in a long frame that also carries the impact.
+	var windup: float = 0.0
+	while fence.current_hp == before and windup < beast_def.attack_hit_delay + 0.25:
+		await get_tree().process_frame
+		windup += get_process_delta_time()
+	_check(windup >= beast_def.attack_hit_delay - 0.01, "the slam has not landed during the windup")
 	_check(fence.current_hp < before, "the slam lands at impact (%.2fs)" % beast_def.attack_hit_delay)
 	# A kid who steps away during the windup is not hit.
 	beast.set("_attack_cooldown_remaining", 99.0)

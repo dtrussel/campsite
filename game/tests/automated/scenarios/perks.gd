@@ -350,8 +350,9 @@ func _run_perk_banner_scenario() -> void:
 	var hud: Node = get_tree().get_first_node_in_group("hud")
 	var plate: Control = hud.get("_banner_plate") as Control
 	hud.show_banner("Night 9!")
-	await get_tree().create_timer(0.15, true, false, true).timeout
-	_check(plate.modulate.a > 0.9, "the night banner shows (alpha %.2f)" % plate.modulate.a)
+	# Polled: a fixed wait can end in a long frame before the fade-in steps.
+	var shown: Callable = func() -> bool: return plate.modulate.a > 0.9
+	_check(await _wait_until(shown, 1.0), "the night banner shows (alpha %.2f)" % plate.modulate.a)
 	ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"test")
 	var picker: PerkPicker = PerkManager.picker()
 	_check(picker != null and is_zero_approx(plate.modulate.a) and hud.is_banner_hidden(),
@@ -360,8 +361,8 @@ func _run_perk_banner_scenario() -> void:
 		return
 	picker.pick(0)
 	# The level-up restarted the banner (its own fade-in) under the picker.
-	await get_tree().create_timer(0.15, true, false, true).timeout
-	_check(plate.modulate.a > 0.9 and not hud.is_banner_hidden(), "the banner comes back once a card is taken (alpha %.2f)" % plate.modulate.a)
+	_check(await _wait_until(shown, 1.0) and not hud.is_banner_hidden(),
+		"the banner comes back once a card is taken (alpha %.2f)" % plate.modulate.a)
 
 
 ## The companion never draws a player-only
