@@ -10,7 +10,7 @@ extends Resource
 ## order); the Journal class finds them and keeps the found ones.
 ##
 ## How it is found (`found_in`):
-## - `dawn`: it is one of Mum's dawn notes (046). `note_id` names that
+## - `dawn`: it is one of Mum's dawn notes. `note_id` names that
 ##   note's story line, whose text, face and sketch the page shows, so
 ##   the dawn card stays the one source of the words. Found when that
 ##   dawn card plays.

@@ -2,7 +2,7 @@ extends Node
 
 ## RunSession
 ##
-## One run's lifecycle (run lifecycle spec): start a run from a
+## One run's lifecycle: start a run from a
 ## RunConfig, continue one from saved data, reset, and announce when a
 ## restore has finished. GameManager's start_run / continue_run /
 ## go_to_title (the title, hero select, pause and end screens) come
@@ -61,7 +61,7 @@ func start(run: RunConfig = null, open_scene: bool = true) -> void:
 	get_tree().paused = false
 	reset(run)
 	if open_scene:
-		LoadingScreen.load_scene(GameManager.GAME_SCENE)  # key art while the camp loads (feature 029)
+		LoadingScreen.load_scene(GameManager.GAME_SCENE)  # key art while the camp loads
 
 
 ## Continues the run `data` was saved from (SaveManager.load_save or

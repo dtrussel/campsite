@@ -29,8 +29,8 @@ var day_number: int = 1
 ## The clock only ticks during a run; the title screen and end screens
 ## leave it stopped. GameManager drives start_run / stop.
 var is_running: bool = false
-## While true the night never runs out (the Moon-Eater holds it,
-## feature 038); skip_phase still ends it.
+## While true the night never runs out (the Moon-Eater holds it);
+## skip_phase still ends it.
 var hold_night: bool = false
 
 

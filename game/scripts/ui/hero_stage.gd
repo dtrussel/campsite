@@ -2,7 +2,7 @@ extends "res://scripts/ui/title_backdrop.gd"
 
 ## HeroStage
 ##
-## 3D backdrop of the hero select screen (feature 034): the dusk camp
+## 3D backdrop of the hero select screen: the dusk camp
 ## from the title screen, with every hero of the roster standing in a
 ## row in front of the fire. The picked hero cheers and stands in an
 ## ember ring of light; the camera drifts a little toward them.

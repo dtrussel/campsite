@@ -3,7 +3,7 @@ extends Resource
 
 ## BadgeDefinition
 ##
-## One Camp Badge (journal badges, .scratch/journal-badges): a Scout-
+## One Camp Badge: a Scout-
 ## style milestone the profile keeps for good. Stored as a .tres under
 ## res://resources/badges/; the Badges autoload checks them and keeps
 ## the earned ones in the profile.

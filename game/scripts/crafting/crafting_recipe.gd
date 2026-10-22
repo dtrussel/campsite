@@ -7,7 +7,7 @@ extends Resource
 ## of `output_id`. Stored as a .tres file under res://resources/recipes/.
 ## Loaded once at startup by CraftingManager.
 ##
-## A recipe can instead have an `effect` on the camp (feature 017):
+## A recipe can instead have an `effect` on the camp:
 ##   &"feed_fire"    - heals the campfire (only while it is damaged)
 ##   &"stone_hearth" - upgrades the campfire (once per run)
 ##   &"tool_tier"    - the next tier of a hero's signature tool (Leo's

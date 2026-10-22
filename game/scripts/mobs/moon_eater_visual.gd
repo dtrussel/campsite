@@ -3,7 +3,7 @@ extends Node3D
 
 ## MoonEaterVisual
 ##
-## The Moon-Eater (feature 038), after the team's character sheet
+## The Moon-Eater, after the team's character sheet
 ## (art/reference/concept-2026-10/15_moon_eater_character_sheet.webp): a
 ## hulking golem of weathered planks and boulders lashed with rope, with
 ## long ape-like arms and huge wooden fists, a small plank head with two
@@ -351,7 +351,7 @@ func _fall_apart() -> void:
 	float_up.tween_callback(_hoard.queue_free)
 
 
-## The little golem (feature 047, its own model after the team's sheet),
+## The little golem (its own model after the team's sheet),
 ## under the heap's top, about to climb out. The Moon-Eater's parts stay
 ## hidden; the golem keeps its real size whatever this visual's scale.
 func _reassemble_small() -> void:

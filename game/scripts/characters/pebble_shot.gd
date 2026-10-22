@@ -3,7 +3,7 @@ extends Node3D
 
 ## PebbleShot
 ##
-## A slingshot pebble (feature 034): flies in a short arc from the
+## A slingshot pebble: flies in a short arc from the
 ## shooter's hand to the target and deals its damage on arrival. If the
 ## target died or left on the way, the pebble just lands. The damage goes
 ## through HeroHits.strike, and Ricochet (perk cards) bounces a hit on to

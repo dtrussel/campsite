@@ -3,7 +3,7 @@ extends Node
 ## PerkManager
 ##
 ## Autoload that owns the perk cards each character has taken (perk
-## cards, .scratch/perk-cards). When the player's hero levels up it
+## cards). When the player's hero levels up it
 ## deals up to three cards and opens the PerkPicker in the HUD; when the
 ## companion levels up it takes a random card itself and the HUD shows a
 ## toast. The gameplay hooks then ask it about the taken perks:

@@ -3,7 +3,7 @@ extends Resource
 
 ## BarkSet
 ##
-## The siblings' barks (feature 037, docs/design/story.md): short lines
+## The siblings' barks (docs/design/story.md): short lines
 ## over a hero's head when something happens in a run. Each line is a
 ## dictionary like a StoryBeat line:
 ##   {"id": "bark.thief.leo.1", "trigger": "thief", "speaker": "leo", "text": "..."}

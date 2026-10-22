@@ -3,7 +3,7 @@ extends Building
 
 ## SnapTrap
 ##
-## A wooden snap trap (feature 017). Imps walk right over it (it blocks
+## A wooden snap trap. Imps walk right over it (it blocks
 ## nothing): the first imp to step on the pad gets snapped, hurt and
 ## held in place for a moment, then the jaws re-arm. Each snap uses one
 ## charge (the trap's HP bar); after the last one it breaks. Traps are

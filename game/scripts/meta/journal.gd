@@ -6,7 +6,7 @@ extends RefCounted
 ## Mum's journal: the JournalPage files under
 ## res://resources/story/journal/ and which of them the player has
 ## found, kept in the profile for good ("journal.<page id>"). A page is
-## found when its dawn card plays (Mum's dawn notes, 046), when a day
+## found when its dawn card plays (Mum's dawn notes), when a day
 ## chest holding it is opened (DayChest), or, for a badge page, as soon
 ## as its badge is earned (read from the badge, so badges earned before
 ## the journal existed count too). The scrapbook's Journal tab shows

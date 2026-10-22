@@ -5,7 +5,7 @@ extends RefCounted
 ##
 ## Gameplay options from the pause menu, saved in user://settings.cfg
 ## (section "gameplay", next to AudioManager's and PostFx's sections).
-## Playtest 1 (feature 044): the hero's auto-attack, on by default.
+## The hero's auto-attack, on by default.
 
 const SETTINGS_PATH: String = "user://settings.cfg"
 

@@ -3,9 +3,9 @@ extends Node3D
 
 ## ItemPickup
 ##
-## A loot drop lying on the ground: Glow Shards from imps (feature
-## 017), or the resources a caught Mushroom Gremlin was carrying
-## (feature 021, shown as the item's icon). It bobs and glows; Leo or Nela collect it just by walking
+## A loot drop lying on the ground: Glow Shards from imps,
+## or the resources a caught Mushroom Gremlin was carrying
+## (shown as the item's icon). It bobs and glows; Leo or Nela collect it just by walking
 ## close. Within `magnet_radius` of Leo it drifts toward him, so small
 ## players do not have to line up exactly.
 

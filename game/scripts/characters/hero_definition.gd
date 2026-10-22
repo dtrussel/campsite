@@ -3,7 +3,7 @@ extends Resource
 
 ## HeroDefinition
 ##
-## One playable hero (feature 034). A hero can fill either role: the
+## One playable hero. A hero can fill either role: the
 ## player character (player_controller.gd) or the AI companion
 ## (companion_controller.gd). Both role shells read their body, stats
 ## and combat style from here, so a hero plays the same way in either

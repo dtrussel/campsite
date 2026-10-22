@@ -3,7 +3,7 @@ extends CanvasLayer
 
 ## StoryBook
 ##
-## The painted storybook (feature 035): the chapter intro after hero
+## The painted storybook: the chapter intro after hero
 ## select, and the chapter ending before the win screen's stats. One
 ## painting per page with one or two voiced lines. Click, Space or
 ## Enter turns the page, Esc skips the rest. Runs while the game is

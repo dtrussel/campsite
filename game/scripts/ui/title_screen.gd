@@ -7,7 +7,7 @@ extends Control
 ## under a LoL-client-style menu - gold Cinzel logo, hextech buttons,
 ## and a How-to-play panel. Two Play buttons pick a fresh run: Chapter
 ## 1 "The Dark Moon" (3 nights) or Chapter 2 "Into the Hollow" (7
-## nights, feature 035), then the hero select screen (feature 034);
+## nights), then the hero select screen;
 ## Continue (shown
 ## when there is an autosave) resumes the saved run, with its party, at
 ## its next morning. Chapter 2 is locked until Chapter 1 is won

@@ -3,7 +3,7 @@ extends CharacterBody3D
 
 ## Hero
 ##
-## Everything Leo or Nela does whichever role they play (hero-core spec).
+## Everything Leo or Nela does whichever role they play.
 ## The two role scripts extend it and add only what differs:
 ## - the player's hero (`player_controller.gd`): input, pointer commands
 ##   and the hit feel. Being down ends the run (GameManager listens).
@@ -450,12 +450,12 @@ func _show_level_up(_level: int, _quiet: bool) -> void:
 
 
 # --- Saving --------------------------------------------------------------
-# A saving system (run lifecycle 03). The hero's entry in the save file
+# A saving system. The hero's entry in the save file
 # is "player" for the player's hero and "sibling" for the companion
-# (their names before feature 034). The hero writes its own part of it;
+# (their names before hero select). The hero writes its own part of it;
 # ProgressionManager and PerkManager write its XP and perks there too.
 
-## Saves from before feature 034 name the signature tool by the role's
+## Saves from before hero select name the signature tool by the role's
 ## old hero: Leo's stick (the player) and Nela's slingshot (the sibling).
 ## Saves from before tool tiers hold `signature: true`. Both load as
 ## tier 1; today's saves hold the tier as `tier`.

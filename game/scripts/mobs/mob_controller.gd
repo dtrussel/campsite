@@ -49,7 +49,7 @@ var _last_damage_source: Node = null
 var _knockback: Vector3 = Vector3.ZERO
 var _spawn_remaining: float = 0.0
 var _stun_remaining: float = 0.0
-# Thief state (feature 021).
+# Thief state.
 var loot_id: StringName = &""
 var loot_amount: int = 0
 var is_fleeing: bool = false
@@ -270,7 +270,7 @@ func is_stunned() -> bool:
 
 
 ## Loot for young players: a chance per kill, with pity so a dry spell
-## never lasts long (feature 036, GameManager.roll_loot).
+## never lasts long (GameManager.roll_loot).
 func _maybe_drop_loot() -> void:
 	if definition == null or definition.drop_item == &"":
 		return
@@ -385,7 +385,7 @@ func _try_attack(target: Node) -> void:
 	if _visual != null:
 		_visual.play_action(&"attack", 1.3)
 	if definition.attack_hit_delay > 0.0:
-		# Telegraphed (feature 026): the blow lands at the clip's impact.
+		# Telegraphed: the blow lands at the clip's impact.
 		get_tree().create_timer(definition.attack_hit_delay, false).timeout.connect(_land_attack.bind(target))
 	else:
 		_land_attack(target)
@@ -419,7 +419,7 @@ func _land_attack(target_or_freed: Variant) -> void:
 	if target is Building:
 		damage = int(round(damage * definition.building_damage_multiplier))
 	target.take_damage(damage, self)
-	# A beast that flattens a building beats its chest (feature 026).
+	# A beast that flattens a building beats its chest.
 	if delayed and target is Building and (target as Building).current_hp <= 0 and _visual != null:
 		_visual.play_action(&"roar", 1.2)
 

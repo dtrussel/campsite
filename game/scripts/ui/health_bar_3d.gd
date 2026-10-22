@@ -7,7 +7,7 @@ extends Node3D
 ## new value; a pale trail drains after it so hits read clearly.
 ## Styles: "ally" (green), "hero" (green, with level badge),
 ## "enemy" (red), "structure" (gold, for the campfire and buildings),
-## "build" (blue, a blueprint's construction progress, feature 044).
+## "build" (blue, a blueprint's construction progress).
 
 const SHADER: Shader = preload("res://shaders/health_bar.gdshader")
 const STYLES: Dictionary = {

@@ -42,7 +42,7 @@ func _ready() -> void:
 		["bush", func() -> Node3D: return _custom("berry_bush.glb", 1.0), 2.6, 1.8, 0.4, 0.3],
 		["tree", func() -> Node3D: return _custom("tree_a.glb", 1.0), 2.6, 1.2, 0.4, 0.3],
 		["pumpkin", func() -> Node3D: return _custom("jack_o_lantern.glb", 1.0), 2.4, 1.2, 0.6, 0.0],
-		# Feature 017: new items, buildings and upgrades.
+		# New items, buildings and upgrades.
 		["clay", func() -> Node3D: return _custom("clay_pit.glb", 1.0), 2.6, 1.8, 0.3, 0.4],
 		["mushrooms", func() -> Node3D: return _custom("mushrooms.glb", 1.0), 2.4, 1.6, 0.3, 0.3],
 		["scrap", func() -> Node3D: return _custom("junk_pile.glb", 1.0), 2.6, 1.8, 0.3, 0.5],
@@ -51,7 +51,7 @@ func _ready() -> void:
 		["trap", _trap, 2.2, 2.0, 0.15, 0.5],
 		["lantern", func() -> Node3D: return _custom("glow_lantern.glb", 1.0), 4.0, 2.4, 0.9, 0.5],
 		["hearth", _hearth, 3.2, 2.4, 0.25, 0.3],
-		# Feature 019: buildings and Crafting Table recipes.
+		# Buildings and Crafting Table recipes.
 		["wall", func() -> Node3D: return _custom("reinforced_wall.glb", 1.0), 3.0, 1.6, 0.55, 0.35],
 		["crate", func() -> Node3D: return _custom("storage_crate.glb", 1.0), 2.6, 1.8, 0.35, 0.5],
 		["table", func() -> Node3D: return _custom("crafting_table.glb", 1.0), 2.8, 2.0, 0.45, 0.4],
@@ -152,7 +152,7 @@ func _portrait(name: String, path: String, style: String, hidden: Array, raise: 
 		clips: Dictionary = {}) -> void:
 	var visual: CharacterVisual = CharacterVisual.new()
 	if not clips.is_empty():
-		visual.clips = clips  # creatures with their own clips (the imp, feature 028)
+		visual.clips = clips  # creatures with their own clips (the imp)
 	visual.model_scene = load("res://assets/" + path)
 	visual.model_scale = 1.0
 	visual.hidden_parts = PackedStringArray(hidden)

@@ -8,7 +8,7 @@ extends Hero
 ## then gather), use the campfire (walk to it, open crafting), or
 ## repair a damaged building (walk to it, then hammer until it is fixed
 ## or the wood runs out; see Repair), or build a blueprint (walk to
-## it, then hammer it up; feature 044). An idle hero takes the oldest
+## it, then hammer it up). An idle hero takes the oldest
 ## waiting blueprint on its own.
 ## Paths come from the world's navigation mesh; WASD still works as a
 ## direct override and cancels the current command.
@@ -17,10 +17,10 @@ extends Hero
 ## regenerate slowly outside of night, eating berries heals, and being
 ## down ends the run (GameManager listens to `down_changed`).
 ##
-## Feature 034: the body, stats and fighting style come from the party's
+## The body, stats and fighting style come from the party's
 ## HeroDefinition (Leo swings a stick; Nela shoots pebbles from range).
 ##
-## Playtest 1 (feature 044): auto-attack. An idle or gathering hero
+## Auto-attack. An idle or gathering hero
 ## picks the nearest mob within `auto_attack_radius()` and fights it,
 ## chains to the next one, then goes back to the interrupted gather.
 ## Any player command wins; the pause menu can switch it off.
@@ -70,7 +70,7 @@ var command_target: Node3D = null
 var _move_goal: Vector3 = Vector3.ZERO
 var _repath_timer: float = 0.0
 var _repair_timer: float = 0.0
-## The hammering rhythm on BUILD and REPAIR (feature 045).
+## The hammering rhythm on BUILD and REPAIR.
 var _build_beat: BuildBeat = BuildBeat.new()
 var _tool_busy: bool = false
 var _auto_scan_timer: float = 0.0
@@ -173,7 +173,7 @@ func command_repair(target: Node3D) -> void:
 	_agent.target_position = target.global_position
 
 
-## Walk to a blueprint and hammer it up (feature 044).
+## Walk to a blueprint and hammer it up.
 func command_build(target: Building) -> void:
 	if not _can_command() or target == null or not target.is_blueprint():
 		return
@@ -414,8 +414,8 @@ func _swing(target: Node3D) -> void:
 # --- Actions ---------------------------------------------------------------
 
 
-## E next to the Moon Lantern hands over the stash's Glow Shards
-## (feature 036). False when there is nothing to hand over here.
+## E next to the Moon Lantern hands over the stash's Glow Shards.
+## False when there is nothing to hand over here.
 func try_feed_lantern() -> bool:
 	var lantern: MoonLantern = MoonLantern.find(get_tree())
 	if lantern == null or not lantern.in_reach(global_position) or not lantern.can_accept():
@@ -521,7 +521,7 @@ func _show_level_up(level: int, quiet: bool) -> void:
 	Fx.burst(&"level_up", global_position)
 
 
-## Auto-attack and auto-build (feature 044): only when the player gave
+## Auto-attack and auto-build: only when the player gave
 ## no command (or the hero is gathering), never while walking by hand.
 ## Fighting comes first, then the interrupted gather, then blueprints.
 func _tick_auto() -> void:

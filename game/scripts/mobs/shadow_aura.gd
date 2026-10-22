@@ -2,7 +2,7 @@ extends CPUParticles3D
 
 ## ShadowAura
 ##
-## The Shadow Imp's smoky aura (feature 031 M8, concept 08): glowing
+## The Shadow Imp's smoky aura (concept 08): glowing
 ## violet puffs that rise off the imp and trail behind it as it runs, plus a
 ## few glowing violet motes. Emits in world space, so the smoke is left
 ## behind on the move. Stops emitting when the imp is defeated.
