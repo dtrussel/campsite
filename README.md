@@ -182,7 +182,7 @@ both zips (a pre-release when the version has a `-suffix`).
     companions/       Companion definitions
   tests/
     manual/           (placeholder for manual smoke scenes)
-    automated/        Headless smoke test (smoke_run.tscn)
+    automated/        Headless smoke test (smoke_run.tscn; scenarios/ has one script per feature)
     sim/              Balance simulation, screenshot and animation-frame capture
   tools/              In-project tools (validate_project.tscn)
 
