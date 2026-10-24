@@ -5,8 +5,8 @@ extends RefCounted
 ##
 ## Starting perks: a Camp Badge unlocks a perk card
 ## that a run can start with already taken. Hero select offers the
-## unlocked ones; the pick is kept in the profile, RunConfig.current()
-## reads it, and GameManager gives it to the played hero when a new run
+## unlocked ones; the pick is kept in the profile, hero select puts it
+## on the run config, and GameManager gives it to the played hero when a new run
 ## starts (PerkManager.take_starting). Continue never gives it again:
 ## the save already holds it.
 ##

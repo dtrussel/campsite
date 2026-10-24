@@ -18,20 +18,39 @@ static var _main: Node = null
 static var _failures: int = 0
 
 
-## The smoke run's config: the current party and run length, a fixed perk
-## deal and loot sequence (the same cards and drops every run), and level-
-## ups that take the first card at once unless `auto_pick_seconds` > 0.
+## The smoke run's config: a 3-night Chapter 1 run of Leo with Nela,
+## with the smoke settings (_run_of).
 func _config(auto_pick_seconds: float = 0.0, perk_seed: int = 1, loot_seed: int = 1) -> RunConfig:
-	var config: RunConfig = RunConfig.current()
-	config.perk_auto_pick_seconds = auto_pick_seconds
-	config.perk_seed = perk_seed
-	config.loot_seed = loot_seed
-	config.day_chest_day = 0  # no day chest, unless a check asks for one
+	return _run_of(RunConfig.for_chapter(1), auto_pick_seconds, perk_seed, loot_seed)
+
+
+## `run` (a config of any shape) with the smoke settings: a fixed perk
+## deal and loot sequence (the same cards and drops every run), no day
+## chest unless a check asks for one, and level-ups that take the first
+## card at once unless `auto_pick_seconds` > 0.
+func _run_of(run: RunConfig, auto_pick_seconds: float = 0.0, perk_seed: int = 1, loot_seed: int = 1) -> RunConfig:
+	run.perk_auto_pick_seconds = auto_pick_seconds
+	run.perk_seed = perk_seed
+	run.loot_seed = loot_seed
+	run.day_chest_day = 0
+	return run
+
+
+## Again, as the end screen plays it: the last run's config with fresh
+## seeds (GameManager.start_run), with the smoke settings.
+func _again(auto_pick_seconds: float = 0.0) -> RunConfig:
+	return _run_of(RunSession.config.again(), auto_pick_seconds)
+
+
+## _config() with `hero` played (and their default companion).
+func _party(hero: StringName, auto_pick_seconds: float = 0.0) -> RunConfig:
+	var config: RunConfig = _config(auto_pick_seconds)
+	config.set_party(hero)
 	return config
 
 
 ## A new run through the run session, from `config` (_config() when
-## null: the current party and run length, the smoke seeds, no picker).
+## null: Chapter 1 with Leo and Nela, the smoke seeds, no picker).
 func _start_fresh_run(config: RunConfig = null) -> void:
 	await _close_main()
 	RunSession.start(config if config != null else _config(), false)
@@ -39,8 +58,8 @@ func _start_fresh_run(config: RunConfig = null) -> void:
 
 
 ## Continues `data` through the run session, as Continue on the title
-## screen does: the party and run length come from the save, the seeds
-## and the auto-pick time from `config` (_config() when null).
+## screen does: the run config comes from the save, the seeds and the
+## auto-pick time from `config` (_config() when null).
 func _continue_from(data: Dictionary, config: RunConfig = null) -> void:
 	await _close_main()
 	_check(RunSession.continue_from(data, config if config != null else _config(), false),
@@ -164,7 +183,7 @@ func _plant_torch(player: Node3D) -> Node3D:
 
 
 func _bark_line(text: String, trigger: StringName, speaker: StringName) -> bool:
-	for line in BarkLibrary.lines_for(trigger, speaker, GameManager.hero_id):
+	for line in BarkLibrary.lines_for(trigger, speaker, RunSession.config.hero_id):
 		if String((line as Dictionary).get("text", "")) == text:
 			return true
 	return false

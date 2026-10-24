@@ -15,16 +15,11 @@ func run() -> void:
 ## time; calmed, it shrinks by the fire and the true ending plays.
 func _run_boss_scenario() -> void:
 	print("smoke: --- boss scenario ---")
-	GameManager.set_party(&"leo")
-	GameManager.nights_to_win = 7
-	await _start_fresh_run()
+	await _start_fresh_run(_run_of(RunConfig.for_chapter(2)))
 	var spawner: MobSpawner = get_tree().get_first_node_in_group("mob_spawner") as MobSpawner
 	_check(spawner.is_boss_night(7) and not spawner.is_boss_night(6), "the Moon-Eater comes on Chapter 2's last night")
 	var wave: Array[MobDefinition] = spawner.build_wave(7)
 	_check(wave[0].is_boss and wave.size() == 1 + spawner.boss_escort, "night 7 is the boss and %d imps" % spawner.boss_escort)
-	GameManager.nights_to_win = 3
-	_check(not spawner.is_boss_night(3), "no boss in Chapter 1")
-	GameManager.nights_to_win = 7
 
 	# Night 5: its eyes at the treeline, gone at dawn.
 	TimeManager.day_number = 5
@@ -53,7 +48,6 @@ func _run_boss_scenario() -> void:
 		t += 0.25
 	_check(boss != null and boss.phase == BossController.Phase.STOMPING, "night 7: the Moon-Eater rises (%.1fs)" % t)
 	if boss == null:
-		GameManager.nights_to_win = 3
 		return
 	boss.set_physics_process(false)  # the test drives it from here
 	var hud: Node = _main.get_node("HUD")
@@ -173,7 +167,6 @@ func _run_boss_scenario() -> void:
 		book.next()
 		await get_tree().process_frame
 	StoryLibrary.forget_progress()
-	GameManager.nights_to_win = 3
 
 
 func _clear_mobs_except(keep: Node) -> void:

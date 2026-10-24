@@ -6,8 +6,9 @@ extends RefCounted
 ## What a run starts from (run lifecycle): the party, the chapter (or an
 ## endless run), the nights to win, the seeds of the perk deal, the loot
 ## rolls and the day chest, and the perk picker's auto-pick time.
-## RunSession.start applies it; the same config plays the same deals,
-## drops and chest, so a test or a bug report can replay a run.
+## RunSession holds it for the run in play, and it never changes once
+## the run has started; the same config plays the same deals, drops and
+## chest, so a test or a bug report can replay a run.
 ##
 ## It also answers the run's rules: which night is the Moon-Eater's,
 ## which dawn wins, how far an endless run is past the story, whether
@@ -20,11 +21,11 @@ const CHAPTER_NIGHTS: Dictionary = {1: 3, 2: 7}
 ## itself, in a normal game.
 const DEFAULT_AUTO_PICK_SECONDS: float = 10.0
 ## The chance a config built for a chapter, or by Again, rolls a day
-## chest (current() uses GameManager.day_chest_chance).
+## chest.
 const DAY_CHEST_CHANCE: float = 0.5
 
-## The played hero and the companion (HeroRoster ids). An empty or
-## unknown companion falls back to the hero's default one.
+## The played hero and the companion (HeroRoster ids); set_party keeps
+## them to known heroes.
 var hero_id: StringName = &"leo"
 var companion_id: StringName = &"nela"
 ## The story chapter: 1 "The Dark Moon" or 2 "Into the Hollow".
@@ -121,19 +122,24 @@ func again() -> RunConfig:
 	return config
 
 
-## A config for the next run: the party, run length and endless flag
-## GameManager holds
-## (kept between runs), fresh seeds and the normal auto-pick time.
-static func current() -> RunConfig:
-	var config: RunConfig = RunConfig.new()
-	config.hero_id = GameManager.hero_id
-	config.companion_id = GameManager.companion_id
-	config.chapter = GameManager.chapter()
-	config.nights_to_win = GameManager.nights_to_win
-	config.endless = GameManager.endless
-	config.starting_perk = StartingPerks.chosen()
-	config.day_chest_day = config.roll_day_chest(GameManager.day_chest_chance)
-	return config
+## Sets the party (hero select does, on a draft config); an unknown
+## hero is Leo, and an empty, unknown or same-as-the-hero companion is
+## the hero's default one.
+func set_party(hero_pick: StringName, companion_pick: StringName = &"") -> void:
+	hero_id = hero_pick if HeroRoster.has_hero(hero_pick) else &"leo"
+	if companion_pick == &"" or companion_pick == hero_id or not HeroRoster.has_hero(companion_pick):
+		companion_pick = HeroRoster.default_companion(hero_id)
+	companion_id = companion_pick
+
+
+## The played hero's definition.
+func hero() -> HeroDefinition:
+	return HeroRoster.get_hero(hero_id)
+
+
+## The companion's definition.
+func companion() -> HeroDefinition:
+	return HeroRoster.get_hero(companion_id)
 
 
 ## Writes the config into the save `data`, under the save's run keys:
@@ -162,8 +168,7 @@ static func from_save(data: Dictionary) -> RunConfig:
 	else:
 		config.chapter = 2 if config.nights_to_win >= CHAPTER_NIGHTS[2] else 1
 	var party: Dictionary = GameManager.party_of(data)
-	config.hero_id = party["hero"]
-	config.companion_id = party["companion"]
+	config.set_party(party["hero"], party["companion"])
 	config.day_chest_day = int(data.get("day_chest_day", 0))
 	return config
 

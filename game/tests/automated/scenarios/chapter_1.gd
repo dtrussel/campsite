@@ -139,7 +139,7 @@ func _run_win_scenario() -> void:
 	imp.take_damage(999, player)
 
 	companion.call("set_task", Companion.Task.GUARD_BASE)
-	for night in range(1, GameManager.nights_to_win + 1):
+	for night in range(1, RunSession.config.nights_to_win + 1):
 		await _survive_night(night, player)
 		if night == 1:
 			await get_tree().process_frame  # the autosave runs deferred
@@ -150,9 +150,9 @@ func _run_win_scenario() -> void:
 			var card: StoryCard = _main.get_node("HUD").call("story_card")
 			_check(card != null and card.lines().size() == 2 and String(card.lines()[0]["speaker"]) == "leo"
 				and String(card.lines()[0]["id"]).begins_with("dawn.c1.n1"), "dawn 1: Leo and Nela talk on the dawn card")
-		if night < GameManager.nights_to_win:
+		if night < RunSession.config.nights_to_win:
 			_check(GameManager.is_playing(), "still playing after night %d" % night)
-	_check(GameManager.run_state == GameManager.RunState.WON, "run WON after %d nights" % GameManager.nights_to_win)
+	_check(GameManager.run_state == GameManager.RunState.WON, "run WON after %d nights" % RunSession.config.nights_to_win)
 	# The Chapter 1 ending book comes before the stats.
 	var end_root: Control = _main.get_node("EndScreen").get("_root")
 	await get_tree().process_frame  # the book opens deferred
@@ -192,7 +192,7 @@ func _run_chapter_lock_scenario() -> void:
 	screen.call("select", 1)
 	GameManager.record_hero_pick((screen.call("selected_hero") as HeroDefinition).id)
 	screen.queue_free()
-	GameManager.set_party(&"leo")  # what a fresh start would hold
+	RunSession.forget_last_run()  # what a fresh start would hold: Leo
 	Profile.reload()
 	screen = (load("res://scenes/ui/HeroSelect.tscn") as PackedScene).instantiate()
 	add_child(screen)
@@ -289,9 +289,9 @@ func _run_continue_scenario() -> void:
 	_check(SaveManager.parse(SaveManager.serialize(data)).hash() == SaveManager.parse(SaveManager.serialize(data)).hash()
 		and not SaveManager.parse(SaveManager.serialize(data)).is_empty(), "save round-trips through JSON")
 
-	GameManager.nights_to_win = 7  # Continue takes the run length from the save
-	await _continue_from(data)
-	_check(GameManager.nights_to_win == int(data["nights_to_win"]), "continued at the saved run length (%d nights)" % GameManager.nights_to_win)
+	await _continue_from(data, _run_of(RunConfig.for_chapter(2)))  # the run length comes from the save
+	_check(RunSession.config.nights_to_win == int(data["nights_to_win"]) and RunSession.config.chapter == 1,
+		"continued at the saved run length and chapter (%d nights, Chapter %d)" % [RunSession.config.nights_to_win, RunSession.config.chapter])
 	_check(TimeManager.day_number == 2 and TimeManager.current_phase == TimeManager.Phase.DAY, "continued at the morning of day 2")
 	_check(ResourceManager.get_count(&"wood") == int(data["inventory"].get("wood", 0)), "inventory restored")
 	var buildings: int = get_tree().get_nodes_in_group(Building.BUILDINGS_GROUP).size()
@@ -305,15 +305,13 @@ func _run_continue_scenario() -> void:
 	_check(int(GameManager.stats[&"nights_survived"]) == 1, "stats restored (1 night survived)")
 
 	# A 7-night run.
-	GameManager.nights_to_win = 7
-	await _start_fresh_run()
+	await _start_fresh_run(_run_of(RunConfig.for_chapter(2)))
 	var hud: Node = get_tree().get_first_node_in_group("hud")
 	if hud == null:
 		hud = _main.get_node_or_null("HUD")
 	_check(hud != null and (hud.get("_moons") as Array).size() == 7, "7-night run shows 7 moons")
 	var spawner: Node = get_tree().get_first_node_in_group("mob_spawner")
 	_check(spawner.get_wave_size(7) == 19 and spawner.get_heavy_count(7) == 6, "night 7: 19 imps and 6 beasts")
-	GameManager.nights_to_win = 3
 
 
 ## Repair, the clay and scrap nodes, recipes, traps and lanterns.

@@ -291,8 +291,7 @@ func _run_companion_perks_scenario() -> void:
 func _run_hero_perks_scenario() -> void:
 	print("smoke: --- hero perks scenario ---")
 	for hero_id in [&"leo", &"nela"]:
-		GameManager.set_party(hero_id)
-		await _start_fresh_run()
+		await _start_fresh_run(_party(hero_id))
 		var player: Node3D = get_tree().get_first_node_in_group("player")
 		var companion: Node3D = get_tree().get_first_node_in_group("companions")
 		# Hold the companion still (the test swings for it), and stop the
@@ -315,7 +314,6 @@ func _run_hero_perks_scenario() -> void:
 				await _check_leo_perks(who)
 			else:
 				await _check_nela_perks(who)
-	GameManager.set_party(&"leo")
 
 
 ## The sibling cards work whichever hero is the player.
@@ -324,8 +322,7 @@ func _run_hero_perks_scenario() -> void:
 func _run_sibling_perks_scenario() -> void:
 	print("smoke: --- sibling perks scenario ---")
 	for hero_id in [&"leo", &"nela"]:
-		GameManager.set_party(hero_id)
-		await _start_fresh_run()
+		await _start_fresh_run(_party(hero_id))
 		var player: Node3D = get_tree().get_first_node_in_group("player")
 		var companion: Node3D = get_tree().get_first_node_in_group("companions")
 		companion.set_physics_process(false)
@@ -337,7 +334,6 @@ func _run_sibling_perks_scenario() -> void:
 			await _check_twin_strike(who, Party.other(who))
 		for who in [player, companion]:
 			_check_cheer_up(who, Party.other(who))
-	GameManager.set_party(&"leo")
 
 
 ## The centre banner ("NIGHT N!") hides while the perk

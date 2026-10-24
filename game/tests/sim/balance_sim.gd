@@ -2,7 +2,7 @@ extends Node
 
 ## Scratch balance simulation (not a pass/fail test). Plays nights
 ## unattended with the given companion task and prints HP at each dawn.
-##   -- <companion task 0-4> <fight|idle> [no_beasts] [7] [seed=N]
+##   -- <companion task 0-4> <fight|idle> [no_beasts] [7 | nights=N] [seed=N]
 ## "fight" chases the nearest mob like an active player; days are
 ## skipped, so the boy is healed to full at each nightfall.
 
@@ -18,14 +18,20 @@ func _ready() -> void:
 	if args.size() > 1: player_fights = args[1] == "fight"
 	var no_beasts: bool = args.has("no_beasts")
 	var nights: int = 7 if args.has("7") else 3
-	GameManager.nights_to_win = nights
+	for arg in args:
+		if arg.begins_with("nights="):
+			nights = maxi(1, int(arg.trim_prefix("nights=")))
+	# A run of any length: Chapter 2's rules from 7 nights on.
+	var run: RunConfig = RunConfig.for_chapter(2 if nights >= 7 else 1)
+	run.nights_to_win = nights
 	# Level-ups take the first perk card at once; the picker never opens.
-	PerkManager.auto_pick_seconds = 0.0
+	run.perk_auto_pick_seconds = 0.0
 	# A fixed deal, so the auto-picked cards repeat run to run.
-	PerkManager.rng.seed = 1
+	run.perk_seed = 1
 	for arg in args:
 		if arg.begins_with("seed="):
-			PerkManager.rng.seed = int(arg.trim_prefix("seed="))
+			run.perk_seed = int(arg.trim_prefix("seed="))
+	RunSession.reset(run)
 	var main: Node = MAIN_SCENE.instantiate()
 	add_child(main)
 	await get_tree().process_frame

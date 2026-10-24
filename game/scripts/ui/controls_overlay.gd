@@ -27,7 +27,7 @@ func _ready() -> void:
 	center.add_child(panel)
 	var column: VBoxContainer = UiKit.vbox(10)
 	panel.add_child(column)
-	column.add_child(UiKit.goal_picture(GameManager.nights_to_win))
+	column.add_child(UiKit.goal_picture(RunSession.config.nights_to_win))
 	var divider_row: CenterContainer = CenterContainer.new()
 	divider_row.add_child(UiKit.divider(560))
 	column.add_child(divider_row)

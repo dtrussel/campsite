@@ -22,7 +22,7 @@ extends CanvasLayer
 ##                   story card; the perk picker covers them
 ## Everything is signal-driven except the clock, cooldown and imp count,
 ## which tick in _process. Names and portraits come from the party
-## (GameManager.party_hero / party_companion).
+## (RunSession.config.hero / companion).
 
 const _BANNER_SECONDS: float = 3.5
 const _PHASE_COLOR_DAY: Color = Color(1, 0.95, 0.8)
@@ -160,12 +160,12 @@ func _build_top(root: Control) -> void:
 	var moons: HBoxContainer = HBoxContainer.new()
 	moons.alignment = BoxContainer.ALIGNMENT_CENTER
 	moons.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	moons.add_theme_constant_override("separation", 3 if GameManager.nights_to_win <= 4 else 1)
-	moons.tooltip_text = "Endless: the nights never end" if GameManager.endless else "Nights to survive"
+	moons.add_theme_constant_override("separation", 3 if RunSession.config.nights_to_win <= 4 else 1)
+	moons.tooltip_text = "Endless: the nights never end" if RunSession.config.endless else "Nights to survive"
 	moons.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_child(moons)
-	var moon_size: float = 24.0 if GameManager.nights_to_win <= 4 else 15.0
-	for i in range(GameManager.nights_to_win):
+	var moon_size: float = 24.0 if RunSession.config.nights_to_win <= 4 else 15.0
+	for i in range(RunSession.config.nights_to_win):
 		var moon: HudWidgets.Glyph = HudWidgets.Glyph.new("moon_empty", Color(1.0, 0.92, 0.6), moon_size)
 		moon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		moons.add_child(moon)
@@ -235,7 +235,7 @@ func _build_sibling_frame(root: Control) -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	plate.add_child(row)
-	var companion: HeroDefinition = GameManager.party_companion()
+	var companion: HeroDefinition = RunSession.config.companion()
 	_sibling_portrait = HudWidgets.Portrait.new(companion.portrait)
 	_sibling_portrait.custom_minimum_size = Vector2(52, 52)
 	row.add_child(_name_tag(_sibling_portrait, companion.display_name, 14))
@@ -350,8 +350,8 @@ func _build_hero_bar(root: Control) -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	plate.add_child(row)
-	var hero: HeroDefinition = GameManager.party_hero()
-	var companion: HeroDefinition = GameManager.party_companion()
+	var hero: HeroDefinition = RunSession.config.hero()
+	var companion: HeroDefinition = RunSession.config.companion()
 	_hero_portrait = HudWidgets.Portrait.new(hero.portrait)
 	_hero_portrait.custom_minimum_size = Vector2(74, 74)
 	row.add_child(_name_tag(_hero_portrait, hero.display_name, 15))
@@ -534,7 +534,7 @@ func show_story(beat: StoryBeat, hint: String = "") -> StoryCard:
 		return null
 	if open != null:
 		open.queue_free()
-	_story_card = StoryCard.make(beat, GameManager.hero_id, hint)
+	_story_card = StoryCard.make(beat, RunSession.config.hero_id, hint)
 	_story_card.dismissed.connect(_show_queued_story, CONNECT_DEFERRED)
 	_story_host.add_child(_story_card)
 	PlaytestLog.write("story_card id=%s" % beat.id)
@@ -837,7 +837,7 @@ func _on_resource_changed(id: StringName, _value: int, delta: int) -> void:
 	_refresh_tray()
 	# The first Glow Shard of a run: what the shards are (story layer 1).
 	if id == &"glow_shards" and delta > 0 and int(GameManager.stats.get(&"shards", 0)) == 0 and GameManager.is_playing():
-		show_story(StoryLibrary.first(&"shard", GameManager.chapter()), _lantern_hint())
+		show_story(StoryLibrary.first(&"shard", RunSession.config.chapter), _lantern_hint())
 
 
 func _on_build_mode_entered(definition: BuildingDefinition) -> void:
@@ -972,7 +972,7 @@ func _on_dawn_started(day_number: int) -> void:
 	show_banner("Good morning!", _PHASE_COLOR_DAWN)
 	# The winning dawn ends the run; its story is the ending book.
 	if GameManager.is_playing():
-		var beat: StoryBeat = StoryLibrary.first(&"dawn", GameManager.chapter(), day_number)
+		var beat: StoryBeat = StoryLibrary.first(&"dawn", RunSession.config.chapter, day_number)
 		show_story(beat, _lantern_hint())
 		Journal.find_notes_on(beat)  # Mum's note on the card is a journal page too
 

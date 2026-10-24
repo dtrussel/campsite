@@ -28,9 +28,9 @@ func _run_hero_scenario() -> void:
 	screen.queue_free()
 	await get_tree().process_frame
 
-	GameManager.set_party(&"nela")
-	_check(GameManager.companion_id == &"leo", "Leo comes along when Nela is played")
-	await _start_fresh_run()
+	var nela_run: RunConfig = _party(&"nela")
+	_check(nela_run.companion_id == &"leo", "Leo comes along when Nela is played")
+	await _start_fresh_run(nela_run)
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	var companion: Node3D = get_tree().get_first_node_in_group("companions")
 	_check(player.is_in_group(HeroRoster.group_for(&"nela")) and companion.is_in_group(HeroRoster.group_for(&"leo")),
@@ -75,12 +75,10 @@ func _run_hero_scenario() -> void:
 	legacy.erase("party")
 	_check(GameManager.party_of(legacy)["hero"] == &"leo", "older saves without a party are Leo with Nela")
 	table.queue_free()
-	GameManager.set_party(&"leo")  # Continue takes the party from the save
-	await _continue_from(data)
+	await _continue_from(data, _config())  # Leo's config: the party comes from the save
 	player = get_tree().get_first_node_in_group("player")
 	_check(player.is_in_group(HeroRoster.group_for(&"nela")) and bool(player.get("has_signature")),
 		"continued as Nela, slingshot and all")
-	GameManager.set_party(&"leo")
 
 
 ## Leo and Nela take hits, heal and go down the same way
@@ -89,8 +87,7 @@ func _run_hero_scenario() -> void:
 func _run_hero_health_scenario() -> void:
 	print("smoke: --- hero health scenario ---")
 	for hero_id in [&"leo", &"nela"]:
-		GameManager.set_party(hero_id)
-		await _start_fresh_run()
+		await _start_fresh_run(_party(hero_id))
 		var player: Hero = get_tree().get_first_node_in_group("player") as Hero
 		var companion: Hero = get_tree().get_first_node_in_group("companions") as Hero
 		_check(player != null and companion != null, "party %s: both roles are Heroes" % hero_id)
@@ -125,7 +122,6 @@ func _run_hero_health_scenario() -> void:
 		_check(player.is_down() and player_downs == [true], "%s: going down emits down_changed(true)" % label)
 		_check(GameManager.run_state == GameManager.RunState.LOST and GameManager.end_trigger == &"loss_hero",
 			"%s: being down ends the run (%s)" % [label, GameManager.end_reason])
-	GameManager.set_party(&"leo")
 
 
 ## A level-up applies the stat bumps, then emits
@@ -134,8 +130,7 @@ func _run_hero_health_scenario() -> void:
 func _run_hero_progress_scenario() -> void:
 	print("smoke: --- hero progress scenario ---")
 	for hero_id in [&"leo", &"nela"]:
-		GameManager.set_party(hero_id)
-		await _start_fresh_run(_config(5.0))  # keep the player's picker open
+		await _start_fresh_run(_party(hero_id, 5.0))  # keep the player's picker open
 		var player: Hero = get_tree().get_first_node_in_group("player") as Hero
 		var companion: Hero = get_tree().get_first_node_in_group("companions") as Hero
 		_check(player != null and companion != null, "party %s: both roles are Heroes" % hero_id)
@@ -145,7 +140,7 @@ func _run_hero_progress_scenario() -> void:
 			_check_hero_level_up(who as Hero)
 		PerkManager.close_picker()
 		# A restored save replays the level-up: stats and `leveled`, no picker.
-		await _start_fresh_run(_config(5.0))
+		await _start_fresh_run(_party(hero_id, 5.0))
 		player = get_tree().get_first_node_in_group("player") as Hero
 		var levels: Array[int] = []
 		var on_level: Callable = func(who: Node, level: int) -> void:
@@ -154,12 +149,11 @@ func _run_hero_progress_scenario() -> void:
 		var before: int = player.max_hp
 		var stats: CharacterStatsDefinition = ProgressionManager.get_stats(player)
 		ProgressionManager.level_up.connect(on_level)
-		await _continue_with_xp(Party.PLAYER, stats.xp_threshold_for_level(2), _config(5.0))
+		await _continue_with_xp(Party.PLAYER, stats.xp_threshold_for_level(2), _party(hero_id, 5.0))
 		ProgressionManager.level_up.disconnect(on_level)
 		player = Party.player_hero()
 		_check(levels == [2] and player.max_hp == before + stats.max_health_per_level and not PerkManager.is_picking(),
 			"party %s: a restored level-up applies its stats with no picker (%s)" % [hero_id, levels])
-	GameManager.set_party(&"leo")
 
 
 ## Both heroes gather, cancel and finish through the Hero
@@ -168,8 +162,7 @@ func _run_hero_progress_scenario() -> void:
 func _run_hero_gather_scenario() -> void:
 	print("smoke: --- hero gather scenario ---")
 	for hero_id in [&"leo", &"nela"]:
-		GameManager.set_party(hero_id)
-		await _start_fresh_run()
+		await _start_fresh_run(_party(hero_id))
 		var player: Hero = get_tree().get_first_node_in_group("player") as Hero
 		var companion: Companion = get_tree().get_first_node_in_group("companions") as Companion
 		_check(player != null and companion != null, "party %s: both roles are Heroes" % hero_id)
@@ -181,7 +174,6 @@ func _run_hero_gather_scenario() -> void:
 		for who in [player, companion]:
 			await _check_hero_gather(who as Hero)
 		await _check_companion_gather_task(companion)
-	GameManager.set_party(&"leo")
 
 
 ## Leo and Nela attack the same way in both roles, through
@@ -191,8 +183,7 @@ func _run_hero_gather_scenario() -> void:
 func _run_hero_attack_scenario() -> void:
 	print("smoke: --- hero attack scenario ---")
 	for hero_id in [&"leo", &"nela"]:
-		GameManager.set_party(hero_id)
-		await _start_fresh_run()
+		await _start_fresh_run(_party(hero_id))
 		var player: Hero = get_tree().get_first_node_in_group("player") as Hero
 		var companion: Hero = get_tree().get_first_node_in_group("companions") as Hero
 		if player == null or companion == null:
@@ -206,7 +197,6 @@ func _run_hero_attack_scenario() -> void:
 			building.set_physics_process(false)
 		for who in [player, companion]:
 			await _check_hero_attack(who as Hero)
-	GameManager.set_party(&"leo")
 
 
 ## A hit lowers HP, the invulnerability window blocks a second one, and
@@ -272,8 +262,8 @@ func _check_hero_level_up(who: Hero) -> void:
 func _check_party(hero_id: StringName, player: Hero, companion: Hero) -> void:
 	_check(Party.player_hero() == player and _hero_id(Party.player_hero()) == hero_id,
 		"party %s: Party.player_hero() is %s" % [hero_id, hero_id])
-	_check(Party.companion() == companion and _hero_id(Party.companion()) == GameManager.companion_id,
-		"party %s: Party.companion() is %s" % [hero_id, GameManager.companion_id])
+	_check(Party.companion() == companion and _hero_id(Party.companion()) == RunSession.config.companion_id,
+		"party %s: Party.companion() is %s" % [hero_id, RunSession.config.companion_id])
 	_check(Party.other(player) == companion and Party.other(companion) == player and Party.other(null) == null,
 		"party %s: each hero's other hero is their sibling" % hero_id)
 	var both: Array[Hero] = Party.heroes()

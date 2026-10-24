@@ -85,7 +85,7 @@ func _is_met(badge: BadgeDefinition, run_won: bool) -> bool:
 		&"total":
 			return total(badge.stat) >= badge.amount
 		&"win":
-			return run_won and (badge.chapter == 0 or badge.chapter == GameManager.chapter()) \
+			return run_won and (badge.chapter == 0 or badge.chapter == RunSession.config.chapter) \
 				and (badge.stat == &"" or _run_stat(badge.stat) >= badge.amount)
 		&"win_each_hero":
 			for hero in HeroRoster.all():
@@ -116,5 +116,5 @@ func _on_stat_recorded(stat: StringName, amount: int) -> void:
 
 func _on_run_ended(won: bool, _reason: String) -> void:
 	if won:
-		Profile.set_value(HERO_WON_PREFIX + String(GameManager.hero_id), true)
+		Profile.set_value(HERO_WON_PREFIX + String(RunSession.config.hero_id), true)
 	check(won)

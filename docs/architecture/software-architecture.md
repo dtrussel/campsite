@@ -454,7 +454,7 @@ The saving systems, and what each saves:
 | Saving system | Saves |
 |---------------|-------|
 | `TimeManager` | `"day"` |
-| `GameManager` (the run fields) | `"nights_to_win"`, `"party"`, `"stats"`, `"loot_misses"` (the shard pity counter) |
+| `GameManager` (the run's stats) | `"stats"`, `"loot_misses"` (the shard pity counter) |
 | `ResourceManager` | `"inventory"` |
 | `ProgressionManager` | each hero's `"xp"` |
 | `PerkManager` | each hero's `"perks"`; the reset zeroes the perk clock and reshuffles the deal |
@@ -490,15 +490,26 @@ session's list.
 `RunSession` (an autoload, last in the list) is the one entry point for
 a run's lifecycle:
 
+- `config`: the run config of the run in play, or of the last run once
+  it has ended (Again, `GameManager.start_run()`, replays it with
+  `again()`). It never changes during a run.
+- `draft`: the next run's config while it is set up. The title builds it
+  (`RunConfig.for_chapter(n)` or `for_endless()`, through
+  `GameManager.open_hero_select`), and hero select adds the party and
+  the starting perk (`GameManager.begin_chapter`).
 - `start(config, open_scene)`: resets every saving system, deletes any
   save and opens the gameplay scene, which starts the clock at day 1.
-- `continue_from(data, config, open_scene)`: resets, then keeps `data`
-  (from `SaveManager.load_save` or `parse`) waiting for the gameplay
-  scene. The party and run length come from the save.
-- `reset(config)`: every saving system back to a fresh run. It also
-  leaves build mode, which is not run state, and applies the config's
-  seeds and auto-pick time.
-- `snapshot()`: the run as plain data, for the save file. It is `{}`
+- `continue_from(data, seeds, open_scene)`: builds the config from the
+  save (`RunConfig.from_save`) before any saving system loads, takes the
+  seeds and auto-pick time from `seeds`, resets, then keeps `data` (from
+  `SaveManager.load_save` or `parse`) waiting for the gameplay scene.
+- `reset(config)`: every saving system back to a fresh run of `config`
+  (the current one when null). It also leaves build mode, which is not
+  run state, and applies the config's seeds and auto-pick time.
+- `forget_last_run()`: back to a fresh Chapter 1 run of Leo with Nela,
+  for both `config` and `draft` (smoke does this between scenarios).
+- `snapshot()`: the run as plain data, for the save file: the config's
+  keys (`RunConfig.write_save`), then every saving system's. It is `{}`
   when there is no camp to save. `save_now()` writes it.
 - `restore_finished`: a continued run is fully back. The perk top-up
   (dealing the cards a level-up still owes) listens here.
@@ -510,10 +521,15 @@ a run's lifecycle:
   also deletes the save when a run ends.
 
 A `RunConfig` (`game/scripts/core/run_config.gd`) is what a run starts
-from: the hero and companion, the chapter goal (`nights_to_win`), the
-seeds of the perk deal and the loot rolls, and the perk auto-pick time.
-`RunConfig.current()` gives a config for the next run, with fresh seeds.
-A test that passes the same config replays the same deals and drops.
+from: the hero and companion (`set_party`, `hero()`, `companion()`), the
+chapter and the endless flag, the nights to win, the seeds of the perk
+deal, the loot rolls and the day chest, and the perk auto-pick time. It
+also answers the run's rules (`is_moon_eater_night`, `dawn_wins`,
+`nights_past_story`, `lantern_starts_full`, `plays_intro`). It is not a
+saving system: the run session writes its keys (`"chapter"`,
+`"nights_to_win"`, `"endless"`, `"party"`, `"day_chest_day"`) into the
+save itself. A test that passes the same config replays the same deals
+and drops.
 
 ### The restore order
 
@@ -521,7 +537,7 @@ A test that passes the same config replays the same deals and drops.
 (called by `GameManager.on_game_scene_ready` once the gameplay scene is
 up) loads each system in it:
 
-1. `TimeManager`, then `GameManager`'s run fields;
+1. `TimeManager`, then `GameManager`'s run stats;
 2. `ResourceManager`;
 3. `ProgressionManager` (it replays the level-ups quietly);
 4. `PerkManager`, then `CraftingManager`;

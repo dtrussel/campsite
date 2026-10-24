@@ -78,8 +78,8 @@ func _scenario_paths(only: String) -> PackedStringArray:
 
 
 ## A clean slate for the next scenario script: no camp, nothing left on
-## the test root, no save, a fresh profile and story, Leo with Nela on a
-## 3-night story run.
+## the test root, no save, a fresh profile and story, and the last run
+## forgotten (Leo with Nela on a 3-night story run).
 func _reset() -> void:
 	await _close_main()
 	for child in get_children():
@@ -89,9 +89,7 @@ func _reset() -> void:
 	Profile.set_path(TEST_PROFILE_PATH)
 	Profile.delete()
 	StoryLibrary.forget_progress()
-	GameManager.set_party(&"leo")
-	GameManager.nights_to_win = 3
-	GameManager.endless = false
+	RunSession.forget_last_run()
 
 
 func _finish() -> void:

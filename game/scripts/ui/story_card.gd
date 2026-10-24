@@ -10,7 +10,7 @@ extends PanelContainer
 ## game: it plays the voiced lines one after another, then fades by
 ## itself (or on a click).
 ##
-##   hud.add_child(StoryCard.make(beat, GameManager.hero_id, hint))
+##   hud.add_child(StoryCard.make(beat, RunSession.config.hero_id, hint))
 
 signal dismissed
 

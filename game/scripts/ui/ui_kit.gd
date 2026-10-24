@@ -308,7 +308,7 @@ static func picture_guide(columns: int = 2) -> GridContainer:
 		var picture: String = entry[1]
 		if picture == "{companion_portrait}":
 			var portrait: TextureRect = TextureRect.new()
-			portrait.texture = GameManager.party_companion().portrait
+			portrait.texture = RunSession.config.companion().portrait
 			portrait.custom_minimum_size = Vector2(52, 52)
 			portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -364,8 +364,8 @@ static func controls_grid() -> GridContainer:
 static func party_text(text: String) -> String:
 	if not "{" in text:
 		return text
-	return text.replace("{hero}", GameManager.party_hero().display_name).replace(
-		"{companion}", GameManager.party_companion().display_name)
+	return text.replace("{hero}", RunSession.config.hero().display_name).replace(
+		"{companion}", RunSession.config.companion().display_name)
 
 
 class _Divider extends Control:

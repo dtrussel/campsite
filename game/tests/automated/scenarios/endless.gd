@@ -21,13 +21,10 @@ func _run_endless_scenario() -> void:
 	_check((await _title_buttons()).has("endless"), "the true ending unlocks the Endless button")
 
 	# An endless run: Chapter 2, the lantern lit, no Moon-Eater, no win.
-	GameManager.set_party(&"leo")
-	GameManager.nights_to_win = 7
-	GameManager.endless = true  # as the title's Endless button sets it
-	await _start_fresh_run()
+	await _start_fresh_run(_run_of(RunConfig.for_endless()))  # as the title's Endless button builds it
 	var spawner: MobSpawner = get_tree().get_first_node_in_group("mob_spawner") as MobSpawner
 	var lantern: MoonLantern = MoonLantern.find(get_tree())
-	_check(GameManager.endless and GameManager.chapter() == 2 and lantern.is_full(),
+	_check(RunSession.config.endless and RunSession.config.chapter == 2 and lantern.is_full(),
 		"an endless run is Chapter 2 with the Moon Lantern lit (stage %d of %d)" % [lantern.stage, lantern.max_stage()])
 	# The lit lantern takes no shards: E beside it keeps them for Glow
 	# Lanterns and tool tiers.
@@ -81,19 +78,17 @@ func _run_endless_scenario() -> void:
 	_check(bool(data.get("endless", false)), "the autosave holds the endless flag")
 	var caption: String = await _title_continue_caption()
 	_check(caption.to_lower().ends_with("night 9"), "the title's Continue shows \"Night N\" in endless (%s)" % caption)
-	GameManager.endless = false  # Continue takes it from the save
-	await _continue_from(data)
+	await _continue_from(data)  # a story config's seeds: the endless flag comes from the save
 	lantern = MoonLantern.find(get_tree())
 	spawner = get_tree().get_first_node_in_group("mob_spawner") as MobSpawner
-	_check(GameManager.endless and TimeManager.day_number == 9 and lantern.is_full() and not spawner.is_boss_night(7),
+	_check(RunSession.config.endless and TimeManager.day_number == 9 and lantern.is_full() and not spawner.is_boss_night(7),
 		"Continue keeps the run endless, at day 9 with the lantern lit")
-	await _start_fresh_run()
-	_check(GameManager.endless, "Again after an endless run is endless too")
+	await _start_fresh_run(_again())
+	_check(RunSession.config.endless and RunSession.config.chapter == 2, "Again after an endless run is endless too")
 
 	# A chapter run after it is a story run again.
-	GameManager.endless = false  # as the title's chapter buttons set it
-	await _start_fresh_run()
-	_check(not GameManager.endless and not MoonLantern.find(get_tree()).is_full()
+	await _start_fresh_run(_run_of(RunConfig.for_chapter(2)))  # as the title's chapter buttons build it
+	_check(not RunSession.config.endless and not MoonLantern.find(get_tree()).is_full()
 		and (get_tree().get_first_node_in_group("mob_spawner") as MobSpawner).is_boss_night(7),
 		"a Chapter 2 run after endless has its dark lantern and its Moon-Eater")
 	var story_spawner: MobSpawner = get_tree().get_first_node_in_group("mob_spawner") as MobSpawner
@@ -103,7 +98,6 @@ func _run_endless_scenario() -> void:
 		and story_10.count(story_spawner.heavy_definition) == 9 and story_10.count(story_spawner.sneak_definition) == 8
 		and story_10.count(story_spawner.mob_definition) == 25,
 		"a story run's mobs keep their HP and its night 10 keeps 25 imps, 9 beasts, 8 gremlins")
-	GameManager.nights_to_win = 3
 	StoryLibrary.forget_progress()
 
 
@@ -118,10 +112,7 @@ func _run_endless_record_scenario() -> void:
 	_check(not _endless_caption(await _title_buttons()).contains("Best:"), "no record on the Endless button before an endless run")
 
 	# Leo lasts to night 9 and the fire goes out.
-	GameManager.set_party(&"leo")
-	GameManager.nights_to_win = 7
-	GameManager.endless = true
-	await _start_fresh_run()
+	await _start_fresh_run(_run_of(RunConfig.for_endless()))
 	TimeManager.day_number = 8
 	_skip_to_night()  # night 8
 	TimeManager.skip_phase()  # dawn 8
@@ -143,8 +134,9 @@ func _run_endless_record_scenario() -> void:
 	_check(caption.contains("night 9") and caption.contains("Leo"), "the Endless button shows the record (%s)" % caption)
 
 	# A worse run, with Nela on night 1, keeps Leo's record.
-	GameManager.set_party(&"nela")
-	await _start_fresh_run()
+	var nela_endless: RunConfig = _run_of(RunConfig.for_endless())
+	nela_endless.set_party(&"nela")
+	await _start_fresh_run(nela_endless)
 	_campfire().take_damage(10000)
 	await get_tree().process_frame
 	end_screen = _main.get_node("EndScreen")
@@ -153,15 +145,19 @@ func _run_endless_record_scenario() -> void:
 	_check(not String(end_screen.call("record_text")).contains("New record!") and String(end_screen.call("record_text")).contains("night 9"),
 		"no New record! for a worse run; it shows the best (%s)" % end_screen.call("record_text"))
 
+	# Again replays the same chapter, mode and party.
+	await _start_fresh_run(_again())
+	_check(RunSession.config.endless and RunSession.config.chapter == 2 and RunSession.config.nights_to_win == 7
+		and RunSession.config.hero_id == &"nela" and RunSession.config.companion_id == &"leo"
+		and Party.player_hero().hero.id == &"nela",
+		"Again replays the endless run with Nela and Leo")
+
 	# A story run's loss is no endless record.
-	GameManager.endless = false
-	await _start_fresh_run()
+	await _start_fresh_run(_run_of(RunConfig.for_chapter(2)))
 	_campfire().take_damage(10000)
 	await get_tree().process_frame
 	_check(String(_main.get_node("EndScreen").call("record_text")) == "", "a story run's end screen has no record line")
 	await _close_main()
-	GameManager.set_party(&"leo")
-	GameManager.nights_to_win = 3
 	Profile.forget("endless.")
 	StoryLibrary.forget_progress()
 

@@ -176,3 +176,16 @@ func test_a_save_from_before_endless_reads_back() -> void:
 	var endless: RunConfig = RunConfig.from_save(data)
 	check(endless.chapter == 2 and endless.endless,
 		"an endless save from before the chapter was stored is Chapter 2, endless")
+
+
+func test_the_party_falls_back_to_known_heroes() -> void:
+	var run: RunConfig = RunConfig.for_chapter(1)
+	run.set_party(&"nela")
+	check(run.hero_id == &"nela" and run.companion_id == &"leo", "Leo comes along when Nela is played")
+	check_eq(run.hero().id, &"nela", "the config's hero is Nela's definition")
+	check_eq(run.companion().id, &"leo", "the config's companion is Leo's definition")
+	run.set_party(&"nobody", &"nobody")
+	check_eq(run.hero_id, &"leo", "an unknown hero is Leo")
+	check(run.companion_id != &"leo" and run.companion_id != &"nobody", "an unknown companion is the hero's default")
+	run.set_party(&"leo", &"leo")
+	check(run.companion_id != &"leo", "the hero is never their own companion")

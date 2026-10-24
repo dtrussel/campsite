@@ -32,7 +32,7 @@ var _done: bool = false
 static func play(beats: Array, hero_id: StringName = &"", layer_index: int = 90) -> StoryBook:
 	var book: StoryBook = StoryBook.new()
 	book._beats = beats
-	book._hero_id = hero_id if hero_id != &"" else GameManager.hero_id
+	book._hero_id = hero_id if hero_id != &"" else RunSession.config.hero_id
 	book.layer = layer_index
 	# Deferred: the root may be busy adding a scene's children.
 	(Engine.get_main_loop() as SceneTree).root.add_child.call_deferred(book)

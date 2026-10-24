@@ -31,9 +31,10 @@ func _run_old_save_scenario() -> void:
 	var finished: Array[int] = []
 	var on_finished: Callable = func() -> void: finished.append(TimeManager.day_number)
 	RunSession.restore_finished.connect(on_finished)
-	GameManager.set_party(&"nela")  # the save's party wins
-	GameManager.nights_to_win = 7
-	await _continue_from(data)
+	# The save's chapter, run length and party win over the given config's.
+	var other: RunConfig = _run_of(RunConfig.for_endless())
+	other.set_party(&"nela")
+	await _continue_from(data, other)
 	RunSession.restore_finished.disconnect(on_finished)
 	var player: Hero = get_tree().get_first_node_in_group("player") as Hero
 	var companion: Hero = get_tree().get_first_node_in_group("companions") as Hero
@@ -43,8 +44,10 @@ func _run_old_save_scenario() -> void:
 	var again: Dictionary = SaveManager.parse(SaveManager.serialize(RunSession.snapshot()))
 	_check(finished == [int(data["day"]) + 1], "the run session announces the finished restore once (%s)" % [finished])
 	_check(GameManager.is_playing() and TimeManager.day_number == int(data["day"]) + 1
-		and TimeManager.current_phase == TimeManager.Phase.DAY and GameManager.nights_to_win == int(data["nights_to_win"]),
-		"continued at the morning of day %d of %d" % [TimeManager.day_number, GameManager.nights_to_win])
+		and TimeManager.current_phase == TimeManager.Phase.DAY and RunSession.config.nights_to_win == int(data["nights_to_win"]),
+		"continued at the morning of day %d of %d" % [TimeManager.day_number, RunSession.config.nights_to_win])
+	_check(RunSession.config.chapter == 1 and not RunSession.config.endless,
+		"the old save continues as a Chapter 1 story run (Chapter %d)" % RunSession.config.chapter)
 	var inventory: Dictionary = data["inventory"]
 	var counts_match: bool = true
 	for definition in ResourceManager.get_definitions():
@@ -70,7 +73,7 @@ func _run_old_save_scenario() -> void:
 	_check(blueprint != null and blueprint.is_blueprint() and is_equal_approx(blueprint.build_progress, float(post_entry["progress"]))
 		and blueprint.current_hp == int(post_entry["hp"]) and blueprint.global_position.distance_to(Vector3(-5, 0, 6)) < 0.01,
 		"the half-built watch post comes back as a blueprint at 50%")
-	_check(GameManager.hero_id == &"leo" and GameManager.companion_id == &"nela"
+	_check(RunSession.config.hero_id == &"leo" and RunSession.config.companion_id == &"nela"
 		and player.is_in_group(HeroRoster.group_for(&"leo")), "the party comes back: Leo plays, Nela tags along")
 	_check(ProgressionManager.get_xp(player) == int(data["player"]["xp"]) and player.tool_tier == 1
 		and PerkManager.perks_of(player) == [&"ember_heart"], "Leo's XP, sturdy stick and Ember Heart come back")
@@ -280,7 +283,6 @@ func _run_world_save_scenario() -> void:
 ## level-up plays no bark.
 func _run_reset_scenario() -> void:
 	print("smoke: --- run reset scenario ---")
-	GameManager.set_party(&"leo")
 	await _start_fresh_run(_config(5.0))  # keep the player's picker open
 	var player: Hero = Party.player_hero()
 	var companion: Hero = Party.companion()
