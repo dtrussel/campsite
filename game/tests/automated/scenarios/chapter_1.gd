@@ -190,7 +190,7 @@ func _run_chapter_lock_scenario() -> void:
 	add_child(screen)
 	await get_tree().process_frame
 	screen.call("select", 1)
-	GameManager.record_hero_pick((screen.call("selected_hero") as HeroDefinition).id)
+	Profile.record_hero_pick((screen.call("selected_hero") as HeroDefinition).id)
 	screen.queue_free()
 	RunSession.forget_last_run()  # what a fresh start would hold: Leo
 	Profile.reload()

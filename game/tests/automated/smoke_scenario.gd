@@ -36,12 +36,6 @@ func _run_of(run: RunConfig, auto_pick_seconds: float = 0.0, perk_seed: int = 1,
 	return run
 
 
-## Again, as the end screen plays it: the last run's config with fresh
-## seeds (GameManager.start_run), with the smoke settings.
-func _again(auto_pick_seconds: float = 0.0) -> RunConfig:
-	return _run_of(RunSession.config.again(), auto_pick_seconds)
-
-
 ## _config() with `hero` played (and their default companion).
 func _party(hero: StringName, auto_pick_seconds: float = 0.0) -> RunConfig:
 	var config: RunConfig = _config(auto_pick_seconds)

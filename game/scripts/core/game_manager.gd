@@ -110,7 +110,7 @@ func begin_chapter(hero: StringName, companion: StringName = &"") -> void:
 	var run: RunConfig = RunSession.draft
 	run.set_party(hero, companion)
 	run.starting_perk = StartingPerks.chosen()
-	record_hero_pick(run.hero_id)
+	Profile.record_hero_pick(run.hero_id)  # hero select opens on it next time
 	var key: String = "intro.c%d" % run.chapter
 	var pages: Array = intro_pages(run)
 	if pages.is_empty():
@@ -121,12 +121,6 @@ func begin_chapter(hero: StringName, companion: StringName = &"") -> void:
 		StoryLibrary.mark_seen(key)
 		PlaytestLog.write("story_intro chapter=%d pages_seen=%d of %d" % [run.chapter, book.page + 1, pages.size()])
 		start_run(run))
-
-
-## Keeps the hero picked on hero select in the profile, so hero select
-## opens on it next time, after a restart too.
-func record_hero_pick(hero: StringName) -> void:
-	Profile.record_hero_pick(hero)
 
 
 ## The hero hero select opens on: the last pick kept in the profile,

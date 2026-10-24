@@ -160,6 +160,12 @@ func _run_endless_record_scenario() -> void:
 	Profile.delete()
 
 
+## Again, as the end screen plays it: the last run's config with fresh
+## seeds (GameManager.start_run), with the smoke settings.
+func _again() -> RunConfig:
+	return _run_of(RunSession.config.again())
+
+
 ## The record line under the title's Endless button, from
 ## _title_buttons (the button's tooltip carries it).
 func _endless_caption(buttons: Dictionary) -> String:
