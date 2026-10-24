@@ -116,9 +116,9 @@ before it says they found a page. These are the source of truth.
 
 Twelve pages, kept in the profile once found and read in the
 scrapbook's Journal tab (`game/resources/story/journal/`, in file
-order). The seven dawn notes above are pages too, found when their
-card plays; the page reads the note's line, so the table above stays
-the source. The other five are new:
+order). The seven dawn notes above are pages too, found at their
+dawn (with or without a card on screen); the page reads the note's
+line, so the table above stays the source. The other five are new:
 
 | Page | Found | Face | Words |
 |---|---|---|---|
