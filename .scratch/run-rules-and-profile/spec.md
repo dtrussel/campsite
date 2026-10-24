@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 
-Comes from the 2026-10-24 architecture review: candidate 1 (the run config owns the run's rules) and candidate 2 (deepen the profile). Rough size: **M–L**. Blocked by: none. The run config part comes first, because the profile's run outcome reads the chapter, the endless flag and the hero from the run config.
+Split into tickets in `issues/` (01&ndash;08); the `Blocked by:` lines give the order. Comes from the 2026-10-24 architecture review: candidate 1 (the run config owns the run's rules) and candidate 2 (deepen the profile). Rough size: **M–L**. Blocked by: none. The run config part comes first, because the profile's run outcome reads the chapter, the endless flag and the hero from the run config.
 
 ## Problem Statement
 
