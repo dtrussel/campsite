@@ -380,9 +380,9 @@ func _ready() -> void:
 	await get_tree().process_frame
 	# The Moon-Eater on Chapter 2's last night.
 	get_tree().paused = false
-	RunSession.reset()
 	GameManager.set_party(&"leo")
 	GameManager.nights_to_win = 7
+	RunSession.reset()  # a run config from the fields above
 	main = load("res://scenes/main/Main.tscn").instantiate()
 	add_child(main)
 	await _settle(0.5)
@@ -450,6 +450,7 @@ func _ready() -> void:
 	GameManager.nights_to_win = 7
 	GameManager.endless = true
 	GameManager.set_party(&"leo")
+	RunSession.reset()  # a run config from the fields above
 	var endless_main: Node = load("res://scenes/main/Main.tscn").instantiate()
 	add_child(endless_main)
 	await _settle(0.5)
