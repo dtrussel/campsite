@@ -56,6 +56,12 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
   - `game/tools/validate_project.tscn` is the data validator from
     layer 3. It also fails on any script, scene, or resource that
     doesn't load.
+  - `game/tests/unit/unit_run.tscn` is the unit-test pass from layer 4,
+    a small runner of our own (no add-on). It plays every
+    `game/tests/unit/test_*.gd` script (extending `unit_test.gd`, with
+    `check` and `check_eq`) and each `test_*` method in it, on a fresh
+    instance, with the autoloads up but no gameplay scene. A new module
+    adds its own test script. `-- --unit <name>` plays just one script.
   - `game/tests/automated/smoke_run.tscn` is the integration smoke
     scene from layer 5. It plays every scenario script in
     `game/tests/automated/scenarios/` (one per feature: `chapter_1.gd`

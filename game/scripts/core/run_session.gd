@@ -199,6 +199,7 @@ func _use_party(run: RunConfig, hero: StringName, companion: StringName, nights:
 	run.companion_id = GameManager.companion_id
 	run.nights_to_win = nights
 	run.endless = endless
+	run.chapter = GameManager.chapter()
 
 
 func _finish_restore() -> void:
