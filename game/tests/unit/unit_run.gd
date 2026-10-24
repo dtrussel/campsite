@@ -42,6 +42,7 @@ func _ready() -> void:
 			# A fresh instance for every test, so no test sees another's state.
 			var test: RefCounted = script.new()
 			test.call(method)
+			test.after_each()
 			failures += int(test.get("failures"))
 			tests += 1
 	if failures == 0:
