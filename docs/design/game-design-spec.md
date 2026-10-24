@@ -60,8 +60,9 @@ the cast, the creatures' place in it, the named places and Mum's notes.
 "How long can you last?" An optional mode for players who finished the
 story ([spec](../../.scratch/endless-mode/spec.md)).
 
-- **Unlock:** the title shows **Endless** once the true ending has been
-  seen. It starts a Chapter 2 run (hero select reads "Endless: how long
+- **Unlock:** the title shows **Endless** once Chapter 2 has been won
+  (or, for an older profile that never recorded the win, once the true
+  ending has been seen). It starts a Chapter 2 run (hero select reads "Endless: how long
   can you last by the campfire?") with no intro.
 - **The nights never end:** dawn 7 is no win, and there is no Moon-Eater
   and no eyes at the treeline. It ends only when the campfire goes out

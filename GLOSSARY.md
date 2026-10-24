@@ -29,7 +29,7 @@ The words this project uses for its own concepts. Use them in code, tickets and 
 - **Badge (Camp Badge):** a Scout-style milestone kept in the profile, such as First Night or Builder. Earned once, for good.
 - **Journal page:** a page of Mum's journal, kept in the profile once found. Mum's dawn notes are pages; the rest come from a **day chest** (at most one a run, at the map edge) or a badge. Read in the scrapbook's Journal tab.
 - **Scrapbook:** the screen the title's Journal button opens, with a Badges tab and a Journal tab.
-- **Unlock:** something the profile opens for good, such as Chapter 2 (by winning Chapter 1), a cosmetic tint or a starting perk (by a badge). Unlocks are sideways or small, never a big head start.
+- **Unlock:** something the profile opens for good, such as Chapter 2 (by winning Chapter 1), Endless (by winning Chapter 2), a cosmetic tint or a starting perk (by a badge). Unlocks are sideways or small, never a big head start.
 - **Record:** a best value kept in the profile, like the furthest night an endless run reached.
 
 ## Building

@@ -5,7 +5,9 @@
 # 1. Re-imports the project (refreshes the class_name cache).
 # 2. Loads every script/scene/resource and validates data integrity.
 # 3. Runs the unit tests (game/tests/unit/test_*.gd), without the
-#    gameplay scene.
+#    gameplay scene. A test that hits a script error (a missing method,
+#    say) still ends "unit: PASSED"; the SCRIPT ERROR scan below is what
+#    fails it.
 # 4. Plays the smoke test's scenarios headlessly, and beside it a second
 #    smoke pass that stalls every few frames (below).
 # 5. Runs the exported build's selftest from the project (the data and
