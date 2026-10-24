@@ -32,6 +32,6 @@ title (`GameManager.open_hero_select(RunConfig.for_chapter(n))` /
 (`write_save`, in `snapshot`) and builds it on Continue with `from_save`
 (seeds from the given config); `RunSession.forget_last_run()` is smoke's
 reset. The badges module and `_end_run` only swapped to read
-`RunSession.config` (tickets 06 rework them). New unit tests in
+`RunSession.config` (ticket 06 reworks them). New unit tests in
 `tests/unit/test_run_session.gd`; the balance sim takes `nights=N`.
 
