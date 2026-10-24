@@ -122,6 +122,15 @@ func again() -> RunConfig:
 	return config
 
 
+## Takes `other`'s seeds (the perk deal, loot rolls and day chest) and
+## its auto-pick time, keeping this config's shape and party.
+func take_seeds_of(other: RunConfig) -> void:
+	perk_seed = other.perk_seed
+	loot_seed = other.loot_seed
+	chest_seed = other.chest_seed
+	perk_auto_pick_seconds = other.perk_auto_pick_seconds
+
+
 ## Sets the party (hero select does, on a draft config); an unknown
 ## hero is Leo, and an empty, unknown or same-as-the-hero companion is
 ## the hero's default one.

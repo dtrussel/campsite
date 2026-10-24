@@ -90,11 +90,11 @@ func continue_from(data: Dictionary, seeds: RunConfig = null, open_scene: bool =
 	if data.is_empty():
 		return false
 	var run: RunConfig = RunConfig.from_save(data)
+	# The save holds the hero's starting perk; the config keeps the pick
+	# for Again.
+	run.starting_perk = StartingPerks.chosen()
 	if seeds != null:
-		run.perk_seed = seeds.perk_seed
-		run.loot_seed = seeds.loot_seed
-		run.chest_seed = seeds.chest_seed
-		run.perk_auto_pick_seconds = seeds.perk_auto_pick_seconds
+		run.take_seeds_of(seeds)
 	get_tree().paused = false
 	reset(run)
 	_pending = data

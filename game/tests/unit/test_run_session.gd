@@ -3,11 +3,16 @@ extends "res://tests/unit/unit_test.gd"
 ## The run session holds the run config: Continue builds it from the
 ## save, a reset keeps it, and forgetting the last run puts back a fresh
 ## Chapter 1 run of Leo with Nela. The game manager saves none of the
-## config's keys. Each test forgets the last run after.
+## config's keys. The last run is forgotten after each test.
 
 ## A save from before the chapter, endless mode and the day chest were
 ## stored: a Chapter 1 run on day 1.
 const V2_SAVE_FIXTURE: String = "res://tests/fixtures/save_v2_day1.json"
+
+
+func after_each() -> void:
+	RunSession.forget_last_run()
+	Profile.use_memory()  # a test that picks a starting perk leaves none behind
 
 
 func test_continue_takes_the_run_from_the_v2_save() -> void:
@@ -19,7 +24,6 @@ func test_continue_takes_the_run_from_the_v2_save() -> void:
 	check_eq(run.chapter, 2, "Continue resumes a 7-night save as Chapter 2")
 	check(not run.endless, "Continue resumes the v2 save as a story run")
 	check(run.hero_id == &"leo" and run.companion_id == &"nela", "Continue resumes the v2 save's party")
-	RunSession.forget_last_run()
 
 
 func test_continue_keeps_an_endless_run_endless() -> void:
@@ -28,21 +32,31 @@ func test_continue_keeps_an_endless_run_endless() -> void:
 	RunSession.continue_from(data, null, false)
 	check(RunSession.config.endless and RunSession.config.chapter == 2, "an endless save continues as endless")
 	check_eq(RunSession.config.hero_id, &"nela", "an endless save continues with its hero")
-	RunSession.forget_last_run()
 
 
 func test_continue_takes_the_seeds_from_the_given_config() -> void:
 	var seeds: RunConfig = RunConfig.for_endless()
 	seeds.perk_seed = 11
 	seeds.loot_seed = 12
+	seeds.chest_seed = 13
 	seeds.perk_auto_pick_seconds = 0.0
 	var data: Dictionary = {"version": SaveManager.VERSION, "day": 1, "nights_to_win": 3.0}
 	RunSession.continue_from(data, seeds, false)
 	var run: RunConfig = RunSession.config
 	check(run.chapter == 1 and not run.endless, "the shape comes from the save, not the given config")
-	check(run.perk_seed == 11 and run.loot_seed == 12, "the seeds come from the given config")
+	check(run.perk_seed == 11 and run.loot_seed == 12 and run.chest_seed == 13,
+		"the seeds come from the given config")
 	check_eq(run.perk_auto_pick_seconds, 0.0, "the auto-pick time comes from the given config")
-	RunSession.forget_last_run()
+
+
+func test_again_after_a_continue_starts_with_the_starting_perk_picked() -> void:
+	Profile.use_memory()  # never the player's own profile
+	Profile.grant_badge_for_tests(StartingPerks.UNLOCKS[&"quick_hands"])
+	StartingPerks.choose(&"quick_hands")
+	var data: Dictionary = {"version": SaveManager.VERSION, "day": 2, "nights_to_win": 3.0}
+	RunSession.continue_from(data, null, false)
+	check_eq(RunSession.config.again().starting_perk, &"quick_hands",
+		"Again after a Continue starts with the starting perk picked")
 
 
 func test_a_reset_keeps_the_config() -> void:
