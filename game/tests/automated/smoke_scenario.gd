@@ -146,6 +146,25 @@ func _flat(point: Vector3) -> Vector2:
 	return Vector2(point.x, point.z)
 
 
+## Opens the title screen and returns its captioned buttons, as
+## {lower-case caption: tooltip}. The screen is gone again by the time
+## this returns.
+func _title_buttons() -> Dictionary:
+	var game_camera: Camera3D = get_viewport().get_camera_3d()
+	var title: Control = (load("res://scenes/ui/TitleScreen.tscn") as PackedScene).instantiate()
+	add_child(title)
+	await get_tree().process_frame
+	var found: Dictionary = {}
+	for node in title.find_children("*", "Button", true, false):
+		var caption: String = (node as Button).text.strip_edges().to_lower()
+		if caption != "":
+			found[caption] = (node as Button).tooltip_text
+	title.free()
+	if game_camera != null and is_instance_valid(game_camera):
+		game_camera.make_current()
+	return found
+
+
 ## Skips day, sunset and night phases until night `night` has dawned.
 func _skip_to_dawn(night: int) -> void:
 	while GameManager.is_playing() and int(GameManager.stats[&"nights_survived"]) < night:

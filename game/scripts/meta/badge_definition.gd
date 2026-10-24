@@ -5,14 +5,14 @@ extends Resource
 ##
 ## One Camp Badge: a Scout-
 ## style milestone the profile keeps for good. Stored as a .tres under
-## res://resources/badges/; the Badges autoload checks them and keeps
-## the earned ones in the profile.
+## res://resources/badges/; Badges.is_met checks one against its facts,
+## and the profile keeps the earned ones.
 ##
 ## Conditions:
 ## - `run_stat`: this run's `stat` (GameManager.stats) reaches `amount`.
 ##   Checked live.
-## - `total`: `stat` added up over every run reaches `amount`. Badges
-##   keeps the total in the profile ("totals.<stat>"). Checked live.
+## - `total`: `stat` added up over every run reaches `amount`. The
+##   profile keeps the total (Profile.stat_total). Checked live.
 ## - `win`: a run is won; of `chapter` when it is above 0, and with this
 ##   run's `stat` at `amount` or more when `stat` is set (Fire Keeper:
 ##   the fire's lowest HP never under 50%). Checked at the end of a run.

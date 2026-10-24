@@ -14,9 +14,6 @@ signal camp_destroyed
 signal companion_task_changed(companion: Node, task: int)
 signal run_started
 signal run_ended(won: bool, reason: String)
-## A run stat was recorded or set; `amount` is how much it went up
-## (Badges counts and checks on it).
-signal stat_recorded(stat: StringName, amount: int)
 ## This run's DayChest was placed at the map edge (the HUD says so).
 ## Typed Node3D: an autoload naming DayChest here makes a load cycle.
 signal day_chest_placed(chest: Node3D)
@@ -37,9 +34,10 @@ var end_reason: String = ""
 ## Which story beat the end screen shows: &"win", &"loss_fire" or
 ## &"loss_hero".
 var end_trigger: StringName = &""
-## True when the run that just ended beat the endless record, so the
-## end screen says "New record!".
-var new_record: bool = false
+## What the run that just ended opened, as the profile said
+## (Profile.record_run_end): the end screen says "New record!" from it.
+## Null while a run plays.
+var run_end: RunOutcome.Result = null
 ## Per-run counters for the end screen and the playtest log.
 var stats: Dictionary = {}
 ## Glow Shard drops: kills since each mob type last
@@ -204,7 +202,7 @@ func is_playing() -> bool:
 
 func record(stat: StringName, amount: int = 1) -> void:
 	stats[stat] = int(stats.get(stat, 0)) + amount
-	stat_recorded.emit(stat, amount)
+	_tell_profile(stat, amount)
 
 
 ## Sets a run stat that is a level, not a count (nights survived, the
@@ -212,7 +210,15 @@ func record(stat: StringName, amount: int = 1) -> void:
 func set_stat(stat: StringName, value: int) -> void:
 	var old: int = int(stats.get(stat, 0))
 	stats[stat] = value
-	stat_recorded.emit(stat, value - old)
+	_tell_profile(stat, value - old)
+
+
+## Tells the profile a stat went up by `amount`, for its totals and the
+## badges. Only play counts: not a save being loaded, nor a menu or end
+## screen.
+func _tell_profile(stat: StringName, amount: int) -> void:
+	if is_playing() and not RunSession.is_restoring():
+		Profile.record_stat(stat, amount, RunSession.config, stats)
 
 
 ## The party a save was made with: {"hero", "companion"} as ids. Saves
@@ -261,7 +267,7 @@ func reset() -> void:
 	is_camp_destroyed = false
 	end_reason = ""
 	end_trigger = &""
-	new_record = false
+	run_end = null
 	loot_misses = {}
 	loot_rng.randomize()
 	_reset_stats()
@@ -290,11 +296,7 @@ func _end_run(won: bool, reason: String, trigger: StringName) -> void:
 		return
 	run_state = RunState.WON if won else RunState.LOST
 	end_reason = reason
-	var run: RunConfig = RunSession.config
-	if won:
-		Profile.record_chapter_won(run.chapter)
-	if run.endless:
-		new_record = EndlessRecord.submit(current_day, run.hero_id)
+	run_end = Profile.record_run_end(RunOutcome.new(RunSession.config, won, current_day, stats))
 	end_trigger = trigger
 	TimeManager.stop()
 	BuildManager.exit_build_mode()

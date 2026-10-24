@@ -131,7 +131,7 @@ func _ready() -> void:
 	GameManager.dawn_beat_played.connect(_on_dawn_beat_played)
 	TimeManager.day_started.connect(_on_day_started)
 	CraftingManager.crafted.connect(_on_crafted)
-	Badges.badge_earned.connect(_on_badge_earned)
+	Profile.badge_earned.connect(_on_badge_earned)
 	GameManager.day_chest_placed.connect(_on_day_chest_placed)
 	_hook_world.call_deferred()
 	_refresh_tray()

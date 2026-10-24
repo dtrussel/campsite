@@ -29,7 +29,7 @@ func _run_starting_perks_scenario() -> void:
 	_check(PerkManager.perks_of(Party.player_hero()).is_empty(), "a locked starting perk is not given")
 
 	# Earn Gatherer: Quick Hands is offered and picked in hero select.
-	Profile.set_value(Badges.EARNED_PREFIX + "gatherer", true)
+	Profile.grant_badge_for_tests(&"gatherer")
 	_check(StartingPerks.unlocked().has(&"quick_hands"), "Gatherer unlocks Quick Hands as a starting perk")
 	screen = (load("res://scenes/ui/HeroSelect.tscn") as PackedScene).instantiate()
 	add_child(screen)

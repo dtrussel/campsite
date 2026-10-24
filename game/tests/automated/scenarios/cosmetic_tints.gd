@@ -24,8 +24,8 @@ func _run_cosmetic_tints_scenario() -> void:
 	screen.queue_free()
 
 	# Earning First Night unlocks Moss; Builder unlocks the Berry tent.
-	Profile.set_value(Badges.EARNED_PREFIX + "first_night", true)
-	Profile.set_value(Badges.EARNED_PREFIX + "builder", true)
+	Profile.grant_badge_for_tests(&"first_night")
+	Profile.grant_badge_for_tests(&"builder")
 	screen = await _open_hero_select(0)
 	moss = screen.call("outfit_button", &"moss") as Button
 	_check(moss != null and not moss.disabled, "earning First Night unlocks the Moss outfit")

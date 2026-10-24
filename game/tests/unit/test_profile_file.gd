@@ -29,18 +29,18 @@ func after_each() -> void:
 
 func test_a_missing_file_loads_empty() -> void:
 	profile.set_path(PATH)
-	check(not profile.has_value("test.missing"), "a missing file has no keys")
-	check_eq(profile.get_value("test.missing", 7), 7, "a missing key reads as its fallback")
+	check_eq(profile.tent_pick(), &"", "a missing file has no tent picked")
+	check_eq(profile.endless_best_night(), 0, "nor an endless best")
 	check(not FileAccess.file_exists(PATH), "loading a missing file does not write one")
 
 
 func test_keys_survive_a_reload() -> void:
 	profile.set_path(PATH)
-	profile.set_value("test.word", "moon")
+	profile.record_tent_pick(&"moon")
 	profile.find_page(&"ranger_log")
 	profile.record_endless(9, &"leo")
 	profile.reload()
-	check_eq(profile.get_value("test.word", ""), "moon", "a string survives a reload")
+	check_eq(profile.tent_pick(), &"moon", "a string survives a reload")
 	check(profile.is_page_found(&"ranger_log"), "a page found survives a reload")
 	check_eq(profile.endless_best_night(), 9, "the endless best survives a reload")
 	check_eq(profile.endless_best_hero(), &"leo", "the endless best hero survives a reload")
@@ -49,20 +49,20 @@ func test_keys_survive_a_reload() -> void:
 func test_a_corrupt_file_loads_empty_and_is_rewritten() -> void:
 	_write_text(PATH, "{ not json [")
 	profile.set_path(PATH)
-	check(not profile.has_value("test.word"), "a corrupt file loads as empty")
-	profile.set_value("test.word", "sun")
+	check_eq(profile.tent_pick(), &"", "a corrupt file loads as empty")
+	profile.record_tent_pick(&"sun")
 	profile.reload()
-	check_eq(profile.get_value("test.word", ""), "sun", "a corrupt file is rewritten on the next write")
+	check_eq(profile.tent_pick(), &"sun", "a corrupt file is rewritten on the next write")
 
 
 func test_delete_removes_the_keys_and_the_file() -> void:
 	profile.set_path(PATH)
-	profile.set_value("test.word", "moon")
+	profile.record_tent_pick(&"moon")
 	profile.delete()
-	check(not profile.has_value("test.word"), "delete empties the profile")
+	check_eq(profile.tent_pick(), &"", "delete empties the profile")
 	check(not FileAccess.file_exists(PATH), "delete removes the file")
 	profile.reload()
-	check(not profile.has_value("test.word"), "deleted keys stay gone after a reload")
+	check_eq(profile.tent_pick(), &"", "deleted keys stay gone after a reload")
 
 
 func test_the_old_story_file_is_imported_once() -> void:
@@ -113,6 +113,8 @@ func test_a_profile_from_before_the_verbs_reads_back_the_same() -> void:
 	check(profile.is_badge_earned(&"first_night"), "its badge earned reads as earned")
 	check(not profile.is_badge_earned(&"builder"), "a badge it never earned reads as not earned")
 	check_eq(profile.tent_pick(), &"moss", "its tent pick reads back")
+	check(profile.has_won_with(&"leo") and not profile.has_won_with(&"nela"), "its hero won with reads back")
+	check_eq(profile.stat_total(&"mobs_defeated"), 41, "its stat total reads back")
 	check_eq(profile.starting_perk_pick(), &"", "its empty starting perk pick reads as none")
 	# The verbs write the keys it already holds, so its bytes stay the same.
 	profile.find_page(&"ranger_log")

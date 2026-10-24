@@ -193,25 +193,6 @@ func _heavy_sneak_share(wave: Array[MobDefinition], spawner: MobSpawner) -> floa
 	return float(others) / float(maxi(1, wave.size()))
 
 
-## Opens the title screen and returns its captioned buttons, as
-## {lower-case caption: tooltip}. The screen is gone again by the time
-## this returns.
-func _title_buttons() -> Dictionary:
-	var game_camera: Camera3D = get_viewport().get_camera_3d()
-	var title: Control = (load("res://scenes/ui/TitleScreen.tscn") as PackedScene).instantiate()
-	add_child(title)
-	await get_tree().process_frame
-	var found: Dictionary = {}
-	for node in title.find_children("*", "Button", true, false):
-		var caption: String = (node as Button).text.strip_edges().to_lower()
-		if caption != "":
-			found[caption] = (node as Button).tooltip_text
-	title.free()
-	if game_camera != null and is_instance_valid(game_camera):
-		game_camera.make_current()
-	return found
-
-
 ## The visible caption under the title screen's Continue button, or "".
 func _title_continue_caption() -> String:
 	var game_camera: Camera3D = get_viewport().get_camera_3d()

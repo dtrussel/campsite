@@ -1,120 +1,77 @@
-extends Node
+class_name Badges
+extends RefCounted
 
 ## Badges
 ##
-## The Camp Badges: checks every BadgeDefinition
-## (res://resources/badges/) live, whenever GameManager records a stat
-## during play, and again at the end of a run, for the win badges. An
-## earned badge is kept in the profile ("badges.<id>") for good, is
-## earned only once, and is announced with badge_earned (the HUD shows
-## a toast, the end screen lists the run's badges).
-##
-## It also keeps what badges count across runs in the profile: the
-## totals of the stats `total` badges count ("totals.<stat>", added to
-## as they are recorded, so a run that is quit still counts) and the
-## heroes a run has been won with ("heroes.won.<id>").
-
-## A badge was earned just now (not one earned before).
-signal badge_earned(badge: BadgeDefinition)
+## The Camp Badges: every BadgeDefinition under res://resources/badges/
+## and the one rule of whether a badge is met, given the facts it reads
+## (Facts). The profile is the one place a badge is earned: it builds
+## the facts when a stat is recorded during play and when a run ends,
+## keeps the earned badges for good and announces each with
+## Profile.badge_earned (the HUD shows a toast, the end screen lists the
+## run's badges).
 
 const BADGES_DIR: String = "res://resources/badges/"
-const EARNED_PREFIX: String = "badges."
-const TOTAL_PREFIX: String = "totals."
-const HERO_WON_PREFIX: String = "heroes.won."
 
-var _definitions: Array[BadgeDefinition] = []
-## The stats some `total` badge counts.
-var _total_stats: Dictionary = {}
-
-
-func _ready() -> void:
-	for res in DefinitionLoader.load_all(BADGES_DIR):
-		var badge: BadgeDefinition = res as BadgeDefinition
-		if badge != null:
-			_definitions.append(badge)
-			if badge.condition == &"total":
-				_total_stats[badge.stat] = true
-	_definitions.sort_custom(func(a: BadgeDefinition, b: BadgeDefinition) -> bool:
-		return a.resource_path < b.resource_path)
-	GameManager.stat_recorded.connect(_on_stat_recorded)
-	GameManager.run_ended.connect(_on_run_ended)
+static var _definitions: Array[BadgeDefinition] = []
 
 
 ## Every badge, in scrapbook order (by file name).
-func definitions() -> Array[BadgeDefinition]:
+static func definitions() -> Array[BadgeDefinition]:
+	if _definitions.is_empty():
+		for res in DefinitionLoader.load_all(BADGES_DIR):
+			if res is BadgeDefinition:
+				_definitions.append(res as BadgeDefinition)
+		_definitions.sort_custom(func(a: BadgeDefinition, b: BadgeDefinition) -> bool:
+			return a.resource_path < b.resource_path)
 	return _definitions
 
 
-func get_badge(id: StringName) -> BadgeDefinition:
-	for badge in _definitions:
+static func get_badge(id: StringName) -> BadgeDefinition:
+	for badge in definitions():
 		if badge.id == id:
 			return badge
 	return null
 
 
-func has_badge(id: StringName) -> bool:
-	return bool(Profile.get_value(EARNED_PREFIX + String(id), false))
+## The stats some `total` badge counts across runs.
+static func total_stats() -> Array[StringName]:
+	var out: Array[StringName] = []
+	for badge in definitions():
+		if badge.condition == &"total" and not out.has(badge.stat):
+			out.append(badge.stat)
+	return out
 
 
-## `stat` added up over every run, as the profile keeps it.
-func total(stat: StringName) -> int:
-	return int(Profile.get_value(TOTAL_PREFIX + String(stat), 0))
-
-
-## Whether a run has been won playing `hero`.
-func has_won_with(hero: StringName) -> bool:
-	return bool(Profile.get_value(HERO_WON_PREFIX + String(hero), false))
-
-
-## Awards every badge whose condition is met now and not earned before,
-## and returns them. `run_won` is true at the end of a won run, when the
-## win badges are checked too.
-func check(run_won: bool = false) -> Array[BadgeDefinition]:
-	var earned: Array[BadgeDefinition] = []
-	for badge in _definitions:
-		if not has_badge(badge.id) and _is_met(badge, run_won):
-			_award(badge)
-			earned.append(badge)
-	return earned
-
-
-func _is_met(badge: BadgeDefinition, run_won: bool) -> bool:
+## Whether `badge`'s condition holds for `facts`.
+static func is_met(badge: BadgeDefinition, facts: Facts) -> bool:
 	match badge.condition:
 		&"run_stat":
-			return _run_stat(badge.stat) >= badge.amount
+			return int(facts.stats.get(badge.stat, 0)) >= badge.amount
 		&"total":
-			return total(badge.stat) >= badge.amount
+			return int(facts.totals.get(badge.stat, 0)) >= badge.amount
 		&"win":
-			return run_won and (badge.chapter == 0 or badge.chapter == RunSession.config.chapter) \
-				and (badge.stat == &"" or _run_stat(badge.stat) >= badge.amount)
+			return facts.won and (badge.chapter == 0 or badge.chapter == facts.chapter) \
+				and (badge.stat == &"" or int(facts.stats.get(badge.stat, 0)) >= badge.amount)
 		&"win_each_hero":
-			for hero in HeroRoster.all():
-				if not has_won_with(hero.id):
+			for hero in facts.roster:
+				if not facts.heroes_won.has(hero):
 					return false
 			return true
 	return false
 
 
-func _run_stat(stat: StringName) -> int:
-	return int(GameManager.stats.get(stat, 0))
+## What a badge's condition reads: the run's own stats and chapter,
+## whether it was won (false during play), the totals across runs and
+## the heroes won with, and the heroes in the roster.
+class Facts:
+	extends RefCounted
 
-
-func _award(badge: BadgeDefinition) -> void:
-	Profile.set_value(EARNED_PREFIX + String(badge.id), true)
-	PlaytestLog.write("badge_earned id=%s day=%d" % [badge.id, TimeManager.day_number])
-	badge_earned.emit(badge)
-
-
-func _on_stat_recorded(stat: StringName, amount: int) -> void:
-	# Only play counts: not a save being loaded, nor a menu or end screen.
-	if not GameManager.is_playing() or RunSession.is_restoring():
-		return
-	if amount > 0 and _total_stats.has(stat):
-		Profile.set_value(TOTAL_PREFIX + String(stat), total(stat) + amount)
-	check()
-
-
-func _on_run_ended(won: bool, _reason: String) -> void:
-	if won:
-		Profile.set_value(HERO_WON_PREFIX + String(RunSession.config.hero_id), true)
-	check(won)
+	## The run's stats (stat -> count), as GameManager.stats.
+	var stats: Dictionary = {}
+	var chapter: int = 1
+	var won: bool = false
+	## Each counted stat added up over every run (stat -> count).
+	var totals: Dictionary = {}
+	var heroes_won: Array[StringName] = []
+	var roster: Array[StringName] = []

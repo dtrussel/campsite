@@ -25,7 +25,7 @@ func _ready() -> void:
 	Profile.set_path("user://screenshot_profile.json")
 	Profile.delete()
 	for id in [&"first_night", &"night_owl", &"builder", &"chapter_1", &"torch_bearer", &"gatherer"]:
-		Profile.set_value(Badges.EARNED_PREFIX + String(id), true)
+		Profile.grant_badge_for_tests(id)
 	for page in [&"ranger_log", &"old_lantern", &"rangers_map", &"bits_of_moon", &"lost_things"]:
 		Journal.find(page)
 	(title.call("journal_button") as Button).pressed.emit()

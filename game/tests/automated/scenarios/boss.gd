@@ -167,6 +167,9 @@ func _run_boss_scenario() -> void:
 		book.next()
 		await get_tree().process_frame
 	StoryLibrary.forget_progress()
+	# With the true ending forgotten again, only the win can open Endless.
+	_check(GameManager.run_end.unlocked.has(&"endless") and (await _title_buttons()).has("endless"),
+		"winning Chapter 2 unlocks Endless on the title")
 
 
 func _clear_mobs_except(keep: Node) -> void:

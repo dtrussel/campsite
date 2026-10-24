@@ -81,7 +81,7 @@ func _ready() -> void:
 	_root.visible = false
 	add_to_group("end_screen")
 	GameManager.run_ended.connect(_on_run_ended)
-	Badges.badge_earned.connect(_on_badge_earned)
+	Profile.badge_earned.connect(_on_badge_earned)
 
 
 func _on_run_ended(won: bool, _reason: String) -> void:
@@ -149,7 +149,7 @@ func record_text() -> String:
 	if not RunSession.config.endless:
 		return ""
 	var lasted: String = "You lasted to night %d." % GameManager.current_day
-	if GameManager.new_record:
+	if GameManager.run_end != null and GameManager.run_end.record_beaten:
 		return lasted + "  New record!"
 	return "%s  %s" % [lasted, EndlessRecord.best_text()]
 
