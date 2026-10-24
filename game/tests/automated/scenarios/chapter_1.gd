@@ -226,7 +226,7 @@ func _run_chapter_lock_scenario() -> void:
 	_check(is_equal_approx(AudioManager.music_volume, music), "Delete profile leaves the audio settings alone")
 	_check(PostFx.blur_level() == strong_blur, "Delete profile leaves the graphics settings alone")
 	PostFx.set_blur_level(blur)
-	_check(not Profile.has_value(Profile.LAST_HERO), "Delete profile forgets the last hero")
+	_check(Profile.last_hero_pick() == &"", "Delete profile forgets the last hero")
 
 	# A player the story.cfg import marked as having played Chapter 2.
 	var old_story: String = "user://smoke_old_story.cfg"

@@ -19,8 +19,6 @@ const UNLOCKS: Dictionary = {
 	&"builders_knack": &"builder",
 	&"ember_heart": &"torch_bearer",
 }
-## The profile key of the pick ("" for none).
-const CHOSEN_KEY: String = "perks.starting"
 
 
 ## The starting perks the profile's badges unlock, in list order.
@@ -33,19 +31,19 @@ static func unlocked() -> Array[StringName]:
 
 
 static func is_unlocked(perk: StringName) -> bool:
-	return UNLOCKS.has(perk) and Badges.has_badge(UNLOCKS[perk])
+	return UNLOCKS.has(perk) and Profile.is_badge_earned(UNLOCKS[perk])
 
 
 ## The pick for the next run, or &"" when none is picked or it is no
 ## longer unlocked (the profile was deleted).
 static func chosen() -> StringName:
-	var perk: StringName = StringName(String(Profile.get_value(CHOSEN_KEY, "")))
+	var perk: StringName = Profile.starting_perk_pick()
 	return perk if is_unlocked(perk) else &""
 
 
 ## Keeps `perk` as the pick for the next runs (&"" for none).
 static func choose(perk: StringName) -> void:
-	Profile.set_value(CHOSEN_KEY, String(perk) if is_unlocked(perk) else "")
+	Profile.record_starting_perk_pick(perk if is_unlocked(perk) else &"")
 
 
 ## What is wrong with the list, for validate_project.gd: an unknown or

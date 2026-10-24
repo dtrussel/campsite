@@ -10,9 +10,10 @@ extends Node
 ## profile never resets them.
 ##
 ## Callers read and write through its verbs (pages found, beats seen,
-## the hero picked, chapters won, the endless best and the unlocks).
-## The raw key access (get_value, set_value) is still there for the
-## modules that have not moved to verbs yet.
+## the hero picked, chapters won, the endless best, badges earned, the
+## starting perk and tints picked, and the unlocks). The raw key access
+## (get_value, set_value) is still there for Badges, which has not
+## moved to verbs yet.
 ##
 ## Keys are strings with a dotted prefix by owner ("story.", "chapters.",
 ## "endless.", "badges."), and values are JSON-friendly (numbers come
@@ -50,6 +51,14 @@ const ENDLESS_BEST_HERO: String = "endless.best_hero"
 const OLD_STORY_IMPORTED: String = "profile.story_cfg_imported"
 ## The prefix found journal pages are kept under ("journal.ranger_log").
 const PAGE_PREFIX: String = "journal."
+## The prefix earned Camp Badges are kept under ("badges.first_night").
+const BADGE_PREFIX: String = "badges."
+## The starting perk picked on hero select ("" for none).
+const STARTING_PERK: String = "perks.starting"
+## The outfit tint each hero wears ("cosmetics.outfit.leo") and the
+## tent's tint.
+const OUTFIT_PREFIX: String = "cosmetics.outfit."
+const TENT: String = "cosmetics.tent"
 ## The true ending's beat (StoryLibrary.TRUE_ENDING). A profile that
 ## never recorded Chapter 2 won (one imported from story.cfg) keeps
 ## Endless through it.
@@ -206,6 +215,43 @@ func endless_best_night() -> int:
 ## The hero who played the endless best, or &"" before the first.
 func endless_best_hero() -> StringName:
 	return StringName(String(get_value(ENDLESS_BEST_HERO, "")))
+
+
+## Whether Camp Badge `id` was earned.
+func is_badge_earned(id: StringName) -> bool:
+	return bool(get_value(BADGE_PREFIX + String(id), false))
+
+
+## Keeps `perk` as the starting perk picked for the next runs (&"" for
+## none). StartingPerks decides whether it is unlocked.
+func record_starting_perk_pick(perk: StringName) -> void:
+	set_value(STARTING_PERK, String(perk))
+
+
+## The starting perk picked, or &"" when none was.
+func starting_perk_pick() -> StringName:
+	return StringName(String(get_value(STARTING_PERK, "")))
+
+
+## Keeps outfit `id` as the one `hero` wears. Cosmetics decides whether
+## it is unlocked.
+func record_outfit_pick(hero: StringName, id: StringName) -> void:
+	set_value(OUTFIT_PREFIX + String(hero), String(id))
+
+
+## The outfit `hero` picked, or &"" when none was.
+func outfit_pick(hero: StringName) -> StringName:
+	return StringName(String(get_value(OUTFIT_PREFIX + String(hero), "")))
+
+
+## Keeps tent tint `id` as the one picked.
+func record_tent_pick(id: StringName) -> void:
+	set_value(TENT, String(id))
+
+
+## The tent tint picked, or &"" when none was.
+func tent_pick() -> StringName:
+	return StringName(String(get_value(TENT, "")))
 
 
 ## Removes every key that starts with prefix ("story.") and saves.

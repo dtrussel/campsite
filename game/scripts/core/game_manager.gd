@@ -170,13 +170,13 @@ func begin_chapter(hero: StringName, companion: StringName = &"") -> void:
 ## Keeps the hero picked on hero select in the profile, so hero select
 ## opens on it next time, after a restart too.
 func record_hero_pick(hero: StringName) -> void:
-	Profile.set_value(Profile.LAST_HERO, String(hero))
+	Profile.record_hero_pick(hero)
 
 
 ## The hero hero select opens on: the last pick kept in the profile,
 ## else the current party's hero.
 func last_hero_pick() -> StringName:
-	var last: StringName = StringName(String(Profile.get_value(Profile.LAST_HERO, "")))
+	var last: StringName = Profile.last_hero_pick()
 	return last if HeroRoster.has_hero(last) else hero_id
 
 

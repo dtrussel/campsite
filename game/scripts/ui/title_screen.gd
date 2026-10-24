@@ -12,9 +12,9 @@ extends Control
 ## when there is an autosave) resumes the saved run, with its party, at
 ## its next morning. Chapter 2 is locked until Chapter 1 is won
 ## (Profile.is_chapter_unlocked).
-## Once the true ending has been seen, Endless ("How long can you
-## last?") starts a Chapter 2 run with no last night; under it, the
-## best endless run so far.
+## Once Endless is unlocked (Profile.is_endless_unlocked), Endless
+## ("How long can you last?") starts a Chapter 2 run with no last
+## night; under it, the best endless run so far.
 ## Journal opens the scrapbook over the title.
 
 const BACKDROP: Script = preload("res://scripts/ui/title_backdrop.gd")
@@ -123,7 +123,7 @@ func _ready() -> void:
 		slot.add_child(subtitle)
 		if play == null:
 			play = start
-	if StoryLibrary.has_seen(StoryLibrary.TRUE_ENDING):
+	if Profile.is_endless_unlocked():
 		var endless: Button = HudWidgets.icon_button("moon", "Endless", _on_endless, Color(0.7, 0.8, 1.0))
 		endless.custom_minimum_size = Vector2(250, 56)
 		endless.tooltip_text = "How long can you last? The Moon Lantern starts lit, and the nights never end."

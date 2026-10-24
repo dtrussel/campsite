@@ -110,11 +110,17 @@ func test_a_profile_from_before_the_verbs_reads_back_the_same() -> void:
 	check_eq(profile.last_hero_pick(), &"tess", "its last hero reads back")
 	check_eq(profile.endless_best_night(), 9, "its endless best night reads back")
 	check_eq(profile.endless_best_hero(), &"leo", "its endless best hero reads back")
+	check(profile.is_badge_earned(&"first_night"), "its badge earned reads as earned")
+	check(not profile.is_badge_earned(&"builder"), "a badge it never earned reads as not earned")
+	check_eq(profile.tent_pick(), &"moss", "its tent pick reads back")
+	check_eq(profile.starting_perk_pick(), &"", "its empty starting perk pick reads as none")
 	# The verbs write the keys it already holds, so its bytes stay the same.
 	profile.find_page(&"ranger_log")
 	profile.mark_seen("intro.c1")
 	profile.record_hero_pick(&"tess")
 	profile.record_chapter_won(1)
+	profile.record_tent_pick(&"moss")
+	profile.record_starting_perk_pick(&"")
 	check_eq(FileAccess.get_file_as_string(PATH), before, "writing the same facts again keeps the file byte for byte")
 
 

@@ -86,3 +86,29 @@ func test_the_endless_best_keeps_the_furthest_night() -> void:
 	check(not profile.record_endless(8, &"leo"), "an equal night is not a record")
 	check_eq(profile.endless_best_night(), 8, "the best is the furthest night")
 	check_eq(profile.endless_best_hero(), &"tess", "the best hero is the one who reached it")
+
+
+func test_a_new_profile_has_no_badge_earned() -> void:
+	check(not profile.is_badge_earned(&"first_night"), "a new profile has earned no badge")
+
+
+func test_the_starting_perk_picked_reads_back() -> void:
+	check_eq(profile.starting_perk_pick(), &"", "a new profile has no starting perk picked")
+	profile.record_starting_perk_pick(&"quick_hands")
+	check_eq(profile.starting_perk_pick(), &"quick_hands", "the starting perk picked reads back")
+	profile.record_starting_perk_pick(&"")
+	check_eq(profile.starting_perk_pick(), &"", "picking none clears it")
+
+
+func test_each_hero_keeps_their_own_outfit_pick() -> void:
+	check_eq(profile.outfit_pick(&"leo"), &"", "a new profile has no outfit picked")
+	profile.record_outfit_pick(&"leo", &"moss")
+	profile.record_outfit_pick(&"nela", &"ember")
+	check_eq(profile.outfit_pick(&"leo"), &"moss", "Leo's outfit pick reads back")
+	check_eq(profile.outfit_pick(&"nela"), &"ember", "Nela's outfit pick is her own")
+
+
+func test_the_tent_picked_reads_back() -> void:
+	check_eq(profile.tent_pick(), &"", "a new profile has no tent picked")
+	profile.record_tent_pick(&"berry")
+	check_eq(profile.tent_pick(), &"berry", "the tent picked reads back")

@@ -6,8 +6,8 @@ extends RefCounted
 ## Finds story beats (res://resources/story/), speaker names and
 ## portraits, and the voice recording for each line. Also remembers
 ## which beats the player has seen (the chapter intros and the true
-## ending) as "story.<beat>" keys in the Profile, so an intro plays once
-## per chapter.
+## ending) through the Profile's verbs (Profile.mark_seen), so an intro
+## plays once per chapter.
 ##
 ## Voice files: res://assets/audio/voice/<line id>.ogg
 ## (or .wav / .mp3). A line without a file is shown as text only.
@@ -103,13 +103,13 @@ static func voice(line_id: String) -> AudioStream:
 
 ## Whether the player has seen this beat ("intro.c1", TRUE_ENDING).
 static func has_seen(key: String) -> bool:
-	return bool(Profile.get_value(Profile.STORY_PREFIX + key, false))
+	return Profile.has_seen(key)
 
 
 static func mark_seen(key: String) -> void:
-	Profile.set_value(Profile.STORY_PREFIX + key, true)
+	Profile.mark_seen(key)
 
 
 ## Forgets every seen beat; the rest of the profile stays.
 static func forget_progress() -> void:
-	Profile.forget(Profile.STORY_PREFIX)
+	Profile.forget_seen()

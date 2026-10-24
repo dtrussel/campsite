@@ -439,8 +439,7 @@ func _ready() -> void:
 	_shot("12_title_mum_home")
 	home.queue_free()
 	# The Endless button with its record...
-	Profile.set_value(Profile.ENDLESS_BEST_NIGHTS, 12)
-	Profile.set_value(Profile.ENDLESS_BEST_HERO, "nela")
+	Profile.record_endless(12, &"nela")
 	var endless_title: Node = load("res://scenes/ui/TitleScreen.tscn").instantiate()
 	add_child(endless_title)
 	await _settle(1.0)
