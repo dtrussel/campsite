@@ -102,12 +102,12 @@ func _run_endless_scenario() -> void:
 
 
 ## An endless loss keeps the best nights and the hero
-## in the profile (under "endless."), the end screen says "New record!"
+## in the profile (its endless best), the end screen says "New record!"
 ## only when it is beaten, and the title's Endless button shows it.
 func _run_endless_record_scenario() -> void:
 	print("smoke: --- endless record scenario ---")
 	await _close_main()
-	Profile.forget("endless.")
+	Profile.delete()
 	StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING)
 	_check(not _endless_caption(await _title_buttons()).contains("Best:"), "no record on the Endless button before an endless run")
 
@@ -122,13 +122,12 @@ func _run_endless_record_scenario() -> void:
 	await get_tree().process_frame
 	var end_screen: Node = _main.get_node("EndScreen")
 	_check(GameManager.run_state == GameManager.RunState.LOST
-		and int(Profile.get_value(Profile.ENDLESS_BEST_NIGHTS, 0)) == 9
-		and String(Profile.get_value(Profile.ENDLESS_BEST_HERO, "")) == "leo",
+		and Profile.endless_best_night() == 9 and Profile.endless_best_hero() == &"leo",
 		"a loss on night 9 records 9 nights and Leo")
 	_check(String(end_screen.call("record_text")).contains("New record!"),
 		"the end screen says New record! (%s)" % end_screen.call("record_text"))
 	Profile.reload()  # as a restart reads it
-	_check(int(Profile.get_value(Profile.ENDLESS_BEST_NIGHTS, 0)) == 9 and String(Profile.get_value(Profile.ENDLESS_BEST_HERO, "")) == "leo",
+	_check(Profile.endless_best_night() == 9 and Profile.endless_best_hero() == &"leo",
 		"the record survives a restart")
 	var caption: String = _endless_caption(await _title_buttons())
 	_check(caption.contains("night 9") and caption.contains("Leo"), "the Endless button shows the record (%s)" % caption)
@@ -140,7 +139,7 @@ func _run_endless_record_scenario() -> void:
 	_campfire().take_damage(10000)
 	await get_tree().process_frame
 	end_screen = _main.get_node("EndScreen")
-	_check(int(Profile.get_value(Profile.ENDLESS_BEST_NIGHTS, 0)) == 9 and String(Profile.get_value(Profile.ENDLESS_BEST_HERO, "")) == "leo",
+	_check(Profile.endless_best_night() == 9 and Profile.endless_best_hero() == &"leo",
 		"a worse run doesn't overwrite the record")
 	_check(not String(end_screen.call("record_text")).contains("New record!") and String(end_screen.call("record_text")).contains("night 9"),
 		"no New record! for a worse run; it shows the best (%s)" % end_screen.call("record_text"))
@@ -158,8 +157,7 @@ func _run_endless_record_scenario() -> void:
 	await get_tree().process_frame
 	_check(String(_main.get_node("EndScreen").call("record_text")) == "", "a story run's end screen has no record line")
 	await _close_main()
-	Profile.forget("endless.")
-	StoryLibrary.forget_progress()
+	Profile.delete()
 
 
 ## The record line under the title's Endless button, from

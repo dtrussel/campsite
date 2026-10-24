@@ -10,14 +10,12 @@ extends RefCounted
 ##
 ## Each entry is {id, name, color, badge}: `badge` is the Camp Badge
 ## that unlocks it, empty for the default everyone has. The picks are
-## kept in the profile: one outfit per hero ("cosmetics.outfit.<hero>")
-## and one tent ("cosmetics.tent"). A pick whose badge is no longer
+## kept in the profile: one outfit per hero (Profile.outfit_pick) and
+## one tent (Profile.tent_pick). A pick whose badge is no longer
 ## earned (the profile was deleted) reads as the default.
 
 const DEFAULT_OUTFIT: StringName = &"ranger"
 const DEFAULT_TENT: StringName = &"canvas"
-const OUTFIT_PREFIX: String = "cosmetics.outfit."
-const TENT_KEY: String = "cosmetics.tent"
 
 const OUTFITS: Array[Dictionary] = [
 	{"id": &"ranger", "name": "Ranger", "color": Color(1, 1, 1), "badge": &""},
@@ -41,7 +39,7 @@ const TENTS: Array[Dictionary] = [
 ## earned, or it is a default.
 static func is_unlocked(entry: Dictionary) -> bool:
 	var badge: StringName = entry.get("badge", &"")
-	return badge == &"" or Badges.has_badge(badge)
+	return badge == &"" or Profile.is_badge_earned(badge)
 
 
 ## How to unlock entry, for a locked swatch's tooltip.
@@ -60,7 +58,7 @@ static func tent(id: StringName) -> Dictionary:
 
 ## The outfit hero wears: the one picked, if still unlocked.
 static func outfit_id(hero: StringName) -> StringName:
-	return _picked(OUTFITS, OUTFIT_PREFIX + String(hero), DEFAULT_OUTFIT)
+	return _picked(OUTFITS, Profile.outfit_pick(hero), DEFAULT_OUTFIT)
 
 
 static func outfit_tint(hero: StringName) -> Color:
@@ -70,11 +68,15 @@ static func outfit_tint(hero: StringName) -> Color:
 ## Keeps id as hero's outfit; false (and nothing kept) when it is
 ## unknown or locked.
 static func choose_outfit(hero: StringName, id: StringName) -> bool:
-	return _choose(OUTFITS, OUTFIT_PREFIX + String(hero), id)
+	if not _can_pick(OUTFITS, id):
+		return false
+	Profile.record_outfit_pick(hero, id)
+	PlaytestLog.write("cosmetic_picked hero=%s outfit=%s" % [hero, id])
+	return true
 
 
 static func tent_id() -> StringName:
-	return _picked(TENTS, TENT_KEY, DEFAULT_TENT)
+	return _picked(TENTS, Profile.tent_pick(), DEFAULT_TENT)
 
 
 static func tent_tint() -> Color:
@@ -82,7 +84,11 @@ static func tent_tint() -> Color:
 
 
 static func choose_tent(id: StringName) -> bool:
-	return _choose(TENTS, TENT_KEY, id)
+	if not _can_pick(TENTS, id):
+		return false
+	Profile.record_tent_pick(id)
+	PlaytestLog.write("cosmetic_picked tent=%s" % id)
+	return true
 
 
 ## Every badge an entry names, for validate_project.gd.
@@ -101,15 +107,13 @@ static func _find(entries: Array[Dictionary], id: StringName) -> Dictionary:
 	return {}
 
 
-static func _picked(entries: Array[Dictionary], key: String, fallback: StringName) -> StringName:
-	var entry: Dictionary = _find(entries, StringName(str(Profile.get_value(key, fallback))))
+## The entry `picked` names, or fallback when none or it is locked.
+static func _picked(entries: Array[Dictionary], picked: StringName, fallback: StringName) -> StringName:
+	var entry: Dictionary = _find(entries, picked)
 	return entry["id"] if not entry.is_empty() and is_unlocked(entry) else fallback
 
 
-static func _choose(entries: Array[Dictionary], key: String, id: StringName) -> bool:
+## Whether id is a known entry that can be picked now.
+static func _can_pick(entries: Array[Dictionary], id: StringName) -> bool:
 	var entry: Dictionary = _find(entries, id)
-	if entry.is_empty() or not is_unlocked(entry):
-		return false
-	Profile.set_value(key, String(id))
-	PlaytestLog.write("cosmetic_picked key=%s id=%s" % [key, id])
-	return true
+	return not entry.is_empty() and is_unlocked(entry)

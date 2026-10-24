@@ -5,11 +5,18 @@ extends RefCounted
 ##
 ## A test script defines methods named test_*, each a few checks on one
 ## rule through a module's public interface. The runner calls them in
-## the order they are written, each on a fresh instance of the script.
-## No test needs the gameplay scene, a camp or a file.
+## the order they are written, each on a fresh instance of the script,
+## and calls after_each() when each is done. No test needs the gameplay
+## scene or a camp; one that needs a file keeps its own under user://.
 
 ## The checks failed in the test now running (the runner reads it).
 var failures: int = 0
+
+
+## Runs after every test method; a script overrides it to free what
+## its tests made.
+func after_each() -> void:
+	pass
 
 
 ## Passes when `condition` holds; `what` says what was expected.
