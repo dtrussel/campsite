@@ -35,8 +35,14 @@ extends Node
 ## (the perk top-up) have run. Not emitted for a new run.
 signal restore_finished
 
-## The config of the run in progress (or of the last reset).
-var config: RunConfig = null
+## The config of the run in progress (or of the last reset); the
+## run's systems ask it the run's rules. Before the first reset it is
+## built from GameManager's run fields.
+var config: RunConfig = null:
+	get:
+		if config == null:
+			config = RunConfig.current()
+		return config
 
 ## A save waiting for the gameplay scene (continue_from), applied by
 ## restore_pending.

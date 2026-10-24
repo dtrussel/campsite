@@ -76,7 +76,7 @@ func _ready() -> void:
 
 
 func costs() -> PackedInt32Array:
-	return costs_chapter_2 if GameManager.chapter() == 2 else costs_chapter_1
+	return costs_chapter_2 if RunSession.config.chapter == 2 else costs_chapter_1
 
 
 func max_stage() -> int:
@@ -191,7 +191,7 @@ func reset() -> void:
 
 
 func _fresh_shards() -> int:
-	return shards_for_max() if GameManager.endless else 0
+	return shards_for_max() if RunSession.config.lantern_starts_full() else 0
 
 
 ## Loses `count` stages of light (the Moon-Eater swallowed them).

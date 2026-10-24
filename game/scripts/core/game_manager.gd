@@ -139,12 +139,14 @@ func chapter() -> int:
 	return 2 if nights_to_win >= 7 else 1
 
 
-## The intro pages a new game opens with. Every new game plays them
-## (Esc skips); Continue, Restart and endless runs never do.
-func intro_pages() -> Array:
-	if endless:
+## The intro pages a new game of `run` (the next run's config when
+## null) opens with. Every new game plays them (Esc skips); Continue,
+## Restart and endless runs never do.
+func intro_pages(run: RunConfig = null) -> Array:
+	run = run if run != null else RunConfig.current()
+	if not run.plays_intro():
 		return []  # endless comes after the story: straight to the camp
-	return StoryLibrary.find(&"intro", chapter())
+	return StoryLibrary.find(&"intro", run.chapter)
 
 
 ## Hero select Go: the chapter intro (StoryBook over the hero select
@@ -152,15 +154,16 @@ func intro_pages() -> Array:
 func begin_chapter(hero: StringName, companion: StringName = &"") -> void:
 	set_party(hero, companion)
 	record_hero_pick(hero_id)
-	var key: String = "intro.c%d" % chapter()
-	var pages: Array = intro_pages()
+	var run: RunConfig = RunConfig.current()
+	var key: String = "intro.c%d" % run.chapter
+	var pages: Array = intro_pages(run)
 	if pages.is_empty():
 		start_run()
 		return
 	var book: StoryBook = StoryBook.play(pages, hero_id)
 	book.finished.connect(func() -> void:
 		StoryLibrary.mark_seen(key)
-		PlaytestLog.write("story_intro chapter=%d pages_seen=%d of %d" % [chapter(), book.page + 1, pages.size()])
+		PlaytestLog.write("story_intro chapter=%d pages_seen=%d of %d" % [run.chapter, book.page + 1, pages.size()])
 		start_run())
 
 
@@ -380,11 +383,11 @@ func _on_dawn_started(day_number: int) -> void:
 		return
 	set_stat(&"nights_survived", day_number)
 	PlaytestLog.write("night_survived night=%d" % day_number)
-	if day_number >= nights_to_win and not endless:
-		if int(stats.get(&"boss_calmed", 0)) > 0:
-			_end_run(true, "You calmed the Moon-Eater!", &"win")
-		else:
-			_end_run(true, "You survived %d nights!" % nights_to_win, &"win")
+	var run: RunConfig = RunSession.config
+	if run.dawn_wins(day_number):
+		# Calming the Moon-Eater changes only the message.
+		var calmed: bool = int(stats.get(&"boss_calmed", 0)) > 0
+		_end_run(true, "You calmed the Moon-Eater!" if calmed else "You survived %d nights!" % run.nights_to_win, &"win")
 
 
 func _on_resource_changed(_id: StringName, _new_value: int, delta: int) -> void:
