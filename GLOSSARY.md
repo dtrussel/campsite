@@ -21,6 +21,7 @@ The words this project uses for its own concepts. Use them in code, tickets and 
 - **Run config:** what a run starts from, fixed until the run ends: the party, the chapter (or an endless run), the nights to win, the seeds, and test settings such as the perk auto-pick time. The run config also answers the run's rules: which night the Moon-Eater comes, which dawn wins, how far an endless run is past the story. *Avoid:* inferring the chapter from the run length.
 - **Endless run:** a Chapter 2 run with no win and no Moon-Eater; it ends only in a loss, and how far it got can set a record.
 - **Continue:** resuming a run from its save.
+- **Run outcome:** how a run ended, as the profile hears it: the run config, whether it was won, the night it ended on and the run's stats.
 
 ## Across runs
 
