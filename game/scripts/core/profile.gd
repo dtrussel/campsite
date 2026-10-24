@@ -33,6 +33,9 @@ extends Node
 ## never recorded a Chapter 1 win, so these stand in for it). The old
 ## file is left on disk, unused, so a downgrade still works.
 
+## Journal page `id` was found for the first time (find_page).
+signal page_found(id: StringName)
+
 const PROFILE_PATH: String = "user://profile.json"
 const OLD_STORY_PATH: String = "user://story.cfg"
 ## The prefix StoryLibrary keeps seen beats under ("story.intro.c1").
@@ -161,6 +164,7 @@ func find_page(id: StringName) -> bool:
 	if is_page_found(id):
 		return false
 	set_value(PAGE_PREFIX + String(id), true)
+	page_found.emit(id)
 	return true
 
 

@@ -637,8 +637,9 @@ Delete profile resets it and a run never saves it.
   page names its note line (`note_id`) and reads the text, face and
   sketch from it; a badge page names its `badge`. `Journal`
   (`game/scripts/meta/journal.gd`) keeps found pages as
-  `journal.<id>`: dawn pages are found when the HUD plays their card
-  (`find_notes_on`), a badge page reads as found while its badge is
+  `journal.<id>`: dawn pages are found by the run's own dawn
+  (`GameManager` calls `find_notes_on`, then hands the beat to the HUD
+  through `dawn_beat_played`, so no HUD is needed), a badge page reads as found while its badge is
   earned, and `next_chest_page()` is what a day chest holds.
 - **The day chest:** `RunConfig` rolls `day_chest_day`
   (`GameManager.day_chest_chance`, 50%, else 0). `GameManager` holds

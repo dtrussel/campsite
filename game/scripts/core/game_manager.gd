@@ -20,6 +20,9 @@ signal stat_recorded(stat: StringName, amount: int)
 ## This run's DayChest was placed at the map edge (the HUD says so).
 ## Typed Node3D: an autoload naming DayChest here makes a load cycle.
 signal day_chest_placed(chest: Node3D)
+## A dawn that does not win plays its story beat; Mum's notes on it
+## are already found as journal pages, so the HUD only shows the card.
+signal dawn_beat_played(beat: StoryBeat)
 
 enum RunState { MENU, PLAYING, WON, LOST }
 
@@ -320,6 +323,12 @@ func _on_dawn_started(day_number: int) -> void:
 		# Calming the Moon-Eater changes only the message.
 		var calmed: bool = int(stats.get(&"boss_calmed", 0)) > 0
 		_end_run(true, "You calmed the Moon-Eater!" if calmed else "You survived %d nights!" % run.nights_to_win, &"win")
+		return
+	# The winning dawn's story is the ending book, not a dawn beat.
+	var beat: StoryBeat = StoryLibrary.first(&"dawn", run.chapter, day_number)
+	if beat != null:
+		Journal.find_notes_on(beat)
+		dawn_beat_played.emit(beat)
 
 
 func _on_resource_changed(_id: StringName, _new_value: int, delta: int) -> void:

@@ -128,6 +128,7 @@ func _ready() -> void:
 		spawner.mob_spawned.connect(_on_mob_spawned)
 	TimeManager.night_started.connect(_on_night_started)
 	TimeManager.dawn_started.connect(_on_dawn_started)
+	GameManager.dawn_beat_played.connect(_on_dawn_beat_played)
 	TimeManager.day_started.connect(_on_day_started)
 	CraftingManager.crafted.connect(_on_crafted)
 	Badges.badge_earned.connect(_on_badge_earned)
@@ -968,13 +969,13 @@ func _on_night_started(day_number: int) -> void:
 	show_banner("Night %d!" % day_number, _PHASE_COLOR_NIGHT)
 
 
-func _on_dawn_started(day_number: int) -> void:
+func _on_dawn_started(_day_number: int) -> void:
 	show_banner("Good morning!", _PHASE_COLOR_DAWN)
-	# The winning dawn ends the run; its story is the ending book.
-	if GameManager.is_playing():
-		var beat: StoryBeat = StoryLibrary.first(&"dawn", RunSession.config.chapter, day_number)
-		show_story(beat, _lantern_hint())
-		Journal.find_notes_on(beat)  # Mum's note on the card is a journal page too
+
+
+## The run's dawn picked this beat and found its notes; the HUD shows it.
+func _on_dawn_beat_played(beat: StoryBeat) -> void:
+	show_story(beat, _lantern_hint())
 
 
 func _on_crafted(recipe: CraftingRecipe, _crafter: Node) -> void:
