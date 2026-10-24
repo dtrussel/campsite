@@ -18,7 +18,8 @@ The words this project uses for its own concepts. Use them in code, tickets and 
 - **Run state:** everything that belongs to one run and is gone when it ends. That includes resources, levels, perks, the time of day, the campfire, buildings, blueprints, torches and the heroes. It lives in the run save.
 - **Saving system:** any module that holds run state. It saves, loads and resets its own state.
 - **Run session:** the one module that starts, continues and resets a run. It walks the saving systems in a declared order and says when a restore has finished.
-- **Run config:** what a run starts from: the party, the chapter goal, the seeds, and test settings such as the perk auto-pick time.
+- **Run config:** what a run starts from, fixed until the run ends: the party, the chapter (or an endless run), the nights to win, the seeds, and test settings such as the perk auto-pick time. The run config also answers the run's rules: which night the Moon-Eater comes, which dawn wins, how far an endless run is past the story. *Avoid:* inferring the chapter from the run length.
+- **Endless run:** a Chapter 2 run with no win and no Moon-Eater; it ends only in a loss, and how far it got can set a record.
 - **Continue:** resuming a run from its save.
 
 ## Across runs
