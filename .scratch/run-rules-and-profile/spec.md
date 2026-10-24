@@ -180,3 +180,14 @@ The run config tickets come first. Then the profile's verbs and storage seam, th
 ## Comments
 
 - 2026-10-24: done. Tickets 01–08 are all done.
+- 2026-10-24: review fixes. Continue now puts the starting perk picked
+  on the run config, so Again after a Continue starts with it again
+  (a unit test covers it). `RunConfig.take_seeds_of` gives Continue the
+  seeds and auto-pick time. Smoke's `_again()` moved back into
+  `scenarios/endless.gd`, its one caller. The run session and run rules
+  unit tests clean up in `after_each()`. The profile stores are
+  duck-typed scripts of their own (`profile_file_store.gd`, which alone
+  imports story.cfg, and `profile_memory_store.gd`), with the file
+  format unchanged. The profile uses `StoryLibrary.TRUE_ENDING`.
+  `Cosmetics` shares the pick steps in `_choose`, and
+  `GameManager.record_hero_pick` is gone (callers use the profile's).

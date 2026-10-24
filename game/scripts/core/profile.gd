@@ -33,8 +33,11 @@ extends Node
 ## own file with set_path; unit tests keep it in memory with use_memory.
 ##
 ## The keys sit behind a store, the profile's one seam to where they
-## are kept: the JSON file (FileStore) or memory (MemoryStore). Both
-## hold the same JSON text, so a value reads back the same from either.
+## are kept: the JSON file (ProfileFileStore) or memory
+## (ProfileMemoryStore). Both hold the same JSON text, so a value reads
+## back the same from either. A store has exists(), read() -> String,
+## write(text), remove() and where() (for the playtest log); the file
+## store alone has the old story file (has_old_story, old_seen_beats).
 ##
 ## The old story file (user://story.cfg, before the profile existed) is
 ## imported once, the first time a profile that has never been created
@@ -80,13 +83,11 @@ const _STARTING_PERK: String = "perks.starting"
 ## tent's tint.
 const _OUTFIT_PREFIX: String = "cosmetics.outfit."
 const _TENT: String = "cosmetics.tent"
-## The true ending's beat (StoryLibrary.TRUE_ENDING). A profile that
-## never recorded Chapter 2 won (one imported from story.cfg) keeps
-## Endless through it.
-const _TRUE_ENDING: String = "ending.c2"
-const _OLD_CHAPTER_2_BEATS: Array[String] = ["intro.c2", _TRUE_ENDING]
+## The old story file's beats that stand in for a Chapter 1 win.
+const _OLD_CHAPTER_2_BEATS: Array[String] = ["intro.c2", StoryLibrary.TRUE_ENDING]
 
-var _store: Store = MemoryStore.new()
+## A ProfileFileStore or a ProfileMemoryStore.
+var _store: RefCounted = ProfileMemoryStore.new()
 var _data: Dictionary = {}
 ## Debug builds (the editor, a debug export) and builds exported with
 ## the "playtest" feature tag open every chapter. Tests clear it to see
@@ -102,14 +103,14 @@ func _ready() -> void:
 ## and loads it. old_story_path is the story.cfg to import when this
 ## profile has never been created; empty means import nothing.
 func set_path(path: String, old_story_path: String = "") -> void:
-	_store = FileStore.new(path, old_story_path)
+	_store = ProfileFileStore.new(path, old_story_path)
 	reload()
 
 
 ## Keeps the profile in memory only, starting empty, for unit tests. It
 ## is never saved and has no old story file to import.
 func use_memory() -> void:
-	_store = MemoryStore.new()
+	_store = ProfileMemoryStore.new()
 	reload()
 
 
@@ -159,10 +160,10 @@ func is_chapter_unlocked(chapter: int) -> bool:
 
 
 ## Whether the title lets the player start Endless: once Chapter 2 is
-## won, or, for a profile that never recorded that win, once the true
-## ending was seen.
+## won, or, for a profile that never recorded that win (one imported
+## from story.cfg), once the true ending was seen.
 func is_endless_unlocked() -> bool:
-	return is_chapter_won(2) or has_seen(_TRUE_ENDING)
+	return is_chapter_won(2) or has_seen(StoryLibrary.TRUE_ENDING)
 
 
 ## Records a chapter won; winning Chapter 1 unlocks Chapter 2. Winning
@@ -363,8 +364,9 @@ func delete() -> void:
 		_set_value(_OLD_STORY_IMPORTED, true)
 
 
+## Only the file store has an old story file to import.
 func _import_old_story() -> void:
-	if _data.has(_OLD_STORY_IMPORTED) or not _store.has_old_story():
+	if _data.has(_OLD_STORY_IMPORTED) or not _store.has_method(&"has_old_story") or not _store.has_old_story():
 		return
 	for beat in _store.old_seen_beats():
 		_data[_STORY_PREFIX + beat] = true
@@ -390,104 +392,3 @@ func _parse(text: String) -> Dictionary:
 func _write() -> void:
 	_store.write(JSON.stringify(_data, "\t"))
 
-
-## Where the profile's JSON text is kept. The profile reads and writes
-## its keys only through these.
-class Store:
-	extends RefCounted
-
-	## The old story file to import; "" means none.
-	var old_story_path: String = ""
-
-	## Whether the profile was ever written here (else it is new).
-	func exists() -> bool:
-		return false
-
-	## The text kept, or "" when there is none.
-	func read() -> String:
-		return ""
-
-	func write(_text: String) -> void:
-		pass
-
-	func remove() -> void:
-		pass
-
-	## Where it is, for the playtest log.
-	func where() -> String:
-		return "memory"
-
-	## Whether there is an old story file to import.
-	func has_old_story() -> bool:
-		return false
-
-	## The beats the old story file marks seen.
-	func old_seen_beats() -> Array[String]:
-		return []
-
-
-## The game's store: the JSON file at path.
-class FileStore:
-	extends Store
-
-	var path: String
-
-	func _init(file_path: String, old_story: String) -> void:
-		path = file_path
-		old_story_path = old_story
-
-	func exists() -> bool:
-		return FileAccess.file_exists(path)
-
-	func read() -> String:
-		var file: FileAccess = FileAccess.open(path, FileAccess.READ) if exists() else null
-		return file.get_as_text() if file != null else ""
-
-	func write(text: String) -> void:
-		var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
-		if file == null:
-			push_warning("Profile: cannot write %s" % path)
-			return
-		file.store_string(text)
-		file.close()
-
-	func remove() -> void:
-		if exists():
-			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
-
-	func where() -> String:
-		return path
-
-	func has_old_story() -> bool:
-		return old_story_path != "" and FileAccess.file_exists(old_story_path)
-
-	func old_seen_beats() -> Array[String]:
-		var out: Array[String] = []
-		var old: ConfigFile = ConfigFile.new()
-		if old.load(old_story_path) == OK and old.has_section("seen"):
-			for beat in old.get_section_keys("seen"):
-				if bool(old.get_value("seen", beat, false)):
-					out.append(beat)
-		return out
-
-
-## The unit tests' store: the same text, kept in memory.
-class MemoryStore:
-	extends Store
-
-	var _text: String = ""
-	var _written: bool = false
-
-	func exists() -> bool:
-		return _written
-
-	func read() -> String:
-		return _text
-
-	func write(text: String) -> void:
-		_text = text
-		_written = true
-
-	func remove() -> void:
-		_text = ""
-		_written = false

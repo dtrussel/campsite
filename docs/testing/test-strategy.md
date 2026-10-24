@@ -135,7 +135,10 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
   test itself, and override `after_each()`, which the runner calls after
   every test method, to free it. For the profile, preload
   `res://scripts/core/profile.gd`, make a fresh one and call
-  `use_memory()` (see `test_profile.gd`); a test that needs a file keeps
+  `use_memory()` (see `test_profile.gd`). A test of a module that reads
+  the `Profile` autoload itself calls `Profile.use_memory()` first, and
+  again in `after_each()`, so it never touches the player's file
+  (`test_run_session.gd`). A test that needs a file keeps
   its own under `user://` and removes it in `after_each()`
   (`test_profile_file.gd`).
 - **Run one script:**

@@ -68,11 +68,8 @@ static func outfit_tint(hero: StringName) -> Color:
 ## Keeps id as hero's outfit; false (and nothing kept) when it is
 ## unknown or locked.
 static func choose_outfit(hero: StringName, id: StringName) -> bool:
-	if not _can_pick(OUTFITS, id):
-		return false
-	Profile.record_outfit_pick(hero, id)
-	PlaytestLog.write("cosmetic_picked hero=%s outfit=%s" % [hero, id])
-	return true
+	return _choose(OUTFITS, id, func() -> void: Profile.record_outfit_pick(hero, id),
+		"hero=%s outfit=%s" % [hero, id])
 
 
 static func tent_id() -> StringName:
@@ -84,11 +81,7 @@ static func tent_tint() -> Color:
 
 
 static func choose_tent(id: StringName) -> bool:
-	if not _can_pick(TENTS, id):
-		return false
-	Profile.record_tent_pick(id)
-	PlaytestLog.write("cosmetic_picked tent=%s" % id)
-	return true
+	return _choose(TENTS, id, func() -> void: Profile.record_tent_pick(id), "tent=%s" % id)
 
 
 ## Every badge an entry names, for validate_project.gd.
@@ -113,7 +106,13 @@ static func _picked(entries: Array[Dictionary], picked: StringName, fallback: St
 	return entry["id"] if not entry.is_empty() and is_unlocked(entry) else fallback
 
 
-## Whether id is a known entry that can be picked now.
-static func _can_pick(entries: Array[Dictionary], id: StringName) -> bool:
+## When id is a known entry of `entries` that can be picked now, keeps
+## it (`record`) and logs the pick (`what`); false (and nothing kept)
+## otherwise.
+static func _choose(entries: Array[Dictionary], id: StringName, record: Callable, what: String) -> bool:
 	var entry: Dictionary = _find(entries, id)
-	return not entry.is_empty() and is_unlocked(entry)
+	if entry.is_empty() or not is_unlocked(entry):
+		return false
+	record.call()
+	PlaytestLog.write("cosmetic_picked %s" % what)
+	return true

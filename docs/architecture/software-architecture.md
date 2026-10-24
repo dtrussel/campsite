@@ -621,10 +621,13 @@ which a run ending never deletes.
   `GameManager.run_end` keeps that result for the end screen ("New
   record!"). The profile never reads the game manager, the run session
   or the time of day.
-- **Storage adapters:** the keys sit behind an inner `Store`, the
-  profile's one seam: `FileStore` (`set_path(path, old_story_path)`; the
-  game and smoke) and `MemoryStore` (`use_memory()`; unit tests). Both
-  hold the same JSON text, so a value reads back the same from either.
+- **Storage adapters:** the keys sit behind a store, the profile's one
+  seam, duck-typed (`exists`, `read`, `write`, `remove`, `where`):
+  `ProfileFileStore` (`game/scripts/core/profile_file_store.gd`;
+  `set_path(path, old_story_path)`; the game and smoke), which alone
+  reads the old `story.cfg` for the import, and `ProfileMemoryStore`
+  (`profile_memory_store.gd`; `use_memory()`; unit tests). Both hold the
+  same JSON text, so a value reads back the same from either.
   `game/tests/fixtures/profile_before_verbs.json` guards the file format
   byte for byte.
 - **Keys:** strings with a dotted owner prefix (`story.`, `chapters.`,
