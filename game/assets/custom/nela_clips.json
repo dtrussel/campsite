@@ -1,5 +1,14 @@
 {
  "clips": {
+  "Hero_Death": {
+   "seconds": 0.7917
+  },
+  "Hero_Getup": {
+   "seconds": 2.3333
+  },
+  "Hero_Hit": {
+   "seconds": 0.6667
+  },
   "Hero_Run": {
    "seconds": 0.4167,
    "stride": 2.56
@@ -11,6 +20,9 @@
   "Nela_Attack": {
    "contact": 0.125,
    "seconds": 0.9167
+  },
+  "Nela_Cheer": {
+   "seconds": 1.6667
   },
   "Nela_Hair": {
    "seconds": 1.9167

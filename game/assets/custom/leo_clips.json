@@ -1,5 +1,14 @@
 {
  "clips": {
+  "Hero_Death": {
+   "seconds": 0.7917
+  },
+  "Hero_Getup": {
+   "seconds": 2.3333
+  },
+  "Hero_Hit": {
+   "seconds": 0.6667
+  },
   "Hero_Run": {
    "seconds": 0.5,
    "stride": 2.86
@@ -11,6 +20,9 @@
   "Leo_Attack": {
    "contact": 0.125,
    "seconds": 1.0417
+  },
+  "Leo_Cheer": {
+   "seconds": 1.6667
   },
   "Leo_Idle": {
    "seconds": 1.3333

@@ -1,14 +1,21 @@
 # 07: Reactions and cheers
 
-Status: ready-for-agent
+Status: done (open: the user's visual sign-off)
 Blocked by: 06 (the clip pipeline is from 03; 06 only orders the model rebuilds)
 
 **What to build:** being hit, going down and getting back up fit a kid's size and weight. These are shared clips varied by the style knobs. Each kid also gets their own cheer for wins, level-ups and Mum's arrival.
 
-- [ ] `hit`, `death` and `getup` map to the shared clips, and `cheer` to each kid's own. The stock clips stay as fallbacks.
-- [ ] Going down still holds the last pose. The companion's getup at dawn still plays and leaves the down pose.
-- [ ] Validate: each action clip's length at its play speed matches the gameplay durations recorded in 01 (enforced).
-- [ ] Contact sheets, GIFs and in-game captures are under `## Comments` for sign-off.
-- [ ] `tools/check.sh` reports validate OK and smoke PASSED.
+- [x] `hit`, `death` and `getup` map to the shared clips, and `cheer` to each kid's own. The stock clips stay as fallbacks.
+- [x] Going down still holds the last pose. The companion's getup at dawn still plays and leaves the down pose.
+- [x] Validate: each action clip's length at its play speed matches the gameplay durations recorded in 01 (enforced).
+- [x] Contact sheets, GIFs and in-game captures are under `## Comments` for sign-off.
+- [x] `tools/check.sh` reports validate OK and smoke PASSED.
 
 ## Comments
+
+- **2026-10-25, done (open: the user's sign-off on the motion, from the captures below).** Shared `Hero_Hit`, `Hero_Death` and `Hero_Getup`, and each kid's own `Leo_Cheer` / `Nela_Cheer`, keyed in `hero_clips.py` and rebuilt into both models; both kids' hero data map `hit`, `death`, `getup` and `cheer` to them. The stock `Hit_A`, `Death_A`, `Lie_StandUp` and `Cheer` stay in the models as the fallback.
+  - **Clips** (at the stock lengths: hit 16 frames, 0.48 s at 1.4x; death 19 frames, 0.79 s; getup 56 frames, 2.33 s; cheer 40 frames, 1.39 s at 1.2x). Hit: a flinch, knocked back with hands up in front of the face, knees giving, a wobble back to standing. Death: knocked back, a plop onto the bottom, then flat on the back, arms out, head rolled aside, the stick or lantern lying beside the kid; the game holds the last frame. Getup: starts on exactly that pose, a dazed head shake, up to sitting on the hands, another shake, a push up through a crouch, a quick dust-off. Leo's cheer: a crouch, a big jump with the stick thrust skyward and his other fist up, a hop and two fist pumps. Nela's: hands clasped under her chin, a light hop with both arms up in a V (lantern lifted), a wave of her free hand over her head while she sways. The kid's bounce scales the knocks and hops (Leo more, Nela less).
+  - **How they're built:** a new `_posed` helper keys sparse `Key`s on top of the kid's stand: hand targets in arm lengths from the key's own shoulder and foot moves (`Foot`) in hip heights, so one set fits both kids' proportions; the body is Bezier-keyed and sampled every frame, the legs re-solved each frame to feet eased from key to key (`_set_leg`, which `_plant` now uses; it clamps an out-of-reach ankle instead of raising), and the right hand's prop (`Key.prop`, the hand slot's +X) is eased from key to key so the stick and lantern lie on the ground instead of poking through it. Down's lying pose matches the stock one's ground contact (the backpack sinks a little into the ground, as with the stock clip; not visible from the game camera).
+  - **Checks:** the validator now enforces `duration` for hit, death, getup and cheer (all within 0.001 s of the stock lengths) and a new `handoff` check on getup: how far its first pose is from death's last (the held down pose), with the loop limits (1 cm, 3 deg). It caught a real 11-20 deg jump in the first build (the arm solver found another way to the same hands), so the getup now starts on death's exact last pose; both read 0.0 cm, 0.0-0.1 deg. Unit: `test_clip_checks.gd` gains the handoff test. Smoke (`hero_animation.gd`): each kid as the companion goes down, plays the death clip through and still holds its last frame half a second later; revived, it plays its getup from there and stands when it ends (new hooks `CharacterVisual.held_clip()` and `playing_action()`). The fidget check's "moving cancels the fidget" was flaky in the stalled pass (a 0.5 s window), so it now checks the cancel on the frame the kid sets off and allows 1.5 s for the fade. `hero_capture` now records `getup` from the held down pose, as the game plays it.
+  - `tools/check.sh`: validate OK, unit PASSED, smoke PASSED in both passes, selftest OK.
+  - **For sign-off** (in `../captures/`): clay `07-<kid>-<hit|death|getup|cheer>-clay.png/.gif`; in game `07-<kid>-<state>-player-old-vs-new.png` (old on top, captured before the rebuild; the old getup capture played the stock getup straight from standing, the new one from the held down pose) and `07-<kid>-<state>-player-new.gif`.

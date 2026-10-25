@@ -134,6 +134,22 @@ legs take longer, slower steps than Nela's quick little ones), and the
 game plays it faster or slower with the kid's real speed. The run
 leans in, with a short flight between steps and the knees driving up.
 
+Being hit, going down and getting back up are shared too, sized to
+each kid and scaled by their bounce. A hit is a flinch: knocked back
+a little, hands up in front of the face, the knees giving, then a
+wobble back to standing. Going down is a kid's flop: knocked back, a
+plop onto the bottom, then flat on the back with the arms flung out
+and the head rolled aside, the stick or lantern lying beside them.
+Getting up starts from exactly that pose: a dazed shake of the head,
+up to sitting on the hands, another shake, a push up through a crouch,
+and a quick dust-off of the front. Each kid cheers in their own way:
+
+- **Leo** crouches and leaps with his stick thrust high and his other
+  fist up, then hops into two fist pumps.
+- **Nela** clasps her hands under her chin, makes a light little hop
+  with both arms up in a V (the lantern lifted high), and waves her
+  free hand over her head while she sways.
+
 The wind-up stays within 0.1 s at play speed, so attacks still feel
 instant.
 

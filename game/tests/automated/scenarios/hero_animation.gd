@@ -2,12 +2,14 @@ extends "res://tests/automated/smoke_scenario.gd"
 
 ## Hero animation: a hero's attack lands on its contact frame, after a
 ## short wind-up, in either role. A hero left idle fidgets now and then,
-## and moving cancels the fidget.
+## and moving cancels the fidget. A hero going down holds the down pose,
+## and gets up from it.
 
 
 func run() -> void:
 	await _run_contact_frame_scenario()
 	await _run_fidget_scenario()
+	await _run_down_scenario()
 
 
 ## For Leo and Nela, played and as the companion: the swing lands, or the
@@ -156,6 +158,45 @@ func _run_fidget_scenario() -> void:
 		return
 	player.command_move(player.global_position + Vector3(8, 0, 0))
 	_check(await _wait_until(func() -> bool: return visual.is_moving(), 1.0), "fidgets: the player sets off")
-	_check(await _wait_until(func() -> bool: return visual.fidget_playing() == &"" and visual.active_action_layer() == "", 0.5),
-		"fidgets: moving cancels the fidget back to locomotion")
+	# The visual cancels the fidget on the frame it starts moving; the
+	# fade back to locomotion then takes 0.18 s (a stalled frame can
+	# carry a short wait past it before the tree steps, so allow more).
+	_check(visual.fidget_playing() == &"", "fidgets: moving cancels the fidget")
+	_check(await _wait_until(func() -> bool: return visual.active_action_layer() == "", 1.5),
+		"fidgets: and it fades back to locomotion")
 	player.stop_commands()
+
+
+## Each kid as the companion (the player's hero going down ends the
+## run): going down plays the death clip through and holds its last
+## frame; revived, as at dawn, the kid plays the getup from there and
+## stands.
+func _run_down_scenario() -> void:
+	print("smoke: --- hero animation: down and back up ---")
+	for played in [&"nela", &"leo"]:
+		await _start_fresh_run(_party(played))
+		var companion: Hero = get_tree().get_first_node_in_group("companions") as Hero
+		if companion == null:
+			_fail("party %s: the companion is a Hero" % played)
+			continue
+		var label: String = _label(companion)
+		var visual: CharacterVisual = companion.get_node("Visual") as CharacterVisual
+		var down_clip: String = String(companion.hero.clips[&"death"])
+		companion.take_damage(companion.max_hp + 10)
+		_check(companion.is_down(), "%s: goes down" % label)
+		if not await _wait_until(func() -> bool: return visual.held_clip() == down_clip, 3.0):
+			_fail("%s: going down plays %s through and holds its last frame (holds '%s')"
+				% [label, down_clip, visual.held_clip()])
+			continue
+		await _wait(0.5)
+		_check(companion.is_down() and visual.held_clip() == down_clip,
+			"%s: still down on the last frame of %s half a second later" % [label, down_clip])
+		companion.revive(companion.max_hp)
+		_check(visual.playing_action() == &"getup" and visual.held_clip() == "",
+			"%s: revived, it leaves the down pose with its getup (%s)" % [label, visual.playing_action()])
+		# An action's end is timed in real seconds (CharacterVisual), and
+		# the smoke test runs the game faster than that.
+		var player: AnimationPlayer = visual.model.find_child("AnimationPlayer", true, false) as AnimationPlayer
+		var getup: float = player.get_animation(String(companion.hero.clips[&"getup"])).length
+		_check(await _wait_until(func() -> bool: return visual.playing_action() == &"" and not companion.is_down(),
+			(getup + 1.0) * Engine.time_scale), "%s: and is up when the getup ends" % label)

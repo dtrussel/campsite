@@ -8,6 +8,8 @@ extends RefCounted
 ## space, and scaled to metres in the game (the hero's model_scale).
 ##
 ##   loop_pop()     how far a looping clip's last pose is from its first
+##   pose_jump()    how far one clip's pose is from another's (getting up
+##                  from the held down pose)
 ##   foot_slide()   how far a planted foot slides per stride at a speed
 
 ## Bones whose names hold these are rig controls, not the body.
@@ -20,8 +22,9 @@ const SAMPLES_PER_SECOND: float = 240.0
 
 ## The looping states, measured for a pop at the wrap.
 const LOOPS: Array[StringName] = [&"idle", &"walk", &"move"]
-## Limits: a loop's wrap may jump a joint this far (m) or turn a bone
-## this much (deg); a foot may slide this far (m) a stride; an action
+## Limits: a loop's wrap, or getting up from the held down pose (the
+## "handoff"), may jump a joint this far (m) or turn a bone this much
+## (deg); a foot may slide this far (m) a stride; an action
 ## may run this far (s) from its gameplay length.
 const LOOP_METRES: float = 0.01
 const LOOP_DEGREES: float = 3.0
@@ -52,16 +55,18 @@ const ACTION_SECONDS: Dictionary = {
 	},
 }
 ## The per-clip switch from "report" to "enforce": hero id -> state ->
-## the checks ("loop", "slide", "duration") that fail the validator
+## the checks ("loop", "slide", "duration", "handoff") that fail the validator
 ## when over their limit. Every other check only reports.
 const ENFORCED: Dictionary = {
-	&"leo": {&"idle": ["loop"], &"attack": ["duration"], &"walk": ["loop", "slide"], &"move": ["loop", "slide"]},
-	&"nela": {&"idle": ["loop"], &"attack": ["duration"], &"walk": ["loop", "slide"], &"move": ["loop", "slide"]},
+	&"leo": {&"idle": ["loop"], &"attack": ["duration"], &"walk": ["loop", "slide"], &"move": ["loop", "slide"],
+		&"hit": ["duration"], &"death": ["duration"], &"getup": ["duration", "handoff"], &"cheer": ["duration"]},
+	&"nela": {&"idle": ["loop"], &"attack": ["duration"], &"walk": ["loop", "slide"], &"move": ["loop", "slide"],
+		&"hit": ["duration"], &"death": ["duration"], &"getup": ["duration", "handoff"], &"cheer": ["duration"]},
 }
 
 
 ## Measures every clip `hero` maps. One row per check: {hero, state,
-## clip, check ("clip", "loop", "slide" or "duration"), value, limit,
+## clip, check ("clip", "loop", "slide", "duration" or "handoff"), value, limit,
 ## text, over, enforced}. A mapped state without its clip is always
 ## enforced. `enforced` and `action_seconds` default to the tables above.
 static func check_hero(hero: HeroDefinition, enforced: Dictionary = ENFORCED,
@@ -94,6 +99,15 @@ static func check_hero(hero: HeroDefinition, enforced: Dictionary = ENFORCED,
 			var over: bool = pop.metres > LOOP_METRES or pop.degrees > LOOP_DEGREES
 			rows.append(_row(row, "loop", pop.metres, LOOP_METRES, "wraps with a %.1f cm, %.1f deg pop (limit %.1f cm, %.0f deg)"
 				% [pop.metres * 100.0, pop.degrees, LOOP_METRES * 100.0, LOOP_DEGREES], over, checks.has("loop")))
+		if state == &"getup" and player.has_animation(String(hero.clips.get(&"death", ""))):
+			# Getting up plays from the last frame of down, which the game holds.
+			var down: Animation = player.get_animation(String(hero.clips[&"death"]))
+			var jump: Dictionary = pose_jump(down, down.length, anim, 0.0, skeleton, prefix, hero.model_scale)
+			var jumps: bool = jump.metres > LOOP_METRES or jump.degrees > LOOP_DEGREES
+			rows.append(_row(row, "handoff", jump.metres, LOOP_METRES,
+				"starts %.1f cm, %.1f deg from where %s ends (limit %.1f cm, %.0f deg)"
+				% [jump.metres * 100.0, jump.degrees, hero.clips[&"death"], LOOP_METRES * 100.0, LOOP_DEGREES], jumps,
+				checks.has("handoff")))
 		if state == &"walk" or state == &"move":
 			# The walk at walk_speed; the run at each role's speed, the worse.
 			var speeds: Array = [walk_speed] if state == &"walk" \
@@ -205,8 +219,16 @@ static func loop_pop(anim: Animation, skeleton: Skeleton3D, prefix: String, mode
 		# A looping clip reads its end as its start; compare the keys.
 		anim = anim.duplicate() as Animation
 		anim.loop_mode = Animation.LOOP_NONE
-	var first: Array[Transform3D] = pose(anim, skeleton, prefix, 0.0)
-	var last: Array[Transform3D] = pose(anim, skeleton, prefix, anim.length)
+	return pose_jump(anim, anim.length, anim, 0.0, skeleton, prefix, model_scale)
+
+
+## How far `from`'s pose at `from_time` is from `to`'s at `to_time`:
+## {metres}, the largest joint jump (at `model_scale`), and {degrees},
+## the largest bone turn. Rig controls are left out.
+static func pose_jump(from: Animation, from_time: float, to: Animation, to_time: float, skeleton: Skeleton3D,
+		prefix: String, model_scale: float) -> Dictionary:
+	var first: Array[Transform3D] = pose(to, skeleton, prefix, to_time)
+	var last: Array[Transform3D] = pose(from, skeleton, prefix, from_time)
 	var metres: float = 0.0
 	var degrees: float = 0.0
 	for bone in first.size():

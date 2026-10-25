@@ -203,3 +203,22 @@ func test_a_run_is_measured_at_both_roles_speeds_and_the_worse_counts() -> void:
 	# Down 0.5 s / 0.6 = 0.83 s at 0.5 m/s covers 0.42 m of the 0.5 m swept.
 	check(slide.size() == 1 and absf(float(slide[0].value) - 0.083) < 0.02,
 		"the companion's 0.5 m/s slides 8 cm a stride, and that row counts (got %.3f)" % float(slide[0].value))
+
+
+func test_a_getup_that_starts_on_the_down_pose_hands_over_without_a_jump() -> void:
+	# Down ends with the hips 0.8 m lower; the game holds that pose, and
+	# getting up plays from it.
+	var death: Animation = _hips_clip([[0.0, Vector3(0, 1, 0)], [1.0, Vector3(0, 0.2, 0)]])
+	var getup: Animation = _hips_clip([[0.0, Vector3(0, 0.2, 0)], [1.0, Vector3(0, 1, 0)]])
+	var hero: HeroDefinition = _hero({&"death": "Death", &"getup": "Getup"}, {"Death": death, "Getup": getup})
+	var handoff: Array[Dictionary] = _rows(ClipChecks.check_hero(hero, {}, {}), &"getup", "handoff")
+	check(handoff.size() == 1 and float(handoff[0].value) < 0.0001 and not handoff[0].over,
+		"getting up from where down ends jumps 0 m (got %s)" % str(handoff))
+	# A getup that begins lying 0.3 m higher than down ends: a jump.
+	getup = _hips_clip([[0.0, Vector3(0, 0.5, 0)], [1.0, Vector3(0, 1, 0)]])
+	hero = _hero({&"death": "Death", &"getup": "Getup"}, {"Death": death, "Getup": getup})
+	hero.model_scale = 0.5
+	handoff = _rows(ClipChecks.check_hero(hero, {&"test": {&"getup": ["handoff"]}}, {}), &"getup", "handoff")
+	check(handoff.size() == 1 and absf(float(handoff[0].value) - 0.15) < 0.001 and handoff[0].over
+		and handoff[0].enforced,
+		"one that starts 0.3 model m off jumps 0.15 m at half scale, and fails when enforced (got %s)" % str(handoff))

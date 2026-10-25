@@ -140,6 +140,11 @@ func _record(hero: HeroDefinition, role: String, state: StringName, out_dir: Str
 		seconds = clip.length / play if clip != null else 1.0
 	elif state == &"death":
 		seconds = _visual.play_final(state)
+	elif state == &"getup":
+		# As in the game: from the held down pose (Hero._set_down).
+		await _wait(_visual.play_final(&"death") + 0.3)
+		_visual.unlock(&"getup")
+		seconds = _clip(hero, state).length if _clip(hero, state) != null else 1.0
 	else:
 		var speed: float = float(COMPANION_SPEEDS.get(state, ClipChecks.PLAY_SPEEDS.get(state, 1.0))) \
 			if role == "companion" else float(ClipChecks.PLAY_SPEEDS.get(state, 1.0))

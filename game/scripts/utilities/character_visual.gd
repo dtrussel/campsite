@@ -392,6 +392,22 @@ func active_action_layer() -> String:
 	return ""
 
 
+## The state of the action playing now (play_action), or &""; tests.
+func playing_action() -> StringName:
+	return _action_state if _action_playing() and not _locked else &""
+
+
+## The clip a play_final holds on its last frame once it has played
+## through, or "" (still falling, or nothing held); tests.
+func held_clip() -> String:
+	if not _locked or _player == null or _player.is_playing() or _player.assigned_animation == &"":
+		return ""
+	var anim: Animation = _player.get_animation(_player.assigned_animation)
+	if anim == null or absf(_player.current_animation_position - anim.length) > 0.001:
+		return ""
+	return String(_player.assigned_animation)
+
+
 func get_animation_tree() -> AnimationTree:
 	return _tree
 

@@ -35,6 +35,12 @@ game plays now and then while the kid stands idle; the hero data lists
 them). Both keep the feet planted: the legs are re-solved every frame
 to where the stock Idle's first pose stands (`_plant`).
 
+Being hit, going down and getting back up are shared clips sized to
+each kid (`_posed`: hand targets in arm lengths, foot moves in hip
+heights), and each kid has their own cheer. Going down ends on the
+pose the game holds while the kid is down, and getting up starts on
+exactly that pose (the validator checks the handoff).
+
 Clips are authored at 24 fps from the stock Idle (sampled with
 `stock_pose`), so they begin and end where the kid stands: the game
 fades an action in over 0.08 s and out over 0.18 s
@@ -567,19 +573,32 @@ def _head(rig, pose, name):
 def _plant(rig, pose, stand):
     """Re-solves `pose`'s legs so each ankle stays where `stand` has it
     and each foot keeps its angle in the world (feet planted)."""
+    for side in "lr":
+        _set_leg(rig, pose, side, _head(rig, stand, "foot." + side), _world(rig, stand, "foot." + side))
+        pose.rot["toes." + side] = list(stand.rot.get("toes." + side, []))
+    return pose
+
+
+def _set_leg(rig, pose, side, ankle, foot, clamp=False):
+    """Solves `side`'s leg on `pose` so its ankle is at `ankle`
+    (armature space) and its foot turned `foot` in the world. With
+    `clamp`, an ankle out of the leg's reach is pulled in (or pushed
+    out) to the nearest it reaches, instead of raising."""
     hips = _world(rig, pose, "hips")
     bones = rig.data.bones
-    for side in "lr":
-        ankle = _head(rig, stand, "foot." + side)
-        joint = _head(rig, pose, "upperleg." + side)
-        ax, ay, knee = _leg_ik(bones["upperleg." + side].head_local, bones["lowerleg." + side].head_local,
-                               bones["foot." + side].head_local, hips.inverted() @ (ankle - joint))
-        upper = Quaternion((1, 0, 0), math.radians(ax)) @ Quaternion((0, 1, 0), math.radians(ay))
-        lower = Quaternion((1, 0, 0), math.radians(knee))
-        pose.rot["upperleg." + side] = [upper]
-        pose.rot["lowerleg." + side] = [lower]
-        pose.rot["foot." + side] = [(hips @ upper @ lower).inverted() @ _world(rig, stand, "foot." + side)]
-        pose.rot["toes." + side] = list(stand.rot.get("toes." + side, []))
+    joint = _head(rig, pose, "upperleg." + side)
+    hip, knee_at, ankle_at = (bones[part + side].head_local for part in ("upperleg.", "lowerleg.", "foot."))
+    target = hips.inverted() @ (ankle - joint)
+    if clamp:
+        thigh, shin = (knee_at - hip).length, (ankle_at - knee_at).length
+        far, near = (thigh + shin) * LEG_STRETCH, abs(thigh - shin) + 0.25 * min(thigh, shin)
+        target = target.normalized() * min(max(target.length, near), far)
+    ax, ay, knee = _leg_ik(hip, knee_at, ankle_at, target)
+    upper = Quaternion((1, 0, 0), math.radians(ax)) @ Quaternion((0, 1, 0), math.radians(ay))
+    lower = Quaternion((1, 0, 0), math.radians(knee))
+    pose.rot["upperleg." + side] = [upper]
+    pose.rot["lowerleg." + side] = [lower]
+    pose.rot["foot." + side] = [(hips @ upper @ lower).inverted() @ foot]
     return pose
 
 
@@ -863,17 +882,326 @@ def nela_hair(rig, style):
     ], hold=True)
 
 
+# ------------------------------------------------------- reactions
+# Being hit, going down and getting back up are shared, sized to each
+# kid: hand targets are in arm lengths from the shoulder of the key's
+# own pose, foot moves in hip heights (`_units`), and the kid's bounce
+# scales the dips. Down is a kid's flop: knocked back, a plop onto the
+# bottom, then flat on the back, arms out. The getup starts on exactly
+# that last pose, so the game's switch from the held down pose to the
+# getup shows no jump. Each kid cheers in their own way.
+
+
+@dataclass(frozen=True)
+class Key:
+    """One key of a posed one-shot (`_posed`): `add`, a Pose added to
+    the kid's stand; `hands` {side: (x, y, z)}, a hand target in arm
+    lengths from that side's shoulder in this key's pose (+x the kid's
+    left, -y forward, +z up); `feet` {side: Foot} (both feet planted
+    where the stand has them when None); `extra(rig, pose)` finishes
+    the key (a stick aim); `prop` points what the right hand holds
+    (Leo's stick, Nela's lantern: the hand slot's +X) along a direction
+    in armature space, so it lies on the ground beside a kid who is
+    down instead of poking through it."""
+    frame: int
+    add: object = None
+    hands: dict = None
+    feet: dict = None
+    extra: object = None
+    prop: tuple = None
+
+
+@dataclass(frozen=True)
+class Foot:
+    """Where a foot goes on a Key, in hip heights: `planted`, an offset
+    from where the stand plants it; or, with `reach`, along `aim` from
+    the hip joint at `reach` of the leg's length. `tilt` turns the foot
+    from its stand angle about the kid's left-right axis (- toes up)."""
+    planted: tuple = (0.0, 0.0, 0.0)
+    aim: tuple = None
+    reach: float = 0.0
+    tilt: float = 0.0
+
+
+def both(x, y, z):
+    """The same hand target (left-side numbers) for both hands."""
+    return {"l": (x, y, z), "r": (-x, y, z)}
+
+
+def feet(aim=None, reach=0.0, tilt=0.0, planted=(0.0, 0.0, 0.0), spread=0.0):
+    """The same Foot for both feet; `aim`, `planted` in left-side numbers
+    (`spread` widens a planted pair)."""
+    out = {}
+    for side, sign in (("l", 1.0), ("r", -1.0)):
+        p = (sign * (planted[0] + spread), planted[1], planted[2])
+        a = (sign * aim[0], aim[1], aim[2]) if aim else None
+        out[side] = Foot(planted=p, aim=a, reach=reach, tilt=tilt)
+    return out
+
+
+def _units(rig):
+    """The kid's hip height (the hip joints' height in the rest pose),
+    the unit the reactions' moves are written in."""
+    return rig.data.bones["upperleg.l"].head_local.z
+
+
+def _leg_length(rig, side="l"):
+    bones = rig.data.bones
+    return ((bones["lowerleg." + side].head_local - bones["upperleg." + side].head_local).length
+            + (bones["foot." + side].head_local - bones["lowerleg." + side].head_local).length)
+
+
+def _arm_length(rig, side="l"):
+    bones = rig.data.bones
+    return (bones["hand." + side].head_local - bones["upperarm." + side].head_local).length
+
+
+def _foot_at(rig, pose, idle, side, foot):
+    """A Foot as (ankle position, foot turn) in armature space."""
+    unit = _units(rig)
+    turn = Quaternion((1, 0, 0), math.radians(foot.tilt)) @ _world(rig, idle, "foot." + side)
+    if foot.aim is not None:
+        joint = _head(rig, pose, "upperleg." + side)
+        return joint + Vector(foot.aim).normalized() * foot.reach * _leg_length(rig, side), turn
+    return _head(rig, idle, "foot." + side) + Vector(foot.planted) * unit, turn
+
+
+def _slot_x(rig, pose, side="r"):
+    """Where the hand slot's +X points under `pose` (armature space)."""
+    return _world(rig, pose, "handslot." + side) @ rig.data.bones["handslot." + side].matrix_local.to_3x3().col[0]
+
+
+def _posed(rig, style, keys, hold=False, start=None):
+    """A one-shot from `keys` (Key), each added to the kid's stand: the
+    body keyed with Bezier (as the game plays it) and sampled every
+    frame, the legs re-solved every frame to the feet eased from key to
+    key and the right hand's prop turned from its angle on one key to
+    the next. With `hold`, the right hand keeps its Idle angle
+    (Nela's lantern hangs). `start`, a Pose, replaces the first key
+    exactly (a clip that begins where another ends: the arm solver
+    could find another way to the same hands)."""
+    stand, idle = _stand(rig, style)
+    guess = {"l": (-60.0, -20.0, 0.0, 60.0), "r": (-60.0, -20.0, 0.0, 60.0)}
+    posed = []
+    for k in keys:
+        pose = stand + (k.add or P())
+        for side, offset in (k.hands or {}).items():
+            target = _head(rig, pose, "upperarm." + side) + Vector(offset) * _arm_length(rig, side)
+            guess[side] = _reach(rig, pose, side, target, guess[side])
+            for part in ("upperarm.", "lowerarm.", "wrist."):
+                pose.rot.pop(part + side, None)
+            pose = pose + _arm(side, *guess[side])
+        if k.extra is not None:
+            pose = k.extra(rig, pose)
+        planted = {side: Foot() for side in "lr"}
+        spots = {side: _foot_at(rig, pose, idle, side, (k.feet or planted)[side]) for side in "lr"}
+        for side in "lr":
+            _set_leg(rig, pose, side, *spots[side], clamp=True)
+        if hold:
+            _hold_wrist(rig, pose, idle)
+        if k.prop is not None:
+            _aim_slot(rig, pose, Vector(k.prop))
+        posed.append((k.frame, pose, spots, _slot_x(rig, pose)))
+    if start is not None:
+        spots = {side: (_head(rig, start, "foot." + side), _world(rig, start, "foot." + side)) for side in "lr"}
+        posed[0] = (posed[0][0], start, spots, _slot_x(rig, start))
+    act = action(rig, "hero_clips_tmp", [(key[0], key[1]) for key in posed], bones=HERO_BONES)
+    out = []
+    for frame in range(posed[-1][0] + 1):
+        pose = _pose_at(rig, act, frame)
+        i = max(j for j, key in enumerate(posed) if key[0] <= frame)
+        a, b = posed[i], posed[min(i + 1, len(posed) - 1)]
+        t = 0.0 if b[0] == a[0] else _smoother((frame - a[0]) / (b[0] - a[0]))
+        for side in "lr":
+            (pa, qa), (pb, qb) = a[2][side], b[2][side]
+            _set_leg(rig, pose, side, pa.lerp(pb, t), qa.slerp(qb, t), clamp=True)
+            pose.rot["toes." + side] = list(idle.rot.get("toes." + side, []))
+        if hold:
+            _hold_wrist(rig, pose, idle)
+        turn = Quaternion().slerp(a[3].rotation_difference(b[3]), t)
+        out.append((frame, _aim_slot(rig, pose, turn @ a[3])))
+    rig.animation_data.action = None
+    bpy.data.actions.remove(act)
+    return out
+
+
+def _sway(style, back, down, bend=0.0, spine=0.0, chest=0.0, head=0.0, turn=0.0, tip=0.0):
+    """A body move for a Key: the hips `back` (+, toward the heels) and
+    `down` (-) in hip heights, `bend` degrees forward at the hips, then
+    the spine, chest and head bent forward (+) and the head turned to
+    its left (`turn`) and tipped to its left (`tip`)."""
+    return P(hips=[("X", bend)], spine=[("X", spine)], chest=[("X", chest)],
+             head=[("X", head), ("Z", turn), ("Y", tip)], loc={"hips": (0.0, back, down)})
+
+
+def hero_hit(rig, style):
+    """Hit: a kid's flinch. Knocked back a step's lean, hands up in
+    front of the face, the knees giving, then a wobble forward and back
+    to standing. 16 frames (0.67 s; gameplay plays it at 1.4x, 0.48 s).
+    The kid's bounce scales the knock."""
+    unit, amp = _units(rig), style.bounce
+    return _posed(rig, style, [
+        Key(0),
+        Key(2, _sway(style, 0.06 * unit * amp, -0.03 * unit * amp, spine=-10.0 * amp, chest=-7.0, head=-14.0,
+                     tip=6.0), both(0.3, -0.55, 0.35)),
+        Key(5, _sway(style, 0.08 * unit * amp, -0.07 * unit * amp, spine=-12.0 * amp, chest=-5.0, head=-4.0,
+                     tip=4.0), both(0.4, -0.45, 0.15)),
+        Key(9, _sway(style, 0.01 * unit, -0.04 * unit * amp, spine=5.0 * amp, chest=2.0, head=8.0, tip=-3.0),
+            both(0.55, -0.15, -0.7)),
+        Key(12, _sway(style, 0.0, -0.01 * unit * amp, spine=1.5, head=2.0)),
+        Key(16),
+    ], hold=style.hand_hold >= 1.0)
+
+
+# The down pose: flat on the back, arms flung out, head rolled to the
+# side, knees a little up. Hero_Death ends on it and Hero_Getup starts
+# on it.
+LIE_DOWN = -0.55   # the hips' drop lying down, in hip heights
+SIT_DOWN = -0.64   # and sitting on the ground
+DOWN_PROP = (-0.25, -1.0, -0.03)   # the prop lying along the kid's side
+SIT_PROP = (-1.0, 0.4, -0.05)   # out to the side on the ground
+
+
+def _lying(rig, style, frame):
+    unit = _units(rig)
+    return Key(frame, _sway(style, 0.14 * unit, LIE_DOWN * unit, bend=-78.0, spine=-2.0, head=4.0, turn=24.0),
+               {"l": (0.85, 0.3, -0.25), "r": (-0.8, 0.45, -0.25)},
+               {"l": Foot(aim=(0.12, -1.0, -0.12), reach=0.86, tilt=-70.0),
+                "r": Foot(aim=(-0.16, -1.0, -0.08), reach=0.82, tilt=-62.0)},
+               prop=DOWN_PROP)
+
+
+def hero_death(rig, style):
+    """Down: knocked back, the knees give, the kid plops onto their
+    bottom and flops flat on their back, arms out, and stays there (the
+    game holds the last frame). 19 frames (0.79 s), as the stock clip."""
+    unit, amp = _units(rig), style.bounce
+    return _posed(rig, style, [
+        Key(0),
+        Key(3, _sway(style, 0.07 * unit, -0.05 * unit * amp, spine=-14.0, chest=-8.0, head=-18.0),
+            both(0.3, -0.55, 0.3)),
+        Key(6, _sway(style, 0.16 * unit, -0.35 * unit, bend=-10.0, spine=-4.0, head=8.0),
+            both(0.6, -0.25, 0.15)),
+        Key(10, _sway(style, 0.32 * unit, SIT_DOWN * unit, bend=-25.0, spine=-6.0, head=12.0),
+            both(0.45, 0.2, -0.7), feet(planted=(0.0, -0.04, 0.0), tilt=-20.0), prop=SIT_PROP),
+        Key(13, _sway(style, 0.22 * unit, (LIE_DOWN - 0.05) * unit, bend=-68.0, spine=-4.0, head=-10.0),
+            both(0.8, 0.1, 0.2), feet(aim=(0.1, -1.0, 0.45), reach=0.75, tilt=-35.0), prop=(-1.0, 0.2, -0.2)),
+        Key(16, _sway(style, 0.15 * unit, (LIE_DOWN - 0.02) * unit, bend=-80.0, spine=-2.0, head=2.0, turn=12.0),
+            both(0.85, 0.3, -0.15), feet(aim=(0.12, -1.0, -0.1), reach=0.8, tilt=-60.0), prop=DOWN_PROP),
+        _lying(rig, style, 19),
+    ], hold=style.hand_hold >= 1.0)
+
+
+def hero_getup(rig, style):
+    """Getting back up: dazed on the back (a shake of the head), up to
+    sitting on hands behind, another shake, knees tucked, a push up
+    through a crouch to standing, and a quick dust-off of the front.
+    56 frames (2.33 s), as the stock clip; it begins on Hero_Death's
+    last pose."""
+    unit = _units(rig)
+    lying = _lying(rig, style, 0)
+    down = hero_death(rig, style)[-1][1]
+    sit = _sway(style, 0.3 * unit, SIT_DOWN * unit, bend=-12.0, spine=8.0, head=4.0)
+    sit_feet = feet(aim=(0.12, -1.0, -0.12), reach=0.88, tilt=-55.0)
+    sit_hands = both(0.3, 0.35, -0.85)
+    return _posed(rig, style, [
+        lying,
+        Key(7, lying.add + P(head=[("X", 22.0), ("Z", -36.0)]), lying.hands, lying.feet, prop=DOWN_PROP),
+        Key(13, lying.add + P(head=[("X", 18.0), ("Z", -4.0)]), lying.hands, lying.feet, prop=DOWN_PROP),
+        Key(21, sit, sit_hands, sit_feet, prop=SIT_PROP),
+        Key(25, sit + P(head=[("Z", 14.0), ("Y", 5.0)]), sit_hands, sit_feet, prop=SIT_PROP),
+        Key(29, sit + P(head=[("Z", -12.0), ("Y", -5.0)]), sit_hands, sit_feet, prop=SIT_PROP),
+        Key(35, _sway(style, 0.26 * unit, (SIT_DOWN + 0.02) * unit, bend=18.0, spine=10.0, head=-6.0),
+            both(0.35, -0.35, -0.8), feet(planted=(0.0, -0.3, 0.0), tilt=-10.0), prop=(-0.6, -0.8, -0.05)),
+        Key(42, _sway(style, 0.06 * unit, -0.32 * unit, bend=28.0, spine=14.0, head=-12.0),
+            both(0.25, -0.55, -0.55), prop=(-0.6, -0.6, -0.45)),
+        Key(47, _sway(style, 0.0, -0.01 * unit, spine=-5.0, chest=-3.0, head=-6.0), both(0.6, 0.0, -0.8)),
+        Key(50, _sway(style, 0.0, -0.03 * unit * style.bounce, spine=8.0, head=14.0), both(0.12, -0.4, -0.75)),
+        Key(53, _sway(style, 0.0, -0.02 * unit * style.bounce, spine=7.0, head=12.0), both(0.2, -0.32, -0.6)),
+        Key(56),
+    ], hold=style.hand_hold >= 1.0, start=down)
+
+
+def _stick_up(rig, pose):
+    """Leo's stick held up high, its end skyward."""
+    return _aim_slot(rig, pose, Vector((-0.1, -0.2, 1.0)), 0.0)
+
+
+def leo_cheer(rig, style):
+    """Leo's cheer: a crouch, a big jump with the stick thrust high and
+    his left fist up, then a hop and two fist pumps, all bounce. 40
+    frames (1.67 s; played at 1.2x, 1.39 s, as the stock Cheer)."""
+    unit, amp = _units(rig), style.bounce
+    up = {"r": (-0.15, -0.15, 0.95), "l": (0.35, -0.3, 0.85)}
+    pumped = {"r": (-0.15, -0.15, 0.95), "l": (0.2, -0.5, 0.1)}
+    air = feet(planted=(0.0, 0.02, 0.12 * amp), tilt=25.0)
+    hop = feet(planted=(0.0, 0.0, 0.05 * amp), tilt=12.0)
+    return _posed(rig, style, [
+        Key(0),
+        Key(4, _sway(style, 0.02 * unit, -0.14 * unit * amp, bend=8.0, spine=10.0, head=6.0), both(0.4, -0.35, -0.7),
+            prop=(-0.3, -0.6, -0.6)),
+        Key(8, _sway(style, 0.0, 0.16 * unit * amp, spine=-8.0, head=-16.0), up, air, _stick_up),
+        Key(11, _sway(style, 0.0, 0.2 * unit * amp, spine=-10.0, head=-18.0, tip=6.0), up,
+            feet(planted=(0.0, 0.02, 0.15 * amp), tilt=18.0), _stick_up),
+        Key(14, _sway(style, 0.0, -0.12 * unit * amp, bend=6.0, spine=6.0, head=-6.0), up, None, _stick_up),
+        Key(18, _sway(style, 0.0, -0.02 * unit, spine=2.0, head=-10.0, tip=-5.0), pumped, None, _stick_up),
+        Key(22, _sway(style, 0.0, 0.06 * unit * amp, spine=-6.0, head=-14.0, tip=5.0), up, hop, _stick_up),
+        Key(26, _sway(style, 0.0, -0.06 * unit * amp, spine=4.0, head=-8.0, tip=-5.0), pumped, None, _stick_up),
+        Key(30, _sway(style, 0.0, 0.0, spine=-5.0, head=-14.0, tip=5.0), up, None, _stick_up),
+        Key(34, _sway(style, 0.0, -0.03 * unit * amp, spine=3.0, head=-4.0), both(0.5, -0.15, -0.75),
+            prop=(-0.3, -0.4, -0.8)),
+        Key(40),
+    ])
+
+
+def nela_cheer(rig, style):
+    """Nela's cheer: hands clasped under her chin, a light little hop
+    with both arms up in a V (the lantern lifted high), a happy wave of
+    her free hand over her head while she sways, then hands clasped
+    again. Lighter and smaller than Leo's. 40 frames (1.67 s; played at
+    1.2x, 1.39 s)."""
+    unit, amp = _units(rig), style.bounce
+    clasp = {"l": (-0.25, -0.55, -0.3), "r": (0.25, -0.55, -0.3)}
+    vee = {"l": (0.45, -0.15, 0.8), "r": (-0.45, -0.2, 0.7)}
+
+    def wave(x, sway):
+        return (_sway(style, 0.0, -0.02 * unit, spine=-3.0, head=-8.0, tip=8.0 * sway)
+                + P(hips=[("Y", -3.0 * sway)], loc={"hips": (0.02 * unit * sway, 0.0, 0.0)}),
+                {"l": (x, -0.1, 0.9), "r": (-0.45, -0.35, 0.25)})
+
+    keys = [
+        Key(0),
+        Key(4, _sway(style, 0.0, -0.07 * unit * amp, spine=6.0, head=6.0, tip=-6.0), clasp),
+        Key(9, _sway(style, 0.0, 0.1 * unit * amp, spine=-6.0, head=-12.0), vee,
+            feet(planted=(0.0, 0.0, 0.1 * amp), tilt=8.0)),
+        Key(13, _sway(style, 0.0, -0.05 * unit * amp, spine=2.0, head=-8.0), vee),
+    ]
+    for frame, x, sway in ((17, 0.6, 1.0), (21, 0.15, -1.0), (25, 0.6, 1.0), (29, 0.15, -1.0)):
+        add, hands = wave(x, sway)
+        keys.append(Key(frame, add, hands))
+    keys += [
+        Key(34, _sway(style, 0.0, -0.03 * unit * amp, spine=4.0, head=4.0, tip=-8.0), clasp),
+        Key(40),
+    ]
+    return _posed(rig, style, keys, hold=True)
+
+
 # Each kid's own clips (attack, cheer, idle, run where it shows).
 OWN = {
     "leo": {"Leo_Attack": Clip(leo_attack, contact=3), "Leo_Idle": Clip(leo_idle, cyclic=True),
+            "Leo_Cheer": Clip(leo_cheer),
             "Leo_Look": Clip(leo_look), "Leo_Scratch": Clip(leo_scratch), "Leo_Stick": Clip(leo_stick)},
     "nela": {"Nela_Attack": Clip(nela_attack, contact=3), "Nela_Idle": Clip(nela_idle, cyclic=True),
+             "Nela_Cheer": Clip(nela_cheer),
              "Nela_Look": Clip(nela_look), "Nela_Stretch": Clip(nela_stretch), "Nela_Hair": Clip(nela_hair)},
 }
 # The shared set, keyed once per kid with that kid's Style.
 SHARED = {
     "Hero_Walk": Clip(walk, cyclic=True, gait="walk"),
     "Hero_Run": Clip(run, cyclic=True, gait="run"),
+    "Hero_Hit": Clip(hero_hit),
+    "Hero_Death": Clip(hero_death),
+    "Hero_Getup": Clip(hero_getup),
 }
 
 
