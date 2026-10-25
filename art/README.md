@@ -24,6 +24,7 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 | `lib/paint_bake.py` | **The painted look**: bakes base colour, a warm-top/cool-bottom tint, AO, edge highlights and brush noise into one texture (`<name>_painted` material) |
 | `lib/detail.py` | Feature 031 M6: **dense detail**. `bake_prop` and `bake_prop_lows` model a prop dense and bake its painted look onto the budget mesh (`paint_bake.paint_direct`). Dense helpers: `bark_log`, `plank`, `leaf_clump`, `colour_foliage`, `cull_hidden`. M8: `scatter_leaves` and `leaf_colour` put individual leaves or needles over a foliage shell |
 | `lib/preview.py` | Preview renders |
+| `review/clip_sheet.py` | **Clip review**: clay contact sheet and GIF of one kid clip from the game camera, travelling at the game's speed (see "Clip review" below) |
 | `lib/measure.py` | Feature 043: **measured proportion checks**. `landmarks()` and `widths()` of the posed meshes as fractions of the height, and `silhouette()` (orthographic flat-white front or side). Compare them with landmarks read off a concept sheet and iterate: a measured loop, not judging renders by eye |
 | `nature/` | Trees (3 variants + stump), autumn pines (the Resin trees) and green border pines (`pine_c/d`), rocks, berry bush and flowering shrub (`flower_bush`) |
 | `props/camp.py` | Campfire, tent, fence, watch post, torch, woodpile, crate, barrel, toadstools. Feature 045: the builders' mallet (`hammer`: grip at the origin, handle up, head along X; `CharacterVisual` holds it on `handslot.r`). Feature 047: the Moon Lantern (`moon_lantern`, after `reference/concept-2026-10/16_moon_lantern_sheet.webp`: granite plinth with stone courses and a raised crescent, an open iron lamp frame (Godot adds the glass, shards and glow), stepped roof, 2.4k tris, 1024 bake) |
@@ -65,6 +66,17 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 - **High-to-low bake:** the kid scripts build dense meshes (voxel cloth with folds, the 100-ring head loft, per-vertex colours) and `chibi.lowpoly(mesh, tris)` decimates each one to its budget while keeping a dense copy. `paint_bake.paint(mesh, high=copy)` paints the look on the dense copy (so stripes, folds, AO and the face stay crisp), then transfers it onto the low mesh with a selected-to-active colour bake. `HIGH_POLY=1` skips the decimation, to compare.
 - **Prop detail:** model props dense and finish them with `detail.bake_prop(parts, name, budget, ray=...)`, so carved detail (bark, plank seams, tiles, stitching) lives in the texture. Check a model in the game look with `game/tools/model_gallery.tscn` (usage is in its header).
 - **Draft bakes:** `BAKE_SIZE=512 .venv-blender/bin/python art/characters/nela.py` bakes the painted look at low resolution with fewer samples (about a minute per kid at 256, a few minutes at 512–1024) and renders the previews, but never exports to `game/assets` (unless `DRAFT_EXPORT=1`, for a quick look in Godot; do not commit those). Use it to review paint between milestones; run the full 1024 bake only for a release.
+- **Clip review:** `.venv-blender/bin/python art/review/clip_sheet.py leo walk`
+  renders one kid clip (a state from the hero data, or a clip name) from
+  the committed GLB in matte clay, from the gameplay camera's pitch and
+  lens: a strip of 8 frames and a GIF at the game's play speed, in
+  `build/clip_sheets/`. Walk and run travel over a checked ground at
+  the game's speed, so sliding feet show. Options (`--azimuth`,
+  `--frames`, `--travel`, `--size`) are in its docstring. Rebuild the
+  kid first to review a new clip. In the game, `game/tools/hero_capture.tscn`
+  records the same states as the player and the companion, and the
+  validator measures slide, loop pops and action lengths
+  (`docs/testing/test-strategy.md`, "Hero clip checks").
 - **Sculpt review:** `SCULPT=1 QUICK=1 .venv-blender/bin/python art/characters/leo.py` renders matte clay views (front, 3/4, side, back), game-size silhouettes and clay animation frames, without baking (`preview.render_clay`, `preview.render_silhouette`).
 - **Shape kit (chibi):** `limb` (elliptical lofted sections for anatomy), `fold` (sculpted cloth folds: parallel or radiating), `hem_ring` (rolled hems), `sculpted_hand`, `sculpted_boot`, `webbing`, `buckle`, `bedroll_detail`, `hair_clump(sharp=, twist=)`.
 - **Patterned cloth** (stripes, folk patterns) is voxel-remeshed without decimation, so painted bands stay crisp.

@@ -15,8 +15,13 @@ extends Node
 ## 3. Fails on comments that name work items (feature numbers, tickets,
 ##    .scratch paths), which docs/architecture/coding-standards.md
 ##    leaves to the commit log.
+## 4. Measures every hero clip as data (tools/clip_checks.gd): a clip
+##    for each mapped state, loop wraps, foot slide and action lengths.
+##    Checks on "report" print one summary line; `-- --clips` prints
+##    every number. Only enforced ones fail.
 ## Exits 0 when clean, 1 otherwise.
 
+const ClipChecks: GDScript = preload("res://tools/clip_checks.gd")
 const SKIP_DIRS: Array[String] = ["res://.godot", "res://addons"]
 ## Where the issue tracker keeps one folder per feature slug, so "<slug> NN"
 ## or "<slug> spec" in a comment reads as a work-item reference.
@@ -90,6 +95,7 @@ func _ready() -> void:
 	_validate_run_lifecycle_contract()
 	_validate_rebuild_missing_keys()
 	_validate_comments(files)
+	_validate_hero_clips()
 	if _errors.is_empty():
 		print("validate_project: OK (%d files checked)" % files.size())
 		get_tree().quit(0)
@@ -270,6 +276,26 @@ func _collect(dir_path: String, out: PackedStringArray) -> void:
 
 func _fail(message: String) -> void:
 	_errors.append(message)
+
+
+## Every hero's clips, measured (ClipChecks). Fails on enforced checks
+## over their limit; the reported ones are counted on one line, or all
+## printed with `-- --clips`.
+func _validate_hero_clips() -> void:
+	var rows: Array[Dictionary] = []
+	for hero in HeroRoster.all():
+		rows.append_array(ClipChecks.check_hero(hero))
+	var verbose: bool = OS.get_cmdline_user_args().has("--clips")
+	var reported: int = 0
+	for row in rows:
+		if row.over and row.enforced:
+			_fail("clip " + ClipChecks.describe(row))
+		elif row.over:
+			reported += 1
+		if verbose:
+			print("validate_project: clip " + ClipChecks.describe(row))
+	print("validate_project: hero clips: %d checks, %d over their limit on report (-- --clips lists them)"
+		% [rows.size(), reported])
 
 
 ## Every hero on the select screen is complete. Tool tiers:
