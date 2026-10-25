@@ -11,6 +11,8 @@ The words this project uses for its own concepts. Use them in code, tickets and 
 - **Signature tool:** a hero's crafted tool (Leo's stick, Nela's sling).
 - **Tool tier:** one step of a hero's signature tool, crafted at the Crafting Table in order (tier 1: the Sturdy Stick or the Slingshot; up to tier 3). *Avoid:* "upgrade level".
 - **Perk:** a card picked at level-up that changes a hero's stats or hits.
+- **Contact frame:** the moment in an attack where the blow connects (the stick strikes, the sling lets go). A hero's hit lands then, after a short wind-up, not when the attack starts. *Avoid:* "hit frame", which is easily confused with the hit reaction.
+- **Hit-stop:** a brief freeze of the attacker and the target as a hit lands. The rest of the game keeps running.
 
 ## Runs
 
