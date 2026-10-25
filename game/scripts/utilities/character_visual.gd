@@ -12,6 +12,7 @@ extends Node3D
 ##   visual.set_locomotion(speed)     # idle / walk / run blend by speed
 ##   visual.play_action(&"attack")    # one-shot, returns length
 ##   visual.face(direction, delta)    # smooth turn toward a direction
+##   visual.action_contact_in()       # seconds to the action's contact frame
 ##
 ## Animation is layered with an AnimationTree built in code:
 ##
@@ -81,6 +82,9 @@ const TOOL_SCALE: float = 1.9
 ## Model parts put away while a hand tool is out (Leo's stick, Nela's
 ## lantern); set by HeroBody.
 @export var tool_hidden_parts: PackedStringArray = PackedStringArray()
+## Logical state -> seconds into its clip (at speed 1) of the contact
+## frame, where a blow connects (a hero's `attack`); set by HeroBody.
+@export var contact_times: Dictionary = {}
 
 var model: Node3D = null
 var _player: AnimationPlayer = null
@@ -101,6 +105,8 @@ var _step_travel: float = 0.0
 var _tool_slot: BoneAttachment3D = null
 var _tools: Dictionary = {}  # key -> Node3D
 var _tool_key: StringName = &""
+## Game seconds until the playing action's contact frame (< 0: none).
+var _contact_remaining: float = -1.0
 ## Footstep puffs made so far (tests).
 var steps_puffed: int = 0
 
@@ -190,6 +196,7 @@ func _tick_footsteps(run_weight: float) -> void:
 ## clip length in seconds (0 if the state has no clip). While moving it
 ## plays on the upper body only.
 func play_action(state: StringName, speed: float = 1.0) -> float:
+	_contact_remaining = -1.0
 	if _locked or _player == null:
 		return 0.0
 	var anim: Animation = _get_clip(state)
@@ -197,6 +204,8 @@ func play_action(state: StringName, speed: float = 1.0) -> float:
 		return 0.0
 	var length: float = anim.length / maxf(speed, 0.01)
 	_action_until_msec = Time.get_ticks_msec() + int(length * 1000.0)
+	var contact: float = float(contact_times.get(state, 0.0))
+	_contact_remaining = contact / maxf(speed, 0.01) if contact > 0.0 and contact < anim.length else -1.0
 	if _tree == null:
 		_player.speed_scale = speed
 		_player.play(String(clips[state]), 0.08)
@@ -225,6 +234,7 @@ func play_final(state: StringName) -> float:
 	_player.speed_scale = 1.0
 	_player.play(String(clips[state]), 0.1)
 	_action_until_msec = Time.get_ticks_msec() + int(anim.length * 1000.0)
+	_contact_remaining = -1.0
 	_locked = true
 	return anim.length
 
@@ -289,6 +299,13 @@ func is_in_action() -> bool:
 	return Time.get_ticks_msec() < _action_until_msec
 
 
+## Game seconds from now until the contact frame of the action playing
+## (play_action), at its play speed; -1 when it has none (no contact
+## time for its state) or it has passed.
+func action_contact_in() -> float:
+	return _contact_remaining if _contact_remaining > 0.0 else -1.0
+
+
 func is_moving() -> bool:
 	return _speed > move_threshold
 
@@ -330,6 +347,8 @@ func face_instantly(direction: Vector3) -> void:
 
 
 func _process(delta: float) -> void:
+	if _contact_remaining > 0.0:
+		_contact_remaining -= delta
 	if model == null or not lean:
 		return
 	# Ease into the lean, and back upright when running straight.

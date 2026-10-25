@@ -363,10 +363,10 @@ func _flat_direction(point: Vector3) -> Vector3:
 
 func _show_attack(target: Node3D) -> void:
 	_visual.face_instantly(target.global_position - global_position)
-	_visual.play_action(&"attack", 1.45)
+	_visual.play_action(&"attack", _attack_anim_speed())
 
 
-## The companion's quick hit: it lands at once, with a sparkle.
+## The companion's quick hit: it lands at the contact frame, with a sparkle.
 func _swing(target: Node3D) -> void:
 	_land_swing(target, &"sparkle")
 

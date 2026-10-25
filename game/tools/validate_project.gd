@@ -161,6 +161,7 @@ func _validate_data() -> void:
 			_fail("%s has no result icon (output item icon or icon_name)" % recipe.resource_path)
 
 	_validate_heroes(recipe_ids)
+	_validate_hero_contact_times()
 	_validate_perks()
 	_validate_hero_perks()
 	_validate_perk_problems()
@@ -305,6 +306,35 @@ func _validate_heroes(recipe_ids: Dictionary) -> void:
 			_fail("%s is a tool tier recipe, but no hero's tier names it" % recipe.resource_path)
 	if HeroRoster.all().size() < 2:
 		_fail("the roster needs at least two heroes (a hero and a companion)")
+
+
+## Each hero's attack contact frame: inside the attack
+## clip, and at most the wind-up cap after the attack starts at play
+## speed, in either role (checked at the slower one). 0 is the instant
+## hit, always fine.
+func _validate_hero_contact_times() -> void:
+	var slowest: float = minf(Hero.ATTACK_ANIM_SPEED, Hero.COMPANION_ATTACK_ANIM_SPEED)
+	for hero in HeroRoster.all():
+		var contact: float = hero.attack_contact_time
+		if contact == 0.0:
+			continue
+		if contact < 0.0:
+			_fail("%s: attack_contact_time %.3f is negative" % [hero.resource_path, contact])
+			continue
+		if contact / slowest > HeroDefinition.WIND_UP_CAP_SECONDS + 0.0001:
+			_fail("%s: the attack's contact frame comes %.3f s in at play speed, past the %.2f s wind-up cap"
+				% [hero.resource_path, contact / slowest, HeroDefinition.WIND_UP_CAP_SECONDS])
+		if hero.model_scene == null:
+			continue
+		var model: Node = hero.model_scene.instantiate()
+		var player: AnimationPlayer = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
+		var clip: String = String(hero.clips.get(&"attack", ""))
+		if player == null or not player.has_animation(clip):
+			_fail("%s: has an attack contact time but no attack clip ('%s')" % [hero.resource_path, clip])
+		elif contact >= player.get_animation(clip).length:
+			_fail("%s: attack_contact_time %.3f is past the end of '%s' (%.3f s)"
+				% [hero.resource_path, contact, clip, player.get_animation(clip).length])
+		model.free()
 
 
 ## Camp badges: every badge has an icon, a name,

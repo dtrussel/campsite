@@ -359,7 +359,8 @@ func _check_hero_attack(who: Hero) -> void:
 	_check(who.is_attack_ready() and not who.is_attacking(), "%s: ready, and not attacking yet" % label)
 	_check(who.attack(mob) and not who.is_attack_ready(), "%s: an attack starts the cooldown" % label)
 	_check(who.is_attacking(), "%s: attacking while the cooldown runs" % label)
-	await _wait(1.2)
+	# The hit comes at the contact frame (and a pebble flies): wait on it.
+	await _wait_until(func() -> bool: return mob.current_hp < beast_def.max_hp, 1.2)
 	_check(mob.current_hp < beast_def.max_hp, "%s: the attack lands (%d/%d HP)" % [label, mob.current_hp, beast_def.max_hp])
 	if not as_companion:
 		# The pointer commands ask the player's hero whether it is attacking:

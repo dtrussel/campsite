@@ -68,6 +68,7 @@ clips = {
 &"pick": "PickUp",
 &"tinker": "Use_Item"
 }
+attack_contact_time = 0.14
 reference_speed = 6.1
 step_distance = 1.0
 capsule_height = 1.1

@@ -208,6 +208,16 @@ fields.
   `is_attacking()`, `get_attack_cooldown_ratio()`, `apply_signature()`
   and the `attacked` signal. Hero owns the cooldown and the melee vs
   pebble branch; the perk effects come from `HeroHits` underneath.
+  The **contact frame** (hero-animation): `attack` starts the cooldown
+  and the attack clip at once, and the swing or the pebble comes at the
+  clip's contact frame, which `CharacterVisual.action_contact_in()`
+  reports from the definition's `attack_contact_time` (clip seconds; 0
+  is the old instant hit). The wind-up is at most
+  `HeroDefinition.WIND_UP_CAP_SECONDS` (0.1 s) at the role's play speed
+  (`Hero.ATTACK_ANIM_SPEED`, `COMPANION_ATTACK_ANIM_SPEED`), which the
+  validator checks. Going down drops the pending hit; being hit does
+  not. A melee target that died or is past 1.4x reach by then is missed
+  quietly; a pebble flies at where the target is then.
   Tool tiers (040): `tool_tier` (read-only; `set_tool_tier(n)` raises
   it and adds each new `ToolTier`'s damage bonus and range factor) and
   `has_tool_effect(effect)`; `tool_effect_tier(effect)` is the highest
@@ -237,7 +247,8 @@ fields.
 **The player's hero** (`player_controller.gd`) adds input, the pointer
 commands (`command_move/attack/gather/campfire/repair/build`,
 `stop_commands()`, `has_command()`, `is_building()`), the hit feel (the
-wind-up, the x1.4 range re-check and the hit-stop), the build and repair
+hit-stop as the swing lands; the wind-up and the x1.4 reach re-check
+are Hero's contact frame now), the build and repair
 ticks, auto-attack and the hero's actions (`try_place_torch()`,
 `try_eat_berries()`, `try_use_bandage()`, `try_feed_lantern()`). When it
 is down, GameManager ends the run.
@@ -245,7 +256,7 @@ is down, GameManager ends the run.
 **The companion** (`Companion`, `companion_controller.gd`) adds the task
 AI (`set_task(Companion.Task.…)`), the repair and build ticks with its own
 constants, the stuck watchdog and the quick sparkle hit. When it is down,
-it revives at dawn.
+it revives at dawn. Its sparkle hit lands at the contact frame too.
 
 **Party** (`game/scripts/characters/party.gd`, static) answers who is who
 in the running camp: `Party.player_hero()`, `Party.companion()`,
