@@ -4,7 +4,8 @@ grin; light-blue tee with a forest badge; teal board shorts with lime
 stripes; grey socks and chunky hiking boots; a big camo backpack with a
 navy bedroll, steel bottle and rope; a compass on a cord; and his
 trusty walking stick. Built on the KayKit adventurer rig so all 76
-animations work, plus his own clips (hero_clips.py: his stick swing).
+animations work, plus his own clips (hero_clips.py: his stick swing,
+the shared walk and run).
 Output: leo.glb and leo_clips.json"""
 
 import math

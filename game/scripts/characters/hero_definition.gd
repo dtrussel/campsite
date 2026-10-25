@@ -31,7 +31,12 @@ const WIND_UP_CAP_SECONDS: float = 0.1
 ## 0 = no contact frame: the hit comes the moment the attack starts.
 ## At play speed it is at most WIND_UP_CAP_SECONDS (the validator).
 @export var attack_contact_time: float = 0.0
+## The ground speeds (m/s) the run (`move`) and the walk clips are
+## authored for, each its stride over its length (CharacterVisual scales
+## their playback by the real speed). For a hand-made cycle they are the
+## clip script's (the validator checks); 0 plays the walk at 1x.
 @export var reference_speed: float = 7.0
+@export var walk_reference_speed: float = 0.0
 @export var step_distance: float = 1.1
 @export var capsule_height: float = 1.2
 @export var hurt_sfx: StringName = &"player_hurt"

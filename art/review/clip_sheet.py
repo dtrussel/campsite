@@ -13,8 +13,9 @@ The kid is matte clay, seen from the gameplay camera's pitch (42 deg,
 34 deg lens) and turned `--azimuth` degrees from facing the camera.
 
 Walk and run travel over a checked ground (half-metre squares) at the
-speed the game moves them (walk 1.6 m/s; run at the hero's move speed,
-the clip played at the game's run scale), with the camera following,
+speed the game moves them (walk 1.6 m/s, the clip played at the game's
+walk scale; run at the hero's move speed, the clip played at the game's
+run scale), with the camera following,
 so a sliding foot shows against the squares. `--travel 0` stands them
 still; `--travel <m/s>` sets another speed.
 
@@ -64,7 +65,8 @@ def hero_data(kid):
         found = re.search(r"^%s = ([\d.]+)" % key, text, re.M)
         return float(found.group(1)) if found else default
 
-    return clips, number("model_scale", 0.7), number("move_speed", 4.0), number("reference_speed", 7.0)
+    return (clips, number("model_scale", 0.7), number("move_speed", 4.0), number("reference_speed", 7.0),
+            number("walk_reference_speed", 0.0))
 
 
 def clay(name, colour):
@@ -108,13 +110,15 @@ def main():
     parser.add_argument("--rekey", action="store_true")
     args = parser.parse_args()
 
-    clips, model_scale, move_speed, reference_speed = hero_data(args.kid)
+    clips, model_scale, move_speed, reference_speed, walk_reference_speed = hero_data(args.kid)
     state = args.clip if args.clip in clips else None
     clip = clips.get(args.clip, args.clip)
     play = PLAY_SPEEDS.get(state, 1.0)
     travel = 0.0
     if state == "walk":
         travel = WALK_SPEED
+        if walk_reference_speed > 0:  # CharacterVisual.walk_play_speed
+            play = min(max(WALK_SPEED / walk_reference_speed, 0.5), 2.0)
     elif state == "move":
         travel = move_speed
         play = min(max(move_speed / reference_speed, 0.6), 1.4)  # CharacterVisual.run_play_speed

@@ -116,7 +116,13 @@ exaggeration.
   stick: cocked up over his right shoulder, down in front of him, then
   low across his body while his head and arm lag.
 - **Nela** is lighter and more careful: less bounce, smaller swings, a
-  more upright stance.
+  more upright stance, with her lantern held steady as she runs.
+
+Both kids share one walk and one run, varied by those knobs. The feet
+stay planted: each cycle is authored for a known stride (Leo's longer
+legs take longer, slower steps than Nela's quick little ones), and the
+game plays it faster or slower with the kid's real speed. The run
+leans in, with a short flight between steps and the knees driving up.
 
 The wind-up stays within 0.1 s at play speed, so attacks still feel
 instant.

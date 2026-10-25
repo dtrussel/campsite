@@ -156,3 +156,50 @@ func test_an_action_clip_is_timed_at_its_play_speed() -> void:
 		"a 1.5 s attack at 1.5x lasts its 1 s target")
 	rows = ClipChecks.check_hero(hero, {}, {&"test": {&"attack": 0.7}})
 	check(_rows(rows, &"attack", "duration")[0].over, "against a 0.7 s target it is over")
+
+
+func test_a_walk_is_measured_at_its_stride_matched_play_speed() -> void:
+	# Planted for 0.5 s while it sweeps 0.5 m: authored for 1 m/s. The
+	# walk is measured at CharacterVisual.walk_speed (1.6 m/s).
+	var hero: HeroDefinition = _hero({&"walk": "Walk"}, {"Walk": _step_clip(0.25, -0.25)})
+	hero.walk_reference_speed = 1.0
+	var slide: Array[Dictionary] = _rows(ClipChecks.check_hero(hero, {}, {}), &"walk", "slide")
+	check(slide.size() == 1 and float(slide[0].value) < 0.02,
+		"played at 1.6x to match 1.6 m/s, its foot stays planted (got %.3f)" % float(slide[0].value))
+	hero.walk_reference_speed = 0.0
+	slide = _rows(ClipChecks.check_hero(hero, {}, {}), &"walk", "slide")
+	check(float(slide[0].value) > 0.2, "played at 1x, it slides (got %.3f)" % float(slide[0].value))
+
+
+func test_a_hand_made_cycles_reference_speed_is_its_recorded_stride_over_its_length() -> void:
+	var hero: HeroDefinition = _hero({&"walk": "Walk", &"move": "Run", &"idle": "Idle"}, {})
+	hero.model_scale = 0.5
+	# 2 model metres a 0.5 s stride at half scale: 2 m/s in the game.
+	var record: Dictionary = {"Walk": {"seconds": 0.5, "stride": 2.0}, "Run": {"seconds": 0.25, "stride": 2.0},
+		"Idle": {"seconds": 1.0}}
+	hero.walk_reference_speed = 2.0
+	hero.reference_speed = 4.0
+	check(ClipChecks.stride_problems(hero, record).is_empty(), "walk 2 m/s and run 4 m/s agree with the record")
+	hero.reference_speed = 7.0
+	var problems: Array[String] = ClipChecks.stride_problems(hero, record)
+	check(problems.size() == 1 and problems[0].contains("4.00"), "a run reference of 7 m/s is reported against 4 m/s: %s"
+		% str(problems))
+	hero.clips[&"move"] = "Running_A"
+	check(ClipChecks.stride_problems(hero, record).is_empty(), "a stock run (no record) is skipped")
+
+
+func test_a_run_is_measured_at_both_roles_speeds_and_the_worse_counts() -> void:
+	# Authored for 1 m/s (reference 1). The companion's 0.5 m/s is below
+	# the run's slowest play speed (0.6x), so its foot slides.
+	var hero: HeroDefinition = _hero({&"move": "Run"}, {"Run": _step_clip(0.25, -0.25)})
+	hero.reference_speed = 1.0
+	hero.move_speed = 1.0
+	hero.companion_move_speed = 1.0
+	var slide: Array[Dictionary] = _rows(ClipChecks.check_hero(hero, {}, {}), &"move", "slide")
+	check(slide.size() == 1 and float(slide[0].value) < 0.02,
+		"at 1 m/s in both roles it stays planted (got %.3f)" % float(slide[0].value))
+	hero.companion_move_speed = 0.5
+	slide = _rows(ClipChecks.check_hero(hero, {}, {}), &"move", "slide")
+	# Down 0.5 s / 0.6 = 0.83 s at 0.5 m/s covers 0.42 m of the 0.5 m swept.
+	check(slide.size() == 1 and absf(float(slide[0].value) - 0.083) < 0.02,
+		"the companion's 0.5 m/s slides 8 cm a stride, and that row counts (got %.3f)" % float(slide[0].value))

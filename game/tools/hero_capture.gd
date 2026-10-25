@@ -131,7 +131,9 @@ func _record(hero: HeroDefinition, role: String, state: StringName, out_dir: Str
 	if state == &"idle" or state == &"walk" or state == &"move":
 		var clip: Animation = _clip(hero, state)
 		var play: float = 1.0
-		if state == &"move":
+		if state == &"walk":
+			play = CharacterVisual.walk_play_speed(_speed, hero.walk_reference_speed)
+		elif state == &"move":
 			play = CharacterVisual.run_play_speed(_speed, hero.reference_speed)
 		seconds = clip.length / play if clip != null else 1.0
 	elif state == &"death":

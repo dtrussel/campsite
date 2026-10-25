@@ -81,9 +81,11 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
   - **loop:** idle, walk and run's last pose against their first (the
     largest joint jump and bone turn at the wrap; limits 1 cm, 3°);
   - **slide:** how far a foot slides per stride, at the speed the game
-    moves the hero (walk at `CharacterVisual.walk_speed`, the clip at
-    1x; run at the hero's `move_speed`, the clip at the run scale). A
-    foot counts as down within 2 cm of its lowest point (limit 4 cm);
+    moves the hero, with the clip at the speed the game plays it (walk
+    at `CharacterVisual.walk_speed`, scaled by `walk_play_speed`; run at
+    the hero's `move_speed` and `companion_move_speed`, scaled by
+    `run_play_speed`, the worse of the two). A foot counts as down
+    within 2 cm of its lowest point (limit 4 cm);
   - **duration:** each action's length at its gameplay play speed
     (`PLAY_SPEEDS`) against its gameplay length (`ACTION_SECONDS`, the
     stock lengths; ±0.05 s).
@@ -92,9 +94,15 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
     hand-made clip, equal the clip script's: `art/characters/hero_clips.py`
     records each clip it keys in `<kid>_clips.json` beside the model
     (`_validate_hero_clip_records`). Always enforced.
+  - **stride speed:** a hand-made walk or run cycle's reference speed in
+    the hero data (`walk_reference_speed`, `reference_speed`) must be
+    the clip script's recorded stride at the hero's model scale over
+    the clip's length (`ClipChecks.stride_problems`, within 0.01 m/s).
+    Always enforced.
 
   Each check reports until `ENFORCED` (hero, state, checks) switches
-  it to failing the validator. `tools/check.sh` shows one summary line;
+  it to failing the validator (so far: both kids' attack duration and
+  their walk and run loop and slide). `tools/check.sh` shows one summary line;
   `godot --headless --path game res://tools/validate_project.tscn -- --clips`
   prints every number. The pure measures have unit tests
   (`test_clip_checks.gd`).

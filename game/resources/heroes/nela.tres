@@ -63,14 +63,15 @@ clips = {
 &"hammer": "2H_Melee_Attack_Chop",
 &"hit": "Hit_A",
 &"idle": "Idle",
-&"walk": "Walking_A",
-&"move": "Running_A",
+&"walk": "Hero_Walk",
+&"move": "Hero_Run",
 &"pick": "PickUp",
 &"tinker": "Use_Item"
 }
 attack_contact_time = 0.125
-reference_speed = 6.1
-step_distance = 1.0
+reference_speed = 3.993
+walk_reference_speed = 1.04
+step_distance = 0.83
 capsule_height = 1.1
 outfit_mesh = "Nela"
 tool_hidden_parts = PackedStringArray("Nela_Lantern", "Nela_LanternGlow")

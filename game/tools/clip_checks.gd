@@ -27,6 +27,9 @@ const LOOP_METRES: float = 0.01
 const LOOP_DEGREES: float = 3.0
 const SLIDE_METRES: float = 0.04
 const DURATION_SECONDS: float = 0.05
+## How far (m/s) a cycle's reference speed may be from its stride over
+## its length (stride_problems).
+const STRIDE_SPEED_TOLERANCE: float = 0.01
 ## The speed gameplay plays each action at, as the player's hero (the
 ## companion attacks at 1.45x and gathers at 1.3x). The gather state is
 ## the companion's; chop and pick are the player's gathers at a node,
@@ -52,8 +55,8 @@ const ACTION_SECONDS: Dictionary = {
 ## the checks ("loop", "slide", "duration") that fail the validator
 ## when over their limit. Every other check only reports.
 const ENFORCED: Dictionary = {
-	&"leo": {&"attack": ["duration"]},
-	&"nela": {&"attack": ["duration"]},
+	&"leo": {&"attack": ["duration"], &"walk": ["loop", "slide"], &"move": ["loop", "slide"]},
+	&"nela": {&"attack": ["duration"], &"walk": ["loop", "slide"], &"move": ["loop", "slide"]},
 }
 
 
@@ -92,9 +95,20 @@ static func check_hero(hero: HeroDefinition, enforced: Dictionary = ENFORCED,
 			rows.append(_row(row, "loop", pop.metres, LOOP_METRES, "wraps with a %.1f cm, %.1f deg pop (limit %.1f cm, %.0f deg)"
 				% [pop.metres * 100.0, pop.degrees, LOOP_METRES * 100.0, LOOP_DEGREES], over, checks.has("loop")))
 		if state == &"walk" or state == &"move":
-			var speed: float = walk_speed if state == &"walk" else hero.move_speed
-			var play: float = 1.0 if state == &"walk" else CharacterVisual.run_play_speed(speed, hero.reference_speed)
-			var slide: float = foot_slide(anim, skeleton, prefix, hero.model_scale, speed, play)
+			# The walk at walk_speed; the run at each role's speed, the worse.
+			var speeds: Array = [walk_speed] if state == &"walk" \
+				else [hero.move_speed, hero.companion_move_speed]
+			var slide: float = -1.0
+			var speed: float = 0.0
+			var play: float = 1.0
+			for at in speeds:
+				var plays: float = CharacterVisual.walk_play_speed(at, hero.walk_reference_speed) if state == &"walk" \
+					else CharacterVisual.run_play_speed(at, hero.reference_speed)
+				var slid: float = foot_slide(anim, skeleton, prefix, hero.model_scale, at, plays)
+				if slid > slide:
+					slide = slid
+					speed = at
+					play = plays
 			rows.append(_row(row, "slide", slide, SLIDE_METRES, "slides %.1f cm a stride at %.1f m/s, played at %.2fx (limit %.1f cm)"
 				% [slide * 100.0, speed, play, SLIDE_METRES * 100.0], slide > SLIDE_METRES, checks.has("slide")))
 		if PLAY_SPEEDS.has(StringName(state)):
@@ -106,6 +120,27 @@ static func check_hero(hero: HeroDefinition, enforced: Dictionary = ENFORCED,
 	if model != null:
 		model.free()
 	return rows
+
+
+## Where a hand-made walk or run cycle's reference speed in the hero
+## data is not the clip script's: the recorded stride (model metres) at
+## the hero's model scale over the clip's length. `record` is the clip
+## record's "clips" ({name: {seconds, stride}}); a clip without a
+## stride (a stock one) is skipped. One line per problem.
+static func stride_problems(hero: HeroDefinition, record: Dictionary) -> Array[String]:
+	var problems: Array[String] = []
+	for state in [&"walk", &"move"]:
+		var clip: String = String(hero.clips.get(state, ""))
+		var made: Dictionary = record.get(clip, {})
+		if not made.has("stride") or float(made.get("seconds", 0.0)) <= 0.0:
+			continue
+		var authored: float = float(made.stride) * hero.model_scale / float(made.seconds)
+		var field: String = "walk_reference_speed" if state == &"walk" else "reference_speed"
+		var speed: float = hero.walk_reference_speed if state == &"walk" else hero.reference_speed
+		if absf(speed - authored) > STRIDE_SPEED_TOLERANCE:
+			problems.append("%s %.3f, but the clip script authors '%s' for %.2f m/s (a %.3f m stride in %.3f s at scale %.2f)"
+				% [field, speed, clip, authored, float(made.stride), float(made.seconds), hero.model_scale])
+	return problems
 
 
 ## The rows that fail the validator: over their limit and enforced.

@@ -34,6 +34,11 @@ const UPPER_BONES: Array[String] = ["spine", "chest", "head", "upperarm.l", "low
 	"handslot.l", "upperarm.r", "lowerarm.r", "wrist.r", "hand.r", "handslot.r"]
 const MAX_LEAN: float = 0.17  # radians (~10 degrees) into a turn
 const LEAN_PER_TURN_RATE: float = 0.045
+## The run blends in from walk_speed up to this many times it.
+const RUN_START_FACTOR: float = 2.2
+## The walk's play speed range when it is scaled by the real speed.
+const WALK_PLAY_MIN: float = 0.5
+const WALK_PLAY_MAX: float = 2.0
 
 ## Hand tools: key -> model, held on TOOL_BONE.
 const TOOLS: Dictionary = {&"hammer": preload("res://assets/custom/hammer.glb")}
@@ -75,6 +80,10 @@ const TOOL_SCALE: float = 1.9
 ## Speed (m/s) at which the walk clip plays fully; running takes over
 ## above about twice this. Only used when there is a &"walk" clip.
 @export var walk_speed: float = 1.6
+## The ground speed (m/s) the walk clip is authored for: its stride over
+## its length. The walk plays faster or slower with the real speed so its
+## feet stay planted; 0 plays it at its natural rate (a stock walk).
+@export var walk_reference_speed: float = 0.0
 ## Lean into turns.
 @export var lean: bool = true
 ## Fx.burst kind puffed at the feet every `step_distance` metres while
@@ -183,12 +192,11 @@ func set_locomotion(speed: float) -> void:
 	if speed < move_threshold and _blend_position < move_threshold:
 		_blend_position = 0.0
 	_tree.set("parameters/loco/blend_position", _blend_position)
-	# The run clip speeds up and slows down with the character, as before;
-	# idle and walk play at their natural rate.
-	var run_weight: float = clampf((_blend_position - walk_speed) / maxf(_run_start - walk_speed, 0.01), 0.0, 1.0) \
-		if clips.has(&"walk") else (1.0 if speed > move_threshold else 0.0)
-	var run_scale: float = run_play_speed(speed, reference_speed)
-	_tree.set("parameters/loco_speed/scale", lerpf(1.0, run_scale, run_weight))
+	# Stride matching: the walk and the run speed up and slow down with
+	# the character, so their feet keep pace with the ground.
+	_tree.set("parameters/loco_speed/scale", locomotion_play_speed(speed, _blend_position))
+	var run_weight: float = _run_weight(_blend_position) if clips.has(&"walk") \
+		else (1.0 if speed > move_threshold else 0.0)
 	_tick_footsteps(run_weight)
 
 
@@ -196,6 +204,33 @@ func set_locomotion(speed: float) -> void:
 ## move clip fits `reference_speed` (the validator's clip checks too).
 static func run_play_speed(speed: float, reference_speed: float) -> float:
 	return clampf(speed / reference_speed, 0.6, 1.4)
+
+
+## How fast the walk clip plays at `speed` m/s for a walk authored for
+## `walk_reference_speed` (its stride over its length); 0 = 1x.
+static func walk_play_speed(speed: float, walk_reference_speed: float) -> float:
+	if walk_reference_speed <= 0.0:
+		return 1.0
+	return clampf(speed / walk_reference_speed, WALK_PLAY_MIN, WALK_PLAY_MAX)
+
+
+## How fast the locomotion blend plays at `speed` m/s with the blend at
+## `blend_position`: the idle at 1x, the walk and the run at their
+## stride-matched speeds, mixed by their weights in the blend.
+func locomotion_play_speed(speed: float, blend_position: float) -> float:
+	var run_scale: float = run_play_speed(speed, reference_speed)
+	if not clips.has(&"walk"):
+		return run_scale if speed > move_threshold else 1.0
+	var run_weight: float = _run_weight(blend_position)
+	var walk_weight: float = clampf(blend_position / maxf(walk_speed, 0.01), 0.0, 1.0) * (1.0 - run_weight)
+	return (1.0 - walk_weight - run_weight) + walk_weight * walk_play_speed(speed, walk_reference_speed) \
+		+ run_weight * run_scale
+
+
+## The run's share of the walk-to-run blend at `blend_position`.
+func _run_weight(blend_position: float) -> float:
+	var run_start: float = walk_speed * RUN_START_FACTOR
+	return clampf((blend_position - walk_speed) / maxf(run_start - walk_speed, 0.01), 0.0, 1.0)
 
 
 func _tick_footsteps(run_weight: float) -> void:
@@ -397,7 +432,7 @@ func _build_tree() -> void:
 	loco.add_blend_point(_clip_node(idle), 0.0)
 	var walk: String = String(clips.get(&"walk", ""))
 	if walk != "" and _player.has_animation(walk):
-		_run_start = walk_speed * 2.2
+		_run_start = walk_speed * RUN_START_FACTOR
 		loco.add_blend_point(_clip_node(walk), walk_speed)
 		_move_anim = _clip_node(move)
 		loco.add_blend_point(_move_anim, _run_start)

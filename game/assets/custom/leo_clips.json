@@ -1,5 +1,13 @@
 {
  "clips": {
+  "Hero_Run": {
+   "seconds": 0.5,
+   "stride": 2.86
+  },
+  "Hero_Walk": {
+   "seconds": 0.6667,
+   "stride": 1.1
+  },
   "Leo_Attack": {
    "contact": 0.125,
    "seconds": 1.0417

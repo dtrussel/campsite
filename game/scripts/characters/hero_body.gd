@@ -19,6 +19,7 @@ static func apply(character: Node3D, hero: HeroDefinition) -> void:
 			visual.clips = hero.clips.duplicate()
 		visual.contact_times = {&"attack": hero.attack_contact_time} if hero.attack_contact_time > 0.0 else {}
 		visual.reference_speed = hero.reference_speed
+		visual.walk_reference_speed = hero.walk_reference_speed
 		visual.step_distance = hero.step_distance
 		visual.tool_hidden_parts = hero.tool_hidden_parts
 		visual.outfit_mesh = hero.outfit_mesh

@@ -1,5 +1,13 @@
 {
  "clips": {
+  "Hero_Run": {
+   "seconds": 0.4167,
+   "stride": 2.56
+  },
+  "Hero_Walk": {
+   "seconds": 0.5,
+   "stride": 0.8
+  },
   "Nela_Attack": {
    "contact": 0.125,
    "seconds": 0.9167

@@ -367,7 +367,9 @@ func _validate_hero_contact_times() -> void:
 ## A hand-made attack clip's contact time is the clip script's: the
 ## script records each clip it keys in <model>_clips.json beside the
 ## model (art/characters/hero_clips.py), and the hero data must carry
-## the same number. Stock clips have no record and are skipped.
+## the same number. So must a hand-made walk or run cycle's reference
+## speed (its recorded stride over its length, ClipChecks.stride_problems).
+## Stock clips have no record and are skipped.
 func _validate_hero_clip_records() -> void:
 	for hero in HeroRoster.all():
 		if hero.model_scene == null:
@@ -379,6 +381,8 @@ func _validate_hero_clip_records() -> void:
 		if not record is Dictionary or not record.get("clips") is Dictionary:
 			_fail("%s: is not a clip record ({\"clips\": {name: {...}}})" % record_path)
 			continue
+		for problem in ClipChecks.stride_problems(hero, record.clips):
+			_fail("%s: %s (%s)" % [hero.resource_path, problem, record_path])
 		var clip: String = String(hero.clips.get(&"attack", ""))
 		var made: Dictionary = record.clips.get(clip, {})
 		if not made.has("contact"):

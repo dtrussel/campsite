@@ -802,6 +802,10 @@ func _check_animation_layers(player: Node3D) -> void:
 	await _wait(0.4)
 	_check(visual.is_moving() and float(tree.get("parameters/loco/blend_position")) > 1.0,
 		"running blends the locomotion (%.1f)" % float(tree.get("parameters/loco/blend_position")))
+	# Stride matching: Leo's run is authored for his move speed, so it
+	# plays at about 1x (the stock run played at 0.6x and slid).
+	var run_scale: float = float(tree.get("parameters/loco_speed/scale"))
+	_check(absf(run_scale - 1.0) < 0.1, "running, the run cycle plays at its authored speed (%.2fx)" % run_scale)
 	visual.play_action(&"attack", 1.9)
 	_check(await _first_action_layer(visual) == "upper", "a swing while running plays on the upper body")
 	player.stop_commands()

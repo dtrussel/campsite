@@ -5,7 +5,7 @@ with a cream folk pattern and gathered cuffs; cream socks and brown
 boots with pink laces; a plum backpack with a green bedroll, a tin cup
 and her bunny peeking out; a compass on a cord; and a glowing lantern.
 Built on the KayKit adventurer rig so all animations work, plus her own
-clips (hero_clips.py: her sling shot).
+clips (hero_clips.py: her sling shot, the shared walk and run).
 Output: nela.glb"""
 
 import math
