@@ -8,29 +8,49 @@ func run() -> void:
 
 
 ## A badge unlocks an outfit tint and a tent colour.
-## Hero select's outfit row will not pick a locked one; an unlocked one
-## is kept in the profile (after a restart too) and the run dresses the
-## hero (not the companion) and the tent in it.
+## Hero select leaves the cosmetics row out until a badge has unlocked
+## a look, and each group until one of its own is; a still-locked
+## swatch is padlocked and can't be picked. An unlocked one previews on
+## stage, is kept in the profile (after a restart too) and the run
+## dresses the hero (not the companion) and the tent in it.
 func _run_cosmetic_tints_scenario() -> void:
 	print("smoke: --- cosmetic tints scenario ---")
 	await _close_main()
 	Profile.delete()
 	var screen: Node = await _open_hero_select(0)
-	var moss: Button = screen.call("outfit_button", &"moss") as Button
-	_check(moss != null and moss.disabled, "a locked outfit tint is shown but can't be picked")
-	moss.pressed.emit()
+	_check(screen.call("outfit_button", &"ranger") == null and screen.call("tent_button", &"canvas") == null,
+		"with no look unlocked, hero select shows no cosmetics row")
 	_check(Cosmetics.outfit_id(&"leo") == Cosmetics.DEFAULT_OUTFIT and not Cosmetics.choose_outfit(&"leo", &"moss"),
-		"a locked outfit tint is not kept, even when pressed")
+		"a locked outfit tint can't be kept")
 	screen.queue_free()
 
-	# Earning First Night unlocks Moss; Builder unlocks the Berry tent.
+	# Earning First Night unlocks Moss: the Outfit group shows, Tent doesn't.
 	Profile.grant_badge_for_tests(&"first_night")
+	screen = await _open_hero_select(0)
+	var moss: Button = screen.call("outfit_button", &"moss") as Button
+	var ember: Button = screen.call("outfit_button", &"ember") as Button
+	_check(moss != null and not moss.disabled, "earning First Night unlocks the Moss outfit")
+	_check(ember != null and ember.disabled and ember.get_node("Lock").visible and not moss.get_node("Lock").visible,
+		"an outfit still locked is padlocked and can't be picked")
+	_check(screen.call("tent_button", &"canvas") == null, "the Tent group stays hidden until a tent colour is unlocked")
+	screen.queue_free()
+
+	# Builder unlocks the Berry tent, which previews on stage when picked.
 	Profile.grant_badge_for_tests(&"builder")
 	screen = await _open_hero_select(0)
 	moss = screen.call("outfit_button", &"moss") as Button
-	_check(moss != null and not moss.disabled, "earning First Night unlocks the Moss outfit")
 	moss.pressed.emit()
 	(screen.call("tent_button", &"berry") as Button).pressed.emit()
+	var berry_color: Color = Color(1.0, 0.68, 0.74)
+	var stage_tent: MeshInstance3D = null
+	for i in 30:  # the stage's tent is styled a frame after it is placed
+		for node in get_tree().get_nodes_in_group("tent"):
+			if screen.is_ancestor_of(node):
+				stage_tent = (node as Node).find_child("tent", true, false) as MeshInstance3D
+		if _albedo_near(stage_tent, berry_color):
+			break
+		await get_tree().process_frame
+	_check(_albedo_near(stage_tent, berry_color), "picking the Berry tent recolours the tent on stage")
 	screen.queue_free()
 	Profile.reload()
 	_check(Cosmetics.outfit_id(&"leo") == &"moss" and Cosmetics.outfit_id(&"nela") == Cosmetics.DEFAULT_OUTFIT
@@ -41,7 +61,6 @@ func _run_cosmetic_tints_scenario() -> void:
 	config.companion_id = &"nela"
 	await _start_fresh_run(config)
 	var moss_color: Color = Color(0.72, 0.9, 0.62)
-	var berry_color: Color = Color(1.0, 0.68, 0.74)
 	var leo: Node3D = get_tree().get_first_node_in_group("player") as Node3D
 	var nela: Node3D = Party.companion()
 	_check(_albedo_near(_outfit_mesh(leo, "Leo"), moss_color), "the run dresses Leo in the Moss outfit")

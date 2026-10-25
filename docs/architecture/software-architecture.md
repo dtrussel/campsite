@@ -718,7 +718,9 @@ state, so Delete profile resets it and a run never saves it.
   `Stylize`'s `style_tint`, on the hero's outfit mesh only
   (`HeroDefinition.outfit_mesh`, via `CharacterVisual`) and on the node
   in group `tent`. Hero select shows the swatches as an `OutfitRow`
-  (`game/scripts/ui/outfit_row.gd`).
+  (`game/scripts/ui/outfit_row.gd`), left out until a badge unlocks a
+  look (`OutfitRow.is_wanted`); a pick retints the stage's hero or tent
+  (`HeroStage.set_outfit_tint` / `set_tent_tint`).
 - **Starting perks:** `StartingPerks`
   (`game/scripts/meta/starting_perks.gd`) lists the shared perk cards
   a run may start with and their badges, and keeps the pick through

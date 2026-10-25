@@ -42,6 +42,15 @@ static func is_unlocked(entry: Dictionary) -> bool:
 	return badge == &"" or Profile.is_badge_earned(badge)
 
 
+## Whether some badge has unlocked an entry of `entries` (OUTFITS or
+## TENTS) beyond the default.
+static func has_unlocked_extra(entries: Array[Dictionary]) -> bool:
+	for entry in entries:
+		if entry["badge"] != &"" and is_unlocked(entry):
+			return true
+	return false
+
+
 ## How to unlock entry, for a locked swatch's tooltip.
 static func unlock_hint(entry: Dictionary) -> String:
 	var badge: BadgeDefinition = Badges.get_badge(entry.get("badge", &""))

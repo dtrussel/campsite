@@ -145,8 +145,10 @@ player is never far behind.
   they're found), the open page on the right with Mum's face, her
   words and the sketch.
 - **Cosmetic tints:** badges unlock tints only (hats and capes wait for
-  art), picked in a row under the goal on hero select; locked swatches
-  are dimmed and name their badge. Outfits tint the hero's clothes,
+  art), picked in a row under the goal on hero select. The row, and
+  each of its Outfit and Tent groups, shows only once a badge has
+  unlocked a look in it; locked swatches are dimmed, padlocked and name
+  their badge, and a pick previews on the heroes and tent on stage. Outfits tint the hero's clothes,
   not the head or hair, one pick per hero: Ranger (default), Moss
   (First Night), Ember (Fire Keeper), Dusk (Night Owl), Moonlight
   (Lantern Lighter), Mushroom (Gremlin Catcher). Tent colours: Canvas

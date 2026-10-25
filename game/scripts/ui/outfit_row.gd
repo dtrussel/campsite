@@ -4,19 +4,30 @@ extends PanelContainer
 ## OutfitRow
 ##
 ## Hero select's badge cosmetics row (Cosmetics): the shown hero's
-## outfit tints and the tent colours, as swatches on a canvas plate. A
-## locked one is dimmed, says which badge unlocks it and can't be
-## picked; a pick is kept in the profile straight away.
+## outfit tints and the tent colours, as swatches on a canvas plate.
+## Each group shows once a badge has unlocked a look in it beyond the
+## default, and hero select leaves the row out while neither has
+## (`OutfitRow.is_wanted`). A locked swatch is dimmed and padlocked,
+## says which badge unlocks it and can't be picked; a pick is kept in
+## the profile straight away.
 
 ## An outfit was picked for `hero_id`; hero select retints the hero on
 ## stage.
 signal outfit_picked(hero_id: StringName)
+## A tent colour was picked; hero select retints the tent on stage.
+signal tent_picked
 
 const SELECT_COLOR: Color = Color(1.0, 0.66, 0.28)
 
 var _hero_id: StringName = &""
 var _outfit_buttons: Dictionary = {}  # outfit id -> Button
 var _tent_buttons: Dictionary = {}  # tent id -> Button
+
+
+## Whether the row has anything to offer: some badge has unlocked an
+## outfit or a tent colour.
+static func is_wanted() -> bool:
+	return Cosmetics.has_unlocked_extra(Cosmetics.OUTFITS) or Cosmetics.has_unlocked_extra(Cosmetics.TENTS)
 
 
 func _ready() -> void:
@@ -27,11 +38,14 @@ func _ready() -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	add_child(row)
-	_outfit_buttons = _swatches(row, "Outfit", Cosmetics.OUTFITS, _on_outfit)
-	var gap: Control = Control.new()
-	gap.custom_minimum_size = Vector2(18, 0)
-	row.add_child(gap)
-	_tent_buttons = _swatches(row, "Tent", Cosmetics.TENTS, _on_tent)
+	if Cosmetics.has_unlocked_extra(Cosmetics.OUTFITS):
+		_outfit_buttons = _swatches(row, "Outfit", Cosmetics.OUTFITS, _on_outfit)
+	if Cosmetics.has_unlocked_extra(Cosmetics.TENTS):
+		if not _outfit_buttons.is_empty():
+			var gap: Control = Control.new()
+			gap.custom_minimum_size = Vector2(18, 0)
+			row.add_child(gap)
+		_tent_buttons = _swatches(row, "Tent", Cosmetics.TENTS, _on_tent)
 	refresh()
 
 
@@ -41,24 +55,28 @@ func set_hero(hero_id: StringName) -> void:
 	refresh()
 
 
-## The swatch for outfit `id` (tests).
+## The swatch for outfit `id`, or null when the Outfit group isn't shown
+## (tests).
 func outfit_button(id: StringName) -> Button:
 	return _outfit_buttons.get(id)
 
 
-## The swatch for tent colour `id` (tests).
+## The swatch for tent colour `id`, or null when the Tent group isn't
+## shown (tests).
 func tent_button(id: StringName) -> Button:
 	return _tent_buttons.get(id)
 
 
 ## Marks the picked swatches and locks the ones whose badge isn't earned.
 func refresh() -> void:
-	if _outfit_buttons.is_empty() or _hero_id == &"":
+	if _hero_id == &"":
 		return
-	for entry in Cosmetics.OUTFITS:
-		_style_swatch(_outfit_buttons[entry["id"]], entry, entry["id"] == Cosmetics.outfit_id(_hero_id))
-	for entry in Cosmetics.TENTS:
-		_style_swatch(_tent_buttons[entry["id"]], entry, entry["id"] == Cosmetics.tent_id())
+	if not _outfit_buttons.is_empty():
+		for entry in Cosmetics.OUTFITS:
+			_style_swatch(_outfit_buttons[entry["id"]], entry, entry["id"] == Cosmetics.outfit_id(_hero_id))
+	if not _tent_buttons.is_empty():
+		for entry in Cosmetics.TENTS:
+			_style_swatch(_tent_buttons[entry["id"]], entry, entry["id"] == Cosmetics.tent_id())
 
 
 func _on_outfit(id: StringName) -> void:
@@ -68,7 +86,8 @@ func _on_outfit(id: StringName) -> void:
 
 
 func _on_tent(id: StringName) -> void:
-	Cosmetics.choose_tent(id)
+	if Cosmetics.choose_tent(id):
+		tent_picked.emit()
 	refresh()
 
 
@@ -86,6 +105,14 @@ func _swatches(row: HBoxContainer, word: String, entries: Array[Dictionary], pic
 		swatch.pressed.connect(func() -> void:
 			AudioManager.play_sfx(&"ui_click")
 			pick.call(id))
+		var lock: HudWidgets.Glyph = HudWidgets.Glyph.new("lock", UiKit.COLOR_BRASS, 16)
+		lock.name = "Lock"
+		lock.set_anchors_preset(Control.PRESET_CENTER)
+		lock.offset_left = -8
+		lock.offset_top = -8
+		lock.offset_right = 8
+		lock.offset_bottom = 8
+		swatch.add_child(lock)
 		row.add_child(swatch)
 		buttons[id] = swatch
 	return buttons
@@ -99,5 +126,6 @@ func _style_swatch(swatch: Button, entry: Dictionary, picked: bool) -> void:
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		swatch.add_theme_stylebox_override(state, UiKit.flat_style(color, border, 3 if picked else 2, 14))
 	swatch.disabled = not unlocked
-	swatch.modulate = Color.WHITE if unlocked else Color(1, 1, 1, 0.35)
+	swatch.modulate = Color.WHITE if unlocked else Color(1, 1, 1, 0.5)
+	swatch.get_node("Lock").visible = not unlocked
 	swatch.tooltip_text = entry["name"] if unlocked else "%s - %s" % [entry["name"], Cosmetics.unlock_hint(entry)]
