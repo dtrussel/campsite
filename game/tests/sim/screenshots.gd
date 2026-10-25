@@ -73,6 +73,17 @@ func _ready() -> void:
 	await _settle(1.5)
 	_shot("01d_hero_select_nela")
 	select.queue_free()
+	# With a few looks unlocked: the cosmetics row, the Berry tent picked.
+	for id in [&"first_night", &"builder"]:
+		Profile.grant_badge_for_tests(id)
+	select = load("res://scenes/ui/HeroSelect.tscn").instantiate()
+	add_child(select)
+	await _settle(0.5)
+	(select.call("tent_button", &"berry") as Button).pressed.emit()
+	await _settle(1.0)
+	_shot("01d_hero_select_cosmetics")
+	select.queue_free()
+	Profile.delete()
 	# The Chapter 1 intro storybook (first and Mum's page).
 	var book: StoryBook = StoryBook.play(StoryLibrary.find(&"intro", 1), &"leo")
 	await _settle(1.5)

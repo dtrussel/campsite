@@ -12,8 +12,8 @@ extends Control
 ##
 ## Keys: Left / Right (or A / D) pick, Enter starts, Esc goes back.
 ##
-## Under the goal, the badge cosmetics (OutfitRow) and, once a badge
-## has unlocked one, the starting perk pick (StartingPerkRow).
+## Under the goal, once a badge has unlocked one, the badge cosmetics
+## (OutfitRow) and the starting perk pick (StartingPerkRow).
 
 const STAGE: Script = preload("res://scripts/ui/hero_stage.gd")
 const CARD_SIZE: Vector2 = Vector2(320, 200)
@@ -27,6 +27,8 @@ var _glows: Array[Panel] = []
 var _companion_portrait: TextureRect = null
 var _companion_name: Label = null
 var _start: Button = null
+## The badge cosmetics row, or null when no badge has unlocked a look
+## yet.
 var _outfit_row: OutfitRow = null
 ## The starting perk row, or null when no badge has unlocked a starting
 ## perk yet.
@@ -277,25 +279,30 @@ func select(index: int, cheer: bool = true) -> void:
 	_companion_portrait.texture = companion.portrait
 	_companion_name.text = companion.display_name
 	_stage.call("select", selected, cheer)
-	_outfit_row.set_hero(heroes[selected].id)
+	if _outfit_row != null:
+		_outfit_row.set_hero(heroes[selected].id)
 
 
-## The swatch for outfit `id` (tests).
+## The swatch for outfit `id`, or null when it isn't shown (tests).
 func outfit_button(id: StringName) -> Button:
-	return _outfit_row.outfit_button(id)
+	return _outfit_row.outfit_button(id) if _outfit_row != null else null
 
 
-## The swatch for tent colour `id` (tests).
+## The swatch for tent colour `id`, or null when it isn't shown (tests).
 func tent_button(id: StringName) -> Button:
-	return _outfit_row.tent_button(id)
+	return _outfit_row.tent_button(id) if _outfit_row != null else null
 
 
 func _build_outfit_row() -> void:
+	if not OutfitRow.is_wanted():
+		return
 	_outfit_row = OutfitRow.new()
 	_center_top(_outfit_row, 128)
 	add_child(_outfit_row)
 	_outfit_row.outfit_picked.connect(func(hero_id: StringName) -> void:
 		_stage.call("set_outfit_tint", selected, Cosmetics.outfit_tint(hero_id)))
+	_outfit_row.tent_picked.connect(func() -> void:
+		_stage.call("set_tent_tint", Cosmetics.tent_tint()))
 
 
 func selected_hero() -> HeroDefinition:

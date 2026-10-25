@@ -403,6 +403,11 @@ class Glyph extends Control:
 			"check":
 				draw_polyline(PackedVector2Array([c + Vector2(-r * 0.8, 0), c + Vector2(-r * 0.2, r * 0.6), c + Vector2(r * 0.85, -r * 0.6)]),
 					color, s * 0.16, true)
+			"lock":
+				draw_arc(c + Vector2(0, -r * 0.15), r * 0.45, PI, TAU, 16, outline, s * 0.2, true)
+				draw_arc(c + Vector2(0, -r * 0.15), r * 0.45, PI, TAU, 16, color, s * 0.1, true)
+				_poly(PackedVector2Array([c + Vector2(-r * 0.7, -r * 0.15), c + Vector2(r * 0.7, -r * 0.15),
+					c + Vector2(r * 0.7, r * 0.85), c + Vector2(-r * 0.7, r * 0.85)]), color)
 			"shield":
 				_poly(PackedVector2Array([c + Vector2(0, -r), c + Vector2(r * 0.85, -r * 0.6), c + Vector2(r * 0.7, r * 0.3),
 					c + Vector2(0, r), c + Vector2(-r * 0.7, r * 0.3), c + Vector2(-r * 0.85, -r * 0.6)]), color)

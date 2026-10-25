@@ -82,6 +82,14 @@ func set_outfit_tint(index: int, color: Color) -> void:
 		_visuals[index].set_outfit_tint(color)
 
 
+## Recolours the camp tent behind the heroes (hero select's outfit row).
+func set_tent_tint(color: Color) -> void:
+	for tent in get_tree().get_nodes_in_group(&"tent"):
+		if is_ancestor_of(tent):
+			tent.set_meta(Stylize.TINT_META, color)
+			Stylize.apply(tent, "prop")
+
+
 func _process(delta: float) -> void:
 	_time += delta
 	if _ring != null:
