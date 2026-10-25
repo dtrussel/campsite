@@ -248,4 +248,4 @@ The sign-off playtest is `../hand-play-backlog/issues/10-hero-animation-feel.md`
 ## Comments
 
 - **2026-10-25, grilling:** scope, clip source, the four layers and their order, acceptance, the contact frame, hit-stop reach, look-at priorities, stride matching instead of foot IK, the face atlas and delivery were all agreed with the user (Q1–Q16). The wind-up rules (a down hero cancels the hit, being hit does not, a missed melee hit misses quietly) and the baseline-then-enforce plan for the validator were filled in while writing the spec; confirm or change them before `/to-tickets`.
-- **2026-10-25, to-tickets:** the user approved the 14-ticket breakdown, the serialized model rebuilds, and letting 02, 12 (and 13 by its place in the chain) come before the clips are done; the wind-up rules and the baseline-then-enforce plan stand.
+- **2026-10-25, to-tickets:** the user approved the 14-ticket breakdown, the serialized model rebuilds, and letting 02 and 12 start before the clips are done (the faces, 13, still come last in the rebuild chain); the wind-up rules and the baseline-then-enforce plan stand.
