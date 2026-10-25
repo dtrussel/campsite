@@ -53,6 +53,7 @@ const ACTION_SECONDS: Dictionary = {
 ## when over their limit. Every other check only reports.
 const ENFORCED: Dictionary = {
 	&"leo": {&"attack": ["duration"]},
+	&"nela": {&"attack": ["duration"]},
 }
 
 

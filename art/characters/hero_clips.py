@@ -182,10 +182,88 @@ def leo_attack(rig, style):
     return keys + [(25, stock_pose(rig, "Idle", 0))]
 
 
+# ------------------------------------------------------------- Nela
+
+
+def sling_arms(fork, draw):
+    """Nela's two arms on her slingshot: `fork` is her right arm (the
+    fork, with her lantern hanging from the same fist) and `draw` her
+    left arm (the pouch), both as stick_arm's angles; the left one is
+    mirrored, so the same angles make the mirror pose."""
+    return stick_arm(*fork) + stick_arm(*draw).mirrored()
+
+
+# Her arms on each key of her shot, solved offline for where each hand
+# goes and for the lantern hanging down from the fork hand (see the
+# docstring of nela_attack).
+NELA_SLING = {
+    "draw": sling_arms((61.5, 60.2, 24.2, 28.2, 23.6, -18.6, 77.2), (-9.2, -17.8, 3.7, 138.5, -4.5, 1.7, 12.8)),
+    "release": sling_arms((72.2, 46.5, 21.9, 35.8, 12.3, -27.0, 61.7), (-50.2, 1.4, -52.9, 133.2, -20.7, 34.2, 52.1)),
+    "follow": sling_arms((70.3, 41.7, 23.0, 46.3, 11.6, -16.5, 82.2), (-42.0, 29.1, -64.7, 118.6, -16.7, 17.2, 45.6)),
+    "watch": sling_arms((66.8, 46.8, 20.0, 64.9, 2.3, -17.4, 53.6), (-40.9, 45.9, -41.1, 108.0, -9.5, 0.3, 27.4)),
+    "reload": sling_arms((44.7, 61.0, 8.9, 83.1, -4.9, -10.1, 21.1), (-42.0, 44.4, -22.4, 108.3, -6.4, -4.3, 19.1)),
+}
+
+
+def nela_attack_body(style):
+    """Everything but the arms, per key of nela_attack. The chest turns
+    to her left (+twist) so the fork shoulder leads."""
+    return {
+        "draw": (torso(spine=-2.0, chest=2.0, head=-12.0, twist=26.0, roll=-3.0) + lean(style)
+                 + P(head=[("Z", -16.0)])
+                 + legs(swing_l=-8.0, swing_r=10.0, knee_l=14.0, knee_r=6.0, wide=7.0, foot_l=-4.0, foot_r=6.0)
+                 + hips(style, z=-0.03, y=0.03)),
+        "release": (torso(spine=3.0, chest=3.0, head=-12.0, twist=22.0, roll=-2.0) + lean(style)
+                    + P(head=[("Z", -14.0)])
+                    + legs(swing_l=-6.0, swing_r=12.0, knee_l=12.0, knee_r=10.0, wide=7.0, foot_l=-3.0,
+                           foot_r=8.0)
+                    + hips(style, z=-0.04, y=0.0)),
+        "follow": (torso(spine=6.0, chest=4.0, head=-12.0, twist=18.0, roll=-1.0) + lean(style)
+                   + P(head=[("Z", -12.0)])
+                   + legs(swing_l=-6.0, swing_r=12.0, knee_l=12.0, knee_r=12.0, wide=7.0, foot_l=-3.0, foot_r=8.0)
+                   + hips(style, z=-0.045, y=-0.01)),
+        "watch": (torso(spine=5.0, chest=3.0, head=-10.0, twist=14.0) + lean(style)
+                  + P(head=[("Z", -10.0)])
+                  + legs(swing_l=-4.0, swing_r=8.0, knee_l=8.0, knee_r=8.0, wide=6.0, foot_l=-2.0, foot_r=5.0)
+                  + hips(style, z=-0.03, y=-0.005)),
+        "reload": (torso(spine=10.0, chest=4.0, head=-6.0, twist=4.0, roll=4.0) + lean(style)
+                   + P(head=[("Z", 6.0)])
+                   + legs(swing_l=-2.0, swing_r=4.0, knee_l=6.0, knee_r=4.0, wide=6.0, foot_l=-1.0, foot_r=2.0)
+                   + hips(style, z=-0.02, y=0.0)),
+    }
+
+
+NELA_ATTACK_FRAMES = (("draw", 0), ("release", 3), ("follow", 6), ("watch", 10), ("reload", 15))
+
+
+def nela_attack(rig, style):
+    """Nela's slingshot shot: the fork in her right fist (with her
+    lantern hanging below it), the pouch drawn with her left hand. 22
+    frames at 24 fps (the stock Spellcast_Shoot's 0.92 s, which gameplay
+    plays at 1.5x for 0.61 s). Careful and precise where Leo's swing is
+    eager: she aims down her arm and holds still through the shot.
+
+    0   drawn (anticipation): fork arm straight out at the target, the
+        pouch pulled back under her chin, chest turned so the fork
+        shoulder leads, weight on the back foot, head down on the aim;
+    3   contact: she lets go, the pebble flies; the empty draw hand
+        flicks back and out, the fork kicks up a touch;
+    6   follow-through: the draw hand opens out to the side while the
+        fork arm holds the aim;
+    10  she watches the shot, the fork arm sinking;
+    15  reload: the draw hand dips to the pouch at her hip and the fork
+        arm comes down;
+    22  the stock Idle, so the game's fade back to locomotion is clean.
+    """
+    body = nela_attack_body(style)
+    keys = [(frame, body[name] + NELA_SLING[name]) for name, frame in NELA_ATTACK_FRAMES]
+    return keys + [(22, stock_pose(rig, "Idle", 0))]
+
+
 # Each kid's own clips (attack, cheer, idle, run where it shows).
 OWN = {
     "leo": {"Leo_Attack": Clip(leo_attack, contact=3)},
-    "nela": {},
+    "nela": {"Nela_Attack": Clip(nela_attack, contact=3)},
 }
 # The shared set, keyed once per kid with that kid's Style.
 SHARED = {}

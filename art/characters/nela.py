@@ -4,7 +4,8 @@ huge blue eyes and a big laugh; pale-blue tee; puffy plum harem pants
 with a cream folk pattern and gathered cuffs; cream socks and brown
 boots with pink laces; a plum backpack with a green bedroll, a tin cup
 and her bunny peeking out; a compass on a cord; and a glowing lantern.
-Built on the KayKit adventurer rig so all animations work.
+Built on the KayKit adventurer rig so all animations work, plus her own
+clips (hero_clips.py: her sling shot).
 Output: nela.glb"""
 
 import math
@@ -19,7 +20,7 @@ import bmesh  # noqa: E402
 from mathutils import Matrix, Vector, noise  # noqa: E402
 
 from lib import common, paint_bake, preview  # noqa: E402
-from characters import chibi, face_paint, head_loft  # noqa: E402
+from characters import chibi, face_paint, head_loft, hero_clips  # noqa: E402
 from characters.leo import render_previews, sculpt_previews  # noqa: E402
 
 SKIN = (0.99, 0.72, 0.56)
@@ -669,6 +670,8 @@ def build():
         chibi.rigid(obj, bone)
         obj.parent = rig
         obj.modifiers.new("Armature", "ARMATURE").object = rig
+    # Her own clips next to the 76 stock ones (art/characters/hero_clips.py).
+    clips = hero_clips.add_clips(rig, "nela")
 
     meshes = [body, head, hair_obj, lamp, plush]
     # Game budget (~35k): each mesh is decimated; its dense copy carries
@@ -681,14 +684,14 @@ def build():
 
     if os.environ.get("SCULPT"):
         print("nela tris:", common.triangle_count(meshes + [glow]))
-        sculpt_previews(rig, meshes + [glow], "nela", ("Running_A", 8), ("PickUp", 12))
+        sculpt_previews(rig, meshes + [glow], "nela", ("Running_A", 8), ("Nela_Attack", 0))
         return
     if chibi.quick_mode():
         for mesh in meshes:
             chibi.quick_material(mesh, overlay=(FACE_PNG, "FaceUV") if mesh is head else None)
         paint_bake.flat_material(glow, GLOW, emission=3.0, name="lantern_glow")
         print("nela tris:", common.triangle_count(meshes + [glow]))
-        render_previews(rig, meshes + [glow], head, "nela", ("Running_A", 8), ("Spellcast_Shoot", 12), ("PickUp", 12))
+        render_previews(rig, meshes + [glow], head, "nela", ("Running_A", 8), ("Nela_Attack", 0), ("PickUp", 12))
         return
     params = dict(size=1024, ao_distance=0.18, ao_strength=0.62, edge_strength=0.3, edge_radius=0.012,
                   noise_scale=6.0, stroke_strength=0.08, light=(1.12, 1.04, 0.95), shadow=(0.45, 0.38, 0.58),
@@ -705,8 +708,9 @@ def build():
     paint_bake.flat_material(glow, GLOW, emission=3.0, name="lantern_glow")
     rig.data.pose_position = "POSE"
     common.export_glb(os.path.join(common.OUT_DIR, "nela.glb"), [rig] + meshes + [glow], animations=True, image_format="WEBP")
+    hero_clips.write_record("nela", clips)
     print("nela tris:", common.triangle_count(meshes + [glow]))
-    render_previews(rig, meshes + [glow], head, "nela", ("Running_A", 8), ("Spellcast_Shoot", 12), ("PickUp", 12))
+    render_previews(rig, meshes + [glow], head, "nela", ("Running_A", 8), ("Nela_Attack", 0), ("PickUp", 12))
 
 
 if __name__ == "__main__":
