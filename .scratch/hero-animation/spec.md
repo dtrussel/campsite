@@ -225,6 +225,27 @@ Each layer ships on its own. A hero state without a new clip keeps its stock cli
 - **Docs to update as tickets land:** `art/README.md` (the hero clip script, the spring bones, the face atlas), `docs/design/art-direction.md` (a short "hero motion" section on each kid's personality) and the roadmap row when the feature is done.
 - **Previous work:** feature 023 (animation layering) is the base this builds on: `docs/history/features/023-animation-layering/`.
 
+## Tickets
+
+Split on 2026-10-25 with `/to-tickets`. The `Blocked by:` lines give the order. Tickets 03–10 and 13 rebuild the kids' committed models, which can't be merged when built in parallel, so they run one after another. Only 01, 02, 11 and 12 run alongside.
+
+1. `issues/01-clip-checks-and-captures.md`: the validator's slide, loop and duration checks (report-only) and the review renders and captures; records the baseline.
+2. `issues/02-contact-frame.md`: hits land on the contact frame, on the stock clips.
+3. `issues/03-hero-clip-script-leo-attack.md`: the hero clip script, plus Leo's stick swing.
+4. `issues/04-nela-sling-attack.md`: Nela's sling wind-up and release.
+5. `issues/05-walk-and-run.md`: stride-matched cycles with style knobs.
+6. `issues/06-idles-and-fidgets.md`: own idles and the fidget scheduler.
+7. `issues/07-reactions-and-cheers.md`: hit, death and getup, plus each kid's cheer.
+8. `issues/08-work-actions.md`: gather, chop, pick, tinker and hammer at today's durations.
+9. `issues/09-spring-chains-leo.md`: the spring-chain modifier and Leo's chains.
+10. `issues/10-spring-chains-nela-and-mum.md`: Nela's chains, and Mum's where they're free.
+11. `issues/11-hit-stop-and-squash.md`: hit-stop on the attacker and the target.
+12. `issues/12-head-look-at.md`: the look-at modifier and its target order.
+13. `issues/13-face-atlas.md`: blink and expressions.
+
+The sign-off playtest is `../hand-play-backlog/issues/10-hero-animation-feel.md` (`ready-for-human`, blocked by all thirteen).
+
 ## Comments
 
 - **2026-10-25, grilling:** scope, clip source, the four layers and their order, acceptance, the contact frame, hit-stop reach, look-at priorities, stride matching instead of foot IK, the face atlas and delivery were all agreed with the user (Q1–Q16). The wind-up rules (a down hero cancels the hit, being hit does not, a missed melee hit misses quietly) and the baseline-then-enforce plan for the validator were filled in while writing the spec; confirm or change them before `/to-tickets`.
+- **2026-10-25, to-tickets:** the user approved the 14-ticket breakdown, the serialized model rebuilds, and letting 02, 12 (and 13 by its place in the chain) come before the clips are done; the wind-up rules and the baseline-then-enforce plan stand.

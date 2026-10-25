@@ -21,3 +21,4 @@ The checks the archived features (000&ndash;048, in `docs/history/features/`) co
 7. `issues/07-tool-tiers-shard-trade-off.md`: whether spending Glow Shards on tool tiers (040) is a real choice against the Moon Lantern.
 8. `issues/08-endless-run-length.md`: how long an endless run (042) lasts, and whether its rising pressure feels fair.
 9. `issues/09-scrapbook-and-day-chest.md`: the scrapbook (041) with a kid, and a look at the day chest in the running game.
+10. `issues/10-hero-animation-feel.md`: whether the heroes' new motion (hero-animation) feels better, and the user's sign-off.
