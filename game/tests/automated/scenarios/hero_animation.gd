@@ -1,11 +1,13 @@
 extends "res://tests/automated/smoke_scenario.gd"
 
 ## Hero animation: a hero's attack lands on its contact frame, after a
-## short wind-up, in either role.
+## short wind-up, in either role. A hero left idle fidgets now and then,
+## and moving cancels the fidget.
 
 
 func run() -> void:
 	await _run_contact_frame_scenario()
+	await _run_fidget_scenario()
 
 
 ## For Leo and Nela, played and as the companion: the swing lands, or the
@@ -118,3 +120,42 @@ func _pebble_count() -> int:
 
 func _label(who: Hero) -> String:
 	return "%s as %s" % [who.hero.id, "companion" if who.is_in_group("companions") else "player"]
+
+
+## Leo played, Nela the companion, both left standing: each plays one of
+## their own fidgets after a wait in FidgetScheduler's range. Moving
+## cancels a fidget back to locomotion.
+func _run_fidget_scenario() -> void:
+	print("smoke: --- hero animation: idle fidgets ---")
+	await _start_fresh_run(_party(&"leo"))
+	var player: Hero = get_tree().get_first_node_in_group("player") as Hero
+	var companion: Hero = get_tree().get_first_node_in_group("companions") as Hero
+	if player == null or companion == null:
+		_fail("fidgets: both roles are Heroes")
+		return
+	# The companion stands where it is (it would follow, fetch and work).
+	companion.set_physics_process(false)
+	(companion.get_node("Visual") as CharacterVisual).set_locomotion(0.0)
+	var longest: float = FidgetScheduler.GAP_MAX + 2.0
+	for who in [player, companion]:
+		var label: String = _label(who)
+		var visual: CharacterVisual = who.get_node("Visual") as CharacterVisual
+		_check(not who.hero.fidgets.is_empty(), "%s: the hero lists fidgets (%s)" % [label, who.hero.fidgets])
+		if not await _wait_until(func() -> bool: return visual.fidgets_played > 0, longest):
+			_fail("%s: left idle, the hero fidgets within %.0f s" % [label, longest])
+			continue
+		_check(who.hero.fidgets.has(visual.last_fidget), "%s: plays one of its own fidgets (%s)" % [label, visual.last_fidget])
+		_check(visual.last_fidget_wait >= FidgetScheduler.GAP_MIN - 0.05 and visual.last_fidget_wait <= FidgetScheduler.GAP_MAX + 0.25,
+			"%s: after %.2f s idle, in the %.0f-%.0f s range" % [label, visual.last_fidget_wait, FidgetScheduler.GAP_MIN,
+				FidgetScheduler.GAP_MAX])
+
+	# Moving cancels a fidget: wait for the player's next one, then walk.
+	var visual: CharacterVisual = player.get_node("Visual") as CharacterVisual
+	if not await _wait_until(func() -> bool: return visual.fidget_playing() != &"", longest + 4.0):
+		_fail("fidgets: the player fidgets again")
+		return
+	player.command_move(player.global_position + Vector3(8, 0, 0))
+	_check(await _wait_until(func() -> bool: return visual.is_moving(), 1.0), "fidgets: the player sets off")
+	_check(await _wait_until(func() -> bool: return visual.fidget_playing() == &"" and visual.active_action_layer() == "", 0.5),
+		"fidgets: moving cancels the fidget back to locomotion")
+	player.stop_commands()

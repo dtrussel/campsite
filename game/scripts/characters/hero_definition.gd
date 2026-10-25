@@ -31,6 +31,9 @@ const WIND_UP_CAP_SECONDS: float = 0.1
 ## 0 = no contact frame: the hit comes the moment the attack starts.
 ## At play speed it is at most WIND_UP_CAP_SECONDS (the validator).
 @export var attack_contact_time: float = 0.0
+## Idle fidgets (states in `clips`): one plays now and then while the
+## hero stands idle (CharacterVisual, FidgetScheduler).
+@export var fidgets: Array[StringName] = []
 ## The ground speeds (m/s) the run (`move`) and the walk clips are
 ## authored for, each its stride over its length (CharacterVisual scales
 ## their playback by the real speed). For a hand-made cycle they are the

@@ -25,6 +25,7 @@ static func apply(character: Node3D, hero: HeroDefinition) -> void:
 		visual.outfit_mesh = hero.outfit_mesh
 		visual.outfit_tint = Cosmetics.outfit_tint(hero.id)
 		visual.head_look = true
+		visual.fidgets = hero.fidgets.duplicate()
 	var collision: CollisionShape3D = character.get_node_or_null("Collision") as CollisionShape3D
 	if collision != null and collision.shape is CapsuleShape3D:
 		var capsule: CapsuleShape3D = (collision.shape as CapsuleShape3D).duplicate() as CapsuleShape3D

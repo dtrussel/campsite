@@ -16,6 +16,9 @@ extends Node3D
 ##   visual.set_look_focus(node)      # head and chest turn toward it (null: ahead)
 ##   visual.hit_stop(squash)          # freeze for a blink as a hit lands
 ##
+## Standing idle, it plays one of its `fidgets` now and then
+## (FidgetScheduler); moving, any action or going down cuts it short.
+##
 ## Animation is layered with an AnimationTree built in code:
 ##
 ##   BlendSpace1D "loco" (idle . walk . run by speed) -> TimeScale
@@ -99,6 +102,9 @@ const TOOL_SCALE: float = 1.9
 ## Turn the head and chest toward a look focus (`set_look_focus`); set by
 ## HeroBody. Needs a skeleton with "chest" and "head" bones.
 @export var head_look: bool = false
+## Idle fidgets: states in `clips` played now and then while standing
+## idle (a hero's, from HeroDefinition.fidgets). Empty: none.
+@export var fidgets: Array[StringName] = []
 
 var model: Node3D = null
 var _player: AnimationPlayer = null
@@ -187,6 +193,8 @@ func set_locomotion(speed: float) -> void:
 	_speed = speed
 	if _locked or _tree == null:
 		return
+	if is_moving() and fidget_playing() != &"":
+		_cancel_fidget()
 	var delta: float = get_physics_process_delta_time()
 	_blend_position = lerpf(_blend_position, speed, clampf(delta * 14.0, 0.0, 1.0))
 	if speed < move_threshold and _blend_position < move_threshold:
@@ -251,6 +259,7 @@ func _tick_footsteps(run_weight: float) -> void:
 ## plays on the upper body only.
 func play_action(state: StringName, speed: float = 1.0) -> float:
 	_contact_remaining = -1.0
+	_fidget = &""
 	if _locked or _player == null:
 		return 0.0
 	var anim: Animation = _get_clip(state)
@@ -351,7 +360,13 @@ func _set_tool_parts_visible(shown: bool) -> void:
 			node.visible = shown
 
 
+## True while an action plays (a fidget does not count: anything may
+## cut it short).
 func is_in_action() -> bool:
+	return _action_playing() and _fidget == &""
+
+
+func _action_playing() -> bool:
 	return Time.get_ticks_msec() < _action_until_msec
 
 
@@ -407,6 +422,7 @@ func _process(delta: float) -> void:
 		_contact_remaining -= delta
 	if _tick_hit_stop(delta):
 		return
+	_tick_fidgets(delta)
 	if _look != null:
 		_tick_look(delta)
 	if model == null or not lean:
@@ -645,3 +661,50 @@ func _tick_hit_stop(delta: float) -> bool:
 func _apply_squash(amount: float) -> void:
 	var squash: float = SQUASH * amount
 	model.scale = Vector3(1.0 + squash, 1.0 - squash, 1.0 + squash) * model_scale
+
+
+# --- Idle fidgets ------------------------------------------------------------
+# Standing idle, the visual plays one of its `fidgets` on the whole body
+# now and then (FidgetScheduler's wait). Moving cuts it short back to
+# locomotion, and any other action replaces it. The wait pauses through
+# a hit-stop (_process returns before it), like the rest of the pose.
+
+var _fidget_scheduler: FidgetScheduler = null
+## The fidget playing (cleared by any other action).
+var _fidget: StringName = &""
+var _idle_seconds: float = 0.0
+## Fidgets played so far, the last one and how long the visual stood
+## idle before it (tests).
+var fidgets_played: int = 0
+var last_fidget: StringName = &""
+var last_fidget_wait: float = 0.0
+
+
+## The fidget playing now, or &"".
+func fidget_playing() -> StringName:
+	return _fidget if _action_playing() else &""
+
+
+func _tick_fidgets(delta: float) -> void:
+	if fidgets.is_empty() or _tree == null:
+		return
+	if _fidget_scheduler == null:
+		_fidget_scheduler = FidgetScheduler.new(fidgets)
+	var idle: bool = not _locked and not is_moving() and not _action_playing()
+	_idle_seconds = _idle_seconds + delta if idle else 0.0
+	var fidget: StringName = _fidget_scheduler.tick(delta, idle)
+	if fidget == &"" or _get_clip(fidget) == null:
+		return
+	last_fidget_wait = _idle_seconds
+	play_action(fidget)
+	_fidget = fidget
+	last_fidget = fidget
+	fidgets_played += 1
+
+
+## Fades the fidget out, back to locomotion.
+func _cancel_fidget() -> void:
+	_tree.set("parameters/full/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FADE_OUT)
+	_tree.set("parameters/upper/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FADE_OUT)
+	_action_until_msec = 0
+	_fidget = &""

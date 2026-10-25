@@ -299,7 +299,8 @@ func _validate_hero_clips() -> void:
 		% [rows.size(), reported])
 
 
-## Every hero on the select screen is complete. Tool tiers:
+## Every hero on the select screen is complete, and its idle fidgets
+## are mapped states. Tool tiers:
 ## each of its tiers points to an existing tool-tier recipe, and every
 ## tool-tier recipe belongs to exactly one hero's tier.
 func _validate_heroes(recipe_ids: Dictionary) -> void:
@@ -309,6 +310,10 @@ func _validate_heroes(recipe_ids: Dictionary) -> void:
 		_check_id(hero.id, hero.resource_path, hero_ids)
 		if hero.model_scene == null or hero.stats == null or hero.portrait == null:
 			_fail("%s needs a model, stats and a portrait" % hero.resource_path)
+		# Each idle fidget is a mapped state (whose clip the clip checks find).
+		for fidget in hero.fidgets:
+			if not hero.clips.has(fidget):
+				_fail("%s: fidget '%s' is not a state in its clips" % [hero.resource_path, fidget])
 		for n in range(1, hero.tier_count() + 1):
 			var tier: ToolTier = hero.tier(n)
 			if tier == null or tier.recipe == &"":

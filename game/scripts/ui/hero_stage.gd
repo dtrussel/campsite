@@ -4,8 +4,9 @@ extends "res://scripts/ui/title_backdrop.gd"
 ##
 ## 3D backdrop of the hero select screen: the dusk camp
 ## from the title screen, with every hero of the roster standing in a
-## row in front of the fire. The picked hero cheers and stands in an
-## ember ring of light; the camera drifts a little toward them.
+## row in front of the fire, idling and fidgeting now and then. The
+## picked hero cheers and stands in an ember ring of light; the camera
+## drifts a little toward them.
 
 const SPACING: float = 1.8
 const ROW_Z: float = 2.6
@@ -30,6 +31,7 @@ func _ready() -> void:
 		visual.model_scene = hero.model_scene
 		visual.model_scale = hero.model_scale
 		visual.clips = hero.clips.duplicate()
+		visual.fidgets = hero.fidgets.duplicate()
 		visual.style = "hero"
 		visual.outfit_mesh = hero.outfit_mesh
 		visual.outfit_tint = Cosmetics.outfit_tint(hero.id)

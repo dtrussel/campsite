@@ -55,8 +55,8 @@ const ACTION_SECONDS: Dictionary = {
 ## the checks ("loop", "slide", "duration") that fail the validator
 ## when over their limit. Every other check only reports.
 const ENFORCED: Dictionary = {
-	&"leo": {&"attack": ["duration"], &"walk": ["loop", "slide"], &"move": ["loop", "slide"]},
-	&"nela": {&"attack": ["duration"], &"walk": ["loop", "slide"], &"move": ["loop", "slide"]},
+	&"leo": {&"idle": ["loop"], &"attack": ["duration"], &"walk": ["loop", "slide"], &"move": ["loop", "slide"]},
+	&"nela": {&"idle": ["loop"], &"attack": ["duration"], &"walk": ["loop", "slide"], &"move": ["loop", "slide"]},
 }
 
 

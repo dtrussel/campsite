@@ -30,6 +30,11 @@ which the record saves too. The hero data's `walk_reference_speed` and
 the clip's length (the validator checks), and the game scales the
 cycle's playback by the hero's real speed, so the feet stay planted.
 
+Each kid has their own idle loop and a few idle fidgets (one-shots the
+game plays now and then while the kid stands idle; the hero data lists
+them). Both keep the feet planted: the legs are re-solved every frame
+to where the stock Idle's first pose stands (`_plant`).
+
 Clips are authored at 24 fps from the stock Idle (sampled with
 `stock_pose`), so they begin and end where the kid stands: the game
 fades an action in over 0.08 s and out over 0.18 s
@@ -540,10 +545,330 @@ def run(rig, style):
     return cycle(rig, style, style.run, RUN)
 
 
+# ----------------------------------------------------- idles and fidgets
+#
+# Each kid stands in their own idle loop and now and then plays a
+# fidget (the game picks one after a random wait: FidgetScheduler). Both
+# start from the stock Idle's first frame, with the legs re-solved every
+# frame so the feet stay where that pose plants them; a fidget begins and
+# ends on the kid's idle at frame 0, so it fades in and out cleanly.
+
+
+def _head(rig, pose, name):
+    """A bone's head in armature space under `pose`."""
+    bone = rig.data.bones[name]
+    loc = pose.loc.get(name, Vector()) if name in MOVABLE else Vector()
+    if bone.parent is None:
+        return bone.head_local + loc
+    parent = bone.parent
+    return _head(rig, pose, parent.name) + _world(rig, pose, parent.name) @ (bone.head_local - parent.head_local + loc)
+
+
+def _plant(rig, pose, stand):
+    """Re-solves `pose`'s legs so each ankle stays where `stand` has it
+    and each foot keeps its angle in the world (feet planted)."""
+    hips = _world(rig, pose, "hips")
+    bones = rig.data.bones
+    for side in "lr":
+        ankle = _head(rig, stand, "foot." + side)
+        joint = _head(rig, pose, "upperleg." + side)
+        ax, ay, knee = _leg_ik(bones["upperleg." + side].head_local, bones["lowerleg." + side].head_local,
+                               bones["foot." + side].head_local, hips.inverted() @ (ankle - joint))
+        upper = Quaternion((1, 0, 0), math.radians(ax)) @ Quaternion((0, 1, 0), math.radians(ay))
+        lower = Quaternion((1, 0, 0), math.radians(knee))
+        pose.rot["upperleg." + side] = [upper]
+        pose.rot["lowerleg." + side] = [lower]
+        pose.rot["foot." + side] = [(hips @ upper @ lower).inverted() @ _world(rig, stand, "foot." + side)]
+        pose.rot["toes." + side] = list(stand.rot.get("toes." + side, []))
+    return pose
+
+
+def _arm(side, raise_, swing, across, elbow, wrist_x=0.0, wrist_y=0.0, wrist_z=0.0):
+    """stick_arm's angles on either arm (the left one mirrored)."""
+    pose = stick_arm(raise_, swing, across, elbow, wrist_x, wrist_y, wrist_z)
+    return pose.mirrored() if side == "l" else pose
+
+
+def _reach(rig, body, side, target, guess=(-60.0, -20.0, 0.0, 60.0)):
+    """stick_arm angles (raise, swing, across, elbow) that put `side`'s
+    hand at `target` (armature space) on `body`: damped least squares
+    from `guess`, so the arm stays close to it."""
+    base = Pose(body.rot, body.loc)
+    for part in ("upperarm.", "lowerarm.", "wrist."):
+        base.rot.pop(part + side, None)
+    x = list(guess)
+
+    def hand(v):
+        return _head(rig, base + _arm(side, *v), "hand." + side)
+
+    for _ in range(80):
+        at = hand(x)
+        miss = target - at
+        if miss.length < 1e-4:
+            break
+        cols = []
+        for i in range(4):
+            nudged = list(x)
+            nudged[i] += 0.05
+            cols.append((hand(nudged) - at) / 0.05)
+        jjt = Matrix(((0.0,) * 3,) * 3)
+        for col in cols:
+            jjt += Matrix([[col[r] * col[c] for c in range(3)] for r in range(3)])
+        for i in range(3):
+            jjt[i][i] += 1e-5
+        y = jjt.inverted() @ miss
+        for i in range(4):
+            x[i] += max(-8.0, min(8.0, cols[i].dot(y)))
+    if (target - hand(x)).length > 0.01:
+        print("hero_clips: the %s hand only gets within %.3f of %s" % (side, (target - hand(x)).length, target))
+    return x
+
+
+def _hold_wrist(rig, pose, stand, side="r"):
+    """Keys the wrist so the hand keeps `stand`'s angle in the world
+    (Nela's lantern keeps hanging however her arm moves)."""
+    pose.rot["wrist." + side] = [_world(rig, pose, "lowerarm." + side).inverted() @ _world(rig, stand, "wrist." + side)]
+    return pose
+
+
+def _aim_slot(rig, pose, direction, roll=0.0, side="r"):
+    """Turns the wrist so the hand slot's +X (Leo's stick, down its
+    bottom end) points along `direction`, rolled `roll` degrees about it."""
+    rest_x = rig.data.bones["handslot." + side].matrix_local.to_3x3().col[0]
+    now = _world(rig, pose, "handslot." + side) @ rest_x
+    turn = Quaternion(direction.normalized(), math.radians(roll)) @ now.rotation_difference(direction.normalized())
+    pose.rot["wrist." + side] = [_world(rig, pose, "lowerarm." + side).inverted() @ turn
+                                 @ _world(rig, pose, "wrist." + side)]
+    return pose
+
+
+def _stand(rig, style):
+    """The kid's standing pose: the stock Idle's first frame in their
+    posture, feet planted where the Idle puts them."""
+    idle = stock_pose(rig, "Idle", 0)
+    return _plant(rig, idle + lean(style), idle), idle
+
+
+def _pose_at(rig, act, frame):
+    """A Pose sampled from `act` at authored `frame` (24 fps)."""
+    rig.animation_data.action = act
+    at = frame * bpy.context.scene.render.fps / AUTHORED_FPS
+    bpy.context.scene.frame_set(int(at), subframe=at - int(at))
+    bpy.context.view_layer.update()
+    pose = Pose()
+    for name in HERO_BONES:
+        pb = rig.pose.bones.get(name)
+        if pb is None:
+            continue
+        rest = pb.bone.matrix_local.to_quaternion()
+        pose.rot[name] = [rest @ pb.rotation_quaternion @ rest.inverted()]
+        if name in MOVABLE:
+            pose.loc[name] = rest @ pb.location
+    return pose
+
+
+def _every_frame(rig, keys, idle, hold=False):
+    """`keys` eased into a key on every frame (Bezier, as the game
+    would play them), with the feet planted on each, and the right hand
+    held at its Idle angle with `hold`."""
+    act = action(rig, "hero_clips_tmp", keys, bones=HERO_BONES)
+    out = []
+    for frame in range(int(keys[-1][0]) + 1):
+        pose = _plant(rig, _pose_at(rig, act, frame), idle)
+        out.append((frame, _hold_wrist(rig, pose, idle) if hold else pose))
+    rig.animation_data.action = None
+    bpy.data.actions.remove(act)
+    return out
+
+
+def _idle_loop(rig, style, frames, motion, hold=False):
+    """An idle of `frames` frames: `motion(p)` gives the Pose added to
+    the kid's stand at phase p (0..1), and the hips' move (loc) and turn
+    (rot) re-plant the legs. Keyed every frame; the last is the first."""
+    stand, idle = _stand(rig, style)
+    keys = []
+    for f in range(frames):
+        pose = _plant(rig, stand + motion(f / frames), idle)
+        keys.append((f, _hold_wrist(rig, pose, idle) if hold else pose))
+    return keys + [(frames, keys[0][1])]
+
+
+def _wave(p, cycles=1.0, shift=0.0):
+    return math.sin(2 * math.pi * (cycles * p + shift))
+
+
+def _breath(p, cycles=1.0):
+    """0 to 1 and back, once a cycle (in at the top)."""
+    return 0.5 - 0.5 * math.cos(2 * math.pi * cycles * p)
+
+
+def leo_idle_motion(style):
+    """Leo can't wait to go: a springy bob twice a breath, his weight
+    rocking foot to foot, head up and looking about."""
+    def motion(p):
+        breath, rock = _breath(p), _wave(p)
+        bob = -0.014 * style.bounce * _breath(p, 2.0)
+        return (P(hips=[("Y", -1.5 * rock)], loc={"hips": (0.012 * rock, 0.0, bob)})
+                + P(spine=[("Y", 2.5 * rock), ("X", 1.0 * _breath(p, 2.0))], chest=[("X", -2.0 * breath)],
+                    head=[("X", 1.5 * breath - 2.0), ("Y", -1.0 * rock), ("Z", 4.0 * _wave(p, 1.0, 0.15))])
+                + P(upperarm_l=[("X", 2.5 * style.arm_swing * _wave(p, 1.0, 0.2)), ("Y", -1.5 * breath)],
+                    upperarm_r=[("X", 1.5 * style.arm_swing * _wave(p, 1.0, 0.2)), ("Y", 1.5 * breath)]))
+    return motion
+
+
+def nela_idle_motion(style):
+    """Nela waits quietly: a slow breath, a gentle sway, her head tilted
+    as if listening, the lantern hanging still."""
+    def motion(p):
+        breath, sway = _breath(p), _wave(p)
+        return (P(hips=[("Y", -1.0 * sway)], loc={"hips": (0.008 * sway, 0.0, -0.006 * style.bounce * breath)})
+                + P(spine=[("Y", 1.5 * sway)], chest=[("X", -2.5 * breath)],
+                    head=[("X", 1.5 * breath), ("Y", 4.0 * _wave(p, 1.0, 0.2) + 2.0), ("Z", -3.0 * _wave(p, 1.0, 0.1))])
+                + P(upperarm_l=[("Y", -2.0 * breath), ("X", 1.5 * style.arm_swing * _wave(p, 1.0, 0.25))],
+                    upperarm_r=[("Y", 2.0 * breath)]))
+    return motion
+
+
+def leo_idle(rig, style):
+    """Leo's idle: 32 frames (1.33 s), quick and springy."""
+    return _idle_loop(rig, style, 32, leo_idle_motion(style))
+
+
+def nela_idle(rig, style):
+    """Nela's idle: 48 frames (2 s), slow and still."""
+    return _idle_loop(rig, style, 48, nela_idle_motion(style), hold=True)
+
+
+def _fidget(rig, style, motion, keys, hold=False):
+    """A fidget from `keys` [(frame, Pose to add to the stand, {side:
+    hand target} or None, extra)], `extra(rig, pose)` finishing a key
+    (a stick aim); it starts and ends on the idle's first frame."""
+    stand, idle = _stand(rig, style)
+    start = stand + motion(0.0)
+    out = [(0, start)]
+    guess = {"l": (-60.0, -20.0, 0.0, 60.0), "r": (-60.0, -20.0, 0.0, 60.0)}
+    for frame, add, hands, extra in keys:
+        pose = start + add
+        for side, target in (hands or {}).items():
+            guess[side] = _reach(rig, pose, side, Vector(target), guess[side])
+            for part in ("upperarm.", "lowerarm.", "wrist."):
+                pose.rot.pop(part + side, None)
+            pose = pose + _arm(side, *guess[side])
+        if extra is not None:
+            pose = extra(rig, pose)
+        out.append((frame, _plant(rig, pose, idle)))
+    end = out[-1][0] + 8
+    return _every_frame(rig, out + [(end, start)], idle, hold)
+
+
+def leo_look(rig, style):
+    """Leo shades his eyes with his left hand and scans left, then
+    right, up on his toes with it: 60 frames (2.5 s)."""
+    brow = (0.17, -0.34, 1.98)
+
+    def scan(turn, dip=0.0):
+        return (P(spine=[("Z", 0.12 * turn), ("X", 2.0)], chest=[("Z", 0.18 * turn)],
+                  head=[("Z", 0.7 * turn), ("X", -4.0)]) + hips(style, z=dip))
+
+    return _fidget(rig, style, leo_idle_motion(style), [
+        (6, scan(0.0, -0.015), {"l": (0.42, -0.2, 1.4)}, None),
+        (12, scan(10.0, 0.005), {"l": brow}, None),
+        (22, scan(55.0), {"l": brow}, None),
+        (28, scan(58.0), {"l": brow}, None),
+        (38, scan(-55.0), {"l": brow}, None),
+        (44, scan(-58.0), {"l": brow}, None),
+        (52, scan(0.0, -0.01), {"l": (0.45, -0.18, 1.35)}, None),
+    ])
+
+
+def leo_scratch(rig, style):
+    """Leo is stumped: his head tips over and he scratches it with his
+    left hand: 48 frames (2 s)."""
+    puzzled = P(head=[("Y", -9.0), ("X", 4.0), ("Z", -6.0)], spine=[("Y", -2.0)], chest=[("Z", -4.0)])
+    keys = [(5, puzzled + hips(style, z=-0.01), {"l": (0.46, -0.1, 1.5)}, None),
+            (9, puzzled, {"l": (0.4, -0.04, 1.95)}, None)]
+    for i, frame in enumerate(range(12, 34, 3)):
+        side = 0.035 if i % 2 else -0.035
+        keys.append((frame, puzzled, {"l": (0.25, 0.02 + side, 2.08 + abs(side) * 0.5)}, None))
+    keys.append((37, P(head=[("Y", -5.0)]), {"l": (0.46, -0.06, 1.72)}, None))
+    keys.append((42, P(head=[("Y", -2.0)]), {"l": (0.5, -0.04, 1.3)}, None))
+    return _fidget(rig, style, leo_idle_motion(style), keys)
+
+
+def leo_stick(rig, style):
+    """Leo checks his stick: he lifts it up in front, turns it over to
+    look along it, then plants it back with a tap: 56 frames (2.3 s)."""
+    look = P(head=[("X", 14.0), ("Z", -12.0)], chest=[("Z", -8.0), ("X", 3.0)])
+    hand = (-0.3, -0.38, 1.28)
+    tilt = Vector((0.15, -0.45, -0.88))
+
+    def aim(roll):
+        return lambda rig, pose: _aim_slot(rig, pose, tilt, roll)
+
+    return _fidget(rig, style, leo_idle_motion(style), [
+        (8, look + hips(style, z=-0.012), {"r": (-0.42, -0.25, 1.12)}, aim(0.0)),
+        (14, look, {"r": hand}, aim(0.0)),
+        (22, look + P(head=[("Y", -6.0)]), {"r": hand}, aim(70.0)),
+        (30, look + P(head=[("Y", 5.0)]), {"r": hand}, aim(-60.0)),
+        (36, look, {"r": hand}, aim(0.0)),
+        (42, hips(style, z=-0.01), {"r": (-0.56, -0.14, 1.14)}, None),
+        (45, hips(style, z=-0.016), {"r": (-0.56, -0.13, 1.05)}, None),
+    ])
+
+
+def nela_look(rig, style):
+    """Nela lifts her lantern and peers into the dark, left then right:
+    64 frames (2.7 s)."""
+    lamp = (-0.3, -0.36, 1.02)
+
+    def peer(turn):
+        return P(spine=[("X", 6.0), ("Z", 0.3 * turn)], chest=[("Z", 0.3 * turn)], head=[("Z", 0.5 * turn), ("X", 3.0)])
+
+    near = {"r": lamp, "l": (0.3, -0.3, 0.98)}
+    return _fidget(rig, style, nela_idle_motion(style), [
+        (10, peer(0.0), near, None),
+        (20, peer(50.0), near, None),
+        (30, peer(52.0), near, None),
+        (42, peer(-50.0), near, None),
+        (50, peer(-52.0), near, None),
+        (58, peer(0.0), {"r": (-0.48, -0.25, 0.9)}, None),
+    ], hold=True)
+
+
+def nela_stretch(rig, style):
+    """Nela stretches: her free arm up high, back arched, head tipped
+    back, then she settles with a little shake: 56 frames (2.3 s)."""
+    up = P(spine=[("X", -8.0)], chest=[("X", -5.0)], head=[("X", -14.0), ("Y", 4.0)])
+    return _fidget(rig, style, nela_idle_motion(style), [
+        (8, P(spine=[("X", 5.0)], head=[("X", 4.0)]) + hips(style, z=-0.015), {"l": (0.36, -0.2, 1.0)}, None),
+        (20, up + hips(style, z=-0.004), {"l": (0.2, 0.0, 1.78), "r": (-0.5, -0.02, 0.98)}, None),
+        (30, up + P(spine=[("Y", -3.0)]) + hips(style, z=-0.002), {"l": (0.17, 0.03, 1.8), "r": (-0.5, -0.02, 0.98)},
+         None),
+        (40, P(spine=[("X", 4.0)], head=[("X", 3.0)]) + hips(style, z=-0.012), {"l": (0.5, -0.05, 1.0)}, None),
+        (45, P(spine=[("Y", 2.0)], head=[("Y", -4.0)]), None, None),
+        (49, P(spine=[("Y", -2.0)], head=[("Y", 4.0)]), None, None),
+    ], hold=True)
+
+
+def nela_hair(rig, style):
+    """Nela tucks her hair behind her left ear, head tipped to it: 48
+    frames (2 s)."""
+    tip = P(head=[("Y", 8.0), ("Z", 5.0)], spine=[("Y", 1.5)])
+    return _fidget(rig, style, nela_idle_motion(style), [
+        (8, tip, {"l": (0.36, -0.22, 1.25)}, None),
+        (14, tip, {"l": (0.3, -0.16, 1.5)}, None),
+        (24, tip + P(head=[("Y", 2.0)]), {"l": (0.31, 0.06, 1.56)}, None),
+        (30, tip, {"l": (0.33, 0.04, 1.5)}, None),
+        (38, P(head=[("Y", 2.0)]), {"l": (0.5, -0.06, 1.0)}, None),
+    ], hold=True)
+
+
 # Each kid's own clips (attack, cheer, idle, run where it shows).
 OWN = {
-    "leo": {"Leo_Attack": Clip(leo_attack, contact=3)},
-    "nela": {"Nela_Attack": Clip(nela_attack, contact=3)},
+    "leo": {"Leo_Attack": Clip(leo_attack, contact=3), "Leo_Idle": Clip(leo_idle, cyclic=True),
+            "Leo_Look": Clip(leo_look), "Leo_Scratch": Clip(leo_scratch), "Leo_Stick": Clip(leo_stick)},
+    "nela": {"Nela_Attack": Clip(nela_attack, contact=3), "Nela_Idle": Clip(nela_idle, cyclic=True),
+             "Nela_Look": Clip(nela_look), "Nela_Stretch": Clip(nela_stretch), "Nela_Hair": Clip(nela_hair)},
 }
 # The shared set, keyed once per kid with that kid's Style.
 SHARED = {

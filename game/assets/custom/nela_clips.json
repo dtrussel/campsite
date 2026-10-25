@@ -11,6 +11,18 @@
   "Nela_Attack": {
    "contact": 0.125,
    "seconds": 0.9167
+  },
+  "Nela_Hair": {
+   "seconds": 1.9167
+  },
+  "Nela_Idle": {
+   "seconds": 2.0
+  },
+  "Nela_Look": {
+   "seconds": 2.75
+  },
+  "Nela_Stretch": {
+   "seconds": 2.375
   }
  }
 }

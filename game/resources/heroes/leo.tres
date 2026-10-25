@@ -57,16 +57,20 @@ clips = {
 &"cheer": "Cheer",
 &"chop": "1H_Melee_Attack_Chop",
 &"death": "Death_A",
+&"fidget_look": "Leo_Look",
+&"fidget_scratch": "Leo_Scratch",
+&"fidget_stick": "Leo_Stick",
 &"gather": "Interact",
 &"getup": "Lie_StandUp",
 &"hammer": "2H_Melee_Attack_Chop",
 &"hit": "Hit_A",
-&"idle": "Idle",
+&"idle": "Leo_Idle",
 &"walk": "Hero_Walk",
 &"move": "Hero_Run",
 &"pick": "PickUp",
 &"tinker": "Use_Item"
 }
+fidgets = Array[StringName]([&"fidget_look", &"fidget_scratch", &"fidget_stick"])
 attack_contact_time = 0.125
 reference_speed = 4.004
 walk_reference_speed = 1.155

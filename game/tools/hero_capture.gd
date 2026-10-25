@@ -14,8 +14,9 @@ extends Node
 ##   xvfb-run -a godot --path game --resolution 320x180 --fixed-fps 30 \
 ##       res://tools/hero_capture.tscn -- <out_dir> <hero> [state ...] [options]
 ##
-## States are the hero's logical states (idle, walk, move, attack, ...);
-## with none it records every state the hero maps. Options:
+## States are the hero's logical states (idle, walk, move, attack, ...,
+## or a fidget such as fidget_look); with none it records every state
+## the hero maps, its fidgets last. Options:
 ##   --role player|companion   one role only (both by default); the
 ##                             roles differ in speeds (attack, gather, run)
 ##   --all-frames              also writes every frame to
@@ -90,6 +91,7 @@ func _ready() -> void:
 		states.append(StringName(plain[i]))
 	if states.is_empty():
 		states = STATES.filter(func(state: StringName) -> bool: return hero.clips.has(state))
+		states.append_array(hero.fidgets)
 	DirAccess.make_dir_recursive_absolute(plain[0])
 	_setup_stage()
 	for role in roles:

@@ -118,6 +118,16 @@ exaggeration.
 - **Nela** is lighter and more careful: less bounce, smaller swings, a
   more upright stance, with her lantern held steady as she runs.
 
+Standing still, each kid has their own idle and now and then a fidget
+(every 6-12 s, never the same one twice running):
+
+- **Leo** bobs on his knees and rocks foot to foot, impatient to go.
+  He shades his eyes and scans the camp, scratches his head, or lifts
+  his stick to look it over and plants it back with a tap.
+- **Nela** breathes slowly with a gentle sway and a listening tilt of
+  the head. She lifts her lantern to peer left and right, stretches her
+  free arm up, or tucks her hair behind her ear.
+
 Both kids share one walk and one run, varied by those knobs. The feet
 stay planted: each cycle is authored for a known stride (Leo's longer
 legs take longer, slower steps than Nela's quick little ones), and the
