@@ -176,8 +176,8 @@ func _make_card(perk: PerkDefinition, index: int) -> Button:
 
 
 func _ready() -> void:
-	# Slow the game (not pause it), from under any running hit-stop.
-	_saved_scale = Fx.unstopped_time_scale()
+	# Slow the game (not pause it).
+	_saved_scale = Engine.time_scale
 	_slow_scale = _saved_scale * SLOW_FACTOR
 	Engine.time_scale = _slow_scale
 	_opened_at = _now()
@@ -254,10 +254,9 @@ func _close(perk: PerkDefinition) -> void:
 
 
 ## Back to the speed it was opened at, unless something else (a new
-## run, a test) has set the speed since. A hit-stop that started while
-## the picker was open is seen through.
+## run, a test) has set the speed since.
 func _restore_time_scale() -> void:
-	if _slow_scale > 0.0 and is_equal_approx(Fx.unstopped_time_scale(), _slow_scale):
+	if _slow_scale > 0.0 and is_equal_approx(Engine.time_scale, _slow_scale):
 		Engine.time_scale = _saved_scale
 	_slow_scale = -1.0
 

@@ -205,7 +205,7 @@ func _bark_line(text: String, trigger: StringName, speaker: StringName) -> bool:
 ## Waits `game_seconds` of game time, counted by the same frame deltas
 ## the game runs on. A real-time wait (`game_seconds / SPEED` of wall
 ## clock) ends early on a slow machine, where fewer frames fit in it;
-## this one also stretches with a hit-stop or the perk picker's slow-down.
+## this one also stretches with the perk picker's slow-down.
 func _wait(game_seconds: float) -> void:
 	await get_tree().create_timer(game_seconds, true, false, false).timeout
 

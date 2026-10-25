@@ -412,13 +412,6 @@ func _work_target() -> Node3D:
 	return super()
 
 
-## The hit feel: the swing lands (at the contact frame, the target in
-## reach; see Hero.attack), then the hit-stop.
-func _swing(target: Node3D) -> void:
-	_land_swing(target, &"hit")
-	Fx.hit_stop()
-
-
 # --- Actions ---------------------------------------------------------------
 
 
