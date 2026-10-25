@@ -4,7 +4,8 @@ grin; light-blue tee with a forest badge; teal board shorts with lime
 stripes; grey socks and chunky hiking boots; a big camo backpack with a
 navy bedroll, steel bottle and rope; a compass on a cord; and his
 trusty walking stick. Built on the KayKit adventurer rig so all 76
-animations work. Output: leo.glb"""
+animations work, plus his own clips (hero_clips.py: his stick swing).
+Output: leo.glb and leo_clips.json"""
 
 import math
 import os
@@ -18,7 +19,7 @@ import bmesh  # noqa: E402
 from mathutils import Matrix, Vector, noise  # noqa: E402
 
 from lib import common, paint_bake, preview  # noqa: E402
-from characters import chibi, face_paint, head_loft  # noqa: E402
+from characters import chibi, face_paint, head_loft, hero_clips  # noqa: E402
 
 SKIN = (0.97, 0.68, 0.5)
 SKIN_SHADE = (0.8, 0.44, 0.32)
@@ -703,6 +704,8 @@ def build():
         chibi.rigid(obj, bone)
         obj.parent = rig
         obj.modifiers.new("Armature", "ARMATURE").object = rig
+    # His own clips next to the 76 stock ones (art/characters/hero_clips.py).
+    clips = hero_clips.add_clips(rig, "leo")
 
     meshes = [body, head, hair, walking_stick]
     # Game budget (~35k): each mesh is decimated; its dense copy carries
@@ -715,13 +718,13 @@ def build():
 
     if os.environ.get("SCULPT"):
         print("leo tris:", common.triangle_count(meshes))
-        sculpt_previews(rig, meshes, "leo", ("Running_A", 8), ("1H_Melee_Attack_Chop", 14))
+        sculpt_previews(rig, meshes, "leo", ("Running_A", 8), ("Leo_Attack", 3))
         return
     if chibi.quick_mode():
         for mesh in meshes:
             chibi.quick_material(mesh, overlay=(FACE_PNG, "FaceUV") if mesh is head else None)
         print("leo tris:", common.triangle_count(meshes))
-        render_previews(rig, meshes, head, "leo", ("Running_A", 8), ("1H_Melee_Attack_Chop", 14), ("PickUp", 12), ("Death_A", 40))
+        render_previews(rig, meshes, head, "leo", ("Running_A", 8), ("Leo_Attack", 3), ("PickUp", 12), ("Death_A", 40))
         return
     params = dict(size=1024, ao_distance=0.18, ao_strength=0.65, edge_strength=0.3, edge_radius=0.012,
                   noise_scale=6.0, stroke_strength=0.08, light=(1.12, 1.04, 0.94), shadow=(0.42, 0.36, 0.55),
@@ -737,8 +740,9 @@ def build():
         paint_bake.paint(mesh, source="attribute", high=highs.get(mesh), **dict(params, **extra))
     rig.data.pose_position = "POSE"
     common.export_glb(os.path.join(common.OUT_DIR, "leo.glb"), [rig] + meshes, animations=True, image_format="WEBP")
+    hero_clips.write_record("leo", clips)
     print("leo tris:", common.triangle_count(meshes))
-    render_previews(rig, meshes, head, "leo", ("Running_A", 8), ("1H_Melee_Attack_Chop", 14))
+    render_previews(rig, meshes, head, "leo", ("Running_A", 8), ("Leo_Attack", 3))
 
 
 def sculpt_previews(rig, meshes, name, *actions):

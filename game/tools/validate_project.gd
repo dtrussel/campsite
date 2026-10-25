@@ -168,6 +168,7 @@ func _validate_data() -> void:
 
 	_validate_heroes(recipe_ids)
 	_validate_hero_contact_times()
+	_validate_hero_clip_records()
 	_validate_perks()
 	_validate_hero_perks()
 	_validate_perk_problems()
@@ -361,6 +362,30 @@ func _validate_hero_contact_times() -> void:
 			_fail("%s: attack_contact_time %.3f is past the end of '%s' (%.3f s)"
 				% [hero.resource_path, contact, clip, player.get_animation(clip).length])
 		model.free()
+
+
+## A hand-made attack clip's contact time is the clip script's: the
+## script records each clip it keys in <model>_clips.json beside the
+## model (art/characters/hero_clips.py), and the hero data must carry
+## the same number. Stock clips have no record and are skipped.
+func _validate_hero_clip_records() -> void:
+	for hero in HeroRoster.all():
+		if hero.model_scene == null:
+			continue
+		var record_path: String = hero.model_scene.resource_path.get_basename() + "_clips.json"
+		if not FileAccess.file_exists(record_path):
+			continue
+		var record: Variant = JSON.parse_string(FileAccess.get_file_as_string(record_path))
+		if not record is Dictionary or not record.get("clips") is Dictionary:
+			_fail("%s: is not a clip record ({\"clips\": {name: {...}}})" % record_path)
+			continue
+		var clip: String = String(hero.clips.get(&"attack", ""))
+		var made: Dictionary = record.clips.get(clip, {})
+		if not made.has("contact"):
+			continue
+		if absf(float(made.contact) - hero.attack_contact_time) > 0.001:
+			_fail("%s: attack_contact_time %.3f, but the clip script keys '%s' to land at %.3f s (%s)"
+				% [hero.resource_path, hero.attack_contact_time, clip, float(made.contact), record_path])
 
 
 ## Camp badges: every badge has an icon, a name,

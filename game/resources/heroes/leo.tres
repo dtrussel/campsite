@@ -53,7 +53,7 @@ ui_color = Color(1, 0.93, 0.7, 1)
 model_scene = ExtResource("3_model")
 model_scale = 0.7
 clips = {
-&"attack": "1H_Melee_Attack_Chop",
+&"attack": "Leo_Attack",
 &"cheer": "Cheer",
 &"chop": "1H_Melee_Attack_Chop",
 &"death": "Death_A",
@@ -67,7 +67,7 @@ clips = {
 &"pick": "PickUp",
 &"tinker": "Use_Item"
 }
-attack_contact_time = 0.14
+attack_contact_time = 0.125
 reference_speed = 7.0
 step_distance = 1.1
 capsule_height = 1.2

@@ -11,7 +11,9 @@ means "lower the arm, then swing it forward". Useful signs:
 - upperarm.r:  -Y lowers the arm, -X swings it forward;
 - lowerarm.l / .r:  -Z / +Z bends the elbow forward;
 - upperleg:  -X swings the leg forward;  lowerleg: +X bends the knee.
-Locations (hips, root) are offsets in metres in the same axes.
+Locations (hips, root) are offsets in metres in the same axes. A
+rotation may also be a Quaternion in those axes (a pose sampled from
+a stock clip: hero_clips.stock_pose).
 
 Every clip keys every deform bone, so none inherits another's pose. The
 timings are authored at 24 fps and scaled to the scene rate."""
@@ -53,7 +55,8 @@ class Pose:
             return name
         out = Pose()
         for b, v in self.rot.items():
-            out.rot[swap(b)] = [(a, d if a == "X" else -d) for a, d in v]
+            out.rot[swap(b)] = [Quaternion((r.w, r.x, -r.y, -r.z)) if isinstance(r, Quaternion)
+                                else (r[0], r[1] if r[0] == "X" else -r[1]) for r in v]
         for b, v in self.loc.items():
             out.loc[swap(b)] = Vector((-v.x, v.y, v.z))
         return out
@@ -89,18 +92,21 @@ def torso(spine=8.0, chest=4.0, head=-10.0, roll=0.0, twist=0.0, hips_z=0.0, hip
 # ------------------------------------------------------------ keying
 
 
-def key(rig, frame, pose, last):
+def key(rig, frame, pose, last, bones=BONES):
     fps = bpy.context.scene.render.fps
     frame = frame * fps / 24.0
-    for name in BONES:
+    for name in bones:
         pb = rig.pose.bones.get(name)
         if pb is None:
             continue
         rest = pb.bone.matrix_local.to_quaternion()
         q = Quaternion()
-        for axis, deg in pose.rot.get(name, []):
-            vec = {"X": (1, 0, 0), "Y": (0, 1, 0), "Z": (0, 0, 1)}[axis]
-            q = Quaternion(vec, math.radians(deg)) @ q
+        for turn in pose.rot.get(name, []):
+            if isinstance(turn, Quaternion):
+                q = turn @ q
+                continue
+            vec = {"X": (1, 0, 0), "Y": (0, 1, 0), "Z": (0, 0, 1)}[turn[0]]
+            q = Quaternion(vec, math.radians(turn[1])) @ q
         local = rest.inverted() @ q @ rest
         if name in last and last[name].dot(local) < 0:
             local.negate()
@@ -113,14 +119,16 @@ def key(rig, frame, pose, last):
             pb.keyframe_insert("location", frame=frame, group=name)
 
 
-def action(rig, name, keys, cyclic=False):
+def action(rig, name, keys, cyclic=False, bones=BONES):
+    """Keys `keys` ([(frame, Pose)]) as a new action; `bones` are the
+    bones every key sets (the kids' rig adds its hand slots)."""
     action = bpy.data.actions.new(name)
     action.use_fake_user = True
     rig.animation_data_create()
     rig.animation_data.action = action
     last = {}   # keeps quaternions on one hemisphere so curves never flip
     for frame, pose in keys:
-        key(rig, frame, pose, last)
+        key(rig, frame, pose, last, bones)
     for fc in action.fcurves:
         for kp in fc.keyframe_points:
             kp.interpolation = "BEZIER"

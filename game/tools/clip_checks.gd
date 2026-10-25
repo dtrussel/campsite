@@ -51,7 +51,9 @@ const ACTION_SECONDS: Dictionary = {
 ## The per-clip switch from "report" to "enforce": hero id -> state ->
 ## the checks ("loop", "slide", "duration") that fail the validator
 ## when over their limit. Every other check only reports.
-const ENFORCED: Dictionary = {}
+const ENFORCED: Dictionary = {
+	&"leo": {&"attack": ["duration"]},
+}
 
 
 ## Measures every clip `hero` maps. One row per check: {hero, state,

@@ -87,6 +87,11 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
   - **duration:** each action's length at its gameplay play speed
     (`PLAY_SPEEDS`) against its gameplay length (`ACTION_SECONDS`, the
     stock lengths; ±0.05 s).
+  - **contact time:** a hero's `attack_contact_time` must come within
+    the wind-up cap at play speed, inside the attack clip, and, for a
+    hand-made clip, equal the clip script's: `art/characters/hero_clips.py`
+    records each clip it keys in `<kid>_clips.json` beside the model
+    (`_validate_hero_clip_records`). Always enforced.
 
   Each check reports until `ENFORCED` (hero, state, checks) switches
   it to failing the validator. `tools/check.sh` shows one summary line;

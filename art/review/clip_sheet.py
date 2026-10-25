@@ -24,6 +24,11 @@ game's play speed). <out> is build/clip_sheets/ unless `--out` says.
 
 Options: --frames N (8), --size PX per frame (256), --azimuth DEG (35),
 --travel M/S, --samples N (12), --out DIR.
+
+--rekey keys the kid's hand-made clips (art/characters/hero_clips.py)
+onto the committed model first, so a clip in progress can be reviewed
+without rebuilding the kid (minutes for the bake); it also prints the
+stick hand's height and the stick's pitch per frame.
 """
 
 import argparse
@@ -100,6 +105,7 @@ def main():
     parser.add_argument("--travel", type=float, default=None)
     parser.add_argument("--samples", type=int, default=12)
     parser.add_argument("--out", default=os.path.join(common.ROOT, "build", "clip_sheets"))
+    parser.add_argument("--rekey", action="store_true")
     args = parser.parse_args()
 
     clips, model_scale, move_speed, reference_speed = hero_data(args.kid)
@@ -118,6 +124,9 @@ def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=os.path.join(GAME, "assets", "custom", args.kid + ".glb"))
     rig = next(o for o in bpy.context.scene.objects if o.type == "ARMATURE")
+    if args.rekey:
+        from characters import hero_clips
+        hero_clips.add_clips(rig, args.kid)
     action = bpy.data.actions.get(clip)
     if action is None:
         sys.exit("clip_sheet: %s has no clip '%s' (states: %s)" % (args.kid, clip, ", ".join(sorted(clips))))
@@ -180,6 +189,11 @@ def main():
         root.location = forward * (travel * seconds / model_scale)
         cam.location = root.location + Vector((0, 0, height * 0.5)) + offset
         scene.frame_set(frame)
+        if args.rekey:
+            slot = rig.pose.bones["handslot.r"].matrix
+            tip = slot.to_3x3().col[0]
+            print("clip_sheet: frame %d  hand z %.2f y %.2f  stick tip dir (%.2f, %.2f, %.2f)"
+                  % (frame, slot.translation.z, slot.translation.y, tip.x, tip.y, tip.z))
         scene.render.filepath = os.path.join(frame_dir, "%03d.png" % (frame - first))
         bpy.ops.render.render(write_still=True)
         images.append(Image.open(scene.render.filepath).convert("RGB"))

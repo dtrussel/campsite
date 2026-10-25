@@ -103,6 +103,24 @@ head, in the same painted, ink-lined look. The palette is a lime jacket
 boots with red laces, an olive pack and a blue bedroll. Her storybook
 portraits are cut from the sheet's expressions. The beagle isn't adopted.
 
+## Hero motion
+
+The kids move like kids, not the rig's stock adult adventurers. Their
+own clips are hand-keyed (`art/characters/hero_clips.py`) and follow
+the animation principles: a short anticipation, a strike on the
+contact frame, follow-through and overlap, and chibi-sized
+exaggeration.
+
+- **Leo** is bouncy and eager: a little more hop, bigger arm swings, a
+  slight forward lean. His attack is an overhead bonk with his walking
+  stick: cocked up over his right shoulder, down in front of him, then
+  low across his body while his head and arm lag.
+- **Nela** is lighter and more careful: less bounce, smaller swings, a
+  more upright stance.
+
+The wind-up stays within 0.1 s at play speed, so attacks still feel
+instant.
+
 ## Mobs
 
 The mob sheets in the concept set (06–08) are **not** adopted. The Shadow Imp,
