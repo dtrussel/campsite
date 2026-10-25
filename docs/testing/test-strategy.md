@@ -75,6 +75,31 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
   - With `SMOKE_FRAME_DELAY=40` (as CI runs it), a third pass sleeps
     40 ms every frame.
 - `game/tests/sim/balance_sim.tscn` is a tuning aid, not pass/fail.
+- **Hero clip checks** (in the validator, `game/tools/clip_checks.gd`).
+  For every hero, each mapped state must have its clip in the model
+  (always enforced). Then, measured as data with no scene or Blender:
+  - **loop:** idle, walk and run's last pose against their first (the
+    largest joint jump and bone turn at the wrap; limits 1 cm, 3°);
+  - **slide:** how far a foot slides per stride, at the speed the game
+    moves the hero (walk at `CharacterVisual.walk_speed`, the clip at
+    1x; run at the hero's `move_speed`, the clip at the run scale). A
+    foot counts as down within 2 cm of its lowest point (limit 4 cm);
+  - **duration:** each action's length at its gameplay play speed
+    (`PLAY_SPEEDS`) against its gameplay length (`ACTION_SECONDS`, the
+    stock lengths; ±0.05 s).
+
+  Each check reports until `ENFORCED` (hero, state, checks) switches
+  it to failing the validator. `tools/check.sh` shows one summary line;
+  `godot --headless --path game res://tools/validate_project.tscn -- --clips`
+  prints every number. The pure measures have unit tests
+  (`test_clip_checks.gd`).
+- **Hero captures** (review, not pass/fail): `game/tools/hero_capture.tscn`
+  records a hero playing states in the game, as the player and as the
+  companion, and writes PNG strips (or every frame, for a GIF). It also
+  stacks an old capture over a new one. Usage is in its header:
+  `xvfb-run -a godot --path game --resolution 320x180 --fixed-fps 30 res://tools/hero_capture.tscn -- <out_dir> leo walk attack`.
+  The clay contact sheets come from Blender (`art/review/clip_sheet.py`,
+  see `art/README.md`).
 - `game/tests/sim/screenshots.tscn` captures the key screens under
   Xvfb for visual review.
 - Exported builds support `-- --selftest` to prove the PCK loads its
