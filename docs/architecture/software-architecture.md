@@ -158,6 +158,7 @@ game/scripts/game_loop/wave_controller.gd      # later
 game/scripts/characters/hero.gd               # Hero: what both heroes do in either role
 game/scripts/characters/hero_hits.gd           # the perk math under every hero hit
 game/scripts/characters/party.gd               # Party: who plays which role
+game/scripts/characters/head_look.gd           # HeadLook: what a hero looks at (the target order)
 
 game/scripts/player/player_controller.gd       # the player's hero role (extends Hero)
 game/scripts/player/pointer_commands.gd
@@ -240,9 +241,20 @@ fields.
 - **Gathering and queries:** `start_gather(node)`, `cancel_gather()`,
   `is_gathering()`, `gather_target()`, the `gather_finished(node)` signal,
   and `nearest_mob(within)`. The node-radius fallback is 0.4.
+- **Look:** every frame (`_process`, in both roles) Hero picks what its
+  head turns toward with `HeadLook.pick`: the attack target while
+  fighting, the work target while gathering or building, the nearest mob
+  within 6 m while idle at night, otherwise the other hero now and then
+  (`HeadLook.Glance`). It hands the pick to its visual
+  (`CharacterVisual.set_look_focus(node)`), whose `HeadLookModifier`
+  (a `SkeletonModifier3D` on the skeleton, heroes only via `HeroBody`)
+  turns the chest and head, eased, capped at 60° and blended out during
+  `hit`, `death`, `getup` and a standing `cheer`.
 - **Role hooks** (the role overrides them): `_show_hurt`,
-  `_on_down_changed`, `_show_attack`, `_swing`, `_show_level_up` and
-  `_on_gather_started`.
+  `_on_down_changed`, `_show_attack`, `_swing`, `_show_level_up`,
+  `_on_gather_started`, and for the look `_fight_target` (the player's
+  hero adds its attack command's target) and `_work_target` (both roles
+  add the building they build or repair).
 
 **The player's hero** (`player_controller.gd`) adds input, the pointer
 commands (`command_move/attack/gather/campfire/repair/build`,

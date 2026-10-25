@@ -397,6 +397,21 @@ func is_attacking() -> bool:
 	return super() or command == Command.ATTACK
 
 
+## The attack command's target counts as fought, walking to it included.
+func _fight_target() -> Node3D:
+	if command == Command.ATTACK and _is_attackable(command_target):
+		return command_target
+	return super()
+
+
+## The site being built or repaired counts as worked on while the hero
+## hammers it (not while walking there).
+func _work_target() -> Node3D:
+	if _tool_busy and (command == Command.REPAIR or command == Command.BUILD) and is_instance_valid(command_target):
+		return command_target
+	return super()
+
+
 ## The hit feel: the swing lands (at the contact frame, the target in
 ## reach; see Hero.attack), then the hit-stop.
 func _swing(target: Node3D) -> void:

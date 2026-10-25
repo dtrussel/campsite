@@ -14,7 +14,7 @@ extends CharacterBody3D
 ## a role's private fields by name.
 ##
 ## The script is split into sections, one per part of the hero:
-## Health, Attack, Progress, and Gathering with the shared queries.
+## Health, Attack, Progress, Gathering with the shared queries, and Look.
 
 ## HP changed (a hit, a heal, regen, a level-up or a revive).
 signal health_changed(current_hp: int, max_hp: int)
@@ -666,3 +666,40 @@ static func _node_radius(node: Node3D) -> float:
 		var box: Vector3 = (shape.shape as BoxShape3D).size
 		return maxf(box.x, box.z) * 0.5
 	return 0.4
+
+
+# --- Look ----------------------------------------------------------------
+# What the hero's head turns toward (HeadLook's order), picked every
+# frame in both roles and handed to the visual. In `_process`, not the
+# role's physics tick, so it follows a hero whose AI is held still.
+
+var _glance: HeadLook.Glance = HeadLook.Glance.new()
+
+
+func _process(delta: float) -> void:
+	if _visual == null:
+		return
+	var glancing: bool = _glance.tick(delta)
+	if _down:
+		_visual.set_look_focus(null)
+		return
+	var fight: Node3D = _fight_target()
+	var work: Node3D = _work_target()
+	var idle: bool = fight == null and work == null and Vector2(velocity.x, velocity.z).length() < 0.2
+	var mobs: Array = get_tree().get_nodes_in_group("mobs") if idle and TimeManager.is_night() else []
+	_visual.set_look_focus(HeadLook.pick(global_position, fight, work, idle and TimeManager.is_night(), mobs,
+		Party.other(self), glancing))
+
+
+## The mob the hero is fighting, or null: its last attack's target while
+## the cooldown runs. The player's hero also counts its attack command.
+func _fight_target() -> Node3D:
+	if _attack_cooldown_remaining > 0.0 and is_instance_valid(_attack_target):
+		return _attack_target
+	return null
+
+
+## What the hero is working on, or null: the node it gathers. The roles
+## add the building they build or repair.
+func _work_target() -> Node3D:
+	return gather_target()
