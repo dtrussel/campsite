@@ -12,6 +12,7 @@ extends Node3D
 ##   visual.set_locomotion(speed)     # idle / walk / run blend by speed
 ##   visual.play_action(&"attack")    # one-shot, returns length
 ##   visual.face(direction, delta)    # smooth turn toward a direction
+##   visual.set_look_focus(node)      # head and chest turn toward it (null: ahead)
 ##
 ## Animation is layered with an AnimationTree built in code:
 ##
@@ -81,6 +82,9 @@ const TOOL_SCALE: float = 1.9
 ## Model parts put away while a hand tool is out (Leo's stick, Nela's
 ## lantern); set by HeroBody.
 @export var tool_hidden_parts: PackedStringArray = PackedStringArray()
+## Turn the head and chest toward a look focus (`set_look_focus`); set by
+## HeroBody. Needs a skeleton with "chest" and "head" bones.
+@export var head_look: bool = false
 
 var model: Node3D = null
 var _player: AnimationPlayer = null
@@ -103,6 +107,12 @@ var _tools: Dictionary = {}  # key -> Node3D
 var _tool_key: StringName = &""
 ## Footstep puffs made so far (tests).
 var steps_puffed: int = 0
+## The action last played (its state and layer), for the look's blend-out.
+var _action_state: StringName = &""
+var _action_layer: String = ""
+var _look: HeadLookModifier = null
+var _look_focus: Node3D = null
+var _look_yaw: float = 0.0
 
 
 ## Dresses the outfit mesh in `color` now (hero select's preview).
@@ -152,6 +162,8 @@ func _ready() -> void:
 				anim.loop_mode = Animation.LOOP_LINEAR
 		_build_tree()
 	_last_yaw = rotation.y
+	if head_look:
+		_add_head_look()
 
 
 ## Called every physics frame with the character's planar speed.
@@ -197,6 +209,8 @@ func play_action(state: StringName, speed: float = 1.0) -> float:
 		return 0.0
 	var length: float = anim.length / maxf(speed, 0.01)
 	_action_until_msec = Time.get_ticks_msec() + int(length * 1000.0)
+	_action_state = state
+	_action_layer = "full" if _tree == null or not is_moving() else "upper"
 	if _tree == null:
 		_player.speed_scale = speed
 		_player.play(String(clips[state]), 0.08)
@@ -330,6 +344,8 @@ func face_instantly(direction: Vector3) -> void:
 
 
 func _process(delta: float) -> void:
+	if _look != null:
+		_tick_look(delta)
 	if model == null or not lean:
 		return
 	# Ease into the lean, and back upright when running straight.
@@ -434,3 +450,63 @@ func _get_clip(state: StringName) -> Animation:
 	if clip == "" or not _player.has_animation(clip):
 		return null
 	return _player.get_animation(clip)
+
+
+# --- Head look-at ------------------------------------------------------------
+# The head and chest turn toward a focus that gameplay sets (Hero picks
+# it with HeadLook's target order), eased and capped at LOOK_MAX_DEGREES,
+# and back to ahead during full-body actions.
+
+## The most the head and chest turn together, degrees.
+const LOOK_MAX_DEGREES: float = 60.0
+## How quickly the turn eases toward its goal (per second).
+const LOOK_EASE: float = 6.0
+## Actions the look gives way to; &"cheer" only on the whole body.
+const LOOK_OFF_ACTIONS: Array[StringName] = [&"hit", &"death", &"getup"]
+
+
+## Looks at `node` from now on (null: straight ahead again).
+func set_look_focus(node: Node3D) -> void:
+	_look_focus = node
+
+
+## What the head is set to look at, or null (tests).
+func look_focus() -> Node3D:
+	return _look_focus if is_instance_valid(_look_focus) else null
+
+
+## The head's turn from the body last frame, degrees; positive turns
+## from +Z toward +X, as rotation.y does (tests).
+func look_turn_degrees() -> float:
+	return _look.turned_degrees if _look != null else 0.0
+
+
+func _add_head_look() -> void:
+	var skeleton: Skeleton3D = model.find_child("Skeleton3D", true, false) as Skeleton3D
+	if not HeadLookModifier.fits(skeleton):
+		return
+	_look = HeadLookModifier.new()
+	_look.name = &"HeadLook"
+	skeleton.add_child(_look)
+
+
+## Eases the turn toward the focus, capped; toward ahead with no focus
+## or during a full-body action.
+func _tick_look(delta: float) -> void:
+	var goal: float = 0.0
+	var focus: Node3D = look_focus()
+	if focus != null and not _look_blocked():
+		var to: Vector3 = focus.global_position - global_position
+		if Vector2(to.x, to.z).length_squared() > 0.01:
+			var cap: float = deg_to_rad(LOOK_MAX_DEGREES)
+			goal = clampf(angle_difference(global_rotation.y, atan2(to.x, to.z)), -cap, cap)
+	_look_yaw = lerpf(_look_yaw, goal, clampf(delta * LOOK_EASE, 0.0, 1.0))
+	_look.yaw = _look_yaw
+
+
+func _look_blocked() -> bool:
+	if _locked:
+		return true
+	if not is_in_action():
+		return false
+	return LOOK_OFF_ACTIONS.has(_action_state) or (_action_state == &"cheer" and _action_layer == "full")
