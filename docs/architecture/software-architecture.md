@@ -91,8 +91,11 @@ Each autoload is a single small node script registered in
 | `PerkManager`        | Perk cards: deals cards on level-up, opens the picker, answers perk hooks. |
 | `SaveManager`        | The save file only: path, version, JSON read and write, parse checks, delete. |
 | `RunSession`         | One run's lifecycle: start, continue, reset, the dawn autosave, `restore_finished` (see H). |
-| `Profile`            | Keeps a player's progress across runs (see "Profile" under H). |
-| `Badges`             | Camp Badges: checks them live and at a run's end, keeps them in the profile, announces them with `badge_earned` (see "Camp Badges" under H). |
+| `Profile`            | Keeps a player's progress across runs, earns Camp Badges and announces them with `badge_earned` (see "Profile" and "Camp Badges" under H). |
+
+Camp Badges (`Badges`), the journal, the story library, starting perks,
+cosmetics and the endless record are static modules (`class_name`), not
+autoloads: they read and write the profile through its verbs.
 
 ### Autoload contract
 
@@ -454,7 +457,7 @@ The saving systems, and what each saves:
 | Saving system | Saves |
 |---------------|-------|
 | `TimeManager` | `"day"` |
-| `GameManager` (the run fields) | `"nights_to_win"`, `"party"`, `"stats"`, `"loot_misses"` (the shard pity counter) |
+| `GameManager` (the run's stats) | `"stats"`, `"loot_misses"` (the shard pity counter) |
 | `ResourceManager` | `"inventory"` |
 | `ProgressionManager` | each hero's `"xp"` |
 | `PerkManager` | each hero's `"perks"`; the reset zeroes the perk clock and reshuffles the deal |
@@ -490,15 +493,26 @@ session's list.
 `RunSession` (an autoload, last in the list) is the one entry point for
 a run's lifecycle:
 
+- `config`: the run config of the run in play, or of the last run once
+  it has ended (Again, `GameManager.start_run()`, replays it with
+  `again()`). It never changes during a run.
+- `draft`: the next run's config while it is set up. The title builds it
+  (`RunConfig.for_chapter(n)` or `for_endless()`, through
+  `GameManager.open_hero_select`), and hero select adds the party and
+  the starting perk (`GameManager.begin_chapter`).
 - `start(config, open_scene)`: resets every saving system, deletes any
   save and opens the gameplay scene, which starts the clock at day 1.
-- `continue_from(data, config, open_scene)`: resets, then keeps `data`
-  (from `SaveManager.load_save` or `parse`) waiting for the gameplay
-  scene. The party and run length come from the save.
-- `reset(config)`: every saving system back to a fresh run. It also
-  leaves build mode, which is not run state, and applies the config's
-  seeds and auto-pick time.
-- `snapshot()`: the run as plain data, for the save file. It is `{}`
+- `continue_from(data, seeds, open_scene)`: builds the config from the
+  save (`RunConfig.from_save`) before any saving system loads, takes the
+  seeds and auto-pick time from `seeds`, resets, then keeps `data` (from
+  `SaveManager.load_save` or `parse`) waiting for the gameplay scene.
+- `reset(config)`: every saving system back to a fresh run of `config`
+  (the current one when null). It also leaves build mode, which is not
+  run state, and applies the config's seeds and auto-pick time.
+- `forget_last_run()`: back to a fresh Chapter 1 run of Leo with Nela,
+  for both `config` and `draft` (smoke does this between scenarios).
+- `snapshot()`: the run as plain data, for the save file: the config's
+  keys (`RunConfig.write_save`), then every saving system's. It is `{}`
   when there is no camp to save. `save_now()` writes it.
 - `restore_finished`: a continued run is fully back. The perk top-up
   (dealing the cards a level-up still owes) listens here.
@@ -509,11 +523,36 @@ a run's lifecycle:
   check, the companion waking, torches burning out, the night's XP). It
   also deletes the save when a run ends.
 
-A `RunConfig` (`game/scripts/core/run_config.gd`) is what a run starts
-from: the hero and companion, the chapter goal (`nights_to_win`), the
-seeds of the perk deal and the loot rolls, and the perk auto-pick time.
-`RunConfig.current()` gives a config for the next run, with fresh seeds.
+A `RunConfig` (`game/scripts/core/run_config.gd`, a `RefCounted`) is
+what a run starts from: the hero and companion (`set_party`, `hero()`,
+`companion()`), the chapter and the endless flag, the nights to win, the
+seeds of the perk deal, the loot rolls and the day chest (`perk_seed`,
+`loot_seed`, `chest_seed`), the starting perk and the perk auto-pick
+time.
+
+- **Builders:** `RunConfig.for_chapter(n)` (nights to win from
+  `CHAPTER_NIGHTS`: 3 for Chapter 1, 7 for Chapter 2) and
+  `for_endless()` (Chapter 2's nights and moon rows with the endless
+  flag, and no Moon-Eater). `again()` keeps the chapter, mode, nights, party, starting perk
+  and auto-pick time, with fresh seeds and a fresh day chest roll.
+- **The run's rules:** the systems ask the config, never the game
+  manager: `has_moon_eater()`, `is_moon_eater_night(night)` (the mob
+  spawner), `dawn_wins(night)` (the win check; never in endless),
+  `nights_past_story(night)` (endless scaling), `lantern_starts_full()`
+  (the Moon Lantern) and `plays_intro()`.
+- **The day chest:** `roll_day_chest(chance)` rolls `day_chest_day`
+  from `chest_seed` (`DAY_CHEST_CHANCE`, 50%; 0 means no chest), once,
+  when the config is built.
+- **Save:** it is not a saving system: the run session writes its keys
+  (`write_save`: `"chapter"`, `"nights_to_win"`, `"endless"`, `"party"`,
+  `"day_chest_day"`) and reads them back (`RunConfig.from_save`, which
+  infers the chapter from the run length when `"chapter"` is missing).
+  The seeds are not saved.
+
 A test that passes the same config replays the same deals and drops.
+`RunOutcome` (`game/scripts/core/run_outcome.gd`) is how a run ended, as
+the profile hears it: the config, whether it was won, the night it ended
+on and a copy of the run's stats (see "Profile").
 
 ### The restore order
 
@@ -521,7 +560,7 @@ A test that passes the same config replays the same deals and drops.
 (called by `GameManager.on_game_scene_ready` once the gameplay scene is
 up) loads each system in it:
 
-1. `TimeManager`, then `GameManager`'s run fields;
+1. `TimeManager`, then `GameManager`'s run stats;
 2. `ResourceManager`;
 3. `ProgressionManager` (it replays the level-ups quietly);
 4. `PerkManager`, then `CraftingManager`;
@@ -554,35 +593,63 @@ session, must continue with every field intact (smoke).
 ### Profile
 
 The run save holds one run; the **profile** holds what a player keeps
-across runs (story beats seen, chapters won, records, badges, journal
-pages and unlocks). It is the `Profile` autoload (`game/scripts/core/profile.gd`)
-on its own file, `user://profile.json`, which a run ending never deletes.
+across runs (story beats seen, chapters won, records, badges and their
+totals, journal pages and unlocks). It is the `Profile` autoload
+(`game/scripts/core/profile.gd`) on its own file, `user://profile.json`,
+which a run ending never deletes.
 
-- **Interface:** `get_value(key, fallback)`, `set_value(key, value)`
-  (saved at once), `has_value`, `record_best(key, value)` (true for a
-  new record), `forget(prefix)`, `delete`, `reload`, and
-  `set_path(path, old_story_path)` so tests use their own file.
-- **Keys:** strings with a dotted owner prefix, such as `story.`,
-  `chapters.`, `endless.` and `badges.`; values are JSON-friendly. A
-  new kind of progress adds keys rather than a new store.
+- **Verbs:** callers read and write only through its verbs; the keys
+  and the raw key access are private. Pages: `find_page(id)` (true when
+  new; emits `page_found`), `is_page_found`. Story beats: `mark_seen`,
+  `has_seen`, `forget_seen`. Picks: `record_hero_pick` /
+  `last_hero_pick`, `record_starting_perk_pick` / `starting_perk_pick`,
+  `record_outfit_pick(hero, id)` / `outfit_pick(hero)`,
+  `record_tent_pick` / `tent_pick`. Chapters: `record_chapter_won`,
+  `is_chapter_won`, `is_chapter_unlocked`. Endless: `record_endless`,
+  `endless_best_night`, `endless_best_hero`, `is_endless_unlocked`.
+  Badges: `is_badge_earned`, `stat_total`, `has_won_with`, and the
+  test-only `grant_badge_for_tests(id)`. Plus `delete` and `reload`.
+- **What the run tells it:** two things. During play a stat was
+  recorded: `GameManager` calls `record_stat(stat, amount, run,
+  run_stats)` only while a run is playing and not restoring, and the
+  profile adds to the stat's total and earns every badge met. At the
+  end, `GameManager._end_run` calls `record_run_end(RunOutcome)` before
+  it emits `run_ended`: it records the chapter won and the hero won with
+  (a won run) and the endless record (an endless run), earns the badges,
+  win badges included, and returns a `RunOutcome.Result`
+  (`record_beaten`, and `unlocked`: `&"chapter_2"` and/or `&"endless"`).
+  `GameManager.run_end` keeps that result for the end screen ("New
+  record!"). The profile never reads the game manager, the run session
+  or the time of day.
+- **Storage adapters:** the keys sit behind a store, the profile's one
+  seam, duck-typed (`exists`, `read`, `write`, `remove`, `where`):
+  `ProfileFileStore` (`game/scripts/core/profile_file_store.gd`;
+  `set_path(path, old_story_path)`; the game and smoke), which alone
+  reads the old `story.cfg` for the import, and `ProfileMemoryStore`
+  (`profile_memory_store.gd`; `use_memory()`; unit tests). Both hold the
+  same JSON text, so a value reads back the same from either.
+  `game/tests/fixtures/profile_before_verbs.json` guards the file format
+  byte for byte.
+- **Keys:** strings with a dotted owner prefix (`story.`, `chapters.`,
+  `endless.`, `badges.`, `totals.`, `heroes.`, `journal.`, `perks.`,
+  `cosmetics.`); values are JSON-friendly. A new kind of progress adds a
+  verb and keys rather than a new store.
 - **Bad files:** a missing or corrupt file loads as empty and is
   rewritten on the next write.
-- **Story beats:** `StoryLibrary.has_seen` / `mark_seen` /
-  `forget_progress` read and write `story.<beat>` keys.
-- **Endless record:** when an endless run ends, `GameManager` calls
-  `EndlessRecord.submit(night, hero)` (`game/scripts/meta/endless_record.gd`),
-  which uses `record_best("endless.best_nights", night)` and, on a new
-  record, writes the hero to `endless.best_hero`; `GameManager.new_record`
-  tells the end screen, and `EndlessRecord.best_text()` is the line the
-  title and end screen show.
-- **Chapters and the last hero:** `record_chapter_won(chapter)` (from
-  `GameManager._end_run`) writes `chapters.c<n>.won`; winning Chapter 1
-  sets `chapters.c2.unlocked`, which `is_chapter_unlocked(2)` reads for
-  the title's lock. `unlock_all_chapters` (debug builds, the `playtest`
-  feature tag that both export presets carry; the validator checks it)
-  opens every chapter; tests clear it. `GameManager`
-  keeps the hero picked in `begin_chapter` (`record_hero_pick`), and
-  hero select opens on `GameManager.last_hero_pick()`.
+- **Chapters and Endless:** winning Chapter 1 sets
+  `chapters.c2.unlocked`, which `is_chapter_unlocked(2)` reads for the
+  title's lock. Endless opens on the title once Chapter 2 is won, or,
+  for a profile that never recorded that win, once the true ending
+  (`ending.c2`) was seen (`is_endless_unlocked`).
+  `unlock_all_chapters` (debug builds, the `playtest` feature tag that
+  both export presets carry; the validator checks it) opens every
+  chapter; tests clear it. Hero select opens on
+  `GameManager.last_hero_pick()`.
+- **Endless record:** `record_endless(night, hero)` keeps the furthest
+  night and its hero (an equal night is not a record) and logs
+  `endless_record`; `EndlessRecord.best_text()`
+  (`game/scripts/meta/endless_record.gd`) is the line the title and end
+  screen show.
 - **Delete profile:** the pause menu's Delete profile button asks
   through a ConfirmationDialog that says plainly it erases all progress
   (chapters, badges, journal pages, cosmetics, the starting perk, the
@@ -599,34 +666,42 @@ on its own file, `user://profile.json`, which a run ending never deletes.
 Milestones the profile keeps for good. Each is a
 `BadgeDefinition` `.tres` in `game/resources/badges/` (icon, name,
 how-to-earn text, and a condition: `run_stat`, `total`, `win` or
-`win_each_hero`). The `Badges` autoload (`game/scripts/meta/badges.gd`)
-checks them live on `GameManager.stat_recorded` during play and again
-on `run_ended`, keeps earned ones as `badges.<id>`, and emits
-`badge_earned` once per badge. The HUD toasts it; the end screen lists
-the badges the run earned, since the win badges come after the run has
-ended and the paused HUD sits under the end screen. It also keeps what counting badges need across
-runs: `totals.<stat>` (added to as stats are recorded) and
-`heroes.won.<id>`. The run stats some badges need are
+`win_each_hero`). `Badges` (`game/scripts/meta/badges.gd`) is a static
+module, not an autoload: `definitions()`, `get_badge(id)`,
+`total_stats()` (the stats a `total` badge counts) and the pure rule
+`Badges.is_met(badge, Badges.Facts)`. `Facts` holds the run's stats and
+chapter, whether it was won (false during play), the totals across runs,
+the heroes won with and the roster.
+
+The profile is the one place a badge is earned: it builds the facts in
+`record_stat` and `record_run_end`, keeps earned badges as
+`badges.<id>`, logs `badge_earned id=<id>` and emits
+`Profile.badge_earned(badge)` once per badge. The HUD toasts it; the end
+screen lists the badges the run earned, since the win badges come after
+the run has ended and the paused HUD sits under the end screen. Totals
+(`totals.<stat>`) and the heroes won with (`heroes.won.<id>`) are the
+profile's own keys. The run stats some badges need are
 `gremlins_caught`, `fire_low_pct` (the fire's lowest HP, in %) and
 `lantern_lit`.
 
 ### Journal, scrapbook and unlocks
 
 What the profile unlocks. Each is a small
-static class over profile keys, with no autoload and no run state, so
-Delete profile resets it and a run never saves it.
+static class over the profile's verbs, with no autoload and no run
+state, so Delete profile resets it and a run never saves it.
 
 - **Journal pages:** `JournalPage` `.tres` in
   `game/resources/story/journal/` (file order is journal order). A dawn
   page names its note line (`note_id`) and reads the text, face and
   sketch from it; a badge page names its `badge`. `Journal`
-  (`game/scripts/meta/journal.gd`) keeps found pages as
-  `journal.<id>`: dawn pages are found when the HUD plays their card
-  (`find_notes_on`), a badge page reads as found while its badge is
+  (`game/scripts/meta/journal.gd`) keeps found pages through
+  `Profile.find_page`: dawn pages are found by the run's own dawn
+  (`GameManager` calls `find_notes_on`, then hands the beat to the HUD
+  through `dawn_beat_played`, so no HUD is needed), a badge page reads as found while its badge is
   earned, and `next_chest_page()` is what a day chest holds.
 - **The day chest:** `RunConfig` rolls `day_chest_day`
-  (`GameManager.day_chest_chance`, 50%, else 0). `GameManager` holds
-  and saves it, so Continue never rolls again; on that day
+  (`RunConfig.DAY_CHEST_CHANCE`, 50%, else 0), and the run save keeps
+  it with the config, so Continue never rolls again; on that day
   `DayChest.place` (`game/scripts/world/day_chest.gd`) puts it beside a
   lane at the map edge and `GameManager.day_chest_placed` tells the HUD,
   which shows the banner and toasts the page on `DayChest.opened`. It reuses the Storage Crate model
@@ -637,7 +712,8 @@ Delete profile resets it and a run never saves it.
   Journal is `JournalBook` (`game/scripts/ui/journal_book.gd`).
 - **Cosmetic tints:** `Cosmetics` (`game/scripts/meta/cosmetics.gd`)
   lists outfit and tent tints with the badge that unlocks each, and
-  keeps the picks as `cosmetics.outfit.<hero>` and `cosmetics.tent`. A
+  keeps the picks through `Profile.record_outfit_pick` and
+  `record_tent_pick`. A
   pick whose badge is gone reads as the default. The tint goes through
   `Stylize`'s `style_tint`, on the hero's outfit mesh only
   (`HeroDefinition.outfit_mesh`, via `CharacterVisual`) and on the node
@@ -645,8 +721,8 @@ Delete profile resets it and a run never saves it.
   (`game/scripts/ui/outfit_row.gd`).
 - **Starting perks:** `StartingPerks`
   (`game/scripts/meta/starting_perks.gd`) lists the shared perk cards
-  a run may start with and their badges, and keeps the pick as
-  `perks.starting`; hero select's `StartingPerkRow`
+  a run may start with and their badges, and keeps the pick through
+  `Profile.record_starting_perk_pick`; hero select's `StartingPerkRow`
   (`game/scripts/ui/starting_perk_row.gd`) picks it.
   `RunConfig.starting_perk` carries it; `GameManager`
   hands it to `PerkManager.take_starting` when a new run's scene is
@@ -664,8 +740,9 @@ Detailed plan in
   (`ready-for-human` ones for hand play).
 - Data validation checks ensure required `.tres` files have valid IDs and
   references (later).
-- Script-level tests (e.g. via [GUT](https://github.com/bitwes/Gut)) are
-  introduced when systems stabilize. Not in Phase 0.
+- Script-level unit tests run in the unit pass
+  (`game/tests/unit/unit_run.tscn`, every `tests/unit/test_*.gd`), which
+  `tools/check.sh` runs after the validator and before smoke.
 
 ## J. Performance guardrails
 

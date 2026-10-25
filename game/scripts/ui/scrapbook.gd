@@ -166,7 +166,7 @@ func close() -> void:
 func _earned_count_text() -> String:
 	var earned: int = 0
 	for badge in Badges.definitions():
-		if Badges.has_badge(badge.id):
+		if Profile.is_badge_earned(badge.id):
 			earned += 1
 	return "%d of %d badges earned" % [earned, Badges.definitions().size()]
 
@@ -180,7 +180,7 @@ func _build_badges() -> Control:
 	grid.add_theme_constant_override("v_separation", int(GAP))
 	scroll.add_child(grid)
 	for badge in Badges.definitions():
-		var earned: bool = Badges.has_badge(badge.id)
+		var earned: bool = Profile.is_badge_earned(badge.id)
 		var card: Control = _badge_card(badge, earned)
 		grid.add_child(card)
 		_cards[badge.id] = {"earned": earned, "card": card}

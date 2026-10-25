@@ -4,9 +4,13 @@
 #
 # 1. Re-imports the project (refreshes the class_name cache).
 # 2. Loads every script/scene/resource and validates data integrity.
-# 3. Plays the smoke test's scenarios headlessly, and beside it a second
+# 3. Runs the unit tests (game/tests/unit/test_*.gd), without the
+#    gameplay scene. A test that hits a script error (a missing method,
+#    say) still ends "unit: PASSED"; the SCRIPT ERROR scan below is what
+#    fails it.
+# 4. Plays the smoke test's scenarios headlessly, and beside it a second
 #    smoke pass that stalls every few frames (below).
-# 4. Runs the exported build's selftest from the project (the data and
+# 5. Runs the exported build's selftest from the project (the data and
 #    gameplay scene load), so its floors are checked without templates.
 # Fails on any non-zero exit, timeout, or SCRIPT ERROR in the output.
 #
@@ -47,11 +51,11 @@ run_scene() {
 	fi
 	if [[ $status -ne 0 ]]; then
 		# Only what failed: the passing "ok" lines would bury it.
-		grep -E "^(smoke|validate_project):" "$log" | grep -vE "^smoke: (ok |---)" >&2 || tail -40 "$log" >&2
+		grep -E "^(smoke|unit|validate_project):" "$log" | grep -vE "^(smoke|unit): (ok |---)" >&2 || tail -40 "$log" >&2
 		echo "FAIL: $name exited with $status (log: $log)" >&2
 		exit 1
 	fi
-	grep -E "^(smoke: (PASSED|FAIL)|validate_project:)" "$log" || true
+	grep -E "^((smoke|unit): (PASSED|FAIL)|validate_project:)" "$log" || true
 }
 
 echo "== import"
@@ -69,6 +73,7 @@ if grep -E "SCRIPT ERROR|Parse Error" "$LOG_DIR/import.log"; then
 fi
 
 run_scene validate res://tools/validate_project.tscn
+run_scene unit res://tests/unit/unit_run.tscn
 # The stalled pass runs beside the plain one; its report follows it.
 run_scene "smoke-stalled" res://tests/automated/smoke_run.tscn -- --frame-stall "${SMOKE_FRAME_STALL:-150}" \
 	>"$LOG_DIR/smoke-stalled.out" 2>&1 &

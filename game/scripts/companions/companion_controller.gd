@@ -70,9 +70,9 @@ func _init() -> void:
 
 func _enter_tree() -> void:
 	# Before the Visual child's _ready builds the model.
-	# An empty `hero` takes GameManager.party_companion().
+	# An empty `hero` takes RunSession.config.companion().
 	if hero == null:
-		hero = GameManager.party_companion()
+		hero = RunSession.config.companion()
 	if hero == null or is_in_group(HeroRoster.group_for(hero.id)):
 		return
 	add_to_group(HeroRoster.group_for(hero.id))

@@ -28,12 +28,12 @@
   exist.
 - Wired into a dev-only menu option or a CLI script.
 
-### 4. Script-level tests (when systems stabilize)
+### 4. Script-level tests (the unit pass)
 
-- Optional adoption of [GUT](https://github.com/bitwes/Gut) or an
-  equivalent for unit-testing pure-logic GDScript (resource math, XP
-  table lookups, recipe satisfaction).
-- Not in Phase 0. Introduced no earlier than Phase 6 (combat / XP).
+- Unit tests of pure-logic GDScript (the run config's rules, the
+  profile's verbs and unlocks, the badge rule) through a module's
+  public interface, in a small runner of our own (no add-on). See
+  "Writing unit tests" below.
 
 ### 5. Integration / smoke scenes (later)
 
@@ -56,6 +56,13 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
   - `game/tools/validate_project.tscn` is the data validator from
     layer 3. It also fails on any script, scene, or resource that
     doesn't load.
+  - `game/tests/unit/unit_run.tscn` is the unit-test pass from layer 4,
+    a small runner of our own (no add-on). It plays every
+    `game/tests/unit/test_*.gd` script (extending `unit_test.gd`, with
+    `check` and `check_eq`) and each `test_*` method in it, on a fresh
+    instance, then its `after_each()`, with the autoloads up but no
+    gameplay scene. A new module adds its own test script.
+    `-- --unit <name>` plays just one script. See "Writing unit tests".
   - `game/tests/automated/smoke_run.tscn` is the integration smoke
     scene from layer 5. It plays every scenario script in
     `game/tests/automated/scenarios/` (one per feature: `chapter_1.gd`
@@ -110,6 +117,40 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
   `godot --headless --path game res://tests/automated/smoke_run.tscn -- --scenario <name> --frame-stall 150`.
 - `tools/check.sh` gives every run its own `user://`, so parallel runs
   (one per worktree) never share save or profile files.
+
+## Writing unit tests
+
+- **Where:** a new `game/tests/unit/test_<module>.gd` per module (for
+  example `test_run_config.gd`, `test_profile.gd`, `test_badges.gd`).
+  It touches nothing shared: the runner finds every `test_*.gd` itself.
+- **Shape:** the script extends `"res://tests/unit/unit_test.gd"` and
+  defines `test_*` methods, each a few checks on one rule. The runner
+  calls them in the order they are written, each on a fresh instance,
+  synchronously (no `await`). The autoloads are up, but there is no
+  gameplay scene or camp.
+- **Checks:** `check(condition, what)` and
+  `check_eq(actual, expected, what)`. `check_eq` compares types too, so
+  a number read back from JSON is a float, not an int.
+- **Setup and teardown:** build what a test needs in `_init()` or the
+  test itself, and override `after_each()`, which the runner calls after
+  every test method, to free it. For the profile, preload
+  `res://scripts/core/profile.gd`, make a fresh one and call
+  `use_memory()` (see `test_profile.gd`). A test of a module that reads
+  the `Profile` autoload itself calls `Profile.use_memory()` first, and
+  again in `after_each()`, so it never touches the player's file
+  (`test_run_session.gd`). A test that needs a file keeps
+  its own under `user://` and removes it in `after_each()`
+  (`test_profile_file.gd`).
+- **Run one script:**
+  `godot --headless --path game res://tests/unit/unit_run.tscn -- --unit <name>`
+  (`<name>` without `.gd`). Not `--test`, which Godot itself takes. On
+  a fresh worktree, run `godot --headless --path game --import` first,
+  or class names fail to load.
+- **Read the output, not just the last line.** A test that calls a
+  missing method (or hits any other script error) stops there but still
+  ends with `unit: PASSED`. `tools/check.sh` fails the pass on any
+  `SCRIPT ERROR` in its log; when you run the scene by hand, look for
+  one yourself.
 
 ## Tools and conventions
 

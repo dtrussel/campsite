@@ -22,7 +22,7 @@ func _run_journal_scenario() -> void:
 	var with_chest: int = 0
 	var days_ok: bool = true
 	for i in 400:
-		var rolled: RunConfig = RunConfig.current()
+		var rolled: RunConfig = RunConfig.for_chapter(1)
 		if rolled.day_chest_day > 0:
 			with_chest += 1
 			days_ok = days_ok and rolled.day_chest_day <= rolled.nights_to_win
@@ -94,7 +94,7 @@ func _run_journal_scenario() -> void:
 			badge_page = candidate
 	_check(badge_page != null and not Journal.is_found(badge_page.id), "a badge page is not found before its badge")
 	if badge_page != null:
-		Profile.set_value(Badges.EARNED_PREFIX + String(badge_page.badge), true)
+		Profile.grant_badge_for_tests(badge_page.badge)
 		_check(Journal.is_found(badge_page.id), "earning %s finds its journal page" % badge_page.badge)
 
 	# The scrapbook's Journal tab shows the pages found.

@@ -12,8 +12,7 @@ func run() -> void:
 ## voice; the companion warns about a mob behind the player.
 func _run_bark_scenario() -> void:
 	print("smoke: --- bark scenario ---")
-	GameManager.set_party(&"leo")
-	await _start_fresh_run()
+	await _start_fresh_run(_party(&"leo"))
 	# A first run's story card holds barks back; this checks them alone.
 	await _close_story()
 	var director: BarkDirector = get_tree().get_first_node_in_group("bark_director") as BarkDirector
@@ -84,8 +83,7 @@ func _run_bark_scenario() -> void:
 	imp.take_damage(999, player)
 
 	# Nela played: the speakers swap, and the events reach the director.
-	GameManager.set_party(&"nela")
-	await _start_fresh_run()
+	await _start_fresh_run(_party(&"nela"))
 	director = get_tree().get_first_node_in_group("bark_director") as BarkDirector
 	player = get_tree().get_first_node_in_group("player")
 	companion = get_tree().get_first_node_in_group("companions")
@@ -112,7 +110,6 @@ func _run_bark_scenario() -> void:
 	director.clock += 30.0
 	_check(not director.bark(&"first_beast"), "only once a night")
 	beast.take_damage(9999, player)
-	GameManager.set_party(&"leo")
 
 
 ## Closes any story card or story book that is up.

@@ -5,15 +5,14 @@ extends RefCounted
 ##
 ## Mum's journal: the JournalPage files under
 ## res://resources/story/journal/ and which of them the player has
-## found, kept in the profile for good ("journal.<page id>"). A page is
-## found when its dawn card plays (Mum's dawn notes), when a day
+## found, kept in the profile for good (Profile.find_page). A page is
+## found at its dawn (Mum's dawn notes, found by GameManager), when a day
 ## chest holding it is opened (DayChest), or, for a badge page, as soon
 ## as its badge is earned (read from the badge, so badges earned before
 ## the journal existed count too). The scrapbook's Journal tab shows
 ## the found ones (JournalBook).
 
 const PAGES_DIR: String = "res://resources/story/journal/"
-const FOUND_PREFIX: String = "journal."
 
 static var _pages: Array[JournalPage] = []
 
@@ -45,10 +44,10 @@ static func page_for_note(note_id: String) -> JournalPage:
 
 
 static func is_found(id: StringName) -> bool:
-	if bool(Profile.get_value(FOUND_PREFIX + String(id), false)):
+	if Profile.is_page_found(id):
 		return true
 	var page: JournalPage = get_page(id)
-	return page != null and page.found_in == &"badge" and Badges.has_badge(page.badge)
+	return page != null and page.found_in == &"badge" and Profile.is_badge_earned(page.badge)
 
 
 ## The pages found, in journal order.
@@ -64,7 +63,7 @@ static func found() -> Array[JournalPage]:
 static func find(id: StringName) -> bool:
 	if get_page(id) == null or is_found(id):
 		return false
-	Profile.set_value(FOUND_PREFIX + String(id), true)
+	Profile.find_page(id)
 	PlaytestLog.write("journal_page_found id=%s" % id)
 	return true
 

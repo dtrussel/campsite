@@ -29,7 +29,7 @@ func _run_starting_perks_scenario() -> void:
 	_check(PerkManager.perks_of(Party.player_hero()).is_empty(), "a locked starting perk is not given")
 
 	# Earn Gatherer: Quick Hands is offered and picked in hero select.
-	Profile.set_value(Badges.EARNED_PREFIX + "gatherer", true)
+	Profile.grant_badge_for_tests(&"gatherer")
 	_check(StartingPerks.unlocked().has(&"quick_hands"), "Gatherer unlocks Quick Hands as a starting perk")
 	screen = (load("res://scenes/ui/HeroSelect.tscn") as PackedScene).instantiate()
 	add_child(screen)
@@ -40,8 +40,9 @@ func _run_starting_perks_scenario() -> void:
 	screen.queue_free()
 	await get_tree().process_frame
 	Profile.reload()
+	_check(StartingPerks.chosen() == &"quick_hands", "the pick is kept for the next run, after a restart too")
 	config = _config(5.0)  # the level-up below opens the picker
-	_check(config.starting_perk == &"quick_hands", "the pick is kept for the next run, after a restart too")
+	config.starting_perk = StartingPerks.chosen()  # as hero select's Go puts it on the run config
 	await _start_fresh_run(config)
 	var player: Hero = Party.player_hero()
 	var tree_node: ResourceNode = _find_resource_node(&"wood")

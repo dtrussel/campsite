@@ -12,9 +12,9 @@ extends Control
 ## when there is an autosave) resumes the saved run, with its party, at
 ## its next morning. Chapter 2 is locked until Chapter 1 is won
 ## (Profile.is_chapter_unlocked).
-## Once the true ending has been seen, Endless ("How long can you
-## last?") starts a Chapter 2 run with no last night; under it, the
-## best endless run so far.
+## Once Endless is unlocked (Profile.is_endless_unlocked), Endless
+## ("How long can you last?") starts a Chapter 2 run with no last
+## night; under it, the best endless run so far.
 ## Journal opens the scrapbook over the title.
 
 const BACKDROP: Script = preload("res://scripts/ui/title_backdrop.gd")
@@ -76,15 +76,14 @@ func _ready() -> void:
 		play = HudWidgets.icon_button("play", "Continue", _on_continue, Color(0.55, 0.9, 0.4))
 		play.custom_minimum_size = Vector2(300, 72)
 		play.add_theme_font_size_override("font_size", 30)
-		var saved_hero: HeroDefinition = HeroRoster.get_hero(GameManager.party_of(save)["hero"])
-		var hero_name: String = saved_hero.display_name if saved_hero != null else "Leo"
+		var saved: RunConfig = RunConfig.from_save(save)
 		var night: int = int(save["day"]) + 1
 		var caption: String = ""
-		if bool(save.get("endless", false)):
+		if saved.endless:
 			caption = "Endless  -  Night %d" % night
 		else:
-			caption = "Night %d of %d" % [night, int(save["nights_to_win"])]
-		play.tooltip_text = "%s - %s" % [hero_name, caption]
+			caption = "Night %d of %d" % [night, saved.nights_to_win]
+		play.tooltip_text = "%s - %s" % [saved.hero().display_name, caption]
 		var continue_slot: VBoxContainer = UiKit.vbox(2)
 		continue_slot.add_child(play)
 		_continue_caption = UiKit.label(caption, 15, UiKit.COLOR_GOLD_LIGHT)
@@ -99,10 +98,10 @@ func _ready() -> void:
 	lengths.add_theme_constant_override("separation", 12)
 	buttons.add_child(lengths)
 	for chapter in [1, 2]:
-		var nights: int = 3 if chapter == 1 else 7
+		var nights: int = int(RunConfig.CHAPTER_NIGHTS[chapter])
 		var slot: VBoxContainer = UiKit.vbox(2)
 		lengths.add_child(slot)
-		var start: Button = HudWidgets.icon_button("moon", StoryLibrary.chapter_name(chapter), _on_play.bind(nights),
+		var start: Button = HudWidgets.icon_button("moon", StoryLibrary.chapter_name(chapter), _on_play.bind(chapter),
 			Color(1.0, 0.92, 0.55))
 		start.custom_minimum_size = Vector2(250, 64)
 		start.add_theme_font_size_override("font_size", 21)
@@ -123,7 +122,7 @@ func _ready() -> void:
 		slot.add_child(subtitle)
 		if play == null:
 			play = start
-	if StoryLibrary.has_seen(StoryLibrary.TRUE_ENDING):
+	if Profile.is_endless_unlocked():
 		var endless: Button = HudWidgets.icon_button("moon", "Endless", _on_endless, Color(0.7, 0.8, 1.0))
 		endless.custom_minimum_size = Vector2(250, 56)
 		endless.tooltip_text = "How long can you last? The Moon Lantern starts lit, and the nights never end."
@@ -204,17 +203,17 @@ func _on_scrapbook_closed() -> void:
 	_journal_button.grab_focus()
 
 
-func _on_play(nights: int) -> void:
-	GameManager.open_hero_select(nights)
+func _on_play(chapter: int) -> void:
+	GameManager.open_hero_select(RunConfig.for_chapter(chapter))
 
 
 func _on_endless() -> void:
-	GameManager.open_hero_select(7, true)
+	GameManager.open_hero_select(RunConfig.for_endless())
 
 
 func _on_continue() -> void:
 	if not GameManager.continue_run():
-		GameManager.start_run(3)
+		GameManager.start_run(RunConfig.for_chapter(1))
 
 
 func _on_toggle_controls() -> void:

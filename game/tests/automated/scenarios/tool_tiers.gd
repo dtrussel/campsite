@@ -17,8 +17,7 @@ func run() -> void:
 func _run_tool_tiers_scenario() -> void:
 	print("smoke: --- tool tiers scenario ---")
 	for party_hero in [&"leo", &"nela"]:
-		GameManager.set_party(party_hero)
-		await _start_fresh_run()
+		await _start_fresh_run(_party(party_hero))
 		var leo: Hero = HeroRoster.node_for(get_tree(), &"leo") as Hero
 		var role: String = "player" if party_hero == &"leo" else "companion"
 		for hero in Party.heroes():
@@ -124,7 +123,6 @@ func _run_tool_tiers_scenario() -> void:
 		leo = HeroRoster.node_for(get_tree(), &"leo") as Hero
 		_check(leo.tool_tier == 1 and leo.get_attack_damage() == damage + 2 and not leo.has_tool_effect(&"burn"),
 			"Leo as %s: an old save with signature: true loads as tier 1" % role)
-	GameManager.set_party(&"leo")
 
 
 ## Nela's Double Sling, as the player's hero and as the
@@ -135,8 +133,7 @@ func _run_tool_tiers_scenario() -> void:
 func _run_double_sling_scenario() -> void:
 	print("smoke: --- double sling scenario ---")
 	for party_hero in [&"nela", &"leo"]:
-		GameManager.set_party(party_hero)
-		await _start_fresh_run()
+		await _start_fresh_run(_party(party_hero))
 		var nela: Hero = HeroRoster.node_for(get_tree(), &"nela") as Hero
 		var role: String = "player" if party_hero == &"nela" else "companion"
 		for hero in Party.heroes():
@@ -209,7 +206,6 @@ func _run_double_sling_scenario() -> void:
 		for each in [front, behind, aside]:
 			(each as Mob).free()
 		table.queue_free()
-	GameManager.set_party(&"leo")
 
 
 ## How many pebbles one attack by `shooter` at `target` launches.

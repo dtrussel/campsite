@@ -212,7 +212,7 @@ func _build() -> void:
 	column.add_child(row)
 	var tip_icon: Texture2D = null
 	if String(tip[1]) == "{companion_portrait}":
-		tip_icon = GameManager.party_companion().portrait
+		tip_icon = RunSession.config.companion().portrait
 	elif String(tip[1]) != "" and ResourceLoader.exists(String(tip[1])):
 		tip_icon = load(String(tip[1])) as Texture2D
 	if tip_icon != null:

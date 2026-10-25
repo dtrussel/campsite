@@ -104,19 +104,21 @@ func _on_night_started(day_number: int) -> void:
 	_alive_mobs.clear()
 	PlaytestLog.write("wave_started night=%d mobs=%d" % [day_number, _remaining_to_spawn])
 	wave_started.emit(day_number, _remaining_to_spawn)
-	if _eyes_night(day_number):
+	if is_eyes_night(day_number):
 		_show_eyes()
 
 
-## The night the Moon-Eater comes: Chapter 2's last (never in endless).
+## The night the Moon-Eater comes (the run config's).
 func is_boss_night(night: int) -> bool:
-	return boss_definition != null and GameManager.chapter() == 2 and not GameManager.endless \
-		and night == GameManager.nights_to_win
+	return boss_definition != null and RunSession.config.is_moon_eater_night(night)
 
 
-func _eyes_night(night: int) -> bool:
-	return boss_definition != null and GameManager.chapter() == 2 and not GameManager.endless \
-		and night >= eyes_from_night and night < GameManager.nights_to_win
+## Whether its eyes watch from the treeline on `night`: from
+## eyes_from_night until its own night, in a run with a Moon-Eater.
+func is_eyes_night(night: int) -> bool:
+	var run: RunConfig = RunSession.config
+	return boss_definition != null and run.has_moon_eater() \
+		and night >= eyes_from_night and night < run.nights_to_win
 
 
 func _show_eyes() -> void:
@@ -161,7 +163,7 @@ func get_sneak_count(night: int) -> int:
 
 ## Nights past the story's last in an endless run (0 otherwise).
 func endless_nights_past(night: int) -> int:
-	return maxi(0, night - GameManager.nights_to_win) if GameManager.endless else 0
+	return RunSession.config.nights_past_story(night)
 
 
 ## What a mob's HP is multiplied by on `night`: 1 in the story chapters.

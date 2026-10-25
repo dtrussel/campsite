@@ -18,9 +18,6 @@ extends Node
 ## Exits 0 when clean, 1 otherwise.
 
 const SKIP_DIRS: Array[String] = ["res://.godot", "res://addons"]
-## The profile check's own file, never the player's profile.
-const TEST_PROFILE_PATH: String = "user://validate_profile.json"
-const TEST_OLD_STORY_PATH: String = "user://validate_story.cfg"
 ## Where the issue tracker keeps one folder per feature slug, so "<slug> NN"
 ## or "<slug> spec" in a comment reads as a work-item reference.
 const SCRATCH_DIR: String = "res://../.scratch"
@@ -89,8 +86,6 @@ func _ready() -> void:
 	_validate_data()
 	_validate_key_art()
 	_validate_export_presets()
-	_validate_profile()
-	_validate_story_import()
 	_validate_saving_systems()
 	_validate_run_lifecycle_contract()
 	_validate_rebuild_missing_keys()
@@ -576,99 +571,6 @@ func _validate_barks(line_ids: Dictionary, hero_ids: Array[String]) -> void:
 			&"lantern_stage", &"companion_down", &"companion_up", &"danger_behind", &"boss", &"boss_lantern"]:
 		if not barks.triggers.has(trigger):
 			_fail("bark trigger '%s' is fired by BarkDirector but has no tuning" % trigger)
-
-
-## The profile keeps keys across a reload, records
-## bests, loads a missing or corrupt file as empty and deletes cleanly.
-## It runs on its own file and points the profile back afterwards.
-func _validate_profile() -> void:
-	Profile.set_path(TEST_PROFILE_PATH)
-	Profile.delete()
-	if Profile.has_value("test.missing") or Profile.get_value("test.missing", 7) != 7:
-		_fail("Profile: a missing file does not load as empty")
-	Profile.set_value("test.word", "moon")
-	Profile.set_value("test.count", 3)
-	Profile.reload()
-	if not Profile.has_value("test.word") or Profile.get_value("test.word", "") != "moon":
-		_fail("Profile: a string does not survive a reload")
-	if int(Profile.get_value("test.count", 0)) != 3:
-		_fail("Profile: a number does not survive a reload")
-	if not Profile.record_best("test.best", 5):
-		_fail("Profile: a first best is not a record")
-	if not Profile.record_best("test.best", 8):
-		_fail("Profile: a higher best is not a record")
-	if Profile.record_best("test.best", 6) or Profile.record_best("test.best", 8):
-		_fail("Profile: a lower or equal best counts as a record")
-	Profile.reload()
-	if int(Profile.get_value("test.best", 0)) != 8:
-		_fail("Profile: the best is not 8 after a reload (%s)" % Profile.get_value("test.best", 0))
-	Profile.delete()
-	if Profile.has_value("test.word") or FileAccess.file_exists(TEST_PROFILE_PATH):
-		_fail("Profile: delete leaves keys or the file behind")
-	Profile.reload()
-	if Profile.has_value("test.word"):
-		_fail("Profile: deleted keys come back after a reload")
-	var corrupt: FileAccess = FileAccess.open(TEST_PROFILE_PATH, FileAccess.WRITE)
-	corrupt.store_string("{ not json [")
-	corrupt.close()
-	Profile.reload()
-	if Profile.has_value("test.word") or Profile.get_value("test.word", "none") != "none":
-		_fail("Profile: a corrupt file does not load as empty")
-	Profile.set_value("test.word", "sun")
-	Profile.reload()
-	if Profile.get_value("test.word", "") != "sun":
-		_fail("Profile: a corrupt file is not rewritten on the next write")
-	Profile.delete()
-	Profile.set_path(Profile.PROFILE_PATH)
-
-
-## An old story.cfg is imported into a new profile
-## once. Its seen beats read as seen, a seen Chapter 2 intro or true
-## ending sets the Chapter 2 unlocked flag, and after delete the import
-## never runs again. Runs on its own files; the old file stays on disk.
-func _validate_story_import() -> void:
-	_import_old_story(["intro.c1"])
-	if not StoryLibrary.has_seen("intro.c1") or StoryLibrary.has_seen("intro.c2"):
-		_fail("Profile: the imported intro.c1 does not read as the only seen beat")
-	if Profile.has_value(Profile.CHAPTER_2_UNLOCKED):
-		_fail("Profile: a seen intro.c1 alone unlocks Chapter 2")
-	for seen in [["intro.c1", "intro.c2"], [StoryLibrary.TRUE_ENDING]]:
-		_import_old_story(seen)
-		for key in seen:
-			if not StoryLibrary.has_seen(key):
-				_fail("Profile: the imported %s does not read as seen" % key)
-		if not bool(Profile.get_value(Profile.CHAPTER_2_UNLOCKED, false)):
-			_fail("Profile: a seen %s does not unlock Chapter 2" % seen[-1])
-	Profile.delete()
-	Profile.set_path(TEST_PROFILE_PATH, TEST_OLD_STORY_PATH)  # as on the next launch
-	if StoryLibrary.has_seen(StoryLibrary.TRUE_ENDING) or Profile.has_value(Profile.CHAPTER_2_UNLOCKED):
-		_fail("Profile: the old story file is imported again after delete")
-	if not FileAccess.file_exists(TEST_OLD_STORY_PATH):
-		_fail("Profile: the import removed the old story file")
-	StoryLibrary.mark_seen("intro.c1")
-	StoryLibrary.forget_progress()
-	if StoryLibrary.has_seen("intro.c1"):
-		_fail("Profile: forget_progress leaves a beat seen")
-	_remove_user_file(TEST_PROFILE_PATH)
-	_remove_user_file(TEST_OLD_STORY_PATH)
-	Profile.set_path(Profile.PROFILE_PATH)
-
-
-## Prepares an old story.cfg with these beats seen and a profile that
-## has never been created, then loads the profile so it imports.
-func _import_old_story(seen: Array) -> void:
-	_remove_user_file(TEST_PROFILE_PATH)
-	_remove_user_file(TEST_OLD_STORY_PATH)
-	var old: ConfigFile = ConfigFile.new()
-	for key in seen:
-		old.set_value("seen", key, true)
-	old.save(TEST_OLD_STORY_PATH)
-	Profile.set_path(TEST_PROFILE_PATH, TEST_OLD_STORY_PATH)
-
-
-func _remove_user_file(path: String) -> void:
-	if FileAccess.file_exists(path):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 
 ## Every autoload saving system saves, resets and

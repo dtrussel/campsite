@@ -25,7 +25,7 @@ func _ready() -> void:
 	Profile.set_path("user://screenshot_profile.json")
 	Profile.delete()
 	for id in [&"first_night", &"night_owl", &"builder", &"chapter_1", &"torch_bearer", &"gatherer"]:
-		Profile.set_value(Badges.EARNED_PREFIX + String(id), true)
+		Profile.grant_badge_for_tests(id)
 	for page in [&"ranger_log", &"old_lantern", &"rangers_map", &"bits_of_moon", &"lost_things"]:
 		Journal.find(page)
 	(title.call("journal_button") as Button).pressed.emit()
@@ -358,8 +358,9 @@ func _ready() -> void:
 	main.queue_free()
 	await get_tree().process_frame
 	await get_tree().process_frame
-	RunSession.reset()
-	GameManager.set_party(&"nela")
+	var nela_run: RunConfig = RunConfig.for_chapter(1)
+	nela_run.set_party(&"nela")
+	RunSession.reset(nela_run)
 	main = load("res://scenes/main/Main.tscn").instantiate()
 	add_child(main)
 	await _settle(0.5)
@@ -380,9 +381,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	# The Moon-Eater on Chapter 2's last night.
 	get_tree().paused = false
-	RunSession.reset()
-	GameManager.set_party(&"leo")
-	GameManager.nights_to_win = 7
+	RunSession.reset(RunConfig.for_chapter(2))
 	main = load("res://scenes/main/Main.tscn").instantiate()
 	add_child(main)
 	await _settle(0.5)
@@ -429,7 +428,7 @@ func _ready() -> void:
 		await _settle(0.2)
 	_shot("13e_boss_warm_shadow")
 	main.queue_free()
-	GameManager.nights_to_win = 3
+	RunSession.forget_last_run()
 	# ...and after the true ending Mum sits by the title fire.
 	Profile.set_path("user://screenshot_profile.json")
 	StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING)
@@ -439,17 +438,14 @@ func _ready() -> void:
 	_shot("12_title_mum_home")
 	home.queue_free()
 	# The Endless button with its record...
-	Profile.set_value(Profile.ENDLESS_BEST_NIGHTS, 12)
-	Profile.set_value(Profile.ENDLESS_BEST_HERO, "nela")
+	Profile.record_endless(12, &"nela")
 	var endless_title: Node = load("res://scenes/ui/TitleScreen.tscn").instantiate()
 	add_child(endless_title)
 	await _settle(1.0)
 	_shot("15_title_endless_record")
 	endless_title.queue_free()
 	# ...and an endless run that beats it: "New record!".
-	GameManager.nights_to_win = 7
-	GameManager.endless = true
-	GameManager.set_party(&"leo")
+	RunSession.reset(RunConfig.for_endless())
 	var endless_main: Node = load("res://scenes/main/Main.tscn").instantiate()
 	add_child(endless_main)
 	await _settle(0.5)
@@ -462,8 +458,7 @@ func _ready() -> void:
 	await _settle(0.8)
 	_shot("15b_end_screen_new_record")
 	endless_main.queue_free()
-	GameManager.endless = false
-	GameManager.nights_to_win = 3
+	RunSession.forget_last_run()
 	Profile.delete()
 	get_tree().quit(0)
 

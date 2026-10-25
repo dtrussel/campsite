@@ -14,10 +14,6 @@ func run() -> void:
 func _run_story_scenario() -> void:
 	print("smoke: --- story scenario ---")
 	_check(StoryLibrary.chapter_name(1) == "The Dark Moon" and StoryLibrary.chapter_name(2) == "Into the Hollow", "chapter names")
-	GameManager.nights_to_win = 7
-	_check(GameManager.chapter() == 2, "7 nights is Chapter 2")
-	GameManager.nights_to_win = 3
-	_check(GameManager.chapter() == 1, "3 nights is Chapter 1")
 	var pages: Array = StoryLibrary.find(&"intro", 1)
 	_check(pages.size() == 4 and (pages[0] as StoryBeat).page == 1 and (pages[0] as StoryBeat).painting != null,
 		"the Chapter 1 intro has 4 painted pages, in order")
@@ -41,7 +37,7 @@ func _run_story_scenario() -> void:
 	_check(not StoryLibrary.has_seen("intro.c1"), "no intro marked seen yet")
 	StoryLibrary.mark_seen("intro.c1")
 	_check(StoryLibrary.has_seen("intro.c1") and not StoryLibrary.has_seen("intro.c2"), "the seen intro is remembered per chapter")
-	_check(GameManager.intro_pages().size() == 4, "a seen intro still opens the next new game")
+	_check(GameManager.intro_pages(RunConfig.for_chapter(1)).size() == 4, "a seen intro still opens the next new game")
 	StoryLibrary.forget_progress()
 
 	# Shards: a chance per kill with pity, per mob type (seeded).
@@ -136,10 +132,8 @@ func _run_story_scenario() -> void:
 	_check(lantern.is_full(), "Continue keeps the lantern lit (stage %d)" % lantern.stage)
 	await _continue_from(legacy)
 	_check(MoonLantern.find(get_tree()).stage == 0, "older saves start the lantern dark")
-	GameManager.nights_to_win = 7
-	await _start_fresh_run()
+	await _start_fresh_run(_run_of(RunConfig.for_chapter(2)))
 	_check(MoonLantern.find(get_tree()).max_stage() == 6, "Chapter 2's lantern has 6 stages")
-	GameManager.nights_to_win = 3
 
 	# Mum's portraits, her walk home, and her seat at the title.
 	_check(StoryLibrary.speaker_portrait("mum", "worried").resource_path.ends_with("mum_worried.png")

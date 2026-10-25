@@ -81,25 +81,25 @@ func _ready() -> void:
 	_root.visible = false
 	add_to_group("end_screen")
 	GameManager.run_ended.connect(_on_run_ended)
-	Badges.badge_earned.connect(_on_badge_earned)
+	Profile.badge_earned.connect(_on_badge_earned)
 
 
 func _on_run_ended(won: bool, _reason: String) -> void:
 	_show_story(won)
 	_show_summary(won)
-	var pages: Array = StoryLibrary.find(&"win", GameManager.chapter()) if won else []
+	var pages: Array = StoryLibrary.find(&"win", RunSession.config.chapter) if won else []
 	if pages.is_empty():
 		_root.visible = true
 		return
 	# The true ending: Mum walks out of the woods first.
 	var player: Node3D = get_tree().get_first_node_in_group("player") as Node3D
-	if GameManager.chapter() == 2 and player != null and ResourceLoader.exists(MumArrival.MODEL_PATH):
+	if RunSession.config.chapter == 2 and player != null and ResourceLoader.exists(MumArrival.MODEL_PATH):
 		var arrival: MumArrival = MumArrival.play(get_tree().current_scene, player.global_position)
 		await arrival.finished
-	var book: StoryBook = StoryBook.play(pages, GameManager.hero_id, layer + 1)
+	var book: StoryBook = StoryBook.play(pages, RunSession.config.hero_id, layer + 1)
 	book.finished.connect(func() -> void:
 		_root.visible = true
-		if GameManager.chapter() == 2:
+		if RunSession.config.chapter == 2:
 			StoryLibrary.mark_seen(StoryLibrary.TRUE_ENDING))
 
 
@@ -139,17 +139,17 @@ func _show_story(won: bool) -> void:
 func _story_lines(won: bool) -> Array:
 	if won:
 		return []
-	var beat: StoryBeat = StoryLibrary.first(GameManager.end_trigger, GameManager.chapter())
-	return beat.lines_for(GameManager.hero_id) if beat != null else []
+	var beat: StoryBeat = StoryLibrary.first(GameManager.end_trigger, RunSession.config.chapter)
+	return beat.lines_for(RunSession.config.hero_id) if beat != null else []
 
 
 ## The endless line under the title ("You lasted to night 9. New
 ## record!"), or "" for a story run.
 func record_text() -> String:
-	if not GameManager.endless:
+	if not RunSession.config.endless:
 		return ""
 	var lasted: String = "You lasted to night %d." % GameManager.current_day
-	if GameManager.new_record:
+	if GameManager.run_end != null and GameManager.run_end.record_beaten:
 		return lasted + "  New record!"
 	return "%s  %s" % [lasted, EndlessRecord.best_text()]
 
@@ -182,9 +182,9 @@ func _show_summary(won: bool) -> void:
 	for child in _stars.get_children():
 		child.queue_free()
 	var nights: int = int(stats.get(&"nights_survived", 0))
-	for i in range(GameManager.nights_to_win):
+	for i in range(RunSession.config.nights_to_win):
 		_stars.add_child(HudWidgets.Glyph.new("star" if i < nights else "star_empty", Color(1.0, 0.85, 0.3),
-			64 if GameManager.nights_to_win <= 4 else 44))
+			64 if RunSession.config.nights_to_win <= 4 else 44))
 	for child in _stats_row.get_children():
 		child.queue_free()
 	_stats_row.add_child(HudWidgets.icon_count(load("res://assets/icons/portrait_imp.png"), "", str(stats.get(&"kills", 0))))
@@ -193,7 +193,7 @@ func _show_summary(won: bool) -> void:
 	_stats_row.add_child(HudWidgets.icon_count(load("res://assets/icons/torch.png"), "", str(stats.get(&"torches_placed", 0))))
 	var player: Node = get_tree().get_first_node_in_group("player")
 	if player != null:
-		_stats_row.add_child(HudWidgets.icon_count(GameManager.party_hero().portrait, "",
+		_stats_row.add_child(HudWidgets.icon_count(RunSession.config.hero().portrait, "",
 			"Lv %d" % ProgressionManager.get_level(player)))
 	_show_badges()
 	_log_path.text = PlaytestLog.get_absolute_path()

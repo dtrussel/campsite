@@ -291,8 +291,7 @@ func _run_companion_perks_scenario() -> void:
 func _run_hero_perks_scenario() -> void:
 	print("smoke: --- hero perks scenario ---")
 	for hero_id in [&"leo", &"nela"]:
-		GameManager.set_party(hero_id)
-		await _start_fresh_run()
+		await _start_fresh_run(_party(hero_id))
 		var player: Node3D = get_tree().get_first_node_in_group("player")
 		var companion: Node3D = get_tree().get_first_node_in_group("companions")
 		# Hold the companion still (the test swings for it), and stop the
@@ -315,7 +314,6 @@ func _run_hero_perks_scenario() -> void:
 				await _check_leo_perks(who)
 			else:
 				await _check_nela_perks(who)
-	GameManager.set_party(&"leo")
 
 
 ## The sibling cards work whichever hero is the player.
@@ -324,8 +322,7 @@ func _run_hero_perks_scenario() -> void:
 func _run_sibling_perks_scenario() -> void:
 	print("smoke: --- sibling perks scenario ---")
 	for hero_id in [&"leo", &"nela"]:
-		GameManager.set_party(hero_id)
-		await _start_fresh_run()
+		await _start_fresh_run(_party(hero_id))
 		var player: Node3D = get_tree().get_first_node_in_group("player")
 		var companion: Node3D = get_tree().get_first_node_in_group("companions")
 		companion.set_physics_process(false)
@@ -337,7 +334,6 @@ func _run_sibling_perks_scenario() -> void:
 			await _check_twin_strike(who, Party.other(who))
 		for who in [player, companion]:
 			_check_cheer_up(who, Party.other(who))
-	GameManager.set_party(&"leo")
 
 
 ## The centre banner ("NIGHT N!") hides while the perk
@@ -514,8 +510,9 @@ func _check_leo_perks(leo: Node3D) -> void:
 	_check(first.current_hp < beast_def.max_hp and second.current_hp == beast_def.max_hp, "%s Leo: a swing hits one mob" % role)
 	var hp: Array[int] = [first.current_hp, second.current_hp]
 	PerkManager.take(leo, &"big_swing")
-	await _attack_and_wait(leo, first)
-	_check(first.current_hp < hp[0] and second.current_hp < hp[1], "%s Leo, Big Swing: a swing hits two mobs" % role)
+	var both_hit: bool = await _attack_and_wait_until(leo, first,
+		func() -> bool: return first.current_hp < hp[0] and second.current_hp < hp[1])
+	_check(both_hit, "%s Leo, Big Swing: a swing hits two mobs" % role)
 	await _clear_staged_mobs()
 
 	# Stand Firm: 25% less damage near the fire, none away from it.
@@ -547,8 +544,9 @@ func _check_nela_perks(nela: Node3D) -> void:
 	_check(first.current_hp < beast_def.max_hp and second.current_hp == beast_def.max_hp, "%s Nela: a pebble hits one mob" % role)
 	var hp: Array[int] = [first.current_hp, second.current_hp]
 	PerkManager.take(nela, &"ricochet")
-	await _attack_and_wait(nela, first)
-	_check(first.current_hp < hp[0] and second.current_hp < hp[1], "%s Nela, Ricochet: the pebble bounces to a second mob" % role)
+	var bounced: bool = await _attack_and_wait_until(nela, first,
+		func() -> bool: return first.current_hp < hp[0] and second.current_hp < hp[1])
+	_check(bounced, "%s Nela, Ricochet: the pebble bounces to a second mob" % role)
 	await _clear_staged_mobs()
 
 	# Eagle Eye: 20% more reach, for the attack and for finding a target.
@@ -569,10 +567,21 @@ func _check_nela_perks(nela: Node3D) -> void:
 
 
 ## One attack from `hero` on `mob`, through the Hero interface, then
-## waits for the swing or the pebble (and any bounce) to land.
+## waits for the swing or the pebble (and any bounce) to land. For a
+## check that nothing more was hit: a fixed wait can only end early.
 func _attack_and_wait(hero: Node3D, mob: Mob) -> void:
 	(hero as Hero).attack(mob)
 	await _wait(1.2)
+
+
+## One attack from `hero` on `mob`, then waits until `landed` holds (at
+## most 1.2 game s); returns whether it did. A fixed wait races the
+## pebble's and the bounce's tweens (or the swing's wind-up): at the
+## smoke's 4x speed 1.2 s is two stalled frames, and the second can fire
+## the timer before the bounce's tween lands, in the same frame.
+func _attack_and_wait_until(hero: Node3D, mob: Mob, landed: Callable) -> bool:
+	(hero as Hero).attack(mob)
+	return await _wait_until(landed, 1.2)
 
 
 ## True if `hero` would pick `mob` as a target at its current reach.

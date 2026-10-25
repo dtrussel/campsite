@@ -109,9 +109,9 @@ static func speaker_id(node: Node) -> StringName:
 	if node == null:
 		return &""
 	if node.is_in_group("player"):
-		return GameManager.hero_id
+		return RunSession.config.hero_id
 	if node.is_in_group("companions"):
-		return GameManager.companion_id
+		return RunSession.config.companion_id
 	return &""
 
 
@@ -152,7 +152,7 @@ func _speak_all(trigger: StringName, speakers: Array) -> void:
 func _speak(trigger: StringName, node: Node3D) -> float:
 	var speaker: StringName = speaker_id(node)
 	var key: String = "%s:%s" % [trigger, speaker]
-	var line: Dictionary = BarkLibrary.pick(trigger, speaker, GameManager.hero_id, String(_last_line.get(key, "")))
+	var line: Dictionary = BarkLibrary.pick(trigger, speaker, RunSession.config.hero_id, String(_last_line.get(key, "")))
 	if line.is_empty():
 		return 0.0
 	var id: String = String(line.get("id", ""))
