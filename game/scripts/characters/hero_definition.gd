@@ -10,6 +10,10 @@ extends Resource
 ## role. Stored as a .tres under res://resources/heroes/ and listed by
 ## HeroRoster.
 
+## The longest wind-up an attack may have: its contact frame comes at
+## most this long (game seconds, at play speed) after the attack starts.
+const WIND_UP_CAP_SECONDS: float = 0.1
+
 @export var id: StringName = &""
 @export var display_name: String = ""
 ## One line for the hero select card.
@@ -22,6 +26,11 @@ extends Resource
 @export var model_scale: float = 0.7
 ## CharacterVisual clips (logical state -> clip name).
 @export var clips: Dictionary = {}
+## Seconds into the `attack` clip (at speed 1) of its contact frame,
+## where the swing lands or the pebble leaves the sling (Hero.attack).
+## 0 = no contact frame: the hit comes the moment the attack starts.
+## At play speed it is at most WIND_UP_CAP_SECONDS (the validator).
+@export var attack_contact_time: float = 0.0
 @export var reference_speed: float = 7.0
 @export var step_distance: float = 1.1
 @export var capsule_height: float = 1.2

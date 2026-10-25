@@ -39,6 +39,8 @@ var _repair_timer: float = 0.0
 ## The hammering rhythm while building or repairing.
 var _build_beat: BuildBeat = BuildBeat.new()
 var _tool_busy: bool = false
+## The building being built or repaired this frame (the look's work target).
+var _work_site: Node3D = null
 var move_speed: float = 4.8
 
 const BANDAGE_HEAL: int = 25
@@ -180,6 +182,7 @@ func _physics_process(delta: float) -> void:
 		_build_beat.stop(_visual)
 		return
 	_tool_busy = false
+	_work_site = null
 
 	if _player == null or _base_core == null:
 		_refresh_world_refs()
@@ -278,6 +281,7 @@ func _tick_repair(delta: float) -> void:
 			return
 		_stop()
 		_tool_busy = true
+		_work_site = site
 		if _build_beat.tick(delta, _visual, site):
 			_visual.face_instantly(site.global_position - global_position)
 		if site.add_build_progress(delta, self):
@@ -292,6 +296,7 @@ func _tick_repair(delta: float) -> void:
 		return
 	_stop()
 	_tool_busy = true
+	_work_site = target
 	_visual.face(target.global_position - global_position, delta)
 	if _repair_timer <= 0.0:
 		_repair_timer = REPAIR_TAP_SECONDS
@@ -363,12 +368,19 @@ func _flat_direction(point: Vector3) -> Vector3:
 
 func _show_attack(target: Node3D) -> void:
 	_visual.face_instantly(target.global_position - global_position)
-	_visual.play_action(&"attack", 1.45)
+	_visual.play_action(&"attack", _attack_anim_speed())
 
 
-## The companion's quick hit: it lands at once, with a sparkle.
+## The companion's quick hit: it lands at the contact frame, with a sparkle.
 func _swing(target: Node3D) -> void:
 	_land_swing(target, &"sparkle")
+
+
+## The building being built or repaired counts as worked on.
+func _work_target() -> Node3D:
+	if is_instance_valid(_work_site):
+		return _work_site
+	return super()
 
 
 # --- Progress (the role's part; see Hero) ----------------------------

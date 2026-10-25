@@ -17,11 +17,13 @@ static func apply(character: Node3D, hero: HeroDefinition) -> void:
 		visual.model_scale = hero.model_scale
 		if not hero.clips.is_empty():
 			visual.clips = hero.clips.duplicate()
+		visual.contact_times = {&"attack": hero.attack_contact_time} if hero.attack_contact_time > 0.0 else {}
 		visual.reference_speed = hero.reference_speed
 		visual.step_distance = hero.step_distance
 		visual.tool_hidden_parts = hero.tool_hidden_parts
 		visual.outfit_mesh = hero.outfit_mesh
 		visual.outfit_tint = Cosmetics.outfit_tint(hero.id)
+		visual.head_look = true
 	var collision: CollisionShape3D = character.get_node_or_null("Collision") as CollisionShape3D
 	if collision != null and collision.shape is CapsuleShape3D:
 		var capsule: CapsuleShape3D = (collision.shape as CapsuleShape3D).duplicate() as CapsuleShape3D

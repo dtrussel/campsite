@@ -14,7 +14,7 @@ extends CharacterBody3D
 ## a role's private fields by name.
 ##
 ## The script is split into sections, one per part of the hero:
-## Health, Attack, Progress, and Gathering with the shared queries.
+## Health, Attack, Progress, Gathering with the shared queries, and Look.
 
 ## HP changed (a hit, a heal, regen, a level-up or a revive).
 signal health_changed(current_hp: int, max_hp: int)
@@ -131,6 +131,7 @@ func _set_down(value: bool) -> void:
 	_down = value
 	if value:
 		velocity = Vector3.ZERO
+		_cancel_wind_up()
 		_visual.play_final(&"death")
 	else:
 		_visual.unlock(&"getup")
@@ -155,11 +156,23 @@ func _on_down_changed(_is_down: bool) -> void:
 # The module owns the cooldown and the melee vs pebble branch; HeroHits
 # stays the perk math underneath (every hit goes through its strike()).
 # The role adds the feel: `_show_attack` (the swing animation) and
-# `_swing` (the player's wind-up and hit-stop, the companion's sparkle).
+# `_swing` (the player's hit-stop, the companion's sparkle).
+# The hit lands on the attack clip's contact frame (the definition's
+# `attack_contact_time`, as the visual reports it), after a short wind-up;
+# a hero without one hits the moment the attack starts.
 # Settled: the signature's float text lasts 2.8 s in both roles (the
 # companion's was 2.7 s).
 
-## A swing or a pebble left the hero, aimed at `target`.
+## The attack clip's play speed, by role (`_show_attack`); the wind-up
+## cap is checked at the slower one (the validator).
+const ATTACK_ANIM_SPEED: float = 1.5
+const COMPANION_ATTACK_ANIM_SPEED: float = 1.45
+## A melee target still counts as in reach at the contact frame up to
+## this many times the attack's reach (it may have stepped back a bit).
+const CONTACT_REACH_SLACK: float = 1.4
+
+## An attack at `target` started (the swing or the pebble follows at the
+## contact frame).
 signal attacked(target: Node3D)
 
 ## Damage per hit before perks. Set from the stats' base attack; level-
@@ -189,24 +202,56 @@ var _attack_cooldown_remaining: float = 0.0
 var _shot_count: int = 0
 ## What the last attack was aimed at (for `is_attacking`).
 var _attack_target: Node3D = null
+## The wind-up to the contact frame of the attack in flight (null: none).
+var _wind_up: Tween = null
 
 
-## Attacks `target` now: starts the cooldown, then fires a pebble (a
-## ranged hero) or swings (melee). It does not wait for the cooldown:
-## callers check `is_attack_ready()` first. False if the hero is down or
-## `target` cannot be hit.
+## Attacks `target` now: starts the cooldown and the attack animation,
+## then at its contact frame fires a pebble (a ranged hero) or swings
+## (melee). It does not wait for the cooldown: callers check
+## `is_attack_ready()` first. False if the hero is down or `target`
+## cannot be hit.
 func attack(target: Node3D) -> bool:
 	if _down or target == null or not is_instance_valid(target) or not target.has_method("take_damage"):
 		return false
 	_attack_cooldown_remaining = attack_cooldown_seconds
 	_attack_target = target
+	_cancel_wind_up()
 	_show_attack(target)
 	attacked.emit(target)
+	var wind_up: float = _visual.action_contact_in()
+	if wind_up <= 0.0:
+		_on_contact_frame(target)
+		return true
+	_wind_up = create_tween()
+	_wind_up.tween_interval(wind_up)
+	_wind_up.tween_callback(_on_contact_frame.bind(target))
+	return true
+
+
+## The attack's contact frame: the pebble flies toward where the target
+## is now, or the swing lands if the target is still there and in reach
+## (else it misses quietly).
+func _on_contact_frame(target: Node3D) -> void:
+	_wind_up = null
+	if _down or not is_instance_valid(target) or (target.has_method("is_alive") and not target.call("is_alive")):
+		return
 	if hero != null and hero.ranged:
 		_shoot(target)
-	else:
+	elif _flat_distance(target.global_position) <= get_attack_range() * CONTACT_REACH_SLACK:
 		_swing(target)
-	return true
+
+
+## Drops the attack in its wind-up, if any (going down, a reset).
+func _cancel_wind_up() -> void:
+	if _wind_up != null and _wind_up.is_valid():
+		_wind_up.kill()
+	_wind_up = null
+
+
+## The attack clip's play speed in this role.
+func _attack_anim_speed() -> float:
+	return COMPANION_ATTACK_ANIM_SPEED if _is_companion_role() else ATTACK_ANIM_SPEED
 
 
 ## Fires a pebble at `target`; with the Double Sling every few shots
@@ -398,12 +443,14 @@ func _is_companion_role() -> bool:
 	return Party.role_of(self) == Party.COMPANION
 
 
-## Role hook: how the attack starts (the swing or shot animation).
+## Role hook: how the attack starts (the swing or shot animation, at
+## `_attack_anim_speed()`, whose contact frame times the hit).
 func _show_attack(_target: Node3D) -> void:
-	_visual.play_action(&"attack", 1.5)
+	_visual.play_action(&"attack", _attack_anim_speed())
 
 
-## Role hook: a melee swing at `target`. By default it lands at once.
+## Role hook: a melee swing at `target`, at the contact frame with the
+## target in reach. By default it just lands.
 func _swing(target: Node3D) -> void:
 	_land_swing(target, &"hit")
 
@@ -493,6 +540,7 @@ func reset() -> void:
 		tool_tier = 0
 		_update_tool_light()
 	_shot_count = 0
+	_cancel_wind_up()
 	if stats != null:
 		max_hp = stats.base_max_health
 		attack_damage = stats.base_attack_damage
@@ -618,3 +666,40 @@ static func _node_radius(node: Node3D) -> float:
 		var box: Vector3 = (shape.shape as BoxShape3D).size
 		return maxf(box.x, box.z) * 0.5
 	return 0.4
+
+
+# --- Look ----------------------------------------------------------------
+# What the hero's head turns toward (HeadLook's order), picked every
+# frame in both roles and handed to the visual. In `_process`, not the
+# role's physics tick, so it follows a hero whose AI is held still.
+
+var _glance: HeadLook.Glance = HeadLook.Glance.new()
+
+
+func _process(delta: float) -> void:
+	if _visual == null:
+		return
+	var glancing: bool = _glance.tick(delta)
+	if _down:
+		_visual.set_look_focus(null)
+		return
+	var fight: Node3D = _fight_target()
+	var work: Node3D = _work_target()
+	var idle: bool = fight == null and work == null and Vector2(velocity.x, velocity.z).length() < 0.2
+	var mobs: Array = get_tree().get_nodes_in_group("mobs") if idle and TimeManager.is_night() else []
+	_visual.set_look_focus(HeadLook.pick(global_position, fight, work, idle and TimeManager.is_night(), mobs,
+		Party.other(self), glancing))
+
+
+## The mob the hero is fighting, or null: its last attack's target while
+## the cooldown runs. The player's hero also counts its attack command.
+func _fight_target() -> Node3D:
+	if _attack_cooldown_remaining > 0.0 and is_instance_valid(_attack_target):
+		return _attack_target
+	return null
+
+
+## What the hero is working on, or null: the node it gathers. The roles
+## add the building they build or repair.
+func _work_target() -> Node3D:
+	return gather_target()

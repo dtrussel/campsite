@@ -567,21 +567,25 @@ func _check_nela_perks(nela: Node3D) -> void:
 
 
 ## One attack from `hero` on `mob`, through the Hero interface, then
-## waits for the swing or the pebble (and any bounce) to land. For a
-## check that nothing more was hit: a fixed wait can only end early.
+## waits for the swing or the pebble to land on `mob` (at the contact
+## frame, then the flight), then a while for any bounce. For a check
+## that nothing more was hit: that fixed wait can only end early.
 func _attack_and_wait(hero: Node3D, mob: Mob) -> void:
+	var hp: int = mob.current_hp
 	(hero as Hero).attack(mob)
-	await _wait(1.2)
+	await _wait_until(func() -> bool: return mob.current_hp < hp, 1.2)
+	await _wait(0.6)
 
 
 ## One attack from `hero` on `mob`, then waits until `landed` holds (at
-## most 1.2 game s); returns whether it did. A fixed wait races the
-## pebble's and the bounce's tweens (or the swing's wind-up): at the
-## smoke's 4x speed 1.2 s is two stalled frames, and the second can fire
-## the timer before the bounce's tween lands, in the same frame.
+## most 3 game s); returns whether it did. A fixed wait races the
+## wind-up's, the pebble's and the bounce's tweens: at the smoke's 4x
+## speed 1.2 s is two stalled frames, and the second can fire the timer
+## before the bounce's tween lands, in the same frame. The cap is loose
+## for the same reason: each of the three tweens takes a frame at least.
 func _attack_and_wait_until(hero: Node3D, mob: Mob, landed: Callable) -> bool:
 	(hero as Hero).attack(mob)
-	return await _wait_until(landed, 1.2)
+	return await _wait_until(landed, 3.0)
 
 
 ## True if `hero` would pick `mob` as a target at its current reach.

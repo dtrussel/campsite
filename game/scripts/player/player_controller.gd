@@ -44,8 +44,6 @@ const CAMPFIRE_REACH: float = 2.6
 const REPAIR_REACH: float = 1.4
 ## How close to a blueprint's footprint edge the hero hammers from.
 const BUILD_REACH: float = 0.75
-## Seconds into the swing when damage lands (the "wind-up").
-const ATTACK_WINDUP: float = 0.22
 const REPATH_SECONDS: float = 0.25
 ## How often an idle hero looks for a mob to auto-attack.
 const AUTO_ATTACK_SCAN_SECONDS: float = 0.2
@@ -399,16 +397,26 @@ func is_attacking() -> bool:
 	return super() or command == Command.ATTACK
 
 
-## The hit feel: the swing lands after a wind-up, only if the target is
-## still in reach (x1.4), then the hit-stop.
+## The attack command's target counts as fought, walking to it included.
+func _fight_target() -> Node3D:
+	if command == Command.ATTACK and _is_attackable(command_target):
+		return command_target
+	return super()
+
+
+## The site being built or repaired counts as worked on while the hero
+## hammers it (not while walking there).
+func _work_target() -> Node3D:
+	if _tool_busy and (command == Command.REPAIR or command == Command.BUILD) and is_instance_valid(command_target):
+		return command_target
+	return super()
+
+
+## The hit feel: the swing lands (at the contact frame, the target in
+## reach; see Hero.attack), then the hit-stop.
 func _swing(target: Node3D) -> void:
-	var tween: Tween = create_tween()
-	tween.tween_interval(ATTACK_WINDUP)
-	tween.tween_callback(func() -> void:
-		if _is_attackable(target) and _flat_distance(target.global_position) <= get_attack_range() * 1.4:
-			_land_swing(target, &"hit")
-			Fx.hit_stop()
-	)
+	_land_swing(target, &"hit")
+	Fx.hit_stop()
 
 
 # --- Actions ---------------------------------------------------------------

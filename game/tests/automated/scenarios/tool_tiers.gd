@@ -161,7 +161,7 @@ func _run_double_sling_scenario() -> void:
 		_check(CraftingManager.craft(sling, null) and nela.tool_tier == 1, "Nela as %s: the Slingshot is tier 1" % role)
 		var volleys: Array[int] = []
 		for i in 3:
-			volleys.append(_pebbles_from(nela, mob))
+			volleys.append(await _pebbles_from(nela, mob))
 		_check(volleys == [1, 1, 1], "Nela as %s: the Slingshot fires one pebble a shot (%s)" % [role, volleys])
 
 		var shards: int = ResourceManager.get_count(&"glow_shards")
@@ -170,7 +170,7 @@ func _run_double_sling_scenario() -> void:
 			"Nela as %s: the Double Sling is tier 2 and spends 2 Glow Shards" % role)
 		volleys.clear()
 		for i in 6:
-			volleys.append(_pebbles_from(nela, mob))
+			volleys.append(await _pebbles_from(nela, mob))
 		_check(volleys == [1, 1, 2, 1, 1, 2], "Nela as %s: every third shot launches two pebbles (%s)" % [role, volleys])
 		await _wait(0.5)
 		mob.free()
@@ -190,7 +190,7 @@ func _run_double_sling_scenario() -> void:
 			(each as Mob).set_physics_process(false)
 		await get_tree().process_frame
 		var hp: Array[int] = [front.current_hp, behind.current_hp, aside.current_hp]
-		_check(_pebbles_from(nela, front) == 1, "Nela as %s: the Glow Sling's shot is one pebble" % role)
+		_check(await _pebbles_from(nela, front) == 1, "Nela as %s: the Glow Sling's shot is one pebble" % role)
 		# Polled, not a fixed wait: the glow is read the frame the hit lands.
 		await _wait_until(func() -> bool: return front.current_hp < hp[0], PebbleShot.FLIGHT_SECONDS + 1.0)
 		_check(front.current_hp < hp[0] and GlowMark.on(front) != null,
@@ -208,11 +208,20 @@ func _run_double_sling_scenario() -> void:
 		table.queue_free()
 
 
-## How many pebbles one attack by `shooter` at `target` launches.
+## How many pebbles one attack by `shooter` at `target` launches. They
+## leave the sling together at the attack's contact frame, so this waits
+## for the first one (counting launches, not pebbles in flight).
 func _pebbles_from(shooter: Hero, target: Node3D) -> int:
-	var before: int = _pebble_count()
+	var launched: Array[int] = [0]
+	var count_launch: Callable = func(node: Node) -> void:
+		if node is PebbleShot:
+			launched[0] += 1
+	var scene: Node = get_tree().current_scene
+	scene.child_entered_tree.connect(count_launch)
 	shooter.attack(target)
-	return _pebble_count() - before
+	await _wait_until(func() -> bool: return launched[0] > 0, 1.0)
+	scene.child_entered_tree.disconnect(count_launch)
+	return launched[0]
 
 
 func _pebble_count() -> int:
