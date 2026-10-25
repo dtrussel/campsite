@@ -79,7 +79,7 @@ static func strike(attacker: Node, target: Node, base: int) -> int:
 
 
 ## The game clock the hit stamps use (PerkManager.clock): it follows
-## Engine.time_scale (hit stop, the perk picker's slow-down, test speed)
+## Engine.time_scale (the perk picker's slow-down, test speed)
 ## and stops while paused.
 static func game_seconds() -> float:
 	return PerkManager.clock

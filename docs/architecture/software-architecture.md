@@ -219,6 +219,16 @@ fields.
   validator checks. Going down drops the pending hit; being hit does
   not. A melee target that died or is past 1.4x reach by then is missed
   quietly; a pebble flies at where the target is then.
+  The **hit-stop** (hero-animation): every hit a hero lands
+  (`on_attack_hit`, so swings, Big Swing extras, pebbles and bounces, in
+  both roles) calls `CharacterVisual.hit_stop()` on the hero's visual
+  and `hit_stop(true)` on the target's, which also squashes it. The
+  visual holds its pose for `HIT_STOP_SECONDS` (0.05 game s, and at
+  least two frames) by putting its animation mixers on manual
+  processing and skipping its turn, lean and look; `is_hit_stopped()`
+  tells tests. Nothing else slows: damage, knockback, the clock and
+  every other character keep going (the old `Fx.hit_stop` time-scale
+  freeze is gone).
   Tool tiers (040): `tool_tier` (read-only; `set_tool_tier(n)` raises
   it and adds each new `ToolTier`'s damage bonus and range factor) and
   `has_tool_effect(effect)`; `tool_effect_tier(effect)` is the highest
@@ -258,9 +268,8 @@ fields.
 
 **The player's hero** (`player_controller.gd`) adds input, the pointer
 commands (`command_move/attack/gather/campfire/repair/build`,
-`stop_commands()`, `has_command()`, `is_building()`), the hit feel (the
-hit-stop as the swing lands; the wind-up and the x1.4 reach re-check
-are Hero's contact frame now), the build and repair
+`stop_commands()`, `has_command()`, `is_building()`; the hit-stop,
+the wind-up and the x1.4 reach re-check are Hero's now), the build and repair
 ticks, auto-attack and the hero's actions (`try_place_torch()`,
 `try_eat_berries()`, `try_use_bandage()`, `try_feed_lantern()`). When it
 is down, GameManager ends the run.

@@ -14,6 +14,7 @@ extends Node3D
 ##   visual.face(direction, delta)    # smooth turn toward a direction
 ##   visual.action_contact_in()       # seconds to the action's contact frame
 ##   visual.set_look_focus(node)      # head and chest turn toward it (null: ahead)
+##   visual.hit_stop(squash)          # freeze for a blink as a hit lands
 ##
 ## Animation is layered with an AnimationTree built in code:
 ##
@@ -343,7 +344,7 @@ func get_animation_tree() -> AnimationTree:
 ## the turn a little.
 func face(direction: Vector3, delta: float) -> void:
 	direction.y = 0.0
-	if direction.length_squared() < 0.0001 or model == null:
+	if direction.length_squared() < 0.0001 or model == null or is_hit_stopped():
 		return
 	var target_yaw: float = atan2(direction.x, direction.z)
 	rotation.y = lerp_angle(rotation.y, target_yaw, clampf(TURN_SPEED * delta, 0.0, 1.0))
@@ -363,6 +364,8 @@ func face_instantly(direction: Vector3) -> void:
 func _process(delta: float) -> void:
 	if _contact_remaining > 0.0:
 		_contact_remaining -= delta
+	if _tick_hit_stop(delta):
+		return
 	if _look != null:
 		_tick_look(delta)
 	if model == null or not lean:
@@ -529,3 +532,75 @@ func _look_blocked() -> bool:
 	if not is_in_action():
 		return false
 	return LOOK_OFF_ACTIONS.has(_action_state) or (_action_state == &"cheer" and _action_layer == "full")
+
+
+# --- Hit-stop ----------------------------------------------------------------
+# As a hero's hit lands (Hero.on_attack_hit), the attacker's and the
+# target's visuals hold their pose for a blink, and the target squashes
+# and springs back. Only the visual stops: its animation mixers go to
+# manual processing, and the turn, lean and look wait. The body, its
+# damage and knockback, and every other character keep going.
+
+## How long a hit-stop holds, game seconds.
+const HIT_STOP_SECONDS: float = 0.05
+## It also holds for at least this many frames, so a slow frame still
+## shows it.
+const HIT_STOP_MIN_FRAMES: int = 2
+## The target's squash: this much wider and shorter, held through the
+## stop, then back over SQUASH_RECOVER_SECONDS.
+const SQUASH: float = 0.12
+const SQUASH_RECOVER_SECONDS: float = 0.14
+
+var _stopped: bool = false
+var _stop_left: float = 0.0
+var _stop_frames: int = 0
+## Each frozen mixer's own process mode, to restore.
+var _stopped_mixers: Dictionary = {}  # AnimationMixer -> callback mode
+var _squash_left: float = 0.0
+
+
+## Freezes this visual for a blink (HIT_STOP_SECONDS); with `squash`, it
+## squashes too and recovers after. A new stop during one extends it.
+func hit_stop(squash: bool = false) -> void:
+	if model == null:
+		return
+	_stop_left = maxf(_stop_left, HIT_STOP_SECONDS) if _stopped else HIT_STOP_SECONDS
+	_stop_frames = 0
+	_stopped = true
+	for mixer in [_tree, _player]:
+		if mixer != null and not _stopped_mixers.has(mixer):
+			_stopped_mixers[mixer] = (mixer as AnimationMixer).callback_mode_process
+			(mixer as AnimationMixer).callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+	if squash:
+		_squash_left = SQUASH_RECOVER_SECONDS
+		_apply_squash(1.0)
+
+
+## True while a hit-stop holds this visual.
+func is_hit_stopped() -> bool:
+	return _stopped
+
+
+## Runs the stop and the squash's recovery; true while the visual is held.
+func _tick_hit_stop(delta: float) -> bool:
+	if _stopped:
+		_stop_left -= delta
+		_stop_frames += 1
+		if _stop_left > 0.0 or _stop_frames < HIT_STOP_MIN_FRAMES:
+			return true
+		_stopped = false
+		for mixer in _stopped_mixers:
+			if is_instance_valid(mixer):
+				(mixer as AnimationMixer).callback_mode_process = _stopped_mixers[mixer]
+		_stopped_mixers.clear()
+		return false
+	if _squash_left > 0.0:
+		_squash_left = maxf(_squash_left - delta, 0.0)
+		_apply_squash(ease(_squash_left / SQUASH_RECOVER_SECONDS, 2.0))
+	return false
+
+
+## The squash at `amount` (1: full, 0: none) on the model.
+func _apply_squash(amount: float) -> void:
+	var squash: float = SQUASH * amount
+	model.scale = Vector3(1.0 + squash, 1.0 - squash, 1.0 + squash) * model_scale

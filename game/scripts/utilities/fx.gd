@@ -347,33 +347,3 @@ static func shake(amount: float) -> void:
 	var rig: Node = tree.get_first_node_in_group("camera_rig")
 	if rig != null and rig.has_method("add_trauma"):
 		rig.add_trauma(amount)
-
-
-static var _hit_stop_scale: float = -1.0
-static var _hit_stop_previous: float = 1.0
-
-
-## Freezes the game for a blink (a few frames) so a hit lands with
-## weight. Restores whatever time scale was active (tests run faster),
-## and never stacks.
-static func hit_stop(seconds: float = 0.05, slow_factor: float = 0.08) -> void:
-	var tree: SceneTree = Engine.get_main_loop() as SceneTree
-	if tree == null or _hit_stop_scale > 0.0 or tree.paused:
-		return
-	var previous: float = Engine.time_scale
-	_hit_stop_previous = previous
-	_hit_stop_scale = previous * slow_factor
-	Engine.time_scale = _hit_stop_scale
-	tree.create_timer(seconds, true, false, true).timeout.connect(func() -> void:
-		if is_equal_approx(Engine.time_scale, _hit_stop_scale):
-			Engine.time_scale = previous
-		_hit_stop_scale = -1.0
-	)
-
-
-## The time scale with any running hit-stop taken out: what it will
-## return to. The perk picker slows from (and restores to) this.
-static func unstopped_time_scale() -> float:
-	if _hit_stop_scale > 0.0 and is_equal_approx(Engine.time_scale, _hit_stop_scale):
-		return _hit_stop_previous
-	return Engine.time_scale

@@ -83,14 +83,13 @@ func _run_perk_picker_scenario() -> void:
 	player = Party.player_hero()
 	_check(ProgressionManager.get_level(player) == 2 and not PerkManager.is_picking(), "levelling up while restoring a save opens no picker")
 
-	# Nobody picks: the first card is taken after the timeout, through a hit-stop.
+	# Nobody picks: the first card is taken after the timeout.
 	ProgressionManager.award_xp(player, ProgressionManager.get_xp_to_next_level(player), &"test")
 	picker = PerkManager.picker()
 	_check(picker != null, "the next level-up opens the picker")
 	if picker == null:
 		return
 	var first: StringName = picker.cards()[0].id
-	Fx.hit_stop(0.05)
 	await get_tree().create_timer(0.2, true, false, true).timeout
 	_check(PerkManager.is_picking(), "the picker waits before it auto-picks")
 	await get_tree().create_timer(0.6, true, false, true).timeout

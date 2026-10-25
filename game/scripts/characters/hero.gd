@@ -156,7 +156,9 @@ func _on_down_changed(_is_down: bool) -> void:
 # The module owns the cooldown and the melee vs pebble branch; HeroHits
 # stays the perk math underneath (every hit goes through its strike()).
 # The role adds the feel: `_show_attack` (the swing animation) and
-# `_swing` (the player's hit-stop, the companion's sparkle).
+# `_swing` (the player's hit puff, the companion's sparkle).
+# Every hit that lands hit-stops the hero's visual and the target's
+# (`on_attack_hit`); the game itself never slows for it.
 # The hit lands on the attack clip's contact frame (the definition's
 # `attack_contact_time`, as the visual reports it), after a short wind-up;
 # a hero without one hits the moment the attack starts.
@@ -365,9 +367,14 @@ func is_tool_light_on() -> bool:
 
 ## HeroHits.strike calls this for every hit the hero lands (a swing, a
 ## Big Swing extra, a pebble, a Ricochet bounce), after the damage: the
-## tool's on-hit effects (the Ember Stick's burn, the Blaze Stick's
-## splash onto the mobs beside the target, and the Glow Sling's glow).
+## hit-stop on the hero and the target (which squashes), and the tool's
+## on-hit effects (the Ember Stick's burn, the Blaze Stick's splash onto
+## the mobs beside the target, and the Glow Sling's glow).
 func on_attack_hit(target: Node, _damage: int) -> void:
+	_visual.hit_stop()
+	var target_visual: CharacterVisual = target.get_node_or_null("Visual") as CharacterVisual
+	if target_visual != null:
+		target_visual.hit_stop(true)
 	var glow: ToolTier = tool_effect_tier(&"glow_hit")
 	if glow != null:
 		GlowMark.light(target, glow)
