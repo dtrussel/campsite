@@ -168,9 +168,15 @@ func set_locomotion(speed: float) -> void:
 	# idle and walk play at their natural rate.
 	var run_weight: float = clampf((_blend_position - walk_speed) / maxf(_run_start - walk_speed, 0.01), 0.0, 1.0) \
 		if clips.has(&"walk") else (1.0 if speed > move_threshold else 0.0)
-	var run_scale: float = clampf(speed / reference_speed, 0.6, 1.4)
+	var run_scale: float = run_play_speed(speed, reference_speed)
 	_tree.set("parameters/loco_speed/scale", lerpf(1.0, run_scale, run_weight))
 	_tick_footsteps(run_weight)
+
+
+## How fast the move clip plays at `speed` m/s for a character whose
+## move clip fits `reference_speed` (the validator's clip checks too).
+static func run_play_speed(speed: float, reference_speed: float) -> float:
+	return clampf(speed / reference_speed, 0.6, 1.4)
 
 
 func _tick_footsteps(run_weight: float) -> void:
