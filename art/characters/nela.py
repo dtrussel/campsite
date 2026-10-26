@@ -5,7 +5,8 @@ with a cream folk pattern and gathered cuffs; cream socks and brown
 boots with pink laces; a plum backpack with a green bedroll, a tin cup
 and her bunny peeking out; a compass on a cord; and a glowing lantern.
 Built on the KayKit adventurer rig so all animations work, plus her own
-clips (hero_clips.py: her sling shot, the shared walk and run).
+clips (hero_clips.py: her sling shot, the shared walk and run). Her hair
+locks, bun, pack, scarf and lantern swing on spring chains (CHAINS).
 Output: nela.glb"""
 
 import math
@@ -63,6 +64,40 @@ GLOW = (1.0, 0.8, 0.38)
 HEAD = chibi.HeadFrame((0, -0.01, 1.515), (0.242, 0.252, 0.235))  # low: a short chibi neck
 PROP = chibi.Proportions(legs=1.3, spine=1.1, arms=1.1)
 FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "nela_face.png")
+
+
+def _hair_chain(yaw, pitch, drop, out, back=0.0):
+    """A hair chain's three joints: from the head surface at (yaw, pitch),
+    falling `drop`, drifting `out` away from the head's side and `back`
+    (+Y)."""
+    root, _ = HEAD.point(yaw, pitch, 0.015)
+    side = math.copysign(1.0, yaw) if abs(math.sin(yaw)) > 0.3 else 0.0
+    step = Vector((side * out, back, -drop))
+    return [tuple(root), tuple(root + step * 0.5), tuple(root + step)]
+
+
+# Spring chains (hero animation): what hangs or sticks out swings on
+# short bones, which the game's SpringChainModifier moves (tuned in
+# resources/heroes/nela.tres). name -> (parent bone, joints in model
+# rest space before the stretch). Hair locks weight along their own
+# centre lines; the bun, the bag and the scarf along these joints. The
+# pack's joints are where build() puts it (0.04 forward of backpack()).
+# Two more are added in build(): the bun's one bone (hair.bun, from
+# bun_base()) and the lantern's (hung from the hand slot, after the
+# stretch). Nela faces -Y; her left is +X.
+BUN_RISE = Vector((0.0, 0.03, 0.14))
+CHAINS = {
+    "hair.front": ("head", _hair_chain(0.0, 0.8, 0.09, 0.0, back=-0.05)),     # the fringe wisps
+    "hair.back": ("head", _hair_chain(math.pi, -0.05, 0.17, 0.0, back=0.06)),  # the loose nape locks
+    "hair.l": ("head", _hair_chain(0.95, 0.26, 0.27, 0.07)),                  # the face-framing locks
+    "hair.r": ("head", _hair_chain(-0.95, 0.26, 0.27, 0.07)),
+    "pack": ("chest", [(0, 0.33, 1.22), (0, 0.38, 0.97), (0, 0.41, 0.68)]),   # the bag, hung at the top
+    "scarf": ("pack.1", [(0.24, 0.46, 1.02), (0.27, 0.48, 0.93), (0.3, 0.5, 0.84)]),  # knotted to the pack
+}
+
+
+def chain_bones(chain):
+    return chibi.chain_bones(chain, CHAINS[chain][1])
 # From the concept art: a 3-year-old's face. A big round cranium with the
 # features sitting low; huge round deep-blue eyes with two catchlights
 # and dark upper lashes; faint, high, soft brows; a tiny button nose;
@@ -321,9 +356,11 @@ def hair_cap():
 
 
 def wavy(parts, root, up, controls, width, wave, side, thickness=0.42, steps=9, sharp=False, twist=0.0, tier=1,
-          ring=8):
+          ring=8, chain=None):
     """A wavy lock: the swept centreline wiggles sideways as it falls.
-    tier 0 = primary mass (darker roots), 1 = secondary, 2 = flyaway (lighter)."""
+    tier 0 = primary mass (darker roots), 1 = secondary, 2 = flyaway (lighter).
+    With a `chain` (CHAINS) it swings on that spring chain, weighted along
+    its own length; without, it is bound rigidly to the head."""
     pts = chibi.sweep(root, controls, steps=steps)
     for i in range(1, steps):
         pts[i] = pts[i] + side * wave * math.sin(i / (steps - 1) * math.pi * 2.2) * (i / (steps - 1))
@@ -338,6 +375,8 @@ def wavy(parts, root, up, controls, width, wave, side, thickness=0.42, steps=9, 
     elif tier == 2:
         light, mid = common.lerp(HAIR_LIGHT, (1, 1, 0.9), 0.35), common.lerp(HAIR, HAIR_LIGHT, 0.45)
     common.color_by(obj, chibi.lock_colour(root, length, light, mid, dark))
+    if chain:
+        chibi.weight_along(obj, pts, "head", chain_bones(chain))
     parts.append(obj)
 
 
@@ -349,6 +388,13 @@ def bun_base():
     off-centre (as in the art)."""
     p, n = HEAD.point(0.35, 1.05, 0.02)
     return p + Vector((0.0, 0.03, 0.0))
+
+
+def bun_points():
+    """The bun's one-bone spring chain (hair.bun): from where her hair is
+    gathered up through the knot."""
+    base = bun_base()
+    return [tuple(base), tuple(base + BUN_RISE)]
 
 
 def top_bun():
@@ -375,6 +421,9 @@ def top_bun():
         wavy(parts, root, side, [root + out * L * 0.5, root + out * L * 0.9 + side * 0.02 - U * 0.02,
                                  root + out * L + side * 0.05 - U * 0.06],
              rng.uniform(0.012, 0.02), 0.012, side, thickness=0.3, steps=7, sharp=True, tier=2)
+    # The whole bun (knot, tie, wisps) wobbles on its own short chain.
+    for part in parts:
+        chibi.weight_along(part, bun_points(), "head", chibi.chain_bones("hair.bun", bun_points()))
     return parts
 
 
@@ -420,7 +469,8 @@ def hair():
         side = Vector((-math.cos(yaw), -math.sin(yaw), 0))
         wavy(parts, root, F, [root + F * 0.05 + U * 0.02, root + F * 0.06 - U * drop * 0.5 - side * fan * 0.5,
                               root + F * 0.045 - U * drop - side * fan * 1.3], width, 0.01, side,
-             thickness=0.3 if tier == 1 else 0.26, sharp=True, twist=rng.uniform(-0.3, 0.3), tier=tier)
+             thickness=0.3 if tier == 1 else 0.26, sharp=True, twist=rng.uniform(-0.3, 0.3), tier=tier,
+             chain="hair.front")
     # Loose face-framing locks from the temples to the chin, curling out.
     for side in (-1, 1):
         out = Vector((side, 0, 0))
@@ -429,7 +479,8 @@ def hair():
             wavy(parts, root, n, [root + out * 0.02 - U * length * 0.35 + F * 0.01,
                                   root + out * 0.03 - U * length * 0.8 + F * 0.02,
                                   root + out * 0.08 - U * length + F * 0.015], width, 0.018, F,
-                 thickness=0.34, steps=9, sharp=True, twist=side * 0.4, tier=1)
+                 thickness=0.34, steps=9, sharp=True, twist=side * 0.4, tier=1,
+                 chain="hair.l" if side > 0 else "hair.r")
     # Loose locks at the nape.
     for k, yaw in enumerate((2.5, 2.75, 3.0, 3.25, 3.5, 3.75)):
         root, n = HEAD.point(yaw, -0.05, 0.01)
@@ -437,7 +488,7 @@ def hair():
         length = rng.uniform(0.12, 0.22)
         wavy(parts, root, n, [root - U * length * 0.4 + flat * 0.02, root - U * length * 0.85 + flat * 0.04,
                               root - U * length + flat * 0.07], rng.uniform(0.03, 0.045), 0.015,
-             Vector((1, 0, 0)) * rng.choice((-1, 1)), thickness=0.36, sharp=True, tier=1)
+             Vector((1, 0, 0)) * rng.choice((-1, 1)), thickness=0.36, sharp=True, tier=1, chain="hair.back")
     # Flyaways: thin strands curling off the mass (the messy outline).
     for k in range(26):
         yaw = rng.uniform(-3.0, 3.0)
@@ -471,6 +522,9 @@ def head_piece():
     for part in ear_parts:
         chibi.no_face_uv(part)
     hair_parts = hair()
+    for part in hair_parts:
+        if not part.vertex_groups:
+            chibi.rigid(part, "head")   # the cap and the pulled locks; the rest swing
     chibi.report([head] + ear_parts + hair_parts)
     hair_obj = common.join(hair_parts, "Nela_Hair")
     chibi.decimate_tris(hair_obj, 28000)
@@ -544,7 +598,10 @@ def backpack():
     """Olive canvas pack (the art): a wrinkled bag, a leather-trimmed flap
     sagging over the front, a front pocket, two vertical leather straps
     with brass buckles, the green bedroll cinched underneath, the purple
-    scarf, a leaf sprig and padded leather shoulder straps."""
+    scarf, a leaf sprig and padded leather shoulder straps. Returns (the
+    pack, which swings on its spring chain; the scarf, on its own chain
+    from the pack; and the harness: shoulder straps, sternum strap and
+    leaves, which stay on her chest)."""
     parts = []
     canvas = lambda p, n: common.lerp(PACK, PACK_DARK, max(0.0, -n.z) * 0.5 +
                                       max(0.0, noise.noise(p * 14.0) - 0.2) * 0.5)
@@ -575,22 +632,23 @@ def backpack():
     roll_c = (0.0, 0.4, 0.7)
     parts.append(chibi.bedroll(roll_c, 0.54, 0.085, BEDROLL, LEATHER))
     parts += chibi.bedroll_detail(roll_c, 0.54, 0.085, BEDROLL, LEATHER, metal=BRASS)
-    parts += scarf((0.24, 0.5, 1.02))
+    tails = scarf((0.24, 0.5, 1.02))
+    harness = []
     for ang in (0.4, -0.5):
         leaf = chibi.ellipsoid((0, 0, 0.05), (0.022, 0.006, 0.05), name="leaf", segs=(10, 6))
         for v in leaf.data.vertices:
             v.co.y -= abs(v.co.x) * 0.4
         leaf.data.transform(Matrix.Translation((-0.12, -0.262, 1.1)) @ Matrix.Rotation(ang, 4, "Y"))
         common.set_color(leaf, LEAF)
-        parts.append(leaf)
-    parts += chibi.straps(LEATHER, top_y=0.22, front_y=-0.255, xs=(-0.15, 0.15), shoulder_z=1.23, bottom_z=0.74,
-                          width=0.032, thick=0.01, metal=BRASS)
+        harness.append(leaf)
+    harness += chibi.straps(LEATHER, top_y=0.22, front_y=-0.255, xs=(-0.15, 0.15), shoulder_z=1.23, bottom_z=0.74,
+                            width=0.032, thick=0.01, metal=BRASS)
     chest = chibi.webbing([(-0.17, -0.262, 1.04), (0, -0.27, 1.04), (0.17, -0.262, 1.04)], [(0, -1, 0)] * 3,
                           width=0.013, thick=0.006, name="sternum")
     common.set_color(chest, LEATHER)
-    parts.append(chest)
-    parts.append(chibi.buckle((0, -0.278, 1.04), (0, -1, 0), width=0.045, height=0.035, colour=BRASS))
-    return parts
+    harness.append(chest)
+    harness.append(chibi.buckle((0, -0.278, 1.04), (0, -1, 0), width=0.045, height=0.035, colour=BRASS))
+    return parts, tails, harness
 
 
 def lantern(rig):
@@ -598,7 +656,8 @@ def lantern(rig):
     points down in the idle pose, so it hangs from her hand. Layered: a
     bail with side loops, a vented chimney and top ring, a flared cap, a
     glass frame of six bars between two rings, and a thick stepped base
-    with a fuel knob."""
+    with a fuel knob. Also returns its spring chain's joints (world,
+    after the stretch): from her grip on the bail down to the base."""
     to_world = chibi.bone_frame(rig, "handslot.r")
     metal = []
     bail = chibi.torus((0.04, 0, 0), 0.06, 0.008, name="bail", axis="Y", segs=(22, 6))
@@ -637,7 +696,8 @@ def lantern(rig):
     glass = common.join([glass, flame], "Nela_LanternGlow")
     for obj in (body, glass):
         obj.data.transform(to_world @ Matrix.Scale(1.5, 4))
-    return body, glass
+    hang = [to_world @ Vector((0.0, 0.0, 0.0)), to_world @ Vector((0.36 * 1.5, 0.0, 0.0))]
+    return body, glass, hang
 
 
 def build():
@@ -651,9 +711,16 @@ def build():
                      levels=0)
     common.set_color(tab, LEATHER)
     rigid.append((tab, "chest"))
-    for part in backpack():
+    pack, tails, harness = backpack()
+    for part in pack + tails + harness:
         part.data.transform(Matrix.Translation((0, -0.04, 0)))
-        rigid.append((part, "chest"))
+    for part in pack:
+        chibi.weight_along(part, CHAINS["pack"][1], "chest", chain_bones("pack"))
+        rigid.append((part, None))
+    for part in tails:
+        chibi.weight_along(part, CHAINS["scarf"][1], "pack.1", chain_bones("scarf"))
+        rigid.append((part, None))
+    rigid += [(part, "chest") for part in harness]
     collar = chibi.torus((0, 0, 1.2), 0.085, 0.02, name="collar")
     common.set_color(collar, TEE_DARK)
     rigid.append((collar, "chest"))
@@ -662,14 +729,23 @@ def build():
     body = chibi.finish(rig, soft, rigid, "Nela", prop=PROP)
     PROP.stretch_mesh(head)
     PROP.stretch_mesh(hair_obj)
-    lamp, glow = lantern(rig)
+    lamp, glow, hang = lantern(rig)
     plush = bunny()
     plush.data.transform(Matrix.Translation((0, -0.04, 0)))
     PROP.stretch_mesh(plush)
-    for obj, bone in ((head, "head"), (hair_obj, "head"), (lamp, "hand.r"), (glow, "hand.r"), (plush, "chest")):
-        chibi.rigid(obj, bone)
+    # The plush rides in the top of the pack; the lantern hangs on its
+    # own one-bone chain from her hand.
+    for obj, bone in ((head, "head"), (hair_obj, None), (lamp, "lantern.1"), (glow, "lantern.1"),
+                      (plush, "pack.1")):
+        if bone is not None:
+            chibi.rigid(obj, bone)
         obj.parent = rig
         obj.modifiers.new("Armature", "ARMATURE").object = rig
+    # The spring chains' bones, after the auto-weighting (chibi.add_chain).
+    for chain, (parent, joints) in CHAINS.items():
+        chibi.add_chain(rig, chain, joints, parent, prop=PROP)
+    chibi.add_chain(rig, "hair.bun", bun_points(), "head", prop=PROP)
+    chibi.add_chain(rig, "lantern", hang, "hand.r")
     # Her own clips next to the 76 stock ones (art/characters/hero_clips.py).
     clips = hero_clips.add_clips(rig, "nela")
 
