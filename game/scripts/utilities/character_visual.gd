@@ -767,6 +767,18 @@ func spring_swing() -> float:
 	return _springs.swing if _springs != null else 0.0
 
 
+## The largest swing at any simulation step since `clear_spring_peak()`
+## (tests: a long frame can swing a chain out and back within itself).
+func spring_swing_peak() -> float:
+	return _springs.peak_swing if _springs != null else 0.0
+
+
+## Starts `spring_swing_peak()` again from nothing.
+func clear_spring_peak() -> void:
+	if _springs != null:
+		_springs.clear_peak()
+
+
 func _add_springs() -> void:
 	var skeleton: Skeleton3D = model.find_child("Skeleton3D", true, false) as Skeleton3D
 	if skeleton == null:

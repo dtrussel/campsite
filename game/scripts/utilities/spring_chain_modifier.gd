@@ -28,6 +28,10 @@ var paused: bool = false
 ## The largest distance (m) between a chain's tip and where the
 ## animation puts it, last frame (tests, through CharacterVisual).
 var swing: float = 0.0
+## The largest such distance at any simulation step since
+## `clear_peak()`: a long frame can swing a chain out and back before
+## the frame ends, which `swing` alone would miss (tests).
+var peak_swing: float = 0.0
 
 ## Per chain: bone indices (the last one the tip), and per swinging
 ## bone its simulated far end (world) and that point's velocity.
@@ -70,15 +74,24 @@ func _process_modification() -> void:
 		var chain: SpringChain = chains[c]
 		var animated_tip: Vector3 = to_world * skeleton.get_bone_global_pose(bones[-1]).origin
 		for i in bones.size() - 1:
-			_swing_bone(skeleton, to_world, chain, c, i, steps, step)
+			_swing_bone(skeleton, to_world, chain, c, i, steps, step, animated_tip if i == bones.size() - 2 else null)
 		widest = maxf(widest, _points[c][bones.size() - 2].distance_to(animated_tip))
 	swing = widest
+	peak_swing = maxf(peak_swing, widest)
+
+
+## Starts the peak swing again from nothing.
+func clear_peak() -> void:
+	peak_swing = 0.0
 
 
 ## Simulates bone `i` of chain `c` for `steps` of `step` seconds toward
 ## its animated direction, then turns the bone to point at the result.
+## For the chain's last swinging bone, `animated_tip` is where the
+## animation puts the tip, and every step's distance from it counts
+## toward `peak_swing`.
 func _swing_bone(skeleton: Skeleton3D, to_world: Transform3D, chain: SpringChain, c: int, i: int, steps: int,
-		step: float) -> void:
+		step: float, animated_tip: Variant) -> void:
 	var bone: int = _indices[c][i]
 	var pose: Transform3D = skeleton.get_bone_global_pose(bone)
 	var child_origin: Vector3 = skeleton.get_bone_global_pose(_indices[c][i + 1]).origin
@@ -99,6 +112,8 @@ func _swing_bone(skeleton: Skeleton3D, to_world: Transform3D, chain: SpringChain
 		velocity *= maxf(0.0, 1.0 - chain.damping * step)
 		point = _constrain(head, target, point + velocity * step, length, reach)
 		velocity = (point - before) / step
+		if animated_tip != null:
+			peak_swing = maxf(peak_swing, point.distance_to(animated_tip))
 	point = _constrain(head, target, point, length, reach)
 	_points[c][i] = point
 	_velocities[c][i] = velocity

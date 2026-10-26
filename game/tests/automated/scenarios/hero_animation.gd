@@ -335,8 +335,12 @@ func _check_spring_turn(visual: CharacterVisual, label: String) -> void:
 	visual.face_instantly(Vector3(0, 0, 1))
 	_check(await _wait_until(func() -> bool: return visual.spring_swing() < SPRING_SETTLED, 3.0),
 		"%s: standing, the chains rest (%.3f m)" % [label, visual.spring_swing()])
+	# The peak over every simulation step, not the swing at a frame's end:
+	# one long frame (the stalled pass) swings a chain out and most of the
+	# way back before it ends.
+	visual.clear_spring_peak()
 	visual.face_instantly(Vector3(0, 0, -1))
-	_check(await _wait_until(func() -> bool: return visual.spring_swing() > SPRING_SWUNG, 0.5),
-		"%s: a sudden turn swings a chain out (%.3f m)" % [label, visual.spring_swing()])
+	_check(await _wait_until(func() -> bool: return visual.spring_swing_peak() > SPRING_SWUNG, 0.5),
+		"%s: a sudden turn swings a chain out (peak %.3f m)" % [label, visual.spring_swing_peak()])
 	_check(await _wait_until(func() -> bool: return visual.spring_swing() < SPRING_SETTLED, SPRING_SETTLE_SECONDS),
 		"%s: and it settles back within %.1f s (%.3f m)" % [label, SPRING_SETTLE_SECONDS, visual.spring_swing()])
