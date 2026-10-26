@@ -208,7 +208,7 @@ func _physics_process(delta: float) -> void:
 	elif is_gathering():
 		_visual.face(gather_target().global_position - global_position, delta)
 		if not _visual.is_in_action():
-			_visual.play_action(&"gather", 1.3)
+			_visual.play_action(&"gather", hero.companion_gather_play_speed)
 
 
 func _tick_idle() -> void:

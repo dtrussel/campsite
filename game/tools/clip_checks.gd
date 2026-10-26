@@ -33,15 +33,9 @@ const DURATION_SECONDS: float = 0.05
 ## How far (m/s) a cycle's reference speed may be from its stride over
 ## its length (stride_problems).
 const STRIDE_SPEED_TOLERANCE: float = 0.01
-## The speed gameplay plays each action at, as the player's hero (the
-## companion attacks at 1.45x and gathers at 1.3x). The gather state is
-## the companion's; chop and pick are the player's gathers at a node,
-## and pick is also the build beat's plank fetch.
-const PLAY_SPEEDS: Dictionary = {
-	&"attack": 1.5, &"hit": 1.4, &"death": 1.0, &"getup": 1.0, &"cheer": 1.2,
-	&"gather": 1.3, &"chop": 1.5, &"pick": 1.5,
-	&"tinker": BuildBeat.FETCH_SPEED, &"hammer": BuildBeat.HAMMER_SPEED,
-}
+## Each action is measured at the speed gameplay plays it as the
+## player's hero (HeroDefinition.action_play_speeds). The gather state is
+## the companion's; chop and pick are the player's gathers at a node.
 ## Each action's gameplay length (s, at its play speed): the stock
 ## clips' lengths, which new clips keep.
 const ACTION_SECONDS: Dictionary = {
@@ -88,6 +82,7 @@ static func check_hero(hero: HeroDefinition, enforced: Dictionary = ENFORCED,
 	var defaults: CharacterVisual = CharacterVisual.new()
 	var walk_speed: float = defaults.walk_speed
 	defaults.free()
+	var play_speeds: Dictionary = hero.action_play_speeds()
 	var states: Array = hero.clips.keys()
 	states.sort()
 	for state in states:
@@ -129,11 +124,11 @@ static func check_hero(hero: HeroDefinition, enforced: Dictionary = ENFORCED,
 					play = plays
 			rows.append(_row(row, "slide", slide, SLIDE_METRES, "slides %.1f cm a stride at %.1f m/s, played at %.2fx (limit %.1f cm)"
 				% [slide * 100.0, speed, play, SLIDE_METRES * 100.0], slide > SLIDE_METRES, checks.has("slide")))
-		if PLAY_SPEEDS.has(StringName(state)):
-			var seconds: float = anim.length / float(PLAY_SPEEDS[StringName(state)])
+		if play_speeds.has(StringName(state)):
+			var seconds: float = anim.length / float(play_speeds[StringName(state)])
 			var target: float = float(targets.get(StringName(state), seconds))
 			rows.append(_row(row, "duration", seconds, target, "lasts %.3f s at %.2fx (gameplay length %.3f s)"
-				% [seconds, PLAY_SPEEDS[StringName(state)], target], absf(seconds - target) > DURATION_SECONDS,
+				% [seconds, play_speeds[StringName(state)], target], absf(seconds - target) > DURATION_SECONDS,
 				checks.has("duration")))
 	if model != null:
 		model.free()

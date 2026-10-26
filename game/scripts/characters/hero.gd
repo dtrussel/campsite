@@ -83,7 +83,7 @@ func take_damage(amount: int, _source: Node = null) -> void:
 	if current_hp == 0:
 		_set_down(true)
 	elif not _visual.is_in_action():
-		_visual.play_action(&"hit", 1.4)
+		_visual.play_action(&"hit", hero.hit_play_speed if hero != null else 1.0)
 
 
 ## Heals `amount` HP, up to max. Not while down.
@@ -165,14 +165,6 @@ func _on_down_changed(_is_down: bool) -> void:
 # Settled: the signature's float text lasts 2.8 s in both roles (the
 # companion's was 2.7 s).
 
-## The attack clip's play speed, by role (`_show_attack`); the wind-up
-## cap is checked at the slower one (the validator).
-const ATTACK_ANIM_SPEED: float = 1.5
-const COMPANION_ATTACK_ANIM_SPEED: float = 1.45
-## A melee target still counts as in reach at the contact frame up to
-## this many times the attack's reach (it may have stepped back a bit).
-const CONTACT_REACH_SLACK: float = 1.4
-
 ## An attack at `target` started (the swing or the pebble follows at the
 ## contact frame).
 signal attacked(target: Node3D)
@@ -240,7 +232,9 @@ func _on_contact_frame(target: Node3D) -> void:
 		return
 	if hero != null and hero.ranged:
 		_shoot(target)
-	elif _flat_distance(target.global_position) <= get_attack_range() * CONTACT_REACH_SLACK:
+		return
+	var slack: float = hero.contact_reach_slack if hero != null else 1.0
+	if _flat_distance(target.global_position) <= get_attack_range() * slack:
 		_swing(target)
 
 
@@ -251,9 +245,9 @@ func _cancel_wind_up() -> void:
 	_wind_up = null
 
 
-## The attack clip's play speed in this role.
+## The attack clip's play speed in this role (the hero's data).
 func _attack_anim_speed() -> float:
-	return COMPANION_ATTACK_ANIM_SPEED if _is_companion_role() else ATTACK_ANIM_SPEED
+	return hero.attack_speed(_is_companion_role()) if hero != null else 1.0
 
 
 ## Fires a pebble at `target`; with the Double Sling every few shots

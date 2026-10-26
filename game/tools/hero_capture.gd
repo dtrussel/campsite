@@ -46,9 +46,6 @@ const FOV: float = 34.0
 const DISTANCE: float = 3.2
 const STATES: Array[StringName] = [&"idle", &"walk", &"move", &"attack", &"hit", &"cheer", &"gather", &"chop",
 	&"pick", &"tinker", &"hammer", &"death", &"getup"]
-## Where the companion plays a state at another speed than the player
-## (companion_controller.gd).
-const COMPANION_SPEEDS: Dictionary = {&"attack": 1.45, &"gather": 1.3}
 ## Game seconds to settle into a state before recording it.
 const SETTLE_SECONDS: float = 0.6
 ## Motions that are not clips: how long each records after its change.
@@ -200,8 +197,7 @@ func _record(hero: HeroDefinition, role: String, state: StringName, out_dir: Str
 		_visual.unlock(&"getup")
 		seconds = _clip(hero, state).length if _clip(hero, state) != null else 1.0
 	else:
-		var speed: float = float(COMPANION_SPEEDS.get(state, ClipChecks.PLAY_SPEEDS.get(state, 1.0))) \
-			if role == "companion" else float(ClipChecks.PLAY_SPEEDS.get(state, 1.0))
+		var speed: float = float(hero.action_play_speeds(role == "companion").get(state, 1.0))
 		seconds = _visual.play_action(state, speed)
 	var frames: Array[Image] = []
 	var ticks: int = maxi(1, roundi(seconds * FPS))

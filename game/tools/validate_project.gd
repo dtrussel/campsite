@@ -22,6 +22,7 @@ extends Node
 ## Exits 0 when clean, 1 otherwise.
 
 const ClipChecks: GDScript = preload("res://tools/clip_checks.gd")
+const ClipReviewData: GDScript = preload("res://tools/clip_review_data.gd")
 const SKIP_DIRS: Array[String] = ["res://.godot", "res://addons"]
 ## Where the issue tracker keeps one folder per feature slug, so "<slug> NN"
 ## or "<slug> spec" in a comment reads as a work-item reference.
@@ -96,6 +97,7 @@ func _ready() -> void:
 	_validate_rebuild_missing_keys()
 	_validate_comments(files)
 	_validate_hero_clips()
+	_validate_clip_review_data()
 	if _errors.is_empty():
 		print("validate_project: OK (%d files checked)" % files.size())
 		get_tree().quit(0)
@@ -300,6 +302,17 @@ func _validate_hero_clips() -> void:
 		% [rows.size(), reported])
 
 
+## The game numbers the clip review sheets read (clip_review_data.gd)
+## match the game; `-- --write-clip-review` writes them again.
+func _validate_clip_review_data() -> void:
+	if OS.get_cmdline_user_args().has(ClipReviewData.WRITE_FLAG):
+		ClipReviewData.write()
+		print("validate_project: wrote %s" % ClipReviewData.path())
+	var problem: String = ClipReviewData.problem()
+	if problem != "":
+		_fail("%s: run the validator with `-- %s` to write it again" % [problem, ClipReviewData.WRITE_FLAG])
+
+
 ## Every hero on the select screen is complete, and its idle fidgets
 ## are mapped states. Tool tiers:
 ## each of its tiers points to an existing tool-tier recipe, and every
@@ -346,8 +359,8 @@ func _validate_heroes(recipe_ids: Dictionary) -> void:
 ## speed, in either role (checked at the slower one). 0 is the instant
 ## hit, always fine.
 func _validate_hero_contact_times() -> void:
-	var slowest: float = minf(Hero.ATTACK_ANIM_SPEED, Hero.COMPANION_ATTACK_ANIM_SPEED)
 	for hero in HeroRoster.all():
+		var slowest: float = minf(hero.attack_speed(false), hero.attack_speed(true))
 		var contact: float = hero.attack_contact_time
 		if contact == 0.0:
 			continue

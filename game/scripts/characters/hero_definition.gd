@@ -67,6 +67,21 @@ const WIND_UP_CAP_SECONDS: float = 0.1
 @export var companion_attack_cooldown: float = 0.75
 ## Ranged heroes fire a pebble (PebbleShot); the hit lands on impact.
 @export var ranged: bool = false
+## A melee target still counts as in reach at the contact frame up to
+## this many times the attack's reach (it may have stepped back a bit).
+@export var contact_reach_slack: float = 1.4
+
+@export_group("Action speeds")
+## How fast gameplay plays each action clip (x): the attack by role
+## (the wind-up cap is checked at the slower one), the hit reaction, the
+## level-up cheer, and gathering (the player's chop or pick at a node,
+## the companion's gather). The clip checks read them (action_play_speeds).
+@export var attack_play_speed: float = 1.5
+@export var companion_attack_play_speed: float = 1.45
+@export var hit_play_speed: float = 1.4
+@export var cheer_play_speed: float = 1.2
+@export var gather_play_speed: float = 1.5
+@export var companion_gather_play_speed: float = 1.3
 
 @export_group("Signature")
 ## The hero's signature tool path (tool tiers), tier 1 first: each tier
@@ -78,6 +93,22 @@ const WIND_UP_CAP_SECONDS: float = 0.1
 @export_range(1, 3) var rating_health: int = 2
 @export_range(1, 3) var rating_power: int = 2
 @export_range(1, 3) var rating_reach: int = 2
+
+
+## The attack clip's play speed in a role.
+func attack_speed(companion: bool) -> float:
+	return companion_attack_play_speed if companion else attack_play_speed
+
+
+## Logical state -> the speed gameplay plays it at, in a role: this
+## hero's action speeds, the build beat's, and 1x for going down and
+## getting up (play_final and unlock).
+func action_play_speeds(companion: bool = false) -> Dictionary:
+	return {
+		&"attack": attack_speed(companion), &"hit": hit_play_speed, &"death": 1.0, &"getup": 1.0,
+		&"cheer": cheer_play_speed, &"gather": companion_gather_play_speed, &"chop": gather_play_speed,
+		&"pick": gather_play_speed, &"tinker": BuildBeat.FETCH_SPEED, &"hammer": BuildBeat.HAMMER_SPEED,
+	}
 
 
 ## How many tiers the hero's signature tool has.

@@ -8,12 +8,15 @@
 Loads the committed model (game/assets/custom/<kid>.glb), so it shows
 what the game plays; rebuild the kid first to review a clip in progress.
 A state (idle, walk, move, attack, ...) is looked up in the kid's hero
-data (game/resources/heroes/<kid>.tres); anything else is a clip name.
-The kid is matte clay, seen from the gameplay camera's pitch (42 deg,
-34 deg lens) and turned `--azimuth` degrees from facing the camera.
+data; anything else is a clip name. The game's numbers (the hero data,
+the play speeds, the camera, the walk speed, the mallet's scale) come
+from art/review/game_numbers.json, which the game's validator writes and
+checks against the game (game/tools/clip_review_data.gd).
+The kid is matte clay, seen from the gameplay camera's pitch and lens,
+and turned `--azimuth` degrees from facing the camera.
 
 Walk and run travel over a checked ground (half-metre squares) at the
-speed the game moves them (walk 1.6 m/s, the clip played at the game's
+speed the game moves them (walk at the game's walk speed, the clip played at the game's
 walk scale; run at the hero's move speed, the clip played at the game's
 run scale), with the camera following,
 so a sliding foot shows against the squares. `--travel 0` stands them
@@ -35,10 +38,11 @@ stick hand's height and the stick's pitch per frame.
 """
 
 import argparse
+import json
 import math
 import os
-import re
 import sys
+from dataclasses import dataclass
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -49,21 +53,46 @@ from PIL import Image  # noqa: E402
 from lib import common  # noqa: E402
 
 GAME = os.path.join(common.ROOT, "game")
-PITCH = 42.0  # CameraFollow.pitch_degrees
-LENS_FOV = 34.0  # the gameplay camera's vertical field of view
-WALK_SPEED = 1.6  # CharacterVisual.walk_speed
-# The speed gameplay plays each action at (game/tools/clip_checks.gd).
-PLAY_SPEEDS = {"attack": 1.5, "hit": 1.4, "death": 1.0, "getup": 1.0, "cheer": 1.2, "gather": 1.3,
-               "chop": 1.5, "pick": 1.5, "tinker": 1.6, "hammer": 1.8}
-
+# The game's numbers, written and checked by the game's validator.
+GAME_NUMBERS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "game_numbers.json")
 
 # The build beat holds the barrel mallet (CharacterVisual.show_tool) and
 # hides the kid's own prop; the sheet does the same for these states.
 MALLET_STATES = ("hammer", "tinker")
-TOOL_SCALE = 1.9  # CharacterVisual.TOOL_SCALE
 
 
-def hold_mallet(rig, hidden, material):
+@dataclass
+class HeroNumbers:
+    """One kid's numbers from the hero data, as the game moves it."""
+    clips: dict
+    model_scale: float
+    move_speed: float
+    reference_speed: float
+    walk_reference_speed: float
+    tool_hidden_parts: list
+    play_speeds: dict
+
+
+def game_numbers():
+    with open(GAME_NUMBERS) as f:
+        return json.load(f)
+
+
+def hero_data(numbers, kid):
+    """The kid's state -> clip map and the numbers the game moves it by."""
+    if kid not in numbers["heroes"]:
+        sys.exit("clip_sheet: no hero '%s' in %s (heroes: %s)" % (kid, GAME_NUMBERS, ", ".join(numbers["heroes"])))
+    hero = numbers["heroes"][kid]
+    return HeroNumbers(clips=hero["clips"], model_scale=hero["model_scale"], move_speed=hero["move_speed"],
+                       reference_speed=hero["reference_speed"], walk_reference_speed=hero["walk_reference_speed"],
+                       tool_hidden_parts=hero["tool_hidden_parts"], play_speeds=hero["play_speeds"])
+
+
+def clamp(value, limits):
+    return min(max(value, limits["min"]), limits["max"])
+
+
+def hold_mallet(rig, hidden, material, tool_scale):
     """Puts the build mallet in the right hand as the game does: on the
     hand slot, its glTF axes as the bone's (the handle along the slot's
     +Y, the barrel along +X), and hides the parts it replaces."""
@@ -83,28 +112,12 @@ def hold_mallet(rig, hidden, material):
             obj.data.materials.append(material)
     # Blender's import turned the mallet Z-up; turn it back to glTF axes.
     holder.rotation_euler = (-math.pi * 0.5, 0, 0)
-    holder.scale = (TOOL_SCALE,) * 3
+    holder.scale = (tool_scale,) * 3
     follow = holder.constraints.new("CHILD_OF")
     follow.target = rig
     follow.subtarget = "handslot.r"
     follow.set_inverse_pending = False
     follow.inverse_matrix.identity()
-
-
-def hero_data(kid):
-    """The kid's state -> clip map and the numbers the game moves it by."""
-    path = os.path.join(GAME, "resources", "heroes", kid + ".tres")
-    text = open(path).read() if os.path.exists(path) else ""
-    clips = dict(re.findall(r'&"(\w+)": "([^"]+)"', text))
-
-    def number(key, default):
-        found = re.search(r"^%s = ([\d.]+)" % key, text, re.M)
-        return float(found.group(1)) if found else default
-
-    hidden = re.search(r"^tool_hidden_parts = PackedStringArray\((.*)\)", text, re.M)
-    hidden = re.findall(r'"([^"]+)"', hidden.group(1)) if hidden else []
-    return (clips, number("model_scale", 0.7), number("move_speed", 4.0), number("reference_speed", 7.0),
-            number("walk_reference_speed", 0.0), hidden)
 
 
 def clay(name, colour):
@@ -148,18 +161,21 @@ def main():
     parser.add_argument("--rekey", action="store_true")
     args = parser.parse_args()
 
-    clips, model_scale, move_speed, reference_speed, walk_reference_speed, hidden = hero_data(args.kid)
+    numbers = game_numbers()
+    hero = hero_data(numbers, args.kid)
+    clips = hero.clips
+    model_scale = hero.model_scale
     state = args.clip if args.clip in clips else None
     clip = clips.get(args.clip, args.clip)
-    play = PLAY_SPEEDS.get(state, 1.0)
+    play = hero.play_speeds.get(state, 1.0)
     travel = 0.0
     if state == "walk":
-        travel = WALK_SPEED
-        if walk_reference_speed > 0:  # CharacterVisual.walk_play_speed
-            play = min(max(WALK_SPEED / walk_reference_speed, 0.5), 2.0)
+        travel = numbers["walk_speed"]
+        if hero.walk_reference_speed > 0:  # CharacterVisual.walk_play_speed
+            play = clamp(travel / hero.walk_reference_speed, numbers["walk_play_speed"])
     elif state == "move":
-        travel = move_speed
-        play = min(max(move_speed / reference_speed, 0.6), 1.4)  # CharacterVisual.run_play_speed
+        travel = hero.move_speed
+        play = clamp(travel / hero.reference_speed, numbers["run_play_speed"])  # CharacterVisual.run_play_speed
     if args.travel is not None:
         travel = args.travel
 
@@ -191,7 +207,7 @@ def main():
         if obj.parent is None and obj is not root:
             obj.parent = root
     if state in MALLET_STATES:
-        hold_mallet(rig, hidden, body)
+        hold_mallet(rig, hero.tool_hidden_parts, body, numbers["tool_scale"])
     root.rotation_euler = (0, 0, math.radians(args.azimuth))
     forward = root.rotation_euler.to_matrix() @ Vector((0, -1, 0))
     checked_ground(model_scale)
@@ -200,9 +216,9 @@ def main():
     height = max(o.dimensions.z for o in meshes)
     cam_data = bpy.data.cameras.new("clip_cam")
     cam_data.sensor_fit = "VERTICAL"
-    cam_data.angle_y = math.radians(LENS_FOV)
+    cam_data.angle_y = math.radians(numbers["camera"]["fov_degrees"])
     cam = common.link(bpy.data.objects.new("clip_cam", cam_data))
-    pitch = math.radians(PITCH)
+    pitch = math.radians(numbers["camera"]["pitch_degrees"])
     distance = height * 0.85 / math.tan(cam_data.angle_y * 0.5)
     offset = Vector((0, -math.cos(pitch), math.sin(pitch))) * distance
     cam.rotation_euler = (math.pi * 0.5 - pitch, 0, 0)

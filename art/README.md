@@ -76,7 +76,11 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
   the game's speed, so sliding feet show. Options (`--azimuth`,
   `--frames`, `--travel`, `--size`) are in its docstring. The build
   states (`hammer`, `tinker`) hold the mallet, as the game does. Rebuild the
-  kid first to review a new clip. In the game, `game/tools/hero_capture.tscn`
+  kid first to review a new clip. The game's numbers it needs (the hero
+  data, play speeds, camera, walk speed, mallet scale) come from
+  `art/review/game_numbers.json`, which the game's validator checks
+  against the game; after changing one of them, write it again with
+  `godot --headless --path game res://tools/validate_project.tscn -- --write-clip-review`. In the game, `game/tools/hero_capture.tscn`
   records the same states as the player and the companion, and the
   validator measures slide, loop pops and action lengths
   (`docs/testing/test-strategy.md`, "Hero clip checks").

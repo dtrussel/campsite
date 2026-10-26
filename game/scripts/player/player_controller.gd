@@ -258,7 +258,7 @@ func _physics_process(delta: float) -> void:
 		var node: ResourceNode = gather_target()
 		_visual.face(node.global_position - global_position, delta)
 		if not _visual.is_in_action():
-			_visual.play_action(node.gather_animation, 1.5)
+			_visual.play_action(node.gather_animation, hero.gather_play_speed)
 	else:
 		desired = _tick_command(delta)
 	if not _tool_busy:
@@ -350,7 +350,7 @@ func _tick_command(delta: float) -> Vector3:
 				if site.add_build_progress(delta, self):
 					_set_command(Command.NONE, null)
 					_build_beat.stop(_visual)
-					_visual.play_action(&"cheer", 1.2)
+					_visual.play_action(&"cheer", hero.cheer_play_speed)
 				return Vector3.ZERO
 			return _path_velocity(site.global_position)
 	return Vector3.ZERO
@@ -441,7 +441,7 @@ func _try_begin_gather() -> void:
 func _on_gather_started(node: ResourceNode) -> void:
 	velocity = Vector3.ZERO
 	_visual.face_instantly(node.global_position - global_position)
-	_visual.play_action(node.gather_animation, 1.5)
+	_visual.play_action(node.gather_animation, hero.gather_play_speed)
 
 
 func _on_interactor_exited(node: ResourceNode) -> void:
@@ -457,7 +457,7 @@ func _try_attack() -> void:
 	if target == null:
 		# Swing anyway so the key feels responsive.
 		_attack_cooldown_remaining = attack_cooldown_seconds
-		_visual.play_action(&"attack", 1.5)
+		_visual.play_action(&"attack", _attack_anim_speed())
 		return
 	_visual.face_instantly(target.global_position - global_position)
 	command_attack(target)

@@ -45,9 +45,12 @@ const MAX_LEAN: float = 0.17  # radians (~10 degrees) into a turn
 const LEAN_PER_TURN_RATE: float = 0.045
 ## The run blends in from walk_speed up to this many times it.
 const RUN_START_FACTOR: float = 2.2
-## The walk's play speed range when it is scaled by the real speed.
+## The walk's and the run's play speed ranges when they are scaled by
+## the real speed.
 const WALK_PLAY_MIN: float = 0.5
 const WALK_PLAY_MAX: float = 2.0
+const RUN_PLAY_MIN: float = 0.6
+const RUN_PLAY_MAX: float = 1.4
 
 ## Hand tools: key -> model, held on TOOL_BONE.
 const TOOLS: Dictionary = {&"hammer": preload("res://assets/custom/hammer.glb")}
@@ -227,7 +230,7 @@ func set_locomotion(speed: float) -> void:
 ## How fast the move clip plays at `speed` m/s for a character whose
 ## move clip fits `reference_speed` (the validator's clip checks too).
 static func run_play_speed(speed: float, reference_speed: float) -> float:
-	return clampf(speed / reference_speed, 0.6, 1.4)
+	return clampf(speed / reference_speed, RUN_PLAY_MIN, RUN_PLAY_MAX)
 
 
 ## How fast the walk clip plays at `speed` m/s for a walk authored for

@@ -87,7 +87,7 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
     `run_play_speed`, the worse of the two). A foot counts as down
     within 2 cm of its lowest point (limit 4 cm);
   - **duration:** each action's length at its gameplay play speed
-    (`PLAY_SPEEDS`) against its gameplay length (`ACTION_SECONDS`, the
+    (the hero data's `action_play_speeds()`) against its gameplay length (`ACTION_SECONDS`, the
     stock lengths; ±0.05 s).
   - **contact time:** a hero's `attack_contact_time` must come within
     the wind-up cap at play speed, inside the attack clip, and, for a
@@ -130,7 +130,10 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
   stacks an old capture over a new one. Usage is in its header:
   `xvfb-run -a godot --path game --resolution 320x180 --fixed-fps 30 res://tools/hero_capture.tscn -- <out_dir> leo walk attack`.
   The clay contact sheets come from Blender (`art/review/clip_sheet.py`,
-  see `art/README.md`).
+  see `art/README.md`). The game numbers they use are committed in
+  `art/review/game_numbers.json`; the validator fails when that file
+  no longer matches the game (`game/tools/clip_review_data.gd`), and
+  `-- --write-clip-review` writes it again.
 - `game/tests/sim/screenshots.tscn` captures the key screens under
   Xvfb for visual review.
 - Exported builds support `-- --selftest` to prove the PCK loads its

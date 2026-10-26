@@ -215,9 +215,10 @@ fields.
   reports from the definition's `attack_contact_time` (clip seconds; 0
   is the old instant hit). The wind-up is at most
   `HeroDefinition.WIND_UP_CAP_SECONDS` (0.1 s) at the role's play speed
-  (`Hero.ATTACK_ANIM_SPEED`, `COMPANION_ATTACK_ANIM_SPEED`), which the
-  validator checks. Going down drops the pending hit; being hit does
-  not. A melee target that died or is past 1.4x reach by then is missed
+  (the definition's `attack_play_speed` and
+  `companion_attack_play_speed`), which the validator checks. Going
+  down drops the pending hit; being hit does not. A melee target that
+  died or is past `contact_reach_slack` (1.4x) reach by then is missed
   quietly; a pebble flies at where the target is then.
   The **hit-stop** (hero-animation): every hit a hero lands
   (`on_attack_hit`, so swings, Big Swing extras, pebbles and bounces, in

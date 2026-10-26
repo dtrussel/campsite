@@ -1,0 +1,97 @@
+{
+  "camera": {
+    "fov_degrees": 34,
+    "pitch_degrees": 42
+  },
+  "heroes": {
+    "leo": {
+      "clips": {
+        "attack": "Leo_Attack",
+        "cheer": "Leo_Cheer",
+        "chop": "Hero_Chop",
+        "death": "Hero_Death",
+        "fidget_look": "Leo_Look",
+        "fidget_scratch": "Leo_Scratch",
+        "fidget_stick": "Leo_Stick",
+        "gather": "Hero_Gather",
+        "getup": "Hero_Getup",
+        "hammer": "Hero_Hammer",
+        "hit": "Hero_Hit",
+        "idle": "Leo_Idle",
+        "move": "Hero_Run",
+        "pick": "Hero_Pick",
+        "tinker": "Hero_Tinker",
+        "walk": "Hero_Walk"
+      },
+      "model_scale": 0.7,
+      "move_speed": 4,
+      "play_speeds": {
+        "attack": 1.5,
+        "cheer": 1.2,
+        "chop": 1.5,
+        "death": 1,
+        "gather": 1.3,
+        "getup": 1,
+        "hammer": 1.8,
+        "hit": 1.4,
+        "pick": 1.5,
+        "tinker": 1.6
+      },
+      "reference_speed": 4.004,
+      "tool_hidden_parts": [
+        "Leo_Stick"
+      ],
+      "walk_reference_speed": 1.155
+    },
+    "nela": {
+      "clips": {
+        "attack": "Nela_Attack",
+        "cheer": "Nela_Cheer",
+        "chop": "Hero_Chop",
+        "death": "Hero_Death",
+        "fidget_hair": "Nela_Hair",
+        "fidget_look": "Nela_Look",
+        "fidget_stretch": "Nela_Stretch",
+        "gather": "Hero_Gather",
+        "getup": "Hero_Getup",
+        "hammer": "Hero_Hammer",
+        "hit": "Hero_Hit",
+        "idle": "Nela_Idle",
+        "move": "Hero_Run",
+        "pick": "Hero_Pick",
+        "tinker": "Hero_Tinker",
+        "walk": "Hero_Walk"
+      },
+      "model_scale": 0.65,
+      "move_speed": 4,
+      "play_speeds": {
+        "attack": 1.5,
+        "cheer": 1.2,
+        "chop": 1.5,
+        "death": 1,
+        "gather": 1.3,
+        "getup": 1,
+        "hammer": 1.8,
+        "hit": 1.4,
+        "pick": 1.5,
+        "tinker": 1.6
+      },
+      "reference_speed": 3.993,
+      "tool_hidden_parts": [
+        "Nela_Lantern",
+        "Nela_LanternGlow"
+      ],
+      "walk_reference_speed": 1.04
+    }
+  },
+  "run_play_speed": {
+    "max": 1.4,
+    "min": 0.6
+  },
+  "tool_scale": 1.9,
+  "walk_play_speed": {
+    "max": 2,
+    "min": 0.5
+  },
+  "walk_speed": 1.6
+}
