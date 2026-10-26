@@ -1,6 +1,6 @@
 # 03: Hero clip script, plus Leo's stick swing
 
-Status: done
+Status: done (open: the user's visual sign-off)
 Blocked by: 01, 02
 
 **What to build:** the tracer for hand-made hero clips. A Blender Python script, built on the shared clip helpers the mobs use, keys clips on the kids' KayKit rig and exports them inside the kid's model. Its first clip is Leo's own stick swing: a short wind-up (anticipation), the strike on the contact frame, and a follow-through with overlap that suits a chibi kid. Leo's clip mapping points `attack` at it. The script prints the clip's contact time, which goes onto Leo's data.
@@ -23,3 +23,4 @@ Blocked by: 01, 02
   - `clip_sheet.py --rekey` keys the clips onto the committed model before rendering, so a clip can be reviewed in ~15 s without the bake.
   - **For sign-off** (in `../captures/`): `03-leo-attack-clay-34.png/.gif` and `03-leo-attack-clay-side.png/.gif` (clay, game camera, 3/4 and side), and `03-leo-attack-player-old-vs-new.png` and `03-leo-attack-companion-old-vs-new.png` (in game, old on top). The in-game strips start mid-fade from Idle, so the wind-up shows best in the clay GIFs.
   - The Blender export still warns "Mesh Leo is not valid" (it did before this change). Mum's builder fixes the same warning with `mesh.data.validate()`; Leo's doesn't yet.
+- **2026-10-26, review:** status set to `done (open: the user's visual sign-off)`: the captures above await the user's sign-off.

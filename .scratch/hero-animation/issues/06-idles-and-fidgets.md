@@ -1,6 +1,6 @@
 # 06: Idles and fidgets
 
-Status: done
+Status: done (open: the user's visual sign-off)
 Blocked by: 05 (the clip pipeline is from 03; 05 only orders the model rebuilds)
 
 **What to build:** each kid's own idle, and 2–3 idle fidgets each, such as looking around, scratching, stretching or checking their tool. A kid standing still plays a fidget now and then. The fidget never plays while moving, during an action, or while down. Hero select shows the new idle and fidgets.
@@ -20,3 +20,4 @@ Blocked by: 05 (the clip pipeline is from 03; 05 only orders the model rebuilds)
   - **Checks:** validator enforces the idle loop for both kids (both wrap at 0.0 cm / 0.0 deg) and fails a listed fidget that is not a mapped state. Unit: `test_fidget_scheduler.gd` (7 tests). Smoke (`hero_animation.gd`): Leo played and Nela as the companion each fidget after a wait in the range, and moving cancels a fidget back to locomotion. `hero_capture` now records the fidgets too. Tris unchanged (Leo 34,999, Nela 35,711).
   - `tools/check.sh`: validate OK, unit PASSED, smoke PASSED in both passes, selftest OK.
   - **For sign-off** (in `../captures/`): clay `06-<kid>-<idle|fidget-*>-clay.png/.gif`; in game `06-<kid>-idle-player-old-vs-new.png` (old on top, captured before the rebuild), `06-<kid>-idle-player-old.gif` / `-new.gif`, `06-<kid>-fidget-*-player-new.png/.gif`, and hero select `06-hero-select-old-vs-new.png` (top: before, six frames 1.5 s apart; below: after, twelve frames 1.1 s apart, where Leo shades his eyes and later scratches his head).
+- **2026-10-26, review fixes:** the validator now also enforces each fidget's length (at 1x, against its authored length) and a `handoff` from and back to the idle's first pose (all six at 0.0 cm, 0.0 deg). Status set to `done (open: the user's visual sign-off)`.

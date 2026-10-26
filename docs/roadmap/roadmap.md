@@ -278,3 +278,7 @@ and meta progression, adventure tone). The plans for 035&ndash;038 are archived 
 choices (039&ndash;040), then meta (041&ndash;042). Ideas that were not
 chosen this time: fire fuel and burn-down, night omens, last stand and
 revive, a trader, well blessings and signpost chores.
+
+| Feature | Goal |
+|---------|------|
+| Hero animation | **In progress.** Built; waiting on the user's visual sign-off of each layer (the captures in `.scratch/hero-animation/`) and the hand-play backlog's feel playtest. Leo and Nela have their own hand-keyed clips for every state (an attack that winds up and lands on its contact frame, stride-matched walk and run, idles with fidgets, reactions, cheers and camp work), spring chains on their hair, packs and gear (Mum's too), a hit-stop on the attacker and the target, a head look-at, and painted faces that blink and change for a hit, a cheer and being down (Mum blinks). Spec: `.scratch/hero-animation/spec.md`. |

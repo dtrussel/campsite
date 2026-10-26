@@ -1,6 +1,6 @@
 # 12: Head look-at
 
-Status: done
+Status: done (open: the user's visual sign-off)
 Blocked by: none (can start immediately)
 
 **What to build:** each kid turns their head and chest toward what they're paying attention to. The order is:
@@ -27,3 +27,4 @@ The look is capped at about 60° of head and chest turn, eases in and out, and b
   - Tests: `game/tests/unit/test_head_look.gd` (the order, out-of-range mobs, nothing when no case applies, freed targets) and the smoke script `hero_look_at.gd` (both kids in both roles: a mob 90° off turns the head to the cap, one 30° off about 30°, a tree off to the side turns it the other way). The smoke script is its own file, not `hero_animation.gd`, so it does not collide with ticket 02's new script; fold it in later if wanted.
   - Captures for sign-off, the look off (left) and on (right) while fighting a Bramble Beast to the side: `../captures/12-look-at-leo-off-vs-on.png` and `../captures/12-look-at-nela-off-vs-on.png`. The chest, pack and head turn toward the beast.
   - `tools/check.sh`: validate OK, unit PASSED, smoke PASSED (both passes), selftest OK.
+- **2026-10-26, review fixes:** the smoke checks moved from `hero_look_at.gd` into `hero_animation.gd` (tolerances named, the cap read from `CharacterLook.MAX_DEGREES`). The look lives in `CharacterLook`, composed by `CharacterVisual`. Idle at night, the hero rescans the mobs every `look_mob_scan_seconds` (0.25 s), not every frame. Status set to `done (open: the user's visual sign-off)`.

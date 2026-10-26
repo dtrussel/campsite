@@ -1,6 +1,6 @@
 # 04: Nela's sling attack
 
-Status: done
+Status: done (open: the user's visual sign-off)
 Blocked by: 03
 
 **What to build:** Nela's own attack clip, which replaces `Spellcast_Shoot`. She loads the pouch, pulls the sling back, and lets go on the contact frame, which is when the pebble flies, with a light follow-through. Her personality is careful and precise, unlike Leo's eager swing.
@@ -19,3 +19,4 @@ Blocked by: 03
   - `nela.tres`: `attack` -> `Nela_Attack`, `attack_contact_time` 0.125 (was the 0.14 stand-in). `ClipChecks.ENFORCED` now has `nela attack: duration` (0.611 s against 0.611 s). Setting 0.14 back makes the validator fail on the clip record, as for Leo.
   - Nela is 35,711 tris (budget 40k). `tools/check.sh`: validate OK, unit PASSED (70), smoke PASSED in both passes (hero_animation covers Nela in both roles; tool_tiers fires the Double Sling's second pebble).
   - **For sign-off** (in `../captures/`): `04-nela-attack-clay-34.png/.gif` and `04-nela-attack-clay-side.png/.gif` (clay, game camera; the "side" one is turned -60 deg so her draw hand shows), and `04-nela-attack-player-old-vs-new.png` and `04-nela-attack-companion-old-vs-new.png` (in game, old on top, captured before the rebuild). As with Leo, the in-game strips begin mid-fade from Idle, so the draw shows best in the clay GIFs.
+- **2026-10-26, review:** status set to `done (open: the user's visual sign-off)`: the captures above await the user's sign-off.

@@ -1,6 +1,6 @@
 # 05: Walk and run
 
-Status: done
+Status: done (open: the user's visual sign-off)
 Blocked by: 04 (the clip pipeline is from 03; 04 only orders the rebuilds of the kids' committed models)
 
 **What to build:** new walk and run cycles that keep the feet planted. Leo and Nela share the cycles, varied by the style knobs: Leo bouncy and eager, Nela lighter and more careful. Leo gets his own run only if the knobs can't carry his personality. Each cycle is authored with a known stride length. The character visual scales walk playback by the hero's real speed, as it already does for the run, so the feet match the ground.
@@ -20,4 +20,4 @@ Blocked by: 04 (the clip pipeline is from 03; 04 only orders the rebuilds of the
   - **Checks:** `check_hero` measures the walk at its stride-matched play speed and the run at both roles' speeds (the worse counts). Enforced for both kids' walk and move: loop and slide. Numbers: Leo walk 0.9 cm slide / 0.1 deg pop, run 1.9 cm / 0.0; Nela walk 0.9 cm / 0.0, run 1.3 cm / 0.1 deg (baseline was 22-43 cm slides and 3-9 deg pops). Unit tests: `test_stride_matching.gd` (new) and three in `test_clip_checks.gd`; the chapter_1 smoke checks the run plays at about 1x while Leo runs. Layering (upper-body swing while running), the lean and the footstep puffs pass as before.
   - Tris unchanged (Leo 34,999, Nela 35,711). `tools/check.sh`: validate OK (hero clips 30 checks, 0 over), unit PASSED (78), smoke PASSED in both passes, selftest OK.
   - **For sign-off** (in `../captures/`): clay `05-<kid>-<walk|run>-clay-34.png/.gif` and `-clay-side.png/.gif` (travelling over half-metre squares at game speed); in game `05-<kid>-<walk|move>-<player|companion>-old-vs-new.png` (old on top, captured before the rebuild) and `05-<kid>-<walk|move>-player-old.gif` / `-new.gif`.
-
+- **2026-10-26, review:** status set to `done (open: the user's visual sign-off)`: the captures above await the user's sign-off.
