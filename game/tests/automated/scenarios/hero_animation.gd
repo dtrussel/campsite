@@ -156,7 +156,9 @@ func _run_fidget_scenario() -> void:
 			_fail("%s: left idle, the hero fidgets within %.0f s" % [label, longest])
 			continue
 		_check(who.hero.fidgets.has(visual.last_fidget), "%s: plays one of its own fidgets (%s)" % [label, visual.last_fidget])
-		_check(visual.last_fidget_wait >= FidgetScheduler.GAP_MIN - 0.05 and visual.last_fidget_wait <= FidgetScheduler.GAP_MAX + 0.25,
+		# The wait can overshoot by the frame the fidget fires on, and the
+		# stalled pass's long frames are 0.6 game seconds at its speed.
+		_check(visual.last_fidget_wait >= FidgetScheduler.GAP_MIN - 0.05 and visual.last_fidget_wait <= FidgetScheduler.GAP_MAX + 0.75,
 			"%s: after %.2f s idle, in the %.0f-%.0f s range" % [label, visual.last_fidget_wait, FidgetScheduler.GAP_MIN,
 				FidgetScheduler.GAP_MAX])
 
