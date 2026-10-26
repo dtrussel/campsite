@@ -222,3 +222,35 @@ func test_a_getup_that_starts_on_the_down_pose_hands_over_without_a_jump() -> vo
 	check(handoff.size() == 1 and absf(float(handoff[0].value) - 0.15) < 0.001 and handoff[0].over
 		and handoff[0].enforced,
 		"one that starts 0.3 model m off jumps 0.15 m at half scale, and fails when enforced (got %s)" % str(handoff))
+
+
+func test_a_fidget_that_starts_and_ends_on_the_idle_hands_over_without_a_jump() -> void:
+	var idle: Animation = _hips_clip([[0.0, Vector3(0, 1, 0)], [1.0, Vector3(0, 1, 0)]])
+	var fidget: Animation = _hips_clip([[0.0, Vector3(0, 1, 0)], [0.5, Vector3(0, 0.8, 0)], [1.0, Vector3(0, 1, 0)]])
+	var hero: HeroDefinition = _hero({&"idle": "Idle", &"fidget_dip": "Dip"}, {"Idle": idle, "Dip": fidget})
+	hero.fidgets = [&"fidget_dip"] as Array[StringName]
+	var handoff: Array[Dictionary] = _rows(ClipChecks.check_hero(hero, {}, {}), &"fidget_dip", "handoff")
+	check(handoff.size() == 1 and float(handoff[0].value) < 0.0001 and not handoff[0].over,
+		"a fidget from and back to the idle's first pose jumps 0 m (got %s)" % str(handoff))
+	# One that ends 0.3 model m lower than the idle starts: a jump back.
+	fidget = _hips_clip([[0.0, Vector3(0, 1, 0)], [1.0, Vector3(0, 0.7, 0)]])
+	hero = _hero({&"idle": "Idle", &"fidget_dip": "Dip"}, {"Idle": idle, "Dip": fidget})
+	hero.fidgets = [&"fidget_dip"] as Array[StringName]
+	handoff = _rows(ClipChecks.check_hero(hero, {&"test": {&"fidget_dip": ["handoff"]}}, {}), &"fidget_dip", "handoff")
+	check(handoff.size() == 1 and absf(float(handoff[0].value) - 0.3) < 0.001 and handoff[0].over
+		and handoff[0].enforced,
+		"one that ends 0.3 m off the idle jumps 0.3 m, and fails when enforced (got %s)" % str(handoff))
+
+
+func test_a_fidget_is_timed_at_1x_against_its_length() -> void:
+	var idle: Animation = _hips_clip([[0.0, Vector3(0, 1, 0)]])
+	var fidget: Animation = _hips_clip([[0.0, Vector3(0, 1, 0)], [1.0, Vector3(0, 1, 0)]])
+	fidget.length = 2.0
+	var hero: HeroDefinition = _hero({&"idle": "Idle", &"fidget_dip": "Dip"}, {"Idle": idle, "Dip": fidget})
+	hero.fidgets = [&"fidget_dip"] as Array[StringName]
+	var timed: Array[Dictionary] = _rows(ClipChecks.check_hero(hero, {}, {&"test": {&"fidget_dip": 2.0}}),
+		&"fidget_dip", "duration")
+	check(timed.size() == 1 and absf(float(timed[0].value) - 2.0) < 0.001 and not timed[0].over,
+		"a 2 s fidget, played at 1x, lasts its 2 s target (got %s)" % str(timed))
+	timed = _rows(ClipChecks.check_hero(hero, {}, {&"test": {&"fidget_dip": 2.5}}), &"fidget_dip", "duration")
+	check(timed.size() == 1 and timed[0].over, "against a 2.5 s target it is over")

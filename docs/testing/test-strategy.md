@@ -87,8 +87,13 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
     `run_play_speed`, the worse of the two). A foot counts as down
     within 2 cm of its lowest point (limit 4 cm);
   - **duration:** each action's length at its gameplay play speed
-    (the hero data's `action_play_speeds()`) against its gameplay length (`ACTION_SECONDS`, the
-    stock lengths; ±0.05 s).
+    (the hero data's `action_play_speeds()`) against its gameplay
+    length (`ACTION_SECONDS`, the stock lengths; ±0.05 s). The idle
+    fidgets play at 1x and are held to the lengths they were authored
+    at;
+  - **handoff:** the getup's first pose against the death clip's last
+    (the held down pose), and each fidget's first and last poses
+    against the idle's first (limits 1 cm, 3°).
   - **contact time:** a hero's `attack_contact_time` must come within
     the wind-up cap at play speed, inside the attack clip, and, for a
     hand-made clip, equal the clip script's: `art/characters/hero_clips.py`
@@ -103,8 +108,8 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
   Each check reports until `ENFORCED` (hero, state, checks) switches
   it to failing the validator (so far, for both kids: the duration of
   every action clip (attack, hit, death, getup, cheer, gather, chop,
-  pick, tinker, hammer), the getup handoff, the idle loop, and the
-  walk and run loop and slide). A hero's
+  pick, tinker, hammer) and of each fidget, the getup's and the fidgets'
+  handoffs, the idle loop, and the walk and run loop and slide). A hero's
   listed idle `fidgets` must be states in its clip map (always enforced).
   **Hero models** (`_validate_hero_models`, always enforced): each
   hero's model stays within the 40k triangle budget, and each of its

@@ -22,8 +22,8 @@ const SAMPLES_PER_SECOND: float = 240.0
 
 ## The looping states, measured for a pop at the wrap.
 const LOOPS: Array[StringName] = [&"idle", &"walk", &"move"]
-## Limits: a loop's wrap, or getting up from the held down pose (the
-## "handoff"), may jump a joint this far (m) or turn a bone this much
+## Limits: a loop's wrap, or a hand-off between clips (getting up from
+## the held down pose, a fidget from and back to the idle), may jump a joint this far (m) or turn a bone this much
 ## (deg); a foot may slide this far (m) a stride; an action
 ## may run this far (s) from its gameplay length.
 const LOOP_METRES: float = 0.01
@@ -37,15 +37,18 @@ const STRIDE_SPEED_TOLERANCE: float = 0.01
 ## player's hero (HeroDefinition.action_play_speeds). The gather state is
 ## the companion's; chop and pick are the player's gathers at a node.
 ## Each action's gameplay length (s, at its play speed): the stock
-## clips' lengths, which new clips keep.
+## clips' lengths, which new clips keep. The idle fidgets have none to
+## keep; theirs are the lengths they were authored at.
 const ACTION_SECONDS: Dictionary = {
 	&"leo": {
 		&"attack": 0.694, &"hit": 0.476, &"death": 0.792, &"getup": 2.333, &"cheer": 1.389,
 		&"gather": 0.994, &"chop": 0.694, &"pick": 0.861, &"tinker": 0.990, &"hammer": 0.903,
+		&"fidget_look": 2.5, &"fidget_scratch": 2.083, &"fidget_stick": 2.208,
 	},
 	&"nela": {
 		&"attack": 0.611, &"hit": 0.476, &"death": 0.792, &"getup": 2.333, &"cheer": 1.389,
 		&"gather": 0.994, &"chop": 0.694, &"pick": 0.861, &"tinker": 0.990, &"hammer": 0.903,
+		&"fidget_look": 2.75, &"fidget_stretch": 2.375, &"fidget_hair": 1.917,
 	},
 }
 ## The per-clip switch from "report" to "enforce": hero id -> state ->
@@ -55,11 +58,13 @@ const ENFORCED: Dictionary = {
 	&"leo": {&"idle": ["loop"], &"attack": ["duration"], &"walk": ["loop", "slide"], &"move": ["loop", "slide"],
 		&"hit": ["duration"], &"death": ["duration"], &"getup": ["duration", "handoff"], &"cheer": ["duration"],
 		&"gather": ["duration"], &"chop": ["duration"], &"pick": ["duration"], &"tinker": ["duration"],
-		&"hammer": ["duration"]},
+		&"hammer": ["duration"], &"fidget_look": ["duration", "handoff"], &"fidget_scratch": ["duration", "handoff"],
+		&"fidget_stick": ["duration", "handoff"]},
 	&"nela": {&"idle": ["loop"], &"attack": ["duration"], &"walk": ["loop", "slide"], &"move": ["loop", "slide"],
 		&"hit": ["duration"], &"death": ["duration"], &"getup": ["duration", "handoff"], &"cheer": ["duration"],
 		&"gather": ["duration"], &"chop": ["duration"], &"pick": ["duration"], &"tinker": ["duration"],
-		&"hammer": ["duration"]},
+		&"hammer": ["duration"], &"fidget_look": ["duration", "handoff"], &"fidget_stretch": ["duration", "handoff"],
+		&"fidget_hair": ["duration", "handoff"]},
 }
 
 
@@ -106,6 +111,18 @@ static func check_hero(hero: HeroDefinition, enforced: Dictionary = ENFORCED,
 			rows.append(_row(row, "handoff", jump.metres, LOOP_METRES,
 				"starts %.1f cm, %.1f deg from where %s ends (limit %.1f cm, %.0f deg)"
 				% [jump.metres * 100.0, jump.degrees, hero.clips[&"death"], LOOP_METRES * 100.0, LOOP_DEGREES], jumps,
+				checks.has("handoff")))
+		if hero.fidgets.has(StringName(state)) and player.has_animation(String(hero.clips.get(&"idle", ""))):
+			# A fidget fades in from the idle and back out to it.
+			var idle: Animation = player.get_animation(String(hero.clips[&"idle"]))
+			var into: Dictionary = pose_jump(idle, 0.0, anim, 0.0, skeleton, prefix, hero.model_scale)
+			var back: Dictionary = pose_jump(anim, anim.length, idle, 0.0, skeleton, prefix, hero.model_scale)
+			var metres: float = maxf(into.metres, back.metres)
+			var degrees: float = maxf(into.degrees, back.degrees)
+			rows.append(_row(row, "handoff", metres, LOOP_METRES,
+				"starts %.1f cm, %.1f deg and ends %.1f cm, %.1f deg from %s's first pose (limit %.1f cm, %.0f deg)"
+				% [into.metres * 100.0, into.degrees, back.metres * 100.0, back.degrees, hero.clips[&"idle"],
+					LOOP_METRES * 100.0, LOOP_DEGREES], metres > LOOP_METRES or degrees > LOOP_DEGREES,
 				checks.has("handoff")))
 		if state == &"walk" or state == &"move":
 			# The walk at walk_speed; the run at each role's speed, the worse.

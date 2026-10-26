@@ -102,13 +102,16 @@ func attack_speed(companion: bool) -> float:
 
 ## Logical state -> the speed gameplay plays it at, in a role: this
 ## hero's action speeds, the build beat's, and 1x for going down and
-## getting up (play_final and unlock).
+## getting up (play_final and unlock) and for the idle fidgets.
 func action_play_speeds(companion: bool = false) -> Dictionary:
-	return {
+	var speeds: Dictionary = {
 		&"attack": attack_speed(companion), &"hit": hit_play_speed, &"death": 1.0, &"getup": 1.0,
 		&"cheer": cheer_play_speed, &"gather": companion_gather_play_speed, &"chop": gather_play_speed,
 		&"pick": gather_play_speed, &"tinker": BuildBeat.FETCH_SPEED, &"hammer": BuildBeat.HAMMER_SPEED,
 	}
+	for fidget in fidgets:
+		speeds[fidget] = 1.0
+	return speeds
 
 
 ## How many tiers the hero's signature tool has.
