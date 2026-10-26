@@ -14,9 +14,12 @@ extends SkeletonModifier3D
 ## built-in one can replace this after an engine upgrade.
 
 ## The simulation's fixed step (seconds), and the most game time one
-## frame may simulate (a long frame loses the rest, never explodes).
+## frame may simulate (a longer frame loses the rest, never explodes).
+## A hitch of up to a second is simulated in full: the clip jumps ahead
+## by the whole frame, and a chain that simulated less of it would be
+## left lagging behind its animated place for the frames after.
 const STEP_SECONDS: float = 1.0 / 120.0
-const MAX_FRAME_SECONDS: float = 0.25
+const MAX_FRAME_SECONDS: float = 1.0
 ## A tip further than this (m) from its target has been teleported
 ## (the character placed somewhere new): it starts again at rest.
 const TELEPORT_DISTANCE: float = 2.0
