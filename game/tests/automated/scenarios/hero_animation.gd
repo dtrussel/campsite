@@ -3,8 +3,9 @@ extends "res://tests/automated/smoke_scenario.gd"
 ## Hero animation: a hero's attack lands on its contact frame, after a
 ## short wind-up, in either role. A hero left idle fidgets now and then,
 ## and moving cancels the fidget. A hero going down holds the down pose,
-## and gets up from it. A hero's spring chains (hair, pack) swing out
-## after a sudden turn and settle back, in either role and on hero select.
+## and gets up from it. A hero's spring chains (hair, pack, lantern)
+## swing out after a sudden turn and settle back, in either role and on
+## hero select, and so do Mum's, whose story clips still play.
 
 ## A chain tip this far (m) from where the animation puts it has swung.
 const SPRING_SWUNG: float = 0.04
@@ -221,6 +222,8 @@ func _run_spring_scenario() -> void:
 	print("smoke: --- hero animation: spring chains ---")
 	var leo: HeroDefinition = HeroRoster.get_hero(&"leo")
 	_check(leo != null and not leo.spring_chains.is_empty(), "Leo has spring chains")
+	var nela: HeroDefinition = HeroRoster.get_hero(&"nela")
+	_check(nela != null and not nela.spring_chains.is_empty(), "Nela has spring chains")
 	for played in [&"leo", &"nela"]:
 		await _start_fresh_run(_party(played))
 		for who in Party.heroes():
@@ -241,6 +244,24 @@ func _run_spring_scenario() -> void:
 			await _check_spring_turn(visual, "hero select")
 	_check(on_select > 0, "hero select: a hero there has spring chains")
 	screen.queue_free()
+	await get_tree().process_frame
+	await _check_mum_springs()
+
+
+## Mum, as the story beats show her: her hair and pack swing on their
+## chains, and her arrival walk, wave and cheer still play.
+func _check_mum_springs() -> void:
+	var mum: CharacterVisual = MumArrival.make_visual()
+	add_child(mum)
+	await get_tree().process_frame
+	await _check_spring_turn(mum, "Mum")
+	var player: AnimationPlayer = mum.model.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	_check(player != null and player.has_animation(String(MumArrival.CLIPS[&"walk"])), "Mum: she can still walk in")
+	_check(mum.play_action(&"wave") > 0.0 and await _wait_until(func() -> bool: return mum.playing_action() == &"wave", 1.0),
+		"Mum: she still waves")
+	_check(mum.play_action(&"cheer") > 0.0 and await _wait_until(func() -> bool: return mum.playing_action() == &"cheer", 1.0),
+		"Mum: she still cheers")
+	mum.queue_free()
 	await get_tree().process_frame
 
 

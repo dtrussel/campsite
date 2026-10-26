@@ -27,6 +27,16 @@ const WALK_SPEED: float = 1.7
 const START_OFFSET: Vector3 = Vector3(-2.5, 0, -9.0)
 const STOP_OFFSET: Vector3 = Vector3(-1.1, 0, -1.5)
 const WAVE_SECONDS: float = 2.6
+## Her spring chains (the bones art/characters/mum.py adds): bones from
+## the root to the tip, stiffness, damping, reach limit in degrees. A
+## grown-up's long hair swings slower and wider than the kids' locks;
+## the pack is heavier.
+const SPRINGS: Array = [
+	[["hair.l.1", "hair.l.2", "hair.l.end"], 150.0, 7.0, 30.0],
+	[["hair.r.1", "hair.r.2", "hair.r.end"], 150.0, 7.0, 30.0],
+	[["hair.back.1", "hair.back.2", "hair.back.end"], 130.0, 7.0, 25.0],
+	[["pack.1", "pack.2", "pack.end"], 100.0, 7.0, 12.0],
+]
 
 var visual: CharacterVisual = null
 var target: Vector3 = Vector3.ZERO
@@ -45,7 +55,21 @@ static func make_visual(idle_clip: String = "Idle") -> CharacterVisual:
 	var clips: Dictionary = CLIPS.duplicate()
 	clips[&"idle"] = idle_clip
 	mum.clips = clips
+	mum.spring_chains = spring_chains()
 	return mum
+
+
+## Mum's hair and pack swing on these (SPRINGS), as the kids' do.
+static func spring_chains() -> Array[SpringChain]:
+	var chains: Array[SpringChain] = []
+	for row in SPRINGS:
+		var chain: SpringChain = SpringChain.new()
+		chain.bones = PackedStringArray(row[0])
+		chain.stiffness = row[1]
+		chain.damping = row[2]
+		chain.max_degrees = row[3]
+		chains.append(chain)
+	return chains
 
 
 static func play(parent: Node, near: Vector3) -> MumArrival:

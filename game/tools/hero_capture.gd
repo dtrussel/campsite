@@ -16,7 +16,8 @@ extends Node
 ##
 ## States are the hero's logical states (idle, walk, move, attack, ...,
 ## or a fidget such as fidget_look); with none it records every state
-## the hero maps, its fidgets last. Two motions show the spring chains
+## the hero maps, its fidgets last. The hero `mum` records Mum as the
+## story beats show her (MumArrival: walk, wave, cheer, turn, stop). Two motions show the spring chains
 ## (hair, pack): `turn` (running east, a sudden turn back west) and
 ## `stop` (running east, then standing). Options:
 ##   --role player|companion   one role only (both by default); the
@@ -89,7 +90,7 @@ func _ready() -> void:
 	if absf(get_process_delta_time() - 1.0 / FPS) > 0.0001:
 		_quit_with("hero_capture: run with --fixed-fps 30, so frames are even in game time")
 		return
-	var hero: HeroDefinition = HeroRoster.get_hero(StringName(plain[1]))
+	var hero: HeroDefinition = _mum() if plain[1] == "mum" else HeroRoster.get_hero(StringName(plain[1]))
 	if hero == null:
 		_quit_with("hero_capture: no hero '%s'" % plain[1])
 		return
@@ -187,6 +188,8 @@ func _record(hero: HeroDefinition, role: String, state: StringName, out_dir: Str
 
 
 func _make_visual(hero: HeroDefinition) -> CharacterVisual:
+	if hero.id == &"mum":
+		return MumArrival.make_visual()
 	var shell: Node3D = Node3D.new()
 	var visual: CharacterVisual = CharacterVisual.new()
 	visual.name = "Visual"
@@ -196,6 +199,17 @@ func _make_visual(hero: HeroDefinition) -> CharacterVisual:
 	shell.remove_child(visual)
 	shell.free()
 	return visual
+
+
+## Mum (story beats) as a stand-in hero: her clips at her walking pace,
+## her visual from MumArrival.
+func _mum() -> HeroDefinition:
+	var mum: HeroDefinition = HeroDefinition.new()
+	mum.id = &"mum"
+	mum.clips = MumArrival.CLIPS.duplicate()
+	mum.move_speed = MumArrival.WALK_SPEED
+	mum.companion_move_speed = MumArrival.WALK_SPEED
+	return mum
 
 
 func _clip(hero: HeroDefinition, state: StringName) -> Animation:

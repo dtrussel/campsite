@@ -376,43 +376,61 @@ const HERO_TRIANGLE_BUDGET: int = 40000
 
 
 ## Each hero's model stays within the hero triangle budget, and each of
-## its spring chains fits it: sane tuning, every bone in the skeleton,
-## each the child of the one before, and none keyed by a clip (the
-## chains swing only on SpringChainModifier).
+## its spring chains fits it (_validate_spring_chains); so does Mum's.
 func _validate_hero_models() -> void:
 	for hero in HeroRoster.all():
 		if hero.model_scene == null:
 			continue
 		var model: Node = hero.model_scene.instantiate()
-		var tris: int = 0
-		for node in model.find_children("*", "MeshInstance3D", true, false):
-			var mesh: Mesh = (node as MeshInstance3D).mesh
-			for surface in (mesh.get_surface_count() if mesh != null else 0):
-				var arrays: Array = mesh.surface_get_arrays(surface)
-				var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
-				tris += indices.size() / 3 if not indices.is_empty() \
-					else (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size() / 3
+		var tris: int = _model_triangles(model)
 		if tris > HERO_TRIANGLE_BUDGET:
 			_fail("%s: its model has %d triangles, over the hero budget of %d" % [hero.resource_path, tris, HERO_TRIANGLE_BUDGET])
-		var skeleton: Skeleton3D = model.find_child("Skeleton3D", true, false) as Skeleton3D
-		var player: AnimationPlayer = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
-		for chain in hero.spring_chains:
-			if chain == null:
-				_fail("%s: an empty spring chain" % hero.resource_path)
-				continue
-			var label: String = "%s: spring chain %s" % [hero.resource_path, ", ".join(chain.bones)]
-			for problem in chain.problems():
-				_fail("%s %s" % [label, problem])
-			for i in chain.bones.size():
-				var bone: int = skeleton.find_bone(chain.bones[i]) if skeleton != null else -1
-				if bone == -1:
-					_fail("%s: the model has no bone '%s'" % [label, chain.bones[i]])
-				elif i > 0 and skeleton.get_bone_parent(bone) != skeleton.find_bone(chain.bones[i - 1]):
-					_fail("%s: '%s' is not the child of '%s'" % [label, chain.bones[i], chain.bones[i - 1]])
-			var keyed: String = _clip_keying(player, chain.bones)
-			if keyed != "":
-				_fail("%s: clip %s" % [label, keyed])
+		_validate_spring_chains(hero.resource_path, model, hero.spring_chains)
 		model.free()
+	# Mum swings her hair and pack too (MumArrival.SPRINGS).
+	if ResourceLoader.exists(MumArrival.MODEL_PATH):
+		var mum: Node = (load(MumArrival.MODEL_PATH) as PackedScene).instantiate()
+		_validate_spring_chains("Mum", mum, MumArrival.spring_chains())
+		if _model_triangles(mum) > HERO_TRIANGLE_BUDGET:
+			_fail("Mum's model has %d triangles, over the hero budget of %d" % [_model_triangles(mum), HERO_TRIANGLE_BUDGET])
+		mum.free()
+
+
+## Every triangle of every mesh in `model`.
+func _model_triangles(model: Node) -> int:
+	var tris: int = 0
+	for node in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh: Mesh = (node as MeshInstance3D).mesh
+		for surface in (mesh.get_surface_count() if mesh != null else 0):
+			var arrays: Array = mesh.surface_get_arrays(surface)
+			var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+			tris += indices.size() / 3 if not indices.is_empty() \
+				else (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size() / 3
+	return tris
+
+
+## Each of `chains` fits `model`: sane tuning, every bone in the
+## skeleton, each the child of the one before, and none keyed by a clip
+## (the chains swing only on SpringChainModifier).
+func _validate_spring_chains(owner_label: String, model: Node, chains: Array[SpringChain]) -> void:
+	var skeleton: Skeleton3D = model.find_child("Skeleton3D", true, false) as Skeleton3D
+	var player: AnimationPlayer = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	for chain in chains:
+		if chain == null:
+			_fail("%s: an empty spring chain" % owner_label)
+			continue
+		var label: String = "%s: spring chain %s" % [owner_label, ", ".join(chain.bones)]
+		for problem in chain.problems():
+			_fail("%s %s" % [label, problem])
+		for i in chain.bones.size():
+			var bone: int = skeleton.find_bone(chain.bones[i]) if skeleton != null else -1
+			if bone == -1:
+				_fail("%s: the model has no bone '%s'" % [label, chain.bones[i]])
+			elif i > 0 and skeleton.get_bone_parent(bone) != skeleton.find_bone(chain.bones[i - 1]):
+				_fail("%s: '%s' is not the child of '%s'" % [label, chain.bones[i], chain.bones[i - 1]])
+		var keyed: String = _clip_keying(player, chain.bones)
+		if keyed != "":
+			_fail("%s: clip %s" % [label, keyed])
 
 
 ## The first clip (and bone) of `player` that keys a rotation of one of

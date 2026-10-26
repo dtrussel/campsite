@@ -109,7 +109,8 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
   **Hero models** (`_validate_hero_models`, always enforced): each
   hero's model stays within the 40k triangle budget, and each of its
   `spring_chains` has sane tuning and names a chain of bones in the
-  model, each the child of the one before, that no clip moves.
+  model, each the child of the one before, that no clip moves. Mum's
+  model (`MumArrival.SPRINGS`) is held to the same.
   `tools/check.sh` shows one summary line;
   `godot --headless --path game res://tools/validate_project.tscn -- --clips`
   prints every number. The pure measures have unit tests
@@ -118,7 +119,8 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
   records a hero playing states in the game, as the player and as the
   companion, and writes PNG strips (or every frame, for a GIF). Besides
   the clip states it records two motions for the spring chains, `turn`
-  (a sudden turn while running) and `stop`. It also
+  (a sudden turn while running) and `stop`. The hero `mum` records Mum
+  as the story beats show her (`turn`, `stop`, `wave`, `cheer`). It also
   stacks an old capture over a new one. Usage is in its header:
   `xvfb-run -a godot --path game --resolution 320x180 --fixed-fps 30 res://tools/hero_capture.tscn -- <out_dir> leo walk attack`.
   The clay contact sheets come from Blender (`art/review/clip_sheet.py`,

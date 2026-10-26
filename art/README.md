@@ -104,8 +104,19 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
   with `SpringChainModifier`. Leo has five: `hair.front` (the fringe),
   `hair.back` (the nape tufts), `hair.l` / `hair.r` (the side tufts) and
   `pack` (the bag hangs from its top; the harness, sternum strap and
-  compass stay on the chest). The validator checks the chains against
-  the model.
+  compass stay on the chest). Nela has eight: `hair.front` (the fringe
+  wisps), `hair.back` (the nape locks), `hair.l` / `hair.r` (the
+  face-framing locks), `hair.bun` (one bone: the whole top bun wobbles),
+  `pack` (her bunny rides on `pack.1`), `scarf` (parented to `pack.1`,
+  so it hangs off the swinging bag) and `lantern` (one bone from
+  `hand.r`, hung along the hand slot after the stretch; the lantern and
+  its glow are bound to it whole). Mum has four, at no extra triangles:
+  `hair.l` / `hair.r` (the long side fall and the face-framing locks),
+  `hair.back` (the hair under her bun) and `pack` (with the mug; her
+  head-space joints go through `to_adult()` like her hair). Her bun and
+  crown stay on the head. Mum's tuning is `MumArrival.SPRINGS` (she has
+  no hero data). The validator checks the chains against the model, for
+  Mum too.
 
 ## Audio
 

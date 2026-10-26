@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="HeroDefinition" load_steps=9 format=3 uid="uid://b0campsiteheronela"]
+[gd_resource type="Resource" script_class="HeroDefinition" load_steps=18 format=3 uid="uid://b0campsiteheronela"]
 
 [ext_resource type="Script" path="res://scripts/characters/hero_definition.gd" id="1_def"]
 [ext_resource type="Texture2D" path="res://assets/icons/portrait_nela.png" id="2_portrait"]
@@ -6,6 +6,7 @@
 [ext_resource type="Resource" uid="uid://b0campsitestatssibling" path="res://resources/progression/sibling_stats.tres" id="4_stats"]
 
 [ext_resource type="Script" path="res://scripts/characters/tool_tier.gd" id="5_tier"]
+[ext_resource type="Script" path="res://scripts/characters/spring_chain.gd" id="6_spring"]
 
 [sub_resource type="Resource" id="tier_1"]
 script = ExtResource("5_tier")
@@ -44,6 +45,70 @@ glow_seconds = 1.5
 glow_range = 2.5
 glow_energy = 1.4
 
+[sub_resource type="Resource" id="spring_hair_front"]
+script = ExtResource("6_spring")
+bones = PackedStringArray("hair.front.1", "hair.front.2", "hair.front.end")
+stiffness = 300.0
+damping = 12.0
+gravity = 0.0
+max_degrees = 22.0
+
+[sub_resource type="Resource" id="spring_hair_back"]
+script = ExtResource("6_spring")
+bones = PackedStringArray("hair.back.1", "hair.back.2", "hair.back.end")
+stiffness = 200.0
+damping = 8.0
+gravity = 0.0
+max_degrees = 35.0
+
+[sub_resource type="Resource" id="spring_hair_l"]
+script = ExtResource("6_spring")
+bones = PackedStringArray("hair.l.1", "hair.l.2", "hair.l.end")
+stiffness = 200.0
+damping = 8.0
+gravity = 0.0
+max_degrees = 35.0
+
+[sub_resource type="Resource" id="spring_hair_r"]
+script = ExtResource("6_spring")
+bones = PackedStringArray("hair.r.1", "hair.r.2", "hair.r.end")
+stiffness = 200.0
+damping = 8.0
+gravity = 0.0
+max_degrees = 35.0
+
+[sub_resource type="Resource" id="spring_hair_bun"]
+script = ExtResource("6_spring")
+bones = PackedStringArray("hair.bun.1", "hair.bun.end")
+stiffness = 260.0
+damping = 9.0
+gravity = 0.0
+max_degrees = 25.0
+
+[sub_resource type="Resource" id="spring_pack"]
+script = ExtResource("6_spring")
+bones = PackedStringArray("pack.1", "pack.2", "pack.end")
+stiffness = 120.0
+damping = 7.0
+gravity = 0.0
+max_degrees = 14.0
+
+[sub_resource type="Resource" id="spring_scarf"]
+script = ExtResource("6_spring")
+bones = PackedStringArray("scarf.1", "scarf.2", "scarf.end")
+stiffness = 90.0
+damping = 5.0
+gravity = 0.0
+max_degrees = 40.0
+
+[sub_resource type="Resource" id="spring_lantern"]
+script = ExtResource("6_spring")
+bones = PackedStringArray("lantern.1", "lantern.end")
+stiffness = 140.0
+damping = 6.0
+gravity = 0.0
+max_degrees = 30.0
+
 [resource]
 script = ExtResource("1_def")
 id = &"nela"
@@ -72,6 +137,7 @@ clips = {
 &"tinker": "Hero_Tinker"
 }
 fidgets = Array[StringName]([&"fidget_look", &"fidget_stretch", &"fidget_hair"])
+spring_chains = Array[ExtResource("6_spring")]([SubResource("spring_hair_front"), SubResource("spring_hair_back"), SubResource("spring_hair_l"), SubResource("spring_hair_r"), SubResource("spring_hair_bun"), SubResource("spring_pack"), SubResource("spring_scarf"), SubResource("spring_lantern")])
 attack_contact_time = 0.125
 reference_speed = 3.993
 walk_reference_speed = 1.04
