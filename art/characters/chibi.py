@@ -9,7 +9,8 @@ facing -Y, right hand at -X):
   and auto-weighted to the rig. Separate pieces overlap like real
   clothes, so hems and sleeves read as crisp edges.
 * **Rigid parts** (head, face, hair, cap, hands, boots, backpack, gear)
-  are bound 100% to one bone.
+  are bound 100% to one bone, except what swings on a spring chain
+  (hair locks, a pack: `add_chain`, `weight_along`).
 * **The face** is painted with single-sided decals that sit just above
   the head surface: eyes with irises and highlights, brows, a smile,
   freckles. Single-sided means the ink outline does not ring them.
@@ -188,6 +189,83 @@ def auto_skin(obj, rig):
 def rigid(obj, bone):
     group = obj.vertex_groups.new(name=bone)
     group.add(list(range(len(obj.data.vertices))), 1.0, "REPLACE")
+    return obj
+
+
+# ------------------------------------------------------- spring chains
+
+def chain_bones(name, points):
+    """The deforming bones of the spring chain `name` through `points`:
+    name.1 .. name.N, one per span."""
+    return ["%s.%d" % (name, k) for k in range(1, len(points))]
+
+
+def add_chain(rig, name, points, parent, prop=None):
+    """A spring chain (hero animation): bones name.1 .. name.N along
+    `points` (model rest space, before the proportions stretch; `prop`
+    stretches them as it does the meshes), the first parented to
+    `parent`, and a non-deforming `name.end` marking the tip. No clip
+    keys them; the game's SpringChainModifier swings them. Add chains
+    after `finish`, so the auto-weighted clothes never pick them up.
+    Returns the deforming bones' names."""
+    pts = [prop.remap(Vector(p)) if prop is not None else Vector(p) for p in points]
+    common.select_only([rig])
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.object.mode_set(mode="EDIT")
+    inv = rig.matrix_world.inverted()
+    prev = rig.data.edit_bones[parent]
+    names = chain_bones(name, points)
+    for k, bone in enumerate(names):
+        eb = rig.data.edit_bones.new(bone)
+        eb.head, eb.tail = inv @ pts[k], inv @ pts[k + 1]
+        eb.parent = prev
+        eb.use_connect = k > 0
+        eb.use_deform = True
+        prev = eb
+    end = rig.data.edit_bones.new(name + ".end")
+    end.head = inv @ pts[-1]
+    end.tail = inv @ (pts[-1] + (pts[-1] - pts[-2]).normalized() * 0.03)
+    end.parent = prev
+    end.use_connect = True
+    end.use_deform = False
+    bpy.ops.object.mode_set(mode="OBJECT")
+    bpy.context.view_layer.update()
+    return names
+
+
+def weight_along(obj, points, anchor, bones):
+    """Weights `obj` to a spring chain instead of binding it rigidly: each
+    vertex's nearest place along the polyline `points` (world space, like
+    the mesh) sets its share, from `anchor` at the root, bone by bone, to
+    the last of `bones` at the tip. A hair lock passes its own centre
+    line; a bag the chain's joints."""
+    pts = [Vector(p) for p in points]
+    spans = [(pts[i], pts[i + 1] - pts[i]) for i in range(len(pts) - 1)]
+    total = sum(d.length for _, d in spans)
+    groups = {}
+    for name in [anchor] + list(bones):
+        groups[name] = obj.vertex_groups.get(name) or obj.vertex_groups.new(name=name)
+    mw = obj.matrix_world
+    n = len(bones)
+    for v in obj.data.vertices:
+        co = mw @ v.co
+        best, along, run = float("inf"), 0.0, 0.0
+        for a, d in spans:
+            length = d.length
+            t = max(0.0, min(1.0, (co - a).dot(d) / (length * length))) if length > 1e-9 else 0.0
+            dist = (co - (a + d * t)).length
+            if dist < best:
+                best, along = dist, run + t * length
+            run += length
+        u = along / total * n if total > 0 else 0.0
+        k = min(int(u), n - 1)
+        # The first half of each bone's span blends in from the one
+        # before it (the anchor for the first), so the joints bend softly.
+        share = max(0.0, 1.0 - 2.0 * (u - k))
+        if share > 0.0:
+            groups[anchor if k == 0 else bones[k - 1]].add([v.index], share, "REPLACE")
+        if share < 1.0:
+            groups[bones[k]].add([v.index], 1.0 - share, "REPLACE")
     return obj
 
 
@@ -1374,7 +1452,9 @@ def report(objects):
 
 def finish(rig, soft_pieces, rigid_pieces, name, prop=None, **paint):
     """Stretch to the character's proportions, auto-skin the soft pieces,
-    bind the rigid ones and join. The rig must already be stretched."""
+    bind the rigid ones and join. The rig must already be stretched. A
+    rigid piece whose bone is None keeps the weights it has (one already
+    weighted to a spring chain, `weight_along`)."""
     report(list(soft_pieces) + [o for o, _ in rigid_pieces])
     if prop is not None:
         for obj in list(soft_pieces) + [o for o, _ in rigid_pieces]:
@@ -1382,7 +1462,8 @@ def finish(rig, soft_pieces, rigid_pieces, name, prop=None, **paint):
     for piece in soft_pieces:
         auto_skin(piece, rig)
     for obj, bone in rigid_pieces:
-        rigid(obj, bone)
+        if bone is not None:
+            rigid(obj, bone)
     body = common.join(list(soft_pieces) + [o for o, _ in rigid_pieces], name)
     # Drop zero-area faces left by squashed or coincident parts.
     bm = bmesh.new()

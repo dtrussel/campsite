@@ -5,7 +5,8 @@ stripes; grey socks and chunky hiking boots; a big camo backpack with a
 navy bedroll, steel bottle and rope; a compass on a cord; and his
 trusty walking stick. Built on the KayKit adventurer rig so all 76
 animations work, plus his own clips (hero_clips.py: his stick swing,
-the shared walk and run).
+the shared walk and run). His hair locks and pack swing on spring
+chains (CHAINS).
 Output: leo.glb and leo_clips.json"""
 
 import math
@@ -64,6 +65,24 @@ METAL = (0.72, 0.68, 0.6)
 HEAD = chibi.HeadFrame((0, -0.01, 1.51), (0.214, 0.235, 0.225))  # low: a short chibi neck
 PROP = chibi.Proportions(legs=1.85, spine=1.3, arms=1.25)
 FACE_PNG = os.path.join(common.ROOT, "build", "art_faces", "leo_face.png")
+# Spring chains (hero animation): what hangs or sticks out swings on two
+# short bones each, which the game's SpringChainModifier moves (tuned in
+# resources/heroes/leo.tres). name -> (parent bone, joints in model rest
+# space before the stretch). The hair locks weight along their own centre
+# lines; the bag along these joints. Leo faces -Y; his left is +X.
+CHAINS = {
+    "hair.front": ("head", [(0, -0.19, 1.64), (0, -0.27, 1.6), (0, -0.31, 1.52)]),   # the fringe
+    "hair.back": ("head", [(0, 0.2, 1.55), (0, 0.25, 1.46), (0, 0.3, 1.37)]),        # the nape tufts
+    "hair.l": ("head", [(0.19, 0.03, 1.6), (0.23, 0.04, 1.53), (0.27, 0.06, 1.46)]),   # the side tufts
+    "hair.r": ("head", [(-0.19, 0.03, 1.6), (-0.23, 0.04, 1.53), (-0.27, 0.06, 1.46)]),
+    "pack": ("chest", [(0, 0.34, 1.2), (0, 0.4, 0.96), (0, 0.44, 0.7)]),              # the bag, hung at the top
+}
+
+
+def chain_bones(chain):
+    return chibi.chain_bones(chain, CHAINS[chain][1])
+
+
 # From the concept art: a round, open 7-year-old face. Big bright-blue
 # eyes looking up and off to the side (two catchlights), soft raised
 # light-brown brows, a small upturned button nose, a wide happy grin
@@ -314,9 +333,11 @@ F, R, U = Vector((0, -1, 0)), Vector((-1, 0, 0)), Vector((0, 0, 1))  # forward, 
 
 
 def clump(parts, root, up, controls, width, length_ratio=None, thickness=0.55, colour=None, steps=7, sharp=False,
-          twist=0.0, ring=8, tier=1):
+          twist=0.0, ring=8, tier=1, chain=None):
     """One hair clump. tier 0 = primary mass (darker roots), 1 = secondary,
-    2 = tertiary flick (lighter)."""
+    2 = tertiary flick (lighter). With a `chain` (CHAINS) it swings on
+    that spring chain, weighted along its own length; without, it is
+    bound rigidly to the head."""
     pts = chibi.sweep(root, controls, steps=steps)
     widths = [width * (1.0 - (i / (steps - 1)) ** 1.6) * (0.85 + 0.3 * math.sin(math.pi * i / (steps - 1)))
               for i in range(steps)]
@@ -329,6 +350,8 @@ def clump(parts, root, up, controls, width, length_ratio=None, thickness=0.55, c
     elif tier == 2:
         light, mid = common.lerp(HAIR_LIGHT, (1, 1, 0.9), 0.3), common.lerp(HAIR, HAIR_LIGHT, 0.4)
     common.color_by(obj, colour or chibi.lock_colour(root, length, light, mid, dark))
+    if chain:
+        chibi.weight_along(obj, pts, "head", chain_bones(chain))
     parts.append(obj)
 
 
@@ -372,7 +395,8 @@ def hair_and_cap():
                     root + F * 0.1 - U * (drop * 0.4 - up_flick * 1.5) + side * sweep * 0.55,
                     root + F * (0.08 + up_flick) - U * (drop - up_flick * 3.0) + side * sweep * 1.5]
         clump(parts, root, F, controls, width, thickness=(0.5, 0.4, 0.35)[tier], sharp=tier > 0,
-              twist=rng.uniform(-0.35, 0.35), ring=(10, 8, 8)[tier], steps=(9, 8, 7)[tier], tier=tier)
+              twist=rng.uniform(-0.35, 0.35), ring=(10, 8, 8)[tier], steps=(9, 8, 7)[tier], tier=tier,
+              chain="hair.front")
 
     # Primary masses: short, sweeping to his right, ending above the brows.
     for yaw, drop, sweep, width in ((-0.58, 0.1, 0.1, 0.095), (-0.24, 0.085, 0.12, 0.1), (0.1, 0.075, 0.11, 0.095),
@@ -399,7 +423,8 @@ def hair_and_cap():
             clump(parts, root, n, [root - U * length * 0.4 + out * 0.03,
                                    root - U * length * 0.85 + out * 0.045 + back,
                                    root - U * length + out * (0.07 + 0.03 * (k % 2)) + back * 1.5],
-                  rng.uniform(0.045, 0.065), thickness=0.4, sharp=True, twist=side * 0.3, tier=1 + k % 2)
+                  rng.uniform(0.045, 0.065), thickness=0.4, sharp=True, twist=side * 0.3, tier=1 + k % 2,
+                  chain="hair.l" if side > 0 else "hair.r")
     # Nape: uneven tufts under the cap, alternating directions.
     for k, yaw in enumerate((2.4, 2.65, 2.9, 3.14, 3.38, 3.63, 3.88)):
         root, n = HEAD.point(yaw, 0.1, -0.01)
@@ -410,7 +435,7 @@ def hair_and_cap():
         length = rng.uniform(0.12, 0.18)
         clump(parts, root, n, [root - U * length * 0.5 + outv * 0.02, root - U * length * 0.85 + outv * 0.05 + sidev,
                                root - U * length + outv * 0.1 + sidev * 1.6], rng.uniform(0.05, 0.075), thickness=0.4,
-              sharp=True, tier=k % 3)
+              sharp=True, tier=k % 3, chain="hair.back")
 
     # Full baseball cap worn backwards: a six-panel crown down to a band
     # all round the head (at the hairline in front, a little lower at the
@@ -520,6 +545,9 @@ def head_piece():
     for part in ear_parts:
         chibi.no_face_uv(part)
     hair = hair_and_cap()
+    for part in hair:
+        if not part.vertex_groups:
+            chibi.rigid(part, "head")   # the shell and the cap; the locks swing
     chibi.report([head] + ear_parts + hair)
     # Separate textures: the face gets most of the head's texels.
     hair_obj = common.join(hair, "Leo_Hair")
@@ -534,7 +562,9 @@ def backpack():
     wrinkles, an overhanging top flap, a front pocket with its own flap and
     buckle strap, side pockets, compression straps with buckles, a haul
     loop, the navy bedroll cinched on top (overhanging his left), a steel
-    bottle on his left and the rope on a red carabiner on his right."""
+    bottle on his left and the rope on a red carabiner on his right.
+    Returns (the pack, which swings on its spring chain, and the harness:
+    shoulder straps, sternum strap and compass, which stay on his chest)."""
     parts = []
     bag = chibi.fuse([chibi.box((0.52, 0.28, 0.6), (0, 0.41, 0.94), bevel=0.1, name="pack", segments=4),
                       chibi.ellipsoid((0, 0.47, 0.8), (0.25, 0.14, 0.2), name="sag")], "pack", voxel=0.008,
@@ -602,21 +632,21 @@ def backpack():
         v.co.z = 0.99 + (v.co.z - 0.99) * 1.5
     common.set_color(clip, RED)
     parts.append(clip)
-    parts += chibi.straps(STRAP, top_y=0.22, front_y=-0.245, xs=(-0.15, 0.15), shoulder_z=1.235, bottom_z=0.74,
-                          width=0.034, thick=0.01, metal=METAL)
+    harness = chibi.straps(STRAP, top_y=0.22, front_y=-0.245, xs=(-0.15, 0.15), shoulder_z=1.235, bottom_z=0.74,
+                           width=0.034, thick=0.01, metal=METAL)
     sternum = chibi.webbing([(-0.17, -0.252, 1.06), (0, -0.258, 1.06), (0.17, -0.252, 1.06)],
                             [(0, -1, 0)] * 3, width=0.012, thick=0.006, name="sternum")
     common.set_color(sternum, STRAP)
-    parts.append(sternum)
-    parts.append(chibi.buckle((0, -0.266, 1.06), (0, -1, 0), width=0.045, height=0.035, colour=METAL))
+    harness.append(sternum)
+    harness.append(chibi.buckle((0, -0.266, 1.06), (0, -1, 0), width=0.045, height=0.035, colour=METAL))
     # Brass compass clipped low on his right strap, as in the art.
     cc = Vector((-0.19, -0.3, 0.9))
-    parts += chibi.compass(cc, GOLD, neck_z=None, radius=0.05, lid=True)
+    harness += chibi.compass(cc, GOLD, neck_z=None, radius=0.05, lid=True)
     tab = chibi.tube([cc + Vector((0, 0.004, 0.06)), Vector((-0.185, -0.285, 1.0))], [0.008, 0.008], name="cord",
                      levels=0)
     common.set_color(tab, STRAP)
-    parts.append(tab)
-    return parts
+    harness.append(tab)
+    return parts, harness
 
 
 def stick(rig, down):
@@ -687,11 +717,15 @@ def build():
     rigid = hands_and_feet()
     rigid += cargo_pockets()
     pack_c = Vector((0, 0.37, 1.0))
-    for part in backpack():
+    pack, harness = backpack()
+    for part in pack + harness:
         # Hug the leaner back and shrink a little so the silhouette reads.
         part.data.transform(Matrix.Translation(pack_c + Vector((0, -0.03, 0))) @ Matrix.Scale(0.85, 4)
                             @ Matrix.Translation(-pack_c))
-        rigid.append((part, "chest"))
+    for part in pack:
+        chibi.weight_along(part, CHAINS["pack"][1], "chest", chain_bones("pack"))
+        rigid.append((part, None))
+    rigid += [(part, "chest") for part in harness]
     collar = chibi.torus((0, 0, 1.2), 0.09, 0.022, name="collar")
     common.set_color(collar, TEE_DARK)
     rigid.append((collar, "chest"))
@@ -701,10 +735,14 @@ def build():
     PROP.stretch_mesh(head)
     PROP.stretch_mesh(hair)
     walking_stick = stick(rig, chibi.idle_hand_height(rig))
-    for obj, bone in ((head, "head"), (hair, "head"), (walking_stick, "hand.r")):
-        chibi.rigid(obj, bone)
+    for obj, bone in ((head, "head"), (hair, None), (walking_stick, "hand.r")):
+        if bone is not None:
+            chibi.rigid(obj, bone)
         obj.parent = rig
         obj.modifiers.new("Armature", "ARMATURE").object = rig
+    # The spring chains' bones, after the auto-weighting (chibi.add_chain).
+    for chain, (parent, joints) in CHAINS.items():
+        chibi.add_chain(rig, chain, joints, parent, prop=PROP)
     # His own clips next to the 76 stock ones (art/characters/hero_clips.py).
     clips = hero_clips.add_clips(rig, "leo")
 
