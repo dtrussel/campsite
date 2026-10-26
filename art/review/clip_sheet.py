@@ -17,7 +17,9 @@ speed the game moves them (walk 1.6 m/s, the clip played at the game's
 walk scale; run at the hero's move speed, the clip played at the game's
 run scale), with the camera following,
 so a sliding foot shows against the squares. `--travel 0` stands them
-still; `--travel <m/s>` sets another speed.
+still; `--travel <m/s>` sets another speed. The build states (hammer,
+tinker) hold the barrel mallet in place of the kid's prop, as the game
+does.
 
 Writes <out>/<kid>_<clip>.png (a strip of `--frames` frames, evenly
 spread over the clip) and <out>/<kid>_<clip>.gif (every frame at the
@@ -55,6 +57,40 @@ PLAY_SPEEDS = {"attack": 1.5, "hit": 1.4, "death": 1.0, "getup": 1.0, "cheer": 1
                "chop": 1.5, "pick": 1.5, "tinker": 1.6, "hammer": 1.8}
 
 
+# The build beat holds the barrel mallet (CharacterVisual.show_tool) and
+# hides the kid's own prop; the sheet does the same for these states.
+MALLET_STATES = ("hammer", "tinker")
+TOOL_SCALE = 1.9  # CharacterVisual.TOOL_SCALE
+
+
+def hold_mallet(rig, hidden, material):
+    """Puts the build mallet in the right hand as the game does: on the
+    hand slot, its glTF axes as the bone's (the handle along the slot's
+    +Y, the barrel along +X), and hides the parts it replaces."""
+    for obj in bpy.context.scene.objects:
+        if obj.name in hidden:
+            obj.hide_render = True
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=os.path.join(GAME, "assets", "custom", "hammer.glb"))
+    holder = common.link(bpy.data.objects.new("mallet", None))
+    for obj in bpy.data.objects:
+        if obj in before or obj is holder:
+            continue
+        if obj.parent is None:
+            obj.parent = holder
+        if obj.type == "MESH":
+            obj.data.materials.clear()
+            obj.data.materials.append(material)
+    # Blender's import turned the mallet Z-up; turn it back to glTF axes.
+    holder.rotation_euler = (-math.pi * 0.5, 0, 0)
+    holder.scale = (TOOL_SCALE,) * 3
+    follow = holder.constraints.new("CHILD_OF")
+    follow.target = rig
+    follow.subtarget = "handslot.r"
+    follow.set_inverse_pending = False
+    follow.inverse_matrix.identity()
+
+
 def hero_data(kid):
     """The kid's state -> clip map and the numbers the game moves it by."""
     path = os.path.join(GAME, "resources", "heroes", kid + ".tres")
@@ -65,8 +101,10 @@ def hero_data(kid):
         found = re.search(r"^%s = ([\d.]+)" % key, text, re.M)
         return float(found.group(1)) if found else default
 
+    hidden = re.search(r"^tool_hidden_parts = PackedStringArray\((.*)\)", text, re.M)
+    hidden = re.findall(r'"([^"]+)"', hidden.group(1)) if hidden else []
     return (clips, number("model_scale", 0.7), number("move_speed", 4.0), number("reference_speed", 7.0),
-            number("walk_reference_speed", 0.0))
+            number("walk_reference_speed", 0.0), hidden)
 
 
 def clay(name, colour):
@@ -110,7 +148,7 @@ def main():
     parser.add_argument("--rekey", action="store_true")
     args = parser.parse_args()
 
-    clips, model_scale, move_speed, reference_speed, walk_reference_speed = hero_data(args.kid)
+    clips, model_scale, move_speed, reference_speed, walk_reference_speed, hidden = hero_data(args.kid)
     state = args.clip if args.clip in clips else None
     clip = clips.get(args.clip, args.clip)
     play = PLAY_SPEEDS.get(state, 1.0)
@@ -152,6 +190,8 @@ def main():
     for obj in scene.objects:
         if obj.parent is None and obj is not root:
             obj.parent = root
+    if state in MALLET_STATES:
+        hold_mallet(rig, hidden, body)
     root.rotation_euler = (0, 0, math.radians(args.azimuth))
     forward = root.rotation_euler.to_matrix() @ Vector((0, -1, 0))
     checked_ground(model_scale)

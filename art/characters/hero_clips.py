@@ -39,7 +39,9 @@ Being hit, going down and getting back up are shared clips sized to
 each kid (`_posed`: hand targets in arm lengths, foot moves in hip
 heights), and each kid has their own cheer. Going down ends on the
 pose the game holds while the kid is down, and getting up starts on
-exactly that pose (the validator checks the handoff).
+exactly that pose (the validator checks the handoff). The camp work
+(chop, pick-up, gather, the build blow and fiddle) is shared, built the
+same way, and keeps the stock clips' lengths at their play speeds.
 
 Clips are authored at 24 fps from the stock Idle (sampled with
 `stock_pose`), so they begin and end where the kid stands: the game
@@ -902,13 +904,16 @@ class Key:
     the key (a stick aim); `prop` points what the right hand holds
     (Leo's stick, Nela's lantern: the hand slot's +X) along a direction
     in armature space, so it lies on the ground beside a kid who is
-    down instead of poking through it."""
+    down instead of poking through it. `grip` (x, y) sets the hand
+    slot's whole turn instead: its +X along x and its +Y along y (the
+    build mallet's barrel and handle, `_mallet`)."""
     frame: int
     add: object = None
     hands: dict = None
     feet: dict = None
     extra: object = None
     prop: tuple = None
+    grip: tuple = None
 
 
 @dataclass(frozen=True)
@@ -971,6 +976,28 @@ def _slot_x(rig, pose, side="r"):
     return _world(rig, pose, "handslot." + side) @ rig.data.bones["handslot." + side].matrix_local.to_3x3().col[0]
 
 
+def _slot_turn(rig, pose, side="r"):
+    """The hand slot's turn in armature space under `pose`."""
+    return _world(rig, pose, "handslot." + side) @ rig.data.bones["handslot." + side].matrix_local.to_quaternion()
+
+
+def _turn_slot(rig, pose, wanted, side="r"):
+    """Turns the wrist so the hand slot's turn is `wanted`."""
+    turn = wanted @ _slot_turn(rig, pose, side).inverted()
+    pose.rot["wrist." + side] = [_world(rig, pose, "lowerarm." + side).inverted() @ turn
+                                 @ _world(rig, pose, "wrist." + side)]
+    return pose
+
+
+def _grip_slot(rig, pose, x, y, side="r"):
+    """Turns the wrist so the hand slot's +X points along `x` and its
+    +Y as near `y` as it can (a held tool's whole angle)."""
+    x = Vector(x).normalized()
+    y = (Vector(y) - x * x.dot(Vector(y))).normalized()
+    wanted = Matrix((x, y, x.cross(y))).transposed().to_quaternion()
+    return _turn_slot(rig, pose, wanted, side)
+
+
 def _posed(rig, style, keys, hold=False, start=None):
     """A one-shot from `keys` (Key), each added to the kid's stand: the
     body keyed with Bezier (as the game plays it) and sampled every
@@ -1001,11 +1028,16 @@ def _posed(rig, style, keys, hold=False, start=None):
             _hold_wrist(rig, pose, idle)
         if k.prop is not None:
             _aim_slot(rig, pose, Vector(k.prop))
-        posed.append((k.frame, pose, spots, _slot_x(rig, pose)))
+        if k.grip is not None:
+            _grip_slot(rig, pose, *k.grip)
+        posed.append((k.frame, pose, spots, _slot_x(rig, pose), _slot_turn(rig, pose)))
     if start is not None:
         spots = {side: (_head(rig, start, "foot." + side), _world(rig, start, "foot." + side)) for side in "lr"}
-        posed[0] = (posed[0][0], start, spots, _slot_x(rig, start))
+        posed[0] = (posed[0][0], start, spots, _slot_x(rig, start), _slot_turn(rig, start))
     act = action(rig, "hero_clips_tmp", [(key[0], key[1]) for key in posed], bones=HERO_BONES)
+    # A clip that grips a tool turns the whole slot key to key (its roll
+    # too); the others only aim its +X.
+    gripped = any(k.grip is not None for k in keys)
     out = []
     for frame in range(posed[-1][0] + 1):
         pose = _pose_at(rig, act, frame)
@@ -1018,6 +1050,9 @@ def _posed(rig, style, keys, hold=False, start=None):
             pose.rot["toes." + side] = list(idle.rot.get("toes." + side, []))
         if hold:
             _hold_wrist(rig, pose, idle)
+        if gripped:
+            out.append((frame, _turn_slot(rig, pose, a[4].slerp(b[4], t))))
+            continue
         turn = Quaternion().slerp(a[3].rotation_difference(b[3]), t)
         out.append((frame, _aim_slot(rig, pose, turn @ a[3])))
     rig.animation_data.action = None
@@ -1186,6 +1221,174 @@ def nela_cheer(rig, style):
     return _posed(rig, style, keys, hold=True)
 
 
+# --------------------------------------------------------- camp work
+# The camp work, shared by both kids and sized by their Style: the
+# chop and the pick-up (the player gathering), the gather (the
+# companion gathering anything), and the build beat's mallet blow and
+# fiddle. Each keeps the stock clip's length at its play speed, so
+# gathering and building take as long as before (the validator checks).
+# The right hand holds the kid's prop while gathering (Leo's stick,
+# Nela's lantern, which hangs), and the build mallet while building
+# (the game hides the prop then), so the build clips grip the slot
+# whole: the mallet's handle runs along the slot's +Y and its barrel's
+# faces along its +X.
+
+
+def _mallet(lift):
+    """The mallet's grip (barrel, handle) cocked back `lift` degrees
+    from striking flat down in front (0: the handle forward, the barrel
+    face down; 90: the handle up; 150: back over the shoulder)."""
+    a = math.radians(lift)
+    return (0.0, -math.sin(a), -math.cos(a)), (0.0, -math.cos(a), math.sin(a))
+
+
+def _twist(turn, spine=0.0, chest=0.0, head=0.0):
+    """The chest turned to the kid's left (+) by `turn` degrees, shared
+    out over spine and chest, the head counter-turning a little."""
+    return P(spine=[("X", spine), ("Z", 0.4 * turn)], chest=[("X", chest), ("Z", 0.6 * turn)],
+             head=[("X", head), ("Z", -0.35 * turn)])
+
+
+def hero_chop(rig, style):
+    """Chop: a kid whacking a tree trunk (or a rock) with what's in their
+    right hand: a twist back with the hand out to the side, a forehand
+    swing across into the trunk at waist height, a jolt back off it and a
+    shake of the stung hand. 25 frames (1.04 s; played at 1.5x, 0.69 s,
+    as the stock chop). Leo's stick lands flat on the trunk; Nela's
+    lantern hangs."""
+    unit, amp, arm = _units(rig), style.bounce, style.arm_swing
+    hold = style.hand_hold >= 1.0
+
+    def stick(direction):
+        return None if hold else direction
+
+    return _posed(rig, style, [
+        Key(0),
+        Key(6, _twist(-30.0 * arm, spine=-4.0, head=4.0) + hips(style, z=-0.03 * unit),
+            {"r": (-0.8 * arm, 0.2, 0.25), "l": (0.1, -0.65, -0.35)}, prop=stick((-0.45, 0.45, 0.75))),
+        Key(10, _twist(22.0 * arm, spine=14.0, head=10.0) + hips(style, z=-0.07 * unit),
+            {"r": (0.05, -0.85, -0.35), "l": (0.45, -0.2, -0.55)}, prop=stick((0.75, -0.65, -0.1))),
+        Key(12, _twist(16.0 * arm, spine=10.0, head=4.0) + hips(style, z=-0.05 * unit * amp),
+            {"r": (-0.05, -0.72, -0.2), "l": (0.45, -0.2, -0.55)}, prop=stick((0.65, -0.7, 0.05))),
+        Key(16, _twist(4.0, spine=5.0, head=8.0) + hips(style, z=-0.02 * unit),
+            {"r": (-0.35, -0.55, -0.45), "l": (0.4, -0.25, -0.6)}, prop=stick((0.1, -0.7, -0.7))),
+        Key(19, _twist(0.0, spine=3.0, head=6.0) + P(head=[("Y", 6.0)]),
+            {"r": (-0.4, -0.45, -0.5)}, prop=stick((-0.1, -0.6, -0.8))),
+        Key(21, _twist(0.0, spine=3.0, head=6.0) + P(head=[("Y", -5.0)]),
+            {"r": (-0.48, -0.4, -0.55)}, prop=stick((-0.2, -0.5, -0.85))),
+        Key(25),
+    ], hold=hold)
+
+
+def hero_pick(rig, style):
+    """Pick up: a kid squats, reaches to the ground in front with the
+    free left hand, grabs, brings it up to look at it and pockets it at
+    the hip. The right hand rests on the knee, its prop held clear of
+    the ground. 31 frames (1.29 s; played at 1.5x, 0.86 s, and at 1.6x
+    for the build beat's plank fetch)."""
+    unit, amp = _units(rig), style.bounce
+    hold = style.hand_hold >= 1.0
+    low = _sway(style, 0.14 * unit, -0.32 * unit * amp, bend=36.0, spine=18.0, head=10.0)
+    knee = (-0.3, -0.55, -0.75)
+    clear = (-0.8, 0.55, -0.12)
+    return _posed(rig, style, [
+        Key(0),
+        Key(6, _sway(style, 0.06 * unit, -0.14 * unit * amp, bend=14.0, spine=10.0, head=14.0),
+            {"l": (0.05, -0.6, -0.65), "r": (-0.35, -0.45, -0.75)}, prop=(-0.75, 0.4, -0.45)),
+        Key(11, low, {"l": (0.0, -0.75, -1.0), "r": knee}, prop=clear),
+        Key(14, low + P(head=[("X", 4.0)]), {"l": (0.02, -0.72, -1.02), "r": knee}, prop=clear),
+        Key(19, _sway(style, 0.05 * unit, -0.12 * unit * amp, bend=10.0, spine=6.0, head=8.0),
+            {"l": (0.0, -0.6, -0.45), "r": (-0.35, -0.4, -0.8)}, prop=(-0.7, 0.3, -0.6)),
+        Key(23, _sway(style, 0.0, 0.02 * unit * amp, spine=-2.0, head=18.0) + P(head=[("Y", 8.0)]),
+            {"l": (-0.05, -0.55, -0.1)}),
+        Key(27, _sway(style, 0.0, -0.01 * unit, spine=1.0, head=4.0), {"l": (0.25, 0.05, -0.85)}),
+        Key(31),
+    ], hold=hold)
+
+
+def hero_gather(rig, style):
+    """Gather: a kid leans in to a bush, a pile or a tree, grabs with
+    both hands and tugs twice, then hugs the haul to their chest with a
+    pleased little bounce. 31 frames (1.29 s; the companion plays it at
+    1.3x, 0.99 s, as the stock Interact)."""
+    unit, amp = _units(rig), style.bounce
+    hold = style.hand_hold >= 1.0
+    reach = _sway(style, -0.02 * unit, -0.06 * unit * amp, bend=8.0, spine=14.0, head=10.0)
+    tug = _sway(style, 0.05 * unit, -0.09 * unit * amp, bend=-2.0, spine=-4.0, head=2.0)
+
+    def stick(direction):
+        return None if hold else direction
+
+    return _posed(rig, style, [
+        Key(0),
+        Key(5, reach, both(0.12, -0.85, -0.25), prop=stick((-0.15, -0.7, -0.7))),
+        Key(9, reach + hips(style, z=-0.02 * unit), both(0.1, -0.9, -0.42), prop=stick((-0.15, -0.6, -0.78))),
+        Key(13, tug, both(0.12, -0.55, -0.32), prop=stick((-0.15, -0.35, -0.92))),
+        Key(17, reach + hips(style, z=-0.02 * unit), both(0.1, -0.9, -0.42), prop=stick((-0.15, -0.6, -0.78))),
+        Key(21, tug + P(head=[("X", -8.0)]), both(0.12, -0.45, -0.25), prop=stick((-0.15, -0.3, -0.94))),
+        Key(25, _sway(style, 0.0, 0.03 * unit * amp, spine=-3.0, head=8.0), both(0.1, -0.42, -0.1),
+            prop=stick((-0.3, -0.2, -0.93))),
+        Key(28, _sway(style, 0.0, -0.02 * unit * amp, spine=1.0, head=4.0), both(0.15, -0.4, -0.2),
+            prop=stick((-0.3, -0.2, -0.93))),
+        Key(31),
+    ], hold=hold)
+
+
+def hero_hammer(rig, style):
+    """The build blow: the left hand steadies the plank in front, the
+    right swings the barrel mallet up over the shoulder and down onto
+    it, a bounce off the wood and a settle. One-handed. The mallet lands
+    on frame 20 of 39 (BuildBeat.IMPACT_AT, 0.52 of the clip). 39
+    frames (1.63 s; played at 1.8x, 0.90 s, as the stock blow)."""
+    unit, amp, arm = _units(rig), style.bounce, style.arm_swing
+    steady = (0.12, -0.72, -0.6)
+    up = 135.0 * min(arm, 1.1)
+    return _posed(rig, style, [
+        Key(0),
+        Key(4, _sway(style, 0.0, -0.04 * unit * amp, spine=6.0, head=10.0),
+            {"l": steady, "r": (-0.35, -0.45, -0.35)}, grip=_mallet(25.0)),
+        Key(12, _sway(style, 0.01 * unit, -0.01 * unit, spine=-7.0, head=6.0) + _twist(-10.0 * arm),
+            {"l": steady, "r": (-0.25, 0.05, 0.9)}, grip=_mallet(up)),
+        Key(16, _sway(style, 0.0, -0.02 * unit, spine=2.0, head=10.0) + _twist(-4.0 * arm),
+            {"l": steady, "r": (-0.25, -0.5, 0.65)}, grip=_mallet(up - 30.0)),
+        Key(20, _sway(style, -0.02 * unit, -0.08 * unit * amp, bend=6.0, spine=14.0, head=14.0) + _twist(6.0),
+            {"l": steady, "r": (-0.15, -0.85, -0.4)}, grip=_mallet(0.0)),
+        Key(22, _sway(style, -0.01 * unit, -0.06 * unit * amp, bend=4.0, spine=11.0, head=10.0) + _twist(4.0),
+            {"l": steady, "r": (-0.17, -0.8, -0.25)}, grip=_mallet(18.0)),
+        Key(27, _sway(style, 0.0, -0.03 * unit, spine=6.0, head=8.0),
+            {"l": steady, "r": (-0.28, -0.6, -0.35)}, grip=_mallet(15.0)),
+        Key(33, _sway(style, 0.0, -0.01 * unit, spine=2.0, head=4.0),
+            {"l": (0.25, -0.4, -0.75), "r": (-0.35, -0.4, -0.55)}, grip=_mallet(8.0)),
+        Key(39),
+    ])
+
+
+def hero_tinker(rig, style):
+    """The build beat's fiddle: a kid bends to a peg, wiggles it into
+    place with the left hand, head tipping as they look, then two light
+    taps of the mallet to seat it. 38 frames (1.58 s; played at 1.6x,
+    0.99 s, as the stock Use_Item)."""
+    unit, amp = _units(rig), style.bounce
+    bend = _sway(style, 0.04 * unit, -0.12 * unit * amp, bend=14.0, spine=14.0, head=18.0)
+    rest = (-0.3, -0.6, -0.35)
+    keys = [Key(0), Key(5, bend, {"l": (0.05, -0.75, -0.6), "r": rest}, grip=_mallet(30.0))]
+    for frame, side, tip in ((9, 0.07, 8.0), (13, -0.05, -6.0), (17, 0.07, 8.0)):
+        keys.append(Key(frame, bend + P(head=[("Y", tip)]), {"l": (0.05 + side, -0.75, -0.62), "r": rest},
+                        grip=_mallet(30.0)))
+    tap = {"l": (0.12, -0.7, -0.7), "r": (-0.15, -0.75, -0.55)}
+    lift = {"l": (0.12, -0.7, -0.7), "r": (-0.17, -0.7, -0.35)}
+    keys += [
+        Key(21, bend, lift, grip=_mallet(60.0)),
+        Key(24, bend + hips(style, z=-0.01 * unit), tap, grip=_mallet(0.0)),
+        Key(27, bend, lift, grip=_mallet(55.0)),
+        Key(30, bend + hips(style, z=-0.01 * unit), tap, grip=_mallet(0.0)),
+        Key(34, _sway(style, 0.0, -0.02 * unit, spine=3.0, head=6.0), {"r": (-0.35, -0.45, -0.55)},
+            grip=_mallet(10.0)),
+        Key(38),
+    ]
+    return _posed(rig, style, keys)
+
+
 # Each kid's own clips (attack, cheer, idle, run where it shows).
 OWN = {
     "leo": {"Leo_Attack": Clip(leo_attack, contact=3), "Leo_Idle": Clip(leo_idle, cyclic=True),
@@ -1202,6 +1405,11 @@ SHARED = {
     "Hero_Hit": Clip(hero_hit),
     "Hero_Death": Clip(hero_death),
     "Hero_Getup": Clip(hero_getup),
+    "Hero_Chop": Clip(hero_chop),
+    "Hero_Pick": Clip(hero_pick),
+    "Hero_Gather": Clip(hero_gather),
+    "Hero_Hammer": Clip(hero_hammer),
+    "Hero_Tinker": Clip(hero_tinker),
 }
 
 

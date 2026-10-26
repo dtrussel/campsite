@@ -150,6 +150,17 @@ and a quick dust-off of the front. Each kid cheers in their own way:
   with both arms up in a V (the lantern lifted high), and waves her
   free hand over her head while she sways.
 
+The camp work is shared and takes as long as the stock clips did.
+Chopping is a twist back and a forehand whack across into the trunk at
+waist height, a jolt off it and a shake of the stung hand (Leo's stick
+lands flat on the trunk; Nela's lantern just hangs). Picking up is a
+squat with the free left hand to the ground, a look at the find and a
+pat into the pocket. Gathering is a lean in with both hands, two tugs
+and a hug of the haul. Building swings the barrel mallet in one hand,
+up over the shoulder and down onto the plank the other hand steadies,
+landing on the blow's impact frame; between blows the kid bends to
+wiggle a peg in and seats it with two light taps.
+
 The wind-up stays within 0.1 s at play speed, so attacks still feel
 instant.
 

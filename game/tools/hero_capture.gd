@@ -126,7 +126,8 @@ func _record(hero: HeroDefinition, role: String, state: StringName, out_dir: Str
 		_speed = _visual.walk_speed
 	elif state == &"move":
 		_speed = hero.move_speed if role == "player" else hero.companion_move_speed
-	if state == &"hammer":
+	if state == &"hammer" or state == &"tinker":
+		# The build beat keeps the mallet out for its fiddling beat too.
 		_visual.show_tool(&"hammer")
 	await _wait(SETTLE_SECONDS)
 	var seconds: float = 0.0

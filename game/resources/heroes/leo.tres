@@ -55,20 +55,20 @@ model_scale = 0.7
 clips = {
 &"attack": "Leo_Attack",
 &"cheer": "Leo_Cheer",
-&"chop": "1H_Melee_Attack_Chop",
+&"chop": "Hero_Chop",
 &"death": "Hero_Death",
 &"fidget_look": "Leo_Look",
 &"fidget_scratch": "Leo_Scratch",
 &"fidget_stick": "Leo_Stick",
-&"gather": "Interact",
+&"gather": "Hero_Gather",
 &"getup": "Hero_Getup",
-&"hammer": "2H_Melee_Attack_Chop",
+&"hammer": "Hero_Hammer",
 &"hit": "Hero_Hit",
 &"idle": "Leo_Idle",
 &"walk": "Hero_Walk",
 &"move": "Hero_Run",
-&"pick": "PickUp",
-&"tinker": "Use_Item"
+&"pick": "Hero_Pick",
+&"tinker": "Hero_Tinker"
 }
 fidgets = Array[StringName]([&"fidget_look", &"fidget_scratch", &"fidget_stick"])
 attack_contact_time = 0.125

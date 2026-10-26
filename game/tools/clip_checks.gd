@@ -59,9 +59,13 @@ const ACTION_SECONDS: Dictionary = {
 ## when over their limit. Every other check only reports.
 const ENFORCED: Dictionary = {
 	&"leo": {&"idle": ["loop"], &"attack": ["duration"], &"walk": ["loop", "slide"], &"move": ["loop", "slide"],
-		&"hit": ["duration"], &"death": ["duration"], &"getup": ["duration", "handoff"], &"cheer": ["duration"]},
+		&"hit": ["duration"], &"death": ["duration"], &"getup": ["duration", "handoff"], &"cheer": ["duration"],
+		&"gather": ["duration"], &"chop": ["duration"], &"pick": ["duration"], &"tinker": ["duration"],
+		&"hammer": ["duration"]},
 	&"nela": {&"idle": ["loop"], &"attack": ["duration"], &"walk": ["loop", "slide"], &"move": ["loop", "slide"],
-		&"hit": ["duration"], &"death": ["duration"], &"getup": ["duration", "handoff"], &"cheer": ["duration"]},
+		&"hit": ["duration"], &"death": ["duration"], &"getup": ["duration", "handoff"], &"cheer": ["duration"],
+		&"gather": ["duration"], &"chop": ["duration"], &"pick": ["duration"], &"tinker": ["duration"],
+		&"hammer": ["duration"]},
 }
 
 

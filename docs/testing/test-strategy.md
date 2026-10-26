@@ -101,8 +101,10 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
     Always enforced.
 
   Each check reports until `ENFORCED` (hero, state, checks) switches
-  it to failing the validator (so far: both kids' attack duration,
-  their idle loop, and their walk and run loop and slide). A hero's
+  it to failing the validator (so far, for both kids: the duration of
+  every action clip (attack, hit, death, getup, cheer, gather, chop,
+  pick, tinker, hammer), the getup handoff, the idle loop, and the
+  walk and run loop and slide). A hero's
   listed idle `fidgets` must be states in its clip map (always enforced). `tools/check.sh` shows one summary line;
   `godot --headless --path game res://tools/validate_project.tscn -- --clips`
   prints every number. The pure measures have unit tests
