@@ -3,13 +3,22 @@ extends "res://tests/automated/smoke_scenario.gd"
 ## Hero animation: a hero's attack lands on its contact frame, after a
 ## short wind-up, in either role. A hero left idle fidgets now and then,
 ## and moving cancels the fidget. A hero going down holds the down pose,
-## and gets up from it.
+## and gets up from it. A hero's spring chains (hair, pack) swing out
+## after a sudden turn and settle back, in either role and on hero select.
+
+## A chain tip this far (m) from where the animation puts it has swung.
+const SPRING_SWUNG: float = 0.04
+## Within this (m) it has settled (the idle's own sway lags a little).
+const SPRING_SETTLED: float = 0.025
+## Game seconds a chain may take to settle after the turn.
+const SPRING_SETTLE_SECONDS: float = 2.5
 
 
 func run() -> void:
 	await _run_contact_frame_scenario()
 	await _run_fidget_scenario()
 	await _run_down_scenario()
+	await _run_spring_scenario()
 
 
 ## For Leo and Nela, played and as the companion: the swing lands, or the
@@ -200,3 +209,46 @@ func _run_down_scenario() -> void:
 		var getup: float = player.get_animation(String(companion.hero.clips[&"getup"])).length
 		_check(await _wait_until(func() -> bool: return visual.playing_action() == &"" and not companion.is_down(),
 			(getup + 1.0) * Engine.time_scale), "%s: and is up when the getup ends" % label)
+
+
+## Each hero with spring chains (Leo has his), played and as the
+## companion, and on hero select: standing still, a sudden 180-degree
+## turn swings a chain's tip away from its animated place, and it
+## settles back in time.
+func _run_spring_scenario() -> void:
+	print("smoke: --- hero animation: spring chains ---")
+	var leo: HeroDefinition = HeroRoster.get_hero(&"leo")
+	_check(leo != null and not leo.spring_chains.is_empty(), "Leo has spring chains")
+	for played in [&"leo", &"nela"]:
+		await _start_fresh_run(_party(played))
+		for who in Party.heroes():
+			var hero: Hero = who as Hero
+			hero.set_physics_process(false)
+			var visual: CharacterVisual = hero.get_node("Visual") as CharacterVisual
+			visual.set_locomotion(0.0)
+			if not hero.hero.spring_chains.is_empty():
+				await _check_spring_turn(visual, _label(hero))
+	var screen: Node = (load("res://scenes/ui/HeroSelect.tscn") as PackedScene).instantiate()
+	add_child(screen)
+	await get_tree().process_frame
+	var on_select: int = 0
+	for node in screen.find_children("*", "CharacterVisual", true, false):
+		var visual: CharacterVisual = node as CharacterVisual
+		if visual.spring_chain_count() > 0:
+			on_select += 1
+			await _check_spring_turn(visual, "hero select")
+	_check(on_select > 0, "hero select: a hero there has spring chains")
+	screen.queue_free()
+	await get_tree().process_frame
+
+
+func _check_spring_turn(visual: CharacterVisual, label: String) -> void:
+	_check(visual.spring_chain_count() > 0, "%s: the visual swings its spring chains (%d)" % [label, visual.spring_chain_count()])
+	visual.face_instantly(Vector3(0, 0, 1))
+	_check(await _wait_until(func() -> bool: return visual.spring_swing() < SPRING_SETTLED, 3.0),
+		"%s: standing, the chains rest (%.3f m)" % [label, visual.spring_swing()])
+	visual.face_instantly(Vector3(0, 0, -1))
+	_check(await _wait_until(func() -> bool: return visual.spring_swing() > SPRING_SWUNG, 0.5),
+		"%s: a sudden turn swings a chain out (%.3f m)" % [label, visual.spring_swing()])
+	_check(await _wait_until(func() -> bool: return visual.spring_swing() < SPRING_SETTLED, SPRING_SETTLE_SECONDS),
+		"%s: and it settles back within %.1f s (%.3f m)" % [label, SPRING_SETTLE_SECONDS, visual.spring_swing()])

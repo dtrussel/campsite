@@ -105,13 +105,20 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
   every action clip (attack, hit, death, getup, cheer, gather, chop,
   pick, tinker, hammer), the getup handoff, the idle loop, and the
   walk and run loop and slide). A hero's
-  listed idle `fidgets` must be states in its clip map (always enforced). `tools/check.sh` shows one summary line;
+  listed idle `fidgets` must be states in its clip map (always enforced).
+  **Hero models** (`_validate_hero_models`, always enforced): each
+  hero's model stays within the 40k triangle budget, and each of its
+  `spring_chains` has sane tuning and names a chain of bones in the
+  model, each the child of the one before, that no clip moves.
+  `tools/check.sh` shows one summary line;
   `godot --headless --path game res://tools/validate_project.tscn -- --clips`
   prints every number. The pure measures have unit tests
   (`test_clip_checks.gd`).
 - **Hero captures** (review, not pass/fail): `game/tools/hero_capture.tscn`
   records a hero playing states in the game, as the player and as the
-  companion, and writes PNG strips (or every frame, for a GIF). It also
+  companion, and writes PNG strips (or every frame, for a GIF). Besides
+  the clip states it records two motions for the spring chains, `turn`
+  (a sudden turn while running) and `stop`. It also
   stacks an old capture over a new one. Usage is in its header:
   `xvfb-run -a godot --path game --resolution 320x180 --fixed-fps 30 res://tools/hero_capture.tscn -- <out_dir> leo walk attack`.
   The clay contact sheets come from Blender (`art/review/clip_sheet.py`,

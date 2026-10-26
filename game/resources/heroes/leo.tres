@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="HeroDefinition" load_steps=9 format=3 uid="uid://b0campsiteheroleo"]
+[gd_resource type="Resource" script_class="HeroDefinition" load_steps=15 format=3 uid="uid://b0campsiteheroleo"]
 
 [ext_resource type="Script" path="res://scripts/characters/hero_definition.gd" id="1_def"]
 [ext_resource type="Texture2D" path="res://assets/icons/portrait_leo.png" id="2_portrait"]
@@ -6,6 +6,7 @@
 [ext_resource type="Resource" uid="uid://b0campsitestatsplayer" path="res://resources/progression/player_stats.tres" id="4_stats"]
 
 [ext_resource type="Script" path="res://scripts/characters/tool_tier.gd" id="5_tier"]
+[ext_resource type="Script" path="res://scripts/characters/spring_chain.gd" id="6_spring"]
 
 [sub_resource type="Resource" id="tier_1"]
 script = ExtResource("5_tier")
@@ -43,6 +44,46 @@ effects = Array[StringName]([&"burn_splash", &"bright_light"])
 burn_splash_radius = 1.6
 light_range = 4.2
 
+[sub_resource type="Resource" id="spring_hair_front"]
+script = ExtResource("6_spring")
+bones = PackedStringArray("hair.front.1", "hair.front.2", "hair.front.end")
+stiffness = 320.0
+damping = 12.0
+gravity = 0.0
+max_degrees = 25.0
+
+[sub_resource type="Resource" id="spring_hair_back"]
+script = ExtResource("6_spring")
+bones = PackedStringArray("hair.back.1", "hair.back.2", "hair.back.end")
+stiffness = 220.0
+damping = 9.0
+gravity = 0.0
+max_degrees = 35.0
+
+[sub_resource type="Resource" id="spring_hair_l"]
+script = ExtResource("6_spring")
+bones = PackedStringArray("hair.l.1", "hair.l.2", "hair.l.end")
+stiffness = 260.0
+damping = 10.0
+gravity = 0.0
+max_degrees = 30.0
+
+[sub_resource type="Resource" id="spring_hair_r"]
+script = ExtResource("6_spring")
+bones = PackedStringArray("hair.r.1", "hair.r.2", "hair.r.end")
+stiffness = 260.0
+damping = 10.0
+gravity = 0.0
+max_degrees = 30.0
+
+[sub_resource type="Resource" id="spring_pack"]
+script = ExtResource("6_spring")
+bones = PackedStringArray("pack.1", "pack.2", "pack.end")
+stiffness = 110.0
+damping = 7.0
+gravity = 0.0
+max_degrees = 14.0
+
 [resource]
 script = ExtResource("1_def")
 id = &"leo"
@@ -71,6 +112,7 @@ clips = {
 &"tinker": "Hero_Tinker"
 }
 fidgets = Array[StringName]([&"fidget_look", &"fidget_scratch", &"fidget_stick"])
+spring_chains = Array[ExtResource("6_spring")]([SubResource("spring_hair_front"), SubResource("spring_hair_back"), SubResource("spring_hair_l"), SubResource("spring_hair_r"), SubResource("spring_pack")])
 attack_contact_time = 0.125
 reference_speed = 4.004
 walk_reference_speed = 1.155

@@ -46,7 +46,7 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 | `ui/notebook_art.py` | Feature 047: Mum's field journal: a blank page (`notebook_page.webp`, 1200×1600) and a 512 px sketch with alpha per note (`note_<n>.png`), from the team's painted pages in `ui/source/notebook/note_<n>.webp` (1024², alpha): the matte edge is tidied, and each gets tape, a slight tilt and a soft shadow |
 | `ui/story_art.py` | Feature 043: cuts Mum's six expression portraits (round, brass-ringed, 192 px) from `ui/source/mum_sheet.png` into `game/assets/ui/story/`. Feature 047: also the kids' six expressions each (`KID_FACES`: Nela's painted heads in `ui/source/nela_<face>.webp`, the rest cut from the paintings) and the storybook paintings (`ui/source/story/<page>.webp` → `story_<page>.webp`, 1600×900; `PAINTINGS` holds each page's `lift` (shift, shrink) out of the text band, and `cold_lantern` puts out Mum's lantern where the story says it is cold: the Chapter 2 intro and the Chapter 1 ending) |
 | `characters/leo.py`, `nela.py` | Leo and Nela, modelled from the concept art on the KayKit adventurer rig (all 76 clips). The concept sheets are the reference for faces, outfits and gear (feature 012); each script's docstring lists what it follows |
-| `characters/chibi.py` | Kit for the kids: fused, auto-weighted clothing; rigid gear; face decals (eyes, brows, smile); hair locks; boots, backpack parts. `QUICK=1` previews without baking |
+| `characters/chibi.py` | Kit for the kids: fused, auto-weighted clothing; rigid gear; face decals (eyes, brows, smile); hair locks; boots, backpack parts; spring chains (`add_chain`, `weight_along`, see "Spring bones" below). `QUICK=1` previews without baking |
 | `characters/head_loft.py` | **Drawn game heads** (feature 014): a loft through superellipse sections (front outline and side profile per character) with a few planar forms: a wedge nose, inset eye plates, a brow shelf, cheek, lip and chin planes. The face itself is painted. Also the sculpted ears (`ear()`). Tune with a `HeadLoft` per character |
 | `characters/face_paint.py` | LoL-style **painted faces**: numpy paints eyes (lids, liner, iris, catchlight), brushed brows, nose/lip shading, contours and face paint into a front-projected image; `head_loft` places its forms from the same `FaceLayout`, and `paint_bake`'s `overlay` bakes it under the lighting |
 | `ground/textures.py` | Seamless hand-painted grass, dirt and leaf-litter textures (numpy brush stamps) for `painted_ground.gdshader` |
@@ -86,6 +86,26 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 - **Rigid gear** on characters is bound to one bone at weight 1.0.
   Weapons are built in the `handslot.r` bone frame: handle along +Y, blade
   toward -X.
+- **Spring bones** (hero animation): whatever hangs or sticks out on a
+  kid swings on a short chain of bones instead of being bound rigidly.
+  A builder lists its chains (`CHAINS` in `leo.py`: name -> parent bone
+  and 3 joints in rest space before the stretch) and calls
+  `chibi.add_chain(rig, name, joints, parent, prop=PROP)` after
+  `chibi.finish`, so the auto-weighted clothes never pick the bones up.
+  That adds `<name>.1`, `<name>.2` (deforming) and a non-deforming
+  `<name>.end` at the tip. `chibi.weight_along(obj, points, anchor, bones)`
+  weights a part along a polyline, from the anchor at the root to the
+  last bone at the tip: a hair lock along its own centre line (Leo's
+  `clump(..., chain=)`), a bag along the chain's joints (pass such a
+  rigid piece to `finish` with bone `None`, so it keeps its weights).
+  No clip keys the chain bones. In the game, the hero data's
+  `spring_chains` (`SpringChain`: the bones, stiffness, damping, gravity
+  and a reach limit in degrees) tell `CharacterVisual` which to swing
+  with `SpringChainModifier`. Leo has five: `hair.front` (the fringe),
+  `hair.back` (the nape tufts), `hair.l` / `hair.r` (the side tufts) and
+  `pack` (the bag hangs from its top; the harness, sternum strap and
+  compass stay on the chest). The validator checks the chains against
+  the model.
 
 ## Audio
 

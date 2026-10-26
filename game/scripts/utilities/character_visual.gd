@@ -16,6 +16,9 @@ extends Node3D
 ##   visual.set_look_focus(node)      # head and chest turn toward it (null: ahead)
 ##   visual.hit_stop(squash)          # freeze for a blink as a hit lands
 ##
+## With `spring_chains` (a hero's hair, pack, hanging gear), a
+## SpringChainModifier swings those bones on top of the clips.
+##
 ## Standing idle, it plays one of its `fidgets` now and then
 ## (FidgetScheduler); moving, any action or going down cuts it short.
 ##
@@ -105,6 +108,9 @@ const TOOL_SCALE: float = 1.9
 ## Idle fidgets: states in `clips` played now and then while standing
 ## idle (a hero's, from HeroDefinition.fidgets). Empty: none.
 @export var fidgets: Array[StringName] = []
+## Spring chains the model's bones swing on (a hero's, from
+## HeroDefinition.spring_chains). Empty: none.
+@export var spring_chains: Array[SpringChain] = []
 
 var model: Node3D = null
 var _player: AnimationPlayer = null
@@ -186,6 +192,8 @@ func _ready() -> void:
 	_last_yaw = rotation.y
 	if head_look:
 		_add_head_look()
+	if not spring_chains.is_empty():
+		_add_springs()
 
 
 ## Called every physics frame with the character's planar speed.
@@ -640,6 +648,8 @@ func hit_stop(squash: bool = false) -> void:
 	_stop_left = maxf(_stop_left, HIT_STOP_SECONDS) if _stopped else HIT_STOP_SECONDS
 	_stop_frames = 0
 	_stopped = true
+	if _springs != null:
+		_springs.paused = true
 	for mixer in [_tree, _player]:
 		if mixer != null and not _stopped_mixers.has(mixer):
 			_stopped_mixers[mixer] = (mixer as AnimationMixer).callback_mode_process
@@ -662,6 +672,8 @@ func _tick_hit_stop(delta: float) -> bool:
 		if _stop_left > 0.0 or _stop_frames < HIT_STOP_MIN_FRAMES:
 			return true
 		_stopped = false
+		if _springs != null:
+			_springs.paused = false
 		for mixer in _stopped_mixers:
 			if is_instance_valid(mixer):
 				(mixer as AnimationMixer).callback_mode_process = _stopped_mixers[mixer]
@@ -724,3 +736,39 @@ func _cancel_fidget() -> void:
 	_tree.set("parameters/upper/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FADE_OUT)
 	_action_until_msec = 0
 	_fidget = &""
+
+
+# --- Spring chains -----------------------------------------------------------
+# Hair, packs and hanging gear swing on short bone chains that no clip
+# keys (SpringChainModifier), after the look-at has turned the head. They
+# hold still through a hit-stop, as the rest of the pose does, and swing
+# on from there.
+
+var _springs: SpringChainModifier = null
+
+
+## How many spring chains swing on this visual's model (tests).
+func spring_chain_count() -> int:
+	return _springs.chains.size() if _springs != null else 0
+
+
+## The largest distance (m) between a chain's tip and where the clip puts
+## it, last frame: 0 at rest, more while swinging (tests).
+func spring_swing() -> float:
+	return _springs.swing if _springs != null else 0.0
+
+
+func _add_springs() -> void:
+	var skeleton: Skeleton3D = model.find_child("Skeleton3D", true, false) as Skeleton3D
+	if skeleton == null:
+		return
+	var fitting: Array[SpringChain] = []
+	for chain in spring_chains:
+		if SpringChainModifier.fits(skeleton, chain):
+			fitting.append(chain)
+	if fitting.is_empty():
+		return
+	_springs = SpringChainModifier.new()
+	_springs.name = &"SpringChains"
+	_springs.chains = fitting
+	skeleton.add_child(_springs)

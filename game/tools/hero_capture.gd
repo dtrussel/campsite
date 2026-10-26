@@ -16,7 +16,9 @@ extends Node
 ##
 ## States are the hero's logical states (idle, walk, move, attack, ...,
 ## or a fidget such as fidget_look); with none it records every state
-## the hero maps, its fidgets last. Options:
+## the hero maps, its fidgets last. Two motions show the spring chains
+## (hair, pack): `turn` (running east, a sudden turn back west) and
+## `stop` (running east, then standing). Options:
 ##   --role player|companion   one role only (both by default); the
 ##                             roles differ in speeds (attack, gather, run)
 ##   --all-frames              also writes every frame to
@@ -45,11 +47,16 @@ const STATES: Array[StringName] = [&"idle", &"walk", &"move", &"attack", &"hit",
 const COMPANION_SPEEDS: Dictionary = {&"attack": 1.45, &"gather": 1.3}
 ## Game seconds to settle into a state before recording it.
 const SETTLE_SECONDS: float = 0.6
+## Motions that are not clips: how long each records after its change.
+const MOTIONS: Dictionary = {&"turn": 1.2, &"stop": 1.2}
 
 var _camera: Camera3D = null
 var _stage: Node3D = null
 var _visual: CharacterVisual = null
 var _speed: float = 0.0
+## The way the visual travels (and, while _turning, turns toward).
+var _heading: Vector3 = Vector3.RIGHT
+var _turning: bool = false
 
 
 func _ready() -> void:
@@ -109,8 +116,10 @@ func _physics_process(delta: float) -> void:
 	if _visual == null:
 		return
 	_visual.set_locomotion(_speed)
+	if _turning:
+		_visual.face(_heading, delta)
 	if _speed > 0.0:
-		_visual.global_position.x += _speed * delta
+		_visual.global_position += _heading * _speed * delta
 	_camera.global_position = _visual.global_position + Vector3(0.0, 0.6, 0.0) \
 		+ Vector3(0.0, sin(deg_to_rad(PITCH_DEGREES)), cos(deg_to_rad(PITCH_DEGREES))) * DISTANCE
 
@@ -120,18 +129,28 @@ func _record(hero: HeroDefinition, role: String, state: StringName, out_dir: Str
 	var name: String = "%s_%s_%s" % [hero.id, role, state]
 	_visual = _make_visual(hero)
 	_stage.add_child(_visual)
-	_visual.face_instantly(Vector3.RIGHT if state == &"walk" or state == &"move" else Vector3(0.3, 0, 1))
+	var travels: bool = state == &"walk" or state == &"move" or MOTIONS.has(state)
+	_visual.face_instantly(Vector3.RIGHT if travels else Vector3(0.3, 0, 1))
+	_heading = Vector3.RIGHT
+	_turning = false
 	_speed = 0.0
 	if state == &"walk":
 		_speed = _visual.walk_speed
-	elif state == &"move":
+	elif state == &"move" or MOTIONS.has(state):
 		_speed = hero.move_speed if role == "player" else hero.companion_move_speed
 	if state == &"hammer" or state == &"tinker":
 		# The build beat keeps the mallet out for its fiddling beat too.
 		_visual.show_tool(&"hammer")
 	await _wait(SETTLE_SECONDS)
 	var seconds: float = 0.0
-	if state == &"idle" or state == &"walk" or state == &"move":
+	if state == &"turn":
+		_heading = Vector3.LEFT
+		_turning = true
+		seconds = MOTIONS[state]
+	elif state == &"stop":
+		_speed = 0.0
+		seconds = MOTIONS[state]
+	elif state == &"idle" or state == &"walk" or state == &"move":
 		var clip: Animation = _clip(hero, state)
 		var play: float = 1.0
 		if state == &"walk":

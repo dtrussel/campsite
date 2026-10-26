@@ -169,6 +169,7 @@ func _validate_data() -> void:
 	_validate_heroes(recipe_ids)
 	_validate_hero_contact_times()
 	_validate_hero_clip_records()
+	_validate_hero_models()
 	_validate_perks()
 	_validate_hero_perks()
 	_validate_perk_problems()
@@ -367,6 +368,78 @@ func _validate_hero_contact_times() -> void:
 			_fail("%s: attack_contact_time %.3f is past the end of '%s' (%.3f s)"
 				% [hero.resource_path, contact, clip, player.get_animation(clip).length])
 		model.free()
+
+
+## The hero triangle budget (art/README.md), over every mesh in a hero's
+## model.
+const HERO_TRIANGLE_BUDGET: int = 40000
+
+
+## Each hero's model stays within the hero triangle budget, and each of
+## its spring chains fits it: sane tuning, every bone in the skeleton,
+## each the child of the one before, and none keyed by a clip (the
+## chains swing only on SpringChainModifier).
+func _validate_hero_models() -> void:
+	for hero in HeroRoster.all():
+		if hero.model_scene == null:
+			continue
+		var model: Node = hero.model_scene.instantiate()
+		var tris: int = 0
+		for node in model.find_children("*", "MeshInstance3D", true, false):
+			var mesh: Mesh = (node as MeshInstance3D).mesh
+			for surface in (mesh.get_surface_count() if mesh != null else 0):
+				var arrays: Array = mesh.surface_get_arrays(surface)
+				var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+				tris += indices.size() / 3 if not indices.is_empty() \
+					else (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size() / 3
+		if tris > HERO_TRIANGLE_BUDGET:
+			_fail("%s: its model has %d triangles, over the hero budget of %d" % [hero.resource_path, tris, HERO_TRIANGLE_BUDGET])
+		var skeleton: Skeleton3D = model.find_child("Skeleton3D", true, false) as Skeleton3D
+		var player: AnimationPlayer = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
+		for chain in hero.spring_chains:
+			if chain == null:
+				_fail("%s: an empty spring chain" % hero.resource_path)
+				continue
+			var label: String = "%s: spring chain %s" % [hero.resource_path, ", ".join(chain.bones)]
+			for problem in chain.problems():
+				_fail("%s %s" % [label, problem])
+			for i in chain.bones.size():
+				var bone: int = skeleton.find_bone(chain.bones[i]) if skeleton != null else -1
+				if bone == -1:
+					_fail("%s: the model has no bone '%s'" % [label, chain.bones[i]])
+				elif i > 0 and skeleton.get_bone_parent(bone) != skeleton.find_bone(chain.bones[i - 1]):
+					_fail("%s: '%s' is not the child of '%s'" % [label, chain.bones[i], chain.bones[i - 1]])
+			var keyed: String = _clip_keying(player, chain.bones)
+			if keyed != "":
+				_fail("%s: clip %s" % [label, keyed])
+		model.free()
+
+
+## The first clip (and bone) of `player` that keys a rotation of one of
+## `bones`, as "<clip> keys <bone>", or "" when none does.
+func _clip_keying(player: AnimationPlayer, bones: PackedStringArray) -> String:
+	if player == null:
+		return ""
+	for clip in player.get_animation_list():
+		var anim: Animation = player.get_animation(clip)
+		for track in anim.get_track_count():
+			var bone: String = String(anim.track_get_path(track).get_concatenated_subnames())
+			if bones.has(bone) and anim.track_get_type(track) == Animation.TYPE_ROTATION_3D \
+					and _track_moves(anim, track):
+				return "%s keys %s" % [clip, bone]
+	return ""
+
+
+## True when a rotation track's keys are not all the same.
+func _track_moves(anim: Animation, track: int) -> bool:
+	if anim.track_get_key_count(track) < 2:
+		return false
+	var first: Quaternion = anim.track_get_key_value(track, 0)
+	for key in range(1, anim.track_get_key_count(track)):
+		var q: Quaternion = anim.track_get_key_value(track, key)
+		if absf(first.dot(q)) < 0.99999:
+			return true
+	return false
 
 
 ## A hand-made attack clip's contact time is the clip script's: the

@@ -34,6 +34,10 @@ const WIND_UP_CAP_SECONDS: float = 0.1
 ## Idle fidgets (states in `clips`): one plays now and then while the
 ## hero stands idle (CharacterVisual, FidgetScheduler).
 @export var fidgets: Array[StringName] = []
+## The model's spring chains (hair, pack, hanging gear) and their
+## tuning: CharacterVisual swings them (SpringChainModifier) in either
+## role and on hero select.
+@export var spring_chains: Array[SpringChain] = []
 ## The ground speeds (m/s) the run (`move`) and the walk clips are
 ## authored for, each its stride over its length (CharacterVisual scales
 ## their playback by the real speed). For a hand-made cycle they are the
