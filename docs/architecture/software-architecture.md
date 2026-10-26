@@ -224,7 +224,7 @@ fields.
   (`on_attack_hit`, so swings, Big Swing extras, pebbles and bounces, in
   both roles) calls `CharacterVisual.hit_stop()` on the hero's visual
   and `hit_stop(true)` on the target's, which also squashes it. The
-  visual holds its pose for `HIT_STOP_SECONDS` (0.05 game s, and at
+  visual holds its pose for `CharacterHitStop.SECONDS` (0.05 game s, and at
   least two frames) by putting its animation mixers on manual
   processing and skipping its turn, lean and look; `is_hit_stopped()`
   tells tests. Nothing else slows: damage, knockback, the clock and
@@ -257,10 +257,15 @@ fields.
   fighting, the work target while gathering or building, the nearest mob
   within 6 m while idle at night, otherwise the other hero now and then
   (`HeadLook.Glance`). It hands the pick to its visual
-  (`CharacterVisual.set_look_focus(node)`), whose `HeadLookModifier`
-  (a `SkeletonModifier3D` on the skeleton, heroes only via `HeroBody`)
-  turns the chest and head, eased, capped at 60° and blended out during
-  `hit`, `death`, `getup` and a standing `cheer`.
+  (`CharacterVisual.set_look_focus(node)`), whose `CharacterLook` drives
+  a `HeadLookModifier` (a `SkeletonModifier3D` on the skeleton, heroes
+  only via `HeroBody`) that turns the chest and head, eased, capped at
+  60° and blended out during `hit`, `death`, `getup` and a standing
+  `cheer`. `CharacterVisual` composes its hero parts, each in its own
+  script: the look (`CharacterLook`), the spring chains
+  (`SpringChainModifier`), the face (`CharacterFace`), the idle fidgets
+  (`CharacterFidgets`) and the hit-stop (`CharacterHitStop`); its own
+  calls and test hooks stay on the visual.
 - **Role hooks** (the role overrides them): `_show_hurt`,
   `_on_down_changed`, `_show_attack`, `_swing`, `_show_level_up`,
   `_on_gather_started`, and for the look `_fight_target` (the player's

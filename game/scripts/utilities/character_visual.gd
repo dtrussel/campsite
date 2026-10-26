@@ -16,14 +16,14 @@ extends Node3D
 ##   visual.set_look_focus(node)      # head and chest turn toward it (null: ahead)
 ##   visual.hit_stop(squash)          # freeze for a blink as a hit lands
 ##
-## With `spring_chains` (a hero's hair, pack, hanging gear), a
-## SpringChainModifier swings those bones on top of the clips.
-##
-## With a `face_atlas`, the face blinks now and then (BlinkScheduler) and
-## shows an expression through a hit, a cheer and being down.
-##
-## Standing idle, it plays one of its `fidgets` now and then
-## (FidgetScheduler); moving, any action or going down cuts it short.
+## It composes the parts a character may have, each in its own script:
+## the head look-at (CharacterLook, with `head_look`), spring chains
+## swinging the hair, pack and hanging gear on top of the clips
+## (SpringChainModifier, with `spring_chains`), a face that blinks and
+## shows an expression through a hit, a cheer and being down
+## (CharacterFace, with a `face_atlas`), idle fidgets played now and then
+## while standing (CharacterFidgets, with `fidgets`; moving, any action or
+## going down cuts one short) and the hit-stop (CharacterHitStop).
 ##
 ## Animation is layered with an AnimationTree built in code:
 ##
@@ -147,9 +147,7 @@ var steps_puffed: int = 0
 ## The action last played (its state and layer), for the look's blend-out.
 var _action_state: StringName = &""
 var _action_layer: String = ""
-var _look: HeadLookModifier = null
 var _look_focus: Node3D = null
-var _look_yaw: float = 0.0
 
 
 ## Dresses the outfit mesh in `color` now (hero select's preview).
@@ -199,12 +197,7 @@ func _ready() -> void:
 				anim.loop_mode = Animation.LOOP_LINEAR
 		_build_tree()
 	_last_yaw = rotation.y
-	if head_look:
-		_add_head_look()
-	if not spring_chains.is_empty():
-		_add_springs()
-	if face_atlas != null:
-		_add_face()
+	_add_parts()
 
 
 ## Called every physics frame with the character's planar speed.
@@ -278,7 +271,8 @@ func _tick_footsteps(run_weight: float) -> void:
 ## plays on the upper body only.
 func play_action(state: StringName, speed: float = 1.0) -> float:
 	_contact_remaining = -1.0
-	_fidget = &""
+	if _fidgets != null:
+		_fidgets.playing = &""
 	if _locked or _player == null:
 		return 0.0
 	var anim: Animation = _get_clip(state)
@@ -382,7 +376,7 @@ func _set_tool_parts_visible(shown: bool) -> void:
 ## True while an action plays (a fidget does not count: anything may
 ## cut it short).
 func is_in_action() -> bool:
-	return _action_playing() and _fidget == &""
+	return _action_playing() and (_fidgets == null or _fidgets.playing == &"")
 
 
 func _action_playing() -> bool:
@@ -455,12 +449,13 @@ func face_instantly(direction: Vector3) -> void:
 func _process(delta: float) -> void:
 	if _contact_remaining > 0.0:
 		_contact_remaining -= delta
-	if _tick_hit_stop(delta):
+	if _hit_stop != null and _hit_stop.tick(delta):
 		return
 	_tick_fidgets(delta)
-	_tick_face(delta)
+	if _face != null:
+		_face.tick(delta, playing_action(), _locked)
 	if _look != null:
-		_tick_look(delta)
+		_look.tick(delta, self, _look_blocked())
 	if model == null or not lean:
 		return
 	# Ease into the lean, and back upright when running straight.
@@ -567,22 +562,57 @@ func _get_clip(state: StringName) -> Animation:
 	return _player.get_animation(clip)
 
 
-# --- Head look-at ------------------------------------------------------------
-# The head and chest turn toward a focus that gameplay sets (Hero picks
-# it with HeadLook's target order), eased and capped at LOOK_MAX_DEGREES,
-# and back to ahead during full-body actions.
+# --- Composed parts ----------------------------------------------------------
+# The look-at (CharacterLook), the spring chains (SpringChainModifier),
+# the face (CharacterFace), the idle fidgets (CharacterFidgets) and the
+# hit-stop (CharacterHitStop) each live in their own script; the visual
+# makes the ones it needs in _ready and ticks them from _process. Below
+# are their calls and test hooks on the visual.
 
-## The most the head and chest turn together, degrees.
-const LOOK_MAX_DEGREES: float = 60.0
-## How quickly the turn eases toward its goal (per second).
-const LOOK_EASE: float = 6.0
-## Actions the look gives way to; &"cheer" only on the whole body.
-const LOOK_OFF_ACTIONS: Array[StringName] = [&"hit", &"death", &"getup"]
+var _look: CharacterLook = null
+var _springs: SpringChainModifier = null
+var _face: CharacterFace = null
+var _fidgets: CharacterFidgets = null
+var _hit_stop: CharacterHitStop = null
+
+## Fidgets played so far, the last one and how long the visual stood
+## idle before it (tests).
+var fidgets_played: int:
+	get:
+		return _fidgets.played if _fidgets != null else 0
+var last_fidget: StringName:
+	get:
+		return _fidgets.last if _fidgets != null else &""
+var last_fidget_wait: float:
+	get:
+		return _fidgets.last_wait if _fidgets != null else 0.0
+## Blinks shown so far (tests).
+var blinks_shown: int:
+	get:
+		return _face.blinks_shown if _face != null else 0
+
+
+func _add_parts() -> void:
+	var skeleton: Skeleton3D = model.find_child("Skeleton3D", true, false) as Skeleton3D
+	if head_look and skeleton != null:
+		_look = CharacterLook.attach(skeleton)
+	if not spring_chains.is_empty() and skeleton != null:
+		# After the look-at, so the chains swing from the turned head.
+		_springs = SpringChainModifier.attach(skeleton, spring_chains)
+	if face_atlas != null:
+		_face = CharacterFace.attach(model, face_atlas)
+	var mixers: Array[AnimationMixer] = []
+	for mixer in [_tree, _player]:
+		if mixer != null:
+			mixers.append(mixer)
+	_hit_stop = CharacterHitStop.new(model, model_scale, mixers, _springs)
 
 
 ## Looks at `node` from now on (null: straight ahead again).
 func set_look_focus(node: Node3D) -> void:
 	_look_focus = node
+	if _look != null:
+		_look.set_focus(node)
 
 
 ## What the head is set to look at, or null (tests).
@@ -593,170 +623,13 @@ func look_focus() -> Node3D:
 ## The head's turn from the body last frame, degrees; positive turns
 ## from +Z toward +X, as rotation.y does (tests).
 func look_turn_degrees() -> float:
-	return _look.turned_degrees if _look != null else 0.0
-
-
-func _add_head_look() -> void:
-	var skeleton: Skeleton3D = model.find_child("Skeleton3D", true, false) as Skeleton3D
-	if not HeadLookModifier.fits(skeleton):
-		return
-	_look = HeadLookModifier.new()
-	_look.name = &"HeadLook"
-	skeleton.add_child(_look)
-
-
-## Eases the turn toward the focus, capped; toward ahead with no focus
-## or during a full-body action.
-func _tick_look(delta: float) -> void:
-	var goal: float = 0.0
-	var focus: Node3D = look_focus()
-	if focus != null and not _look_blocked():
-		var to: Vector3 = focus.global_position - global_position
-		if Vector2(to.x, to.z).length_squared() > 0.01:
-			var cap: float = deg_to_rad(LOOK_MAX_DEGREES)
-			goal = clampf(angle_difference(global_rotation.y, atan2(to.x, to.z)), -cap, cap)
-	_look_yaw = lerpf(_look_yaw, goal, clampf(delta * LOOK_EASE, 0.0, 1.0))
-	_look.yaw = _look_yaw
+	return _look.turned_degrees() if _look != null else 0.0
 
 
 func _look_blocked() -> bool:
 	if _locked:
 		return true
-	if not is_in_action():
-		return false
-	return LOOK_OFF_ACTIONS.has(_action_state) or (_action_state == &"cheer" and _action_layer == "full")
-
-
-# --- Hit-stop ----------------------------------------------------------------
-# As a hero's hit lands (Hero.on_attack_hit), the attacker's and the
-# target's visuals hold their pose for a blink, and the target squashes
-# and springs back. Only the visual stops: its animation mixers go to
-# manual processing, and the turn, lean and look wait. The body, its
-# damage and knockback, and every other character keep going.
-
-## How long a hit-stop holds, game seconds.
-const HIT_STOP_SECONDS: float = 0.05
-## It also holds for at least this many frames, so a slow frame still
-## shows it.
-const HIT_STOP_MIN_FRAMES: int = 2
-## The target's squash: this much wider and shorter, held through the
-## stop, then back over SQUASH_RECOVER_SECONDS.
-const SQUASH: float = 0.12
-const SQUASH_RECOVER_SECONDS: float = 0.14
-
-var _stopped: bool = false
-var _stop_left: float = 0.0
-var _stop_frames: int = 0
-## Each frozen mixer's own process mode, to restore.
-var _stopped_mixers: Dictionary = {}  # AnimationMixer -> callback mode
-var _squash_left: float = 0.0
-
-
-## Freezes this visual for a blink (HIT_STOP_SECONDS); with `squash`, it
-## squashes too and recovers after. A new stop during one extends it.
-func hit_stop(squash: bool = false) -> void:
-	if model == null:
-		return
-	_stop_left = maxf(_stop_left, HIT_STOP_SECONDS) if _stopped else HIT_STOP_SECONDS
-	_stop_frames = 0
-	_stopped = true
-	if _springs != null:
-		_springs.paused = true
-	for mixer in [_tree, _player]:
-		if mixer != null and not _stopped_mixers.has(mixer):
-			_stopped_mixers[mixer] = (mixer as AnimationMixer).callback_mode_process
-			(mixer as AnimationMixer).callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
-	if squash:
-		_squash_left = SQUASH_RECOVER_SECONDS
-		_apply_squash(1.0)
-
-
-## True while a hit-stop holds this visual.
-func is_hit_stopped() -> bool:
-	return _stopped
-
-
-## Runs the stop and the squash's recovery; true while the visual is held.
-func _tick_hit_stop(delta: float) -> bool:
-	if _stopped:
-		_stop_left -= delta
-		_stop_frames += 1
-		if _stop_left > 0.0 or _stop_frames < HIT_STOP_MIN_FRAMES:
-			return true
-		_stopped = false
-		if _springs != null:
-			_springs.paused = false
-		for mixer in _stopped_mixers:
-			if is_instance_valid(mixer):
-				(mixer as AnimationMixer).callback_mode_process = _stopped_mixers[mixer]
-		_stopped_mixers.clear()
-		return false
-	if _squash_left > 0.0:
-		_squash_left = maxf(_squash_left - delta, 0.0)
-		_apply_squash(ease(_squash_left / SQUASH_RECOVER_SECONDS, 2.0))
-	return false
-
-
-## The squash at `amount` (1: full, 0: none) on the model.
-func _apply_squash(amount: float) -> void:
-	var squash: float = SQUASH * amount
-	model.scale = Vector3(1.0 + squash, 1.0 - squash, 1.0 + squash) * model_scale
-
-
-# --- Idle fidgets ------------------------------------------------------------
-# Standing idle, the visual plays one of its `fidgets` on the whole body
-# now and then (FidgetScheduler's wait). Moving cuts it short back to
-# locomotion, and any other action replaces it. The wait pauses through
-# a hit-stop (_process returns before it), like the rest of the pose.
-
-var _fidget_scheduler: FidgetScheduler = null
-## The fidget playing (cleared by any other action).
-var _fidget: StringName = &""
-var _idle_seconds: float = 0.0
-## Fidgets played so far, the last one and how long the visual stood
-## idle before it (tests).
-var fidgets_played: int = 0
-var last_fidget: StringName = &""
-var last_fidget_wait: float = 0.0
-
-
-## The fidget playing now, or &"".
-func fidget_playing() -> StringName:
-	return _fidget if _action_playing() else &""
-
-
-func _tick_fidgets(delta: float) -> void:
-	if fidgets.is_empty() or _tree == null:
-		return
-	if _fidget_scheduler == null:
-		_fidget_scheduler = FidgetScheduler.new(fidgets)
-	var idle: bool = not _locked and not is_moving() and not _action_playing()
-	_idle_seconds = _idle_seconds + delta if idle else 0.0
-	var fidget: StringName = _fidget_scheduler.tick(delta, idle)
-	if fidget == &"" or _get_clip(fidget) == null:
-		return
-	last_fidget_wait = _idle_seconds
-	play_action(fidget)
-	_fidget = fidget
-	last_fidget = fidget
-	fidgets_played += 1
-
-
-## Fades the fidget out, back to locomotion.
-func _cancel_fidget() -> void:
-	_tree.set("parameters/full/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FADE_OUT)
-	_tree.set("parameters/upper/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FADE_OUT)
-	_action_until_msec = 0
-	_fidget = &""
-
-
-# --- Spring chains -----------------------------------------------------------
-# Hair, packs and hanging gear swing on short bone chains that no clip
-# keys (SpringChainModifier), after the look-at has turned the head. They
-# hold still through a hit-stop, as the rest of the pose does, and swing
-# on from there.
-
-var _springs: SpringChainModifier = null
+	return is_in_action() and CharacterLook.blocked_by(_action_state, _action_layer)
 
 
 ## How many spring chains swing on this visual's model (tests).
@@ -782,103 +655,46 @@ func clear_spring_peak() -> void:
 		_springs.clear_peak()
 
 
-func _add_springs() -> void:
-	var skeleton: Skeleton3D = model.find_child("Skeleton3D", true, false) as Skeleton3D
-	if skeleton == null:
-		return
-	var fitting: Array[SpringChain] = []
-	for chain in spring_chains:
-		if SpringChainModifier.fits(skeleton, chain):
-			fitting.append(chain)
-	if fitting.is_empty():
-		return
-	_springs = SpringChainModifier.new()
-	_springs.name = &"SpringChains"
-	_springs.chains = fitting
-	skeleton.add_child(_springs)
-
-
-# --- Face --------------------------------------------------------------------
-# The head's face surface shows one cell of its FaceAtlas
-# (painted_face.gdshader): the neutral face, blinking now and then
-# (BlinkScheduler), or an expression for as long as a hit or a cheer
-# plays, and dazed while down (play_final). Like the rest of the pose it
-# holds through a hit-stop (_process returns before _tick_face).
-
-const FACE_SHADER: Shader = preload("res://shaders/painted_face.gdshader")
-## Action state -> the expression it shows while it plays.
-const FACE_EXPRESSIONS: Dictionary = {&"hit": &"hurt", &"cheer": &"happy"}
-## The expression while down.
-const FACE_DOWN: StringName = &"dazed"
-
-var _face_material: ShaderMaterial = null
-var _blinks: BlinkScheduler = null
-var _face_shown: StringName = &""
-## Blinks shown so far (tests).
-var blinks_shown: int = 0
-
-
-## The face state the head shows now (&"open", &"closed", &"hurt", ...),
-## read back from its material; &"" without a face atlas (tests).
+## The face state the head shows now (&"open", &"closed", &"hurt", ...);
+## &"" without a face atlas (tests).
 func face_shown() -> StringName:
-	if _face_material == null:
-		return &""
-	var origin: Vector2 = _face_material.get_shader_parameter("cell_origin")
-	for i in face_atlas.states.size():
-		if face_atlas.cell_origins[i].is_equal_approx(origin):
-			return StringName(face_atlas.states[i])
-	return &""
+	return _face.shown() if _face != null else &""
 
 
-func _add_face() -> void:
-	var head: MeshInstance3D = model.find_child(face_atlas.mesh, true, false) as MeshInstance3D
-	if head == null or head.mesh == null:
+## Freezes this visual for a blink (CharacterHitStop); with `squash`, it
+## squashes too and recovers after. A new stop during one extends it.
+func hit_stop(squash: bool = false) -> void:
+	if _hit_stop != null:
+		_hit_stop.stop(squash)
+
+
+## True while a hit-stop holds this visual.
+func is_hit_stopped() -> bool:
+	return _hit_stop != null and _hit_stop.is_stopped()
+
+
+## The fidget playing now, or &"".
+func fidget_playing() -> StringName:
+	return _fidgets.playing if _fidgets != null and _action_playing() else &""
+
+
+## Standing idle, plays a fidget when CharacterFidgets says one is due.
+func _tick_fidgets(delta: float) -> void:
+	if fidgets.is_empty() or _tree == null:
 		return
-	for surface in head.mesh.get_surface_count():
-		var source: Material = head.mesh.surface_get_material(surface)
-		if source == null or source.resource_name != face_atlas.material:
-			continue
-		var material: ShaderMaterial = ShaderMaterial.new()
-		material.shader = FACE_SHADER
-		var styled: ShaderMaterial = head.get_surface_override_material(surface) as ShaderMaterial
-		if styled != null:
-			# The head's own painted look (Stylize) and its ink line.
-			for uniform in styled.shader.get_shader_uniform_list():
-				var key: StringName = StringName(uniform["name"])
-				material.set_shader_parameter(key, styled.get_shader_parameter(key))
-			material.next_pass = styled.next_pass
-		elif source is BaseMaterial3D:
-			material.set_shader_parameter("albedo_texture", (source as BaseMaterial3D).albedo_texture)
-		material.set_shader_parameter("face_atlas", face_atlas.texture)
-		var window: Rect2 = face_atlas.window
-		material.set_shader_parameter("face_window", Vector4(window.position.x, window.position.y,
-			window.size.x, window.size.y))
-		material.set_shader_parameter("cell_size", face_atlas.cell_size)
-		head.set_surface_override_material(surface, material)
-		_face_material = material
-		_blinks = BlinkScheduler.new()
-		_show_face(FaceAtlas.NEUTRAL)
+	if _fidgets == null:
+		_fidgets = CharacterFidgets.new(fidgets)
+	var idle: bool = not _locked and not is_moving() and not _action_playing()
+	var fidget: StringName = _fidgets.tick(delta, idle)
+	if fidget == &"" or _get_clip(fidget) == null:
 		return
+	play_action(fidget)
+	_fidgets.started(fidget)
 
 
-## Picks this frame's face: the expression of the action playing or of
-## being down, else neutral with its blinks.
-func _tick_face(delta: float) -> void:
-	if _face_material == null:
-		return
-	var state: StringName = FACE_DOWN if _locked else FACE_EXPRESSIONS.get(playing_action(), FaceAtlas.NEUTRAL)
-	if not face_atlas.has_state(state):
-		state = FaceAtlas.NEUTRAL
-	var shut: bool = _blinks.tick(delta)
-	if state == FaceAtlas.NEUTRAL and shut:
-		state = FaceAtlas.BLINK
-		if _face_shown != FaceAtlas.BLINK:
-			blinks_shown += 1
-	_show_face(state)
-
-
-func _show_face(state: StringName) -> void:
-	if state == _face_shown:
-		return
-	_face_shown = state
-	_face_material.set_shader_parameter("cell_origin", face_atlas.cell_origin(state))
+## Fades the fidget out, back to locomotion.
+func _cancel_fidget() -> void:
+	_tree.set("parameters/full/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FADE_OUT)
+	_tree.set("parameters/upper/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FADE_OUT)
+	_action_until_msec = 0
+	_fidgets.playing = &""

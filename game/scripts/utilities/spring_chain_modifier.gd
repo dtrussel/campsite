@@ -41,6 +41,22 @@ var _velocities: Array[PackedVector3Array] = []
 var _started: bool = false
 
 
+## A modifier on `skeleton` swinging those of `chains` it has the bones
+## for, or null when none fits.
+static func attach(skeleton: Skeleton3D, chains: Array[SpringChain]) -> SpringChainModifier:
+	var fitting: Array[SpringChain] = []
+	for chain in chains:
+		if fits(skeleton, chain):
+			fitting.append(chain)
+	if fitting.is_empty():
+		return null
+	var springs: SpringChainModifier = SpringChainModifier.new()
+	springs.name = &"SpringChains"
+	springs.chains = fitting
+	skeleton.add_child(springs)
+	return springs
+
+
 ## True when all of `chain`'s bones are in `skeleton`.
 static func fits(skeleton: Skeleton3D, chain: SpringChain) -> bool:
 	return skeleton != null and chain != null and _bone_indices(skeleton, chain).size() >= 2
