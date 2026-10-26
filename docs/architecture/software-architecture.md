@@ -222,8 +222,9 @@ fields.
   quietly; a pebble flies at where the target is then.
   The **hit-stop** (hero-animation): every hit a hero lands
   (`on_attack_hit`, so swings, Big Swing extras, pebbles and bounces, in
-  both roles) calls `CharacterVisual.hit_stop()` on the hero's visual
-  and `hit_stop(true)` on the target's, which also squashes it. The
+  both roles) calls `hit_stop(true)` on the target's visual, which also
+  squashes it, and an attack's first hit calls `CharacterVisual.hit_stop()`
+  on the hero's (once per attack, however many mobs it strikes). The
   visual holds its pose for `CharacterHitStop.SECONDS` (0.05 game s, and at
   least two frames) by putting its animation mixers on manual
   processing and skipping its turn, lean and look; `is_hit_stopped()`

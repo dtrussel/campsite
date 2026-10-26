@@ -565,6 +565,13 @@ func _check_nela_perks(nela: Node3D) -> void:
 	await _clear_staged_mobs()
 
 
+## Game seconds a swing or a pebble may take to land on its target
+## (the wind-up, then the flight), and then to wait for a bounce that
+## should not come.
+const LAND_SECONDS: float = 1.2
+const NO_BOUNCE_SECONDS: float = 0.6
+
+
 ## One attack from `hero` on `mob`, through the Hero interface, then
 ## waits for the swing or the pebble to land on `mob` (at the contact
 ## frame, then the flight), then a while for any bounce. For a check
@@ -572,8 +579,9 @@ func _check_nela_perks(nela: Node3D) -> void:
 func _attack_and_wait(hero: Node3D, mob: Mob) -> void:
 	var hp: int = mob.current_hp
 	(hero as Hero).attack(mob)
-	await _wait_until(func() -> bool: return mob.current_hp < hp, 1.2)
-	await _wait(0.6)
+	_check(await _wait_until(func() -> bool: return mob.current_hp < hp, LAND_SECONDS),
+		"%s: the attack lands on its target" % (hero as Hero).hero.id)
+	await _wait(NO_BOUNCE_SECONDS)
 
 
 ## One attack from `hero` on `mob`, then waits until `landed` holds (at

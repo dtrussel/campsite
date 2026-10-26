@@ -31,6 +31,8 @@ var _frames: int = 0
 ## Each frozen mixer's own process mode, to restore.
 var _modes: Dictionary = {}  # AnimationMixer -> callback mode
 var _squash_left: float = 0.0
+## Hit-stops started or extended so far (tests).
+var count: int = 0
 
 
 ## The stop for `model` (drawn at `model_scale`), freezing `mixers` and
@@ -45,6 +47,7 @@ func _init(model: Node3D, model_scale: float, mixers: Array[AnimationMixer], spr
 ## Freezes the visual for a blink (SECONDS); with `squash`, it squashes
 ## too and recovers after. A new stop during one extends it.
 func stop(squash: bool) -> void:
+	count += 1
 	_left = maxf(_left, SECONDS) if _stopped else SECONDS
 	_frames = 0
 	_stopped = true

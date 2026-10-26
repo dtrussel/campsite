@@ -157,8 +157,9 @@ func _on_down_changed(_is_down: bool) -> void:
 # stays the perk math underneath (every hit goes through its strike()).
 # The role adds the feel: `_show_attack` (the swing animation) and
 # `_swing` (the player's hit puff, the companion's sparkle).
-# Every hit that lands hit-stops the hero's visual and the target's
-# (`on_attack_hit`); the game itself never slows for it.
+# Every hit that lands hit-stops the target's visual, and the attack's
+# first hit the hero's (`on_attack_hit`); the game itself never slows
+# for it.
 # The hit lands on the attack clip's contact frame (the definition's
 # `attack_contact_time`, as the visual reports it), after a short wind-up;
 # a hero without one hits the moment the attack starts.
@@ -198,6 +199,9 @@ var _shot_count: int = 0
 var _attack_target: Node3D = null
 ## The wind-up to the contact frame of the attack in flight (null: none).
 var _wind_up: Tween = null
+## True once the attack in flight has hit-stopped the hero: an attack
+## that strikes several mobs (Big Swing, a bounce) freezes the hero once.
+var _attack_stopped: bool = false
 
 
 ## Attacks `target` now: starts the cooldown and the attack animation,
@@ -210,6 +214,7 @@ func attack(target: Node3D) -> bool:
 		return false
 	_attack_cooldown_remaining = attack_cooldown_seconds
 	_attack_target = target
+	_attack_stopped = false
 	_cancel_wind_up()
 	_show_attack(target)
 	attacked.emit(target)
@@ -236,6 +241,11 @@ func _on_contact_frame(target: Node3D) -> void:
 	var slack: float = hero.contact_reach_slack if hero != null else 1.0
 	if _flat_distance(target.global_position) <= get_attack_range() * slack:
 		_swing(target)
+
+
+## True while an attack waits for its contact frame (tests).
+func is_winding_up() -> bool:
+	return _wind_up != null and _wind_up.is_valid()
 
 
 ## Drops the attack in its wind-up, if any (going down, a reset).
@@ -361,11 +371,13 @@ func is_tool_light_on() -> bool:
 
 ## HeroHits.strike calls this for every hit the hero lands (a swing, a
 ## Big Swing extra, a pebble, a Ricochet bounce), after the damage: the
-## hit-stop on the hero and the target (which squashes), and the tool's
-## on-hit effects (the Ember Stick's burn, the Blaze Stick's splash onto
+## hit-stop on the target (which squashes), and on the hero for its
+## attack's first hit only, and the tool's on-hit effects (the Ember Stick's burn, the Blaze Stick's splash onto
 ## the mobs beside the target, and the Glow Sling's glow).
 func on_attack_hit(target: Node, _damage: int) -> void:
-	_visual.hit_stop()
+	if not _attack_stopped:
+		_attack_stopped = true
+		_visual.hit_stop()
 	var target_visual: CharacterVisual = target.get_node_or_null("Visual") as CharacterVisual
 	if target_visual != null:
 		target_visual.hit_stop(true)

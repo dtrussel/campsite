@@ -586,6 +586,10 @@ var last_fidget: StringName:
 var last_fidget_wait: float:
 	get:
 		return _fidgets.last_wait if _fidgets != null else 0.0
+## Hit-stops this visual has taken, a new one or an extension (tests).
+var hit_stops: int:
+	get:
+		return _hit_stop.count if _hit_stop != null else 0
 ## Blinks shown so far (tests).
 var blinks_shown: int:
 	get:
