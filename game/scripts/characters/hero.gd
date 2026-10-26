@@ -674,7 +674,17 @@ static func _node_radius(node: Node3D) -> float:
 # frame in both roles and handed to the visual. In `_process`, not the
 # role's physics tick, so it follows a hero whose AI is held still.
 
+## Below this ground speed (m/s), with nothing to fight or work on, the
+## hero counts as idle for the look.
+@export var look_idle_speed: float = 0.2
+## Idle at night, the hero looks for mobs to watch this often (s), not
+## every frame; between looks it keeps the last list (freed mobs are
+## skipped).
+@export var look_mob_scan_seconds: float = 0.25
+
 var _glance: HeadLook.Glance = HeadLook.Glance.new()
+var _watched_mobs: Array = []
+var _mob_scan_left: float = 0.0
 
 
 func _process(delta: float) -> void:
@@ -686,10 +696,24 @@ func _process(delta: float) -> void:
 		return
 	var fight: Node3D = _fight_target()
 	var work: Node3D = _work_target()
-	var idle: bool = fight == null and work == null and Vector2(velocity.x, velocity.z).length() < 0.2
-	var mobs: Array = get_tree().get_nodes_in_group("mobs") if idle and TimeManager.is_night() else []
-	_visual.set_look_focus(HeadLook.pick(global_position, fight, work, idle and TimeManager.is_night(), mobs,
+	var idle: bool = fight == null and work == null and Vector2(velocity.x, velocity.z).length() < look_idle_speed
+	var watching: bool = idle and TimeManager.is_night()
+	_scan_watched_mobs(delta, watching)
+	_visual.set_look_focus(HeadLook.pick(global_position, fight, work, watching, _watched_mobs,
 		Party.other(self), glancing))
+
+
+## Refreshes the mobs an idle hero watches at night every
+## `look_mob_scan_seconds` (at once when it starts watching).
+func _scan_watched_mobs(delta: float, watching: bool) -> void:
+	if not watching:
+		_mob_scan_left = 0.0
+		_watched_mobs.clear()
+		return
+	_mob_scan_left -= delta
+	if _mob_scan_left <= 0.0:
+		_watched_mobs = get_tree().get_nodes_in_group("mobs")
+		_mob_scan_left = look_mob_scan_seconds
 
 
 ## The mob the hero is fighting, or null: its last attack's target while
