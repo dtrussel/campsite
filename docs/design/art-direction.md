@@ -162,7 +162,32 @@ landing on the blow's impact frame; between blows the kid bends to
 wiggle a peg in and seats it with two light taps.
 
 The wind-up stays within 0.1 s at play speed, so attacks still feel
-instant.
+instant. As a hit lands, the attacker and the target hold their pose
+for a blink (hit-stop) and the target squashes a little; the camera
+never shakes. Each kid turns their head toward what they are dealing
+with: the mob they fight, the tree or building they work on, a mob
+nearby at night, or now and then the other kid.
+
+What hangs off a kid swings and settles on short spring chains: Leo's
+fringe, nape and side tufts and his camo pack; Nela's fringe, locks and
+top bun, her pack with the bunny riding on it, her scarf tails and her
+lantern; Mum's long hair and her pack. Leo's springs are a little
+stiffer, so his tufts flick; Nela's hair and lantern are softer and
+sway longer. They hold still through a hit-stop, like the rest of the
+pose.
+
+The faces stay painted, in the same hand-painted style as the head,
+and change by swapping the painted eyes and mouth:
+
+- **Blink:** every 2-6 s, now and then a quick double blink.
+- **Hit:** a wince, eyes screwed shut (`> <`) under knitted brows and
+  a gritted frown, for as long as the flinch plays.
+- **Cheer:** a beam, the eyes squeezed into smiling arcs and a wide
+  open grin.
+- **Down:** dazed, swirly eyes, one brow up and a wobbly mouth, until
+  the kid is back up.
+
+Mum blinks too; her story beats keep her neutral face.
 
 ## Mobs
 

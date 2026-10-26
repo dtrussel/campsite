@@ -15,6 +15,8 @@ extends Node3D
 signal finished
 
 const MODEL_PATH: String = "res://assets/custom/mum.glb"
+## Her face atlas: she blinks (FaceAtlas; open and closed only).
+const FACE_PATH: String = "res://assets/custom/mum_face.tres"
 ## A grown-up next to the kids (Leo 0.7, Nela 0.65 on the same rig).
 const MODEL_SCALE: float = 0.72
 const CLIPS: Dictionary = {
@@ -56,6 +58,8 @@ static func make_visual(idle_clip: String = "Idle") -> CharacterVisual:
 	clips[&"idle"] = idle_clip
 	mum.clips = clips
 	mum.spring_chains = spring_chains()
+	if ResourceLoader.exists(FACE_PATH):
+		mum.face_atlas = load(FACE_PATH)
 	return mum
 
 

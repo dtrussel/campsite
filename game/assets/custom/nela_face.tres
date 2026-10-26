@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="FaceAtlas" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/characters/face_atlas.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/custom/nela_face.webp" id="2_atlas"]
+
+[resource]
+script = ExtResource("1_script")
+texture = ExtResource("2_atlas")
+mesh = "Nela_Head"
+material = "Nela_Face_painted"
+states = PackedStringArray("open", "closed", "happy", "hurt", "dazed")
+window = Rect2(0.233824, 0.391176, 0.532353, 0.413235)
+cell_size = Vector2(0.491018, 0.326478)
+cell_origins = PackedVector2Array(0.005988, 0.005141, 0.502994, 0.005141, 0.005988, 0.336761, 0.502994, 0.336761, 0.005988, 0.668380)

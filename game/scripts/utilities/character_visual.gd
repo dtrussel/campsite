@@ -19,6 +19,9 @@ extends Node3D
 ## With `spring_chains` (a hero's hair, pack, hanging gear), a
 ## SpringChainModifier swings those bones on top of the clips.
 ##
+## With a `face_atlas`, the face blinks now and then (BlinkScheduler) and
+## shows an expression through a hit, a cheer and being down.
+##
 ## Standing idle, it plays one of its `fidgets` now and then
 ## (FidgetScheduler); moving, any action or going down cuts it short.
 ##
@@ -111,6 +114,9 @@ const TOOL_SCALE: float = 1.9
 ## Spring chains the model's bones swing on (a hero's, from
 ## HeroDefinition.spring_chains). Empty: none.
 @export var spring_chains: Array[SpringChain] = []
+## The head's face atlas (a hero's, from HeroDefinition.face_atlas; Mum's
+## from MumArrival): blinks and expressions. Null: a still face.
+@export var face_atlas: FaceAtlas = null
 
 var model: Node3D = null
 var _player: AnimationPlayer = null
@@ -194,6 +200,8 @@ func _ready() -> void:
 		_add_head_look()
 	if not spring_chains.is_empty():
 		_add_springs()
+	if face_atlas != null:
+		_add_face()
 
 
 ## Called every physics frame with the character's planar speed.
@@ -447,6 +455,7 @@ func _process(delta: float) -> void:
 	if _tick_hit_stop(delta):
 		return
 	_tick_fidgets(delta)
+	_tick_face(delta)
 	if _look != null:
 		_tick_look(delta)
 	if model == null or not lean:
@@ -772,3 +781,89 @@ func _add_springs() -> void:
 	_springs.name = &"SpringChains"
 	_springs.chains = fitting
 	skeleton.add_child(_springs)
+
+
+# --- Face --------------------------------------------------------------------
+# The head's face surface shows one cell of its FaceAtlas
+# (painted_face.gdshader): the neutral face, blinking now and then
+# (BlinkScheduler), or an expression for as long as a hit or a cheer
+# plays, and dazed while down (play_final). Like the rest of the pose it
+# holds through a hit-stop (_process returns before _tick_face).
+
+const FACE_SHADER: Shader = preload("res://shaders/painted_face.gdshader")
+## Action state -> the expression it shows while it plays.
+const FACE_EXPRESSIONS: Dictionary = {&"hit": &"hurt", &"cheer": &"happy"}
+## The expression while down.
+const FACE_DOWN: StringName = &"dazed"
+
+var _face_material: ShaderMaterial = null
+var _blinks: BlinkScheduler = null
+var _face_shown: StringName = &""
+## Blinks shown so far (tests).
+var blinks_shown: int = 0
+
+
+## The face state the head shows now (&"open", &"closed", &"hurt", ...),
+## read back from its material; &"" without a face atlas (tests).
+func face_shown() -> StringName:
+	if _face_material == null:
+		return &""
+	var origin: Vector2 = _face_material.get_shader_parameter("cell_origin")
+	for i in face_atlas.states.size():
+		if face_atlas.cell_origins[i].is_equal_approx(origin):
+			return StringName(face_atlas.states[i])
+	return &""
+
+
+func _add_face() -> void:
+	var head: MeshInstance3D = model.find_child(face_atlas.mesh, true, false) as MeshInstance3D
+	if head == null or head.mesh == null:
+		return
+	for surface in head.mesh.get_surface_count():
+		var source: Material = head.mesh.surface_get_material(surface)
+		if source == null or source.resource_name != face_atlas.material:
+			continue
+		var material: ShaderMaterial = ShaderMaterial.new()
+		material.shader = FACE_SHADER
+		var styled: ShaderMaterial = head.get_surface_override_material(surface) as ShaderMaterial
+		if styled != null:
+			# The head's own painted look (Stylize) and its ink line.
+			for uniform in styled.shader.get_shader_uniform_list():
+				var key: StringName = StringName(uniform["name"])
+				material.set_shader_parameter(key, styled.get_shader_parameter(key))
+			material.next_pass = styled.next_pass
+		elif source is BaseMaterial3D:
+			material.set_shader_parameter("albedo_texture", (source as BaseMaterial3D).albedo_texture)
+		material.set_shader_parameter("face_atlas", face_atlas.texture)
+		var window: Rect2 = face_atlas.window
+		material.set_shader_parameter("face_window", Vector4(window.position.x, window.position.y,
+			window.size.x, window.size.y))
+		material.set_shader_parameter("cell_size", face_atlas.cell_size)
+		head.set_surface_override_material(surface, material)
+		_face_material = material
+		_blinks = BlinkScheduler.new()
+		_show_face(FaceAtlas.NEUTRAL)
+		return
+
+
+## Picks this frame's face: the expression of the action playing or of
+## being down, else neutral with its blinks.
+func _tick_face(delta: float) -> void:
+	if _face_material == null:
+		return
+	var state: StringName = FACE_DOWN if _locked else FACE_EXPRESSIONS.get(playing_action(), FaceAtlas.NEUTRAL)
+	if not face_atlas.has_state(state):
+		state = FaceAtlas.NEUTRAL
+	var shut: bool = _blinks.tick(delta)
+	if state == FaceAtlas.NEUTRAL and shut:
+		state = FaceAtlas.BLINK
+		if _face_shown != FaceAtlas.BLINK:
+			blinks_shown += 1
+	_show_face(state)
+
+
+func _show_face(state: StringName) -> void:
+	if state == _face_shown:
+		return
+	_face_shown = state
+	_face_material.set_shader_parameter("cell_origin", face_atlas.cell_origin(state))

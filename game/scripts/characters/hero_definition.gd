@@ -38,6 +38,10 @@ const WIND_UP_CAP_SECONDS: float = 0.1
 ## tuning: CharacterVisual swings them (SpringChainModifier) in either
 ## role and on hero select.
 @export var spring_chains: Array[SpringChain] = []
+## The head's face atlas (the model builder writes it beside the model):
+## CharacterVisual blinks the face and shows the hit, cheer and down
+## expressions with it, in either role and on hero select.
+@export var face_atlas: FaceAtlas
 ## The ground speeds (m/s) the run (`move`) and the walk clips are
 ## authored for, each its stride over its length (CharacterVisual scales
 ## their playback by the real speed). For a hand-made cycle they are the

@@ -386,6 +386,10 @@ func _validate_hero_models() -> void:
 		if tris > HERO_TRIANGLE_BUDGET:
 			_fail("%s: its model has %d triangles, over the hero budget of %d" % [hero.resource_path, tris, HERO_TRIANGLE_BUDGET])
 		_validate_spring_chains(hero.resource_path, model, hero.spring_chains)
+		if hero.face_atlas == null:
+			_fail("%s: has no face atlas (blinks and expressions)" % hero.resource_path)
+		else:
+			_validate_face_atlas(hero.resource_path, model, hero.face_atlas, FaceAtlas.STATES)
 		model.free()
 	# Mum swings her hair and pack too (MumArrival.SPRINGS).
 	if ResourceLoader.exists(MumArrival.MODEL_PATH):
@@ -393,7 +397,43 @@ func _validate_hero_models() -> void:
 		_validate_spring_chains("Mum", mum, MumArrival.spring_chains())
 		if _model_triangles(mum) > HERO_TRIANGLE_BUDGET:
 			_fail("Mum's model has %d triangles, over the hero budget of %d" % [_model_triangles(mum), HERO_TRIANGLE_BUDGET])
+		# She blinks (her face atlas has the open and closed states).
+		if not ResourceLoader.exists(MumArrival.FACE_PATH):
+			_fail("Mum has no face atlas at %s" % MumArrival.FACE_PATH)
+		else:
+			_validate_face_atlas("Mum", mum, load(MumArrival.FACE_PATH) as FaceAtlas,
+				[FaceAtlas.NEUTRAL, FaceAtlas.BLINK] as Array[StringName])
 		mum.free()
+
+
+## The hero texture budget (art/README.md): a face atlas is one small
+## texture, at most this many texels a side.
+const FACE_ATLAS_MAX_SIZE: int = 1024
+
+
+## `atlas` is sound (FaceAtlas.problems), has every one of `states`,
+## stays within the texture budget, and fits `model`: its head mesh has
+## the face surface, with the face-plane UVs (UV2) the shader reads.
+func _validate_face_atlas(owner_label: String, model: Node, atlas: FaceAtlas, states: Array[StringName]) -> void:
+	for problem in atlas.problems():
+		_fail("%s: its face atlas %s" % [owner_label, problem])
+	for state in states:
+		if not atlas.has_state(state):
+			_fail("%s: its face atlas lacks the '%s' state" % [owner_label, state])
+	if atlas.texture != null and maxi(atlas.texture.get_width(), atlas.texture.get_height()) > FACE_ATLAS_MAX_SIZE:
+		_fail("%s: its face atlas is %dx%d, over %d a side" % [owner_label, atlas.texture.get_width(),
+			atlas.texture.get_height(), FACE_ATLAS_MAX_SIZE])
+	var head: MeshInstance3D = model.find_child(atlas.mesh, true, false) as MeshInstance3D
+	if head == null or head.mesh == null:
+		_fail("%s: its model has no head mesh '%s' for the face atlas" % [owner_label, atlas.mesh])
+		return
+	for surface in head.mesh.get_surface_count():
+		var material: Material = head.mesh.surface_get_material(surface)
+		if material != null and material.resource_name == atlas.material:
+			if (head.mesh.surface_get_arrays(surface)[Mesh.ARRAY_TEX_UV2] as PackedVector2Array).is_empty():
+				_fail("%s: the face surface of '%s' has no face-plane UVs (UV2)" % [owner_label, atlas.mesh])
+			return
+	_fail("%s: '%s' has no face surface (material '%s')" % [owner_label, atlas.mesh, atlas.material])
 
 
 ## Every triangle of every mesh in `model`.

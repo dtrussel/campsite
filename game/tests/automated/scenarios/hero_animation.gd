@@ -5,7 +5,9 @@ extends "res://tests/automated/smoke_scenario.gd"
 ## and moving cancels the fidget. A hero going down holds the down pose,
 ## and gets up from it. A hero's spring chains (hair, pack, lantern)
 ## swing out after a sudden turn and settle back, in either role and on
-## hero select, and so do Mum's, whose story clips still play.
+## hero select, and so do Mum's, whose story clips still play. A kid's
+## face blinks, winces at a hit, beams in a cheer and looks dazed while
+## down; Mum blinks.
 
 ## A chain tip this far (m) from where the animation puts it has swung.
 const SPRING_SWUNG: float = 0.04
@@ -20,6 +22,69 @@ func run() -> void:
 	await _run_fidget_scenario()
 	await _run_down_scenario()
 	await _run_spring_scenario()
+	await _run_face_scenario()
+
+
+## Each kid, played and as the companion: the face blinks now and then;
+## a hit shows the hurt face and then neutral again; a cheer shows the
+## happy face; a companion going down looks dazed until it is back up.
+## Mum blinks too.
+func _run_face_scenario() -> void:
+	print("smoke: --- hero animation: faces ---")
+	for played in [&"leo", &"nela"]:
+		await _start_fresh_run(_party(played))
+		var companion: Hero = get_tree().get_first_node_in_group("companions") as Hero
+		if companion == null:
+			_fail("party %s: the companion is a Hero" % played)
+			continue
+		var visual: CharacterVisual = companion.get_node("Visual") as CharacterVisual
+		var label: String = _label(companion)
+		companion.take_damage(companion.max_hp + 10)
+		_check(await _wait_until(func() -> bool: return visual.face_shown() == &"dazed", 1.0),
+			"%s: down, it looks dazed (%s)" % [label, visual.face_shown()])
+		await _wait(0.5)
+		_check(visual.face_shown() == &"dazed", "%s: and still dazed while down" % label)
+		companion.revive(companion.max_hp)
+		_check(await _wait_until(func() -> bool: return _neutral(visual), 1.0),
+			"%s: back up, the daze is gone (%s)" % [label, visual.face_shown()])
+		for who in Party.heroes():
+			var hero: Hero = who as Hero
+			hero.set_physics_process(false)
+			var hero_visual: CharacterVisual = hero.get_node("Visual") as CharacterVisual
+			hero_visual.set_locomotion(0.0)
+			await _check_face(hero, hero_visual, _label(hero))
+	var mum: CharacterVisual = MumArrival.make_visual()
+	add_child(mum)
+	await get_tree().process_frame
+	_check(_neutral(mum), "Mum: her face shows (%s)" % mum.face_shown())
+	_check(await _wait_until(func() -> bool: return mum.blinks_shown > 0, BlinkScheduler.GAP_MAX + 1.0),
+		"Mum: she blinks")
+	mum.queue_free()
+	await get_tree().process_frame
+
+
+func _neutral(visual: CharacterVisual) -> bool:
+	return visual.face_shown() == FaceAtlas.NEUTRAL or visual.face_shown() == FaceAtlas.BLINK
+
+
+func _check_face(hero: Hero, visual: CharacterVisual, label: String) -> void:
+	_check(_neutral(visual), "%s: the face shows, neutral (%s)" % [label, visual.face_shown()])
+	var before: int = visual.blinks_shown
+	_check(await _wait_until(func() -> bool: return visual.blinks_shown > before, BlinkScheduler.GAP_MAX + 1.0),
+		"%s: blinks within %.0f s" % [label, BlinkScheduler.GAP_MAX])
+	# An action's end is timed in real seconds (CharacterVisual), and the
+	# smoke test runs the game faster than that.
+	await _wait_until(func() -> bool: return not visual.is_in_action(), 3.0 * Engine.time_scale)
+	hero.take_damage(1)
+	_check(await _wait_until(func() -> bool: return visual.face_shown() == &"hurt", 1.0),
+		"%s: hit, it winces (%s)" % [label, visual.face_shown()])
+	_check(await _wait_until(func() -> bool: return _neutral(visual), 3.0 * Engine.time_scale),
+		"%s: and is neutral again after the hit (%s)" % [label, visual.face_shown()])
+	visual.play_action(&"cheer")
+	_check(await _wait_until(func() -> bool: return visual.face_shown() == &"happy", 1.0),
+		"%s: cheering, it beams (%s)" % [label, visual.face_shown()])
+	_check(await _wait_until(func() -> bool: return _neutral(visual), 4.0 * Engine.time_scale),
+		"%s: and is neutral again after the cheer (%s)" % [label, visual.face_shown()])
 
 
 ## For Leo and Nela, played and as the companion: the swing lands, or the

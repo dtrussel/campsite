@@ -33,6 +33,7 @@ func _ready() -> void:
 		visual.clips = hero.clips.duplicate()
 		visual.fidgets = hero.fidgets.duplicate()
 		visual.spring_chains = hero.spring_chains.duplicate()
+		visual.face_atlas = hero.face_atlas
 		visual.style = "hero"
 		visual.outfit_mesh = hero.outfit_mesh
 		visual.outfit_tint = Cosmetics.outfit_tint(hero.id)

@@ -11,7 +11,7 @@ mesh without real face UVs samples nothing.
 
 import math
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import numpy as np
 
@@ -74,6 +74,44 @@ class FaceLayout:
     plane_light: float = 0.0      # painted plane lighting (hand-painted game style), 0 = off
     face_half_w: float = 0.2      # face half-width at the cheeks (for the side form shadow)
     light_colour: tuple = (1.0, 0.93, 0.84)
+    # Expressions (the face atlas, `expression()`): how the eyes are drawn
+    # ("open", "closed", "happy", "hurt", "dazed"), a wobble along the
+    # mouth line (m), and how much of an open mouth the teeth fill.
+    eyes: str = "open"
+    mouth_wave: float = 0.0
+    teeth: float = 0.45
+
+
+# The face atlas's states: the neutral open face, a blink, and the three
+# expressions the game shows (a cheer, a hit, being down).
+STATES = ("open", "closed", "happy", "hurt", "dazed")
+
+
+def expression(layout, state):
+    """`layout` with the eyes, brows and mouth of `state` (STATES):
+    "open" is the layout itself; "closed" shuts the eyes (a blink);
+    "happy" squeezes them into smiling arcs, lifts the brows and opens
+    the grin; "hurt" screws them shut (> <) under knitted brows, over a
+    gritted frown; "dazed" swirls them, one brow up, the mouth a small
+    wobbly line."""
+    L = layout
+    (dzl, tl, thl, al), (dzr, tr, thr, ar) = L.brows
+    if state == "open":
+        return L
+    if state == "closed":
+        return replace(L, eyes="closed")
+    if state == "happy":
+        return replace(L, eyes="happy", brows=((dzl + 0.008, tl, thl, al + 0.004), (dzr + 0.008, tr, thr, ar + 0.004)),
+                       smile=min(L.smile * 1.5 + 2.0, 13.0), open_mouth=max(L.open_mouth * 1.8, 0.02), mouth_w=L.mouth_w * 1.08,
+                       smirk=0.0, tongue=L.tongue or (0.8, 0.36, 0.36))
+    if state == "hurt":
+        return replace(L, eyes="hurt", brows=((dzl - 0.006, tl + 0.4, thl * 1.1, al * 0.4),
+                                              (dzr - 0.006, tr + 0.4, thr * 1.1, ar * 0.4)),
+                       smile=-7.0, smirk=0.0, open_mouth=0.014, teeth=1.0, mouth_w=L.mouth_w * 1.05, tongue=None)
+    if state == "dazed":
+        return replace(L, eyes="dazed", brows=((dzl + 0.012, tl - 0.1, thl, al + 0.004), (dzr - 0.004, tr + 0.1, thr, ar)),
+                       smile=0.5, smirk=0.0, open_mouth=0.0, mouth_wave=0.0035, mouth_w=L.mouth_w * 0.8)
+    raise ValueError("no expression " + state)
 
 
 def _grid(layout):
@@ -176,6 +214,57 @@ def _eye_curves(layout, side):
     return top, bottom
 
 
+def _shut_eye(canvas, u, v, px, L, side, top, bottom):
+    """A shut eye as one bold lash stroke: a lid line sagging a little
+    ("closed"), a smiling arc ("happy") or a squeezed > < ("hurt")."""
+    ex = side * L.eye_x
+    w, h = L.eye_w, L.eye_h
+    n = 14
+    if L.eyes == "hurt":
+        # The point toward the nose, the arms out to the temple.
+        pts = [(ex + side * w * 1.0, L.eye_z + h * 0.75), (ex - side * w * 0.55, L.eye_z + h * 0.05),
+               (ex + side * w * 0.95, L.eye_z - h * 0.6)]
+        widths = [L.lash_width * 0.45, L.lash_width * 1.1, L.lash_width * 0.45]
+        _over(canvas, L.lash, _stroke(u, v, pts, widths, px))
+        # Squeezed skin: short creases above and below the outer end.
+        for dv in (h * 1.25, -h * 1.05):
+            crease = [(ex + side * w * 0.2, L.eye_z + dv), (ex + side * w * 0.95, L.eye_z + dv * 0.85)]
+            _over(canvas, L.socket, L.lid_fold * _stroke(u, v, crease, [0.0025, 0.0015], px, soft=0.002))
+        return
+    pts, widths = [], []
+    for k in range(n + 1):
+        d = -w + 2 * w * k / n
+        t = max(0.0, 1.0 - (d / w) ** 2)
+        if L.eyes == "happy":
+            dv = h * 0.6 * t ** 0.8 - h * 0.15 + L.eye_tilt * d
+        else:
+            dv = -h * 0.28 * t ** 0.8 + L.eye_tilt * d
+        pts.append((ex + side * d, L.eye_z + dv))
+        widths.append(L.lash_width * (0.35 + 0.65 * min(1.0, (d / w + 1.0) * 0.7)))
+    if L.eyes == "closed":
+        # The outer wing and a hint of the lower lashes, as the open eye has.
+        pts.append((ex + side * (w + L.wing), pts[-1][1] + L.wing * 0.4))
+        widths.append(L.lash_width * 0.15)
+    _over(canvas, L.lash, _stroke(u, v, pts, widths, px))
+    if L.eyes == "closed":
+        crease = [(ex + side * d, L.eye_z + float(top(np.float32(d))) * 0.6 + h * 0.35)
+                  for d in np.linspace(-w * 0.6, w * 0.85, 8)]
+        _over(canvas, L.socket, L.lid_fold * _stroke(u, v, crease, [0.0025] * len(crease), px, soft=0.002))
+
+
+def _swirl(canvas, u, v, px, L, ex, eye_a):
+    """Dizzy eyes: a dark spiral in the eye opening."""
+    r_max = min(L.eye_w, L.eye_h) * 0.95
+    pts, widths = [], []
+    for k in range(61):
+        t = k / 60
+        a = t * 2.6 * 2 * math.pi
+        r = r_max * (0.12 + 0.88 * t)
+        pts.append((ex + r * math.cos(a) * 1.25, L.eye_z + r * math.sin(a)))
+        widths.append(L.lash_width * (0.45 + 0.3 * t))
+    _over(canvas, L.iris_dark, _stroke(u, v, pts, widths, px) * eye_a)
+
+
 def paint_face(layout, path):
     u, v, px = _grid(layout)
     canvas = np.zeros((RES, RES, 4), dtype=np.float32)
@@ -248,10 +337,15 @@ def paint_face(layout, path):
         inside_side = L.eye_w - np.abs(du)
         open_d = np.minimum(np.minimum(inside_top, inside_bottom), inside_side)
         eye_a = _aa(open_d, px)
+        if L.eyes not in ("open", "dazed"):
+            _shut_eye(canvas, u, v, px, L, side, top, bottom)
+            continue
         # Sclera, shaded by the lid at the top.
         lid_shade = np.clip(1.0 - inside_top / (L.eye_h * 0.9), 0.0, 1.0)
         sclera = np.stack([0.97 - 0.3 * lid_shade, 0.95 - 0.33 * lid_shade, 0.93 - 0.3 * lid_shade], -1)
         _over(canvas, sclera, eye_a)
+        if L.eyes == "dazed":
+            _swirl(canvas, u, v, px, L, ex, eye_a)
         # Iris with a dark limbal ring, lighter bottom, pupil, catchlight.
         iu = ex + side * L.look[0]
         iv = L.eye_z + L.look[1]
@@ -262,14 +356,15 @@ def paint_face(layout, path):
         iris_rgb = base * (1 - ring) + np.array(L.iris_dark, np.float32) * 0.6 * ring
         # Lid shadow falls on the iris too.
         iris_rgb = iris_rgb * (1.0 - 0.45 * lid_shade[..., None])
-        _over(canvas, iris_rgb, _aa((1.0 - r) * L.iris_r, px) * eye_a)
+        iris_on = 0.0 if L.eyes == "dazed" else 1.0
+        _over(canvas, iris_rgb, iris_on * _aa((1.0 - r) * L.iris_r, px) * eye_a)
         pr = np.sqrt((u - iu) ** 2 + (v - iv) ** 2) / (L.iris_r * 0.45)
-        _over(canvas, (0.03, 0.03, 0.05), _aa((1.0 - pr) * L.iris_r * 0.45, px) * eye_a)
+        _over(canvas, (0.03, 0.03, 0.05), iris_on * _aa((1.0 - pr) * L.iris_r * 0.45, px) * eye_a)
         hu, hv = iu - side * L.iris_r * 0.3, iv + L.iris_r * 0.35
-        _over(canvas, (1.0, 1.0, 1.0), _aa((1.0 - np.sqrt(((u - hu) / (L.iris_r * 0.28)) ** 2 +
-                                                          ((v - hv) / (L.iris_r * 0.24)) ** 2)) * L.iris_r * 0.25, px)
-              * eye_a)
-        if L.catch2:
+        _over(canvas, (1.0, 1.0, 1.0), iris_on * _aa((1.0 - np.sqrt(((u - hu) / (L.iris_r * 0.28)) ** 2 +
+                                                                    ((v - hv) / (L.iris_r * 0.24)) ** 2))
+                                                     * L.iris_r * 0.25, px) * eye_a)
+        if L.catch2 and iris_on:
             hu2, hv2 = iu + side * L.iris_r * 0.35, iv - L.iris_r * 0.4
             _over(canvas, (1.0, 1.0, 1.0), L.catch2 * _aa((1.0 - np.sqrt(((u - hu2) / (L.iris_r * 0.13)) ** 2 +
                                                                        ((v - hv2) / (L.iris_r * 0.11)) ** 2))
@@ -309,7 +404,7 @@ def paint_face(layout, path):
 
     # --- mouth -------------------------------------------------------------
     def line(x):
-        return L.mouth_z + L.smile * x * x + L.smirk * x
+        return L.mouth_z + L.smile * x * x + L.smirk * x + L.mouth_wave * np.sin(x / L.mouth_w * 3.0 * math.pi)
 
     xs = np.linspace(-L.mouth_w, L.mouth_w, 17)
     # Lips: upper (darker, bow-shaped) and lower (fuller, with a highlight).
@@ -328,7 +423,7 @@ def paint_face(layout, path):
     if L.open_mouth > 0:
         opening = np.minimum(line(mu) - v, v - (line(mu) - L.open_mouth * lipw ** 0.6))
         _over(canvas, (0.3, 0.07, 0.08), _aa(opening, px) * (np.abs(mu) < L.mouth_w))
-        teeth = np.minimum(line(mu) - v, v - (line(mu) - L.open_mouth * 0.45 * lipw ** 0.6))
+        teeth = np.minimum(line(mu) - v, v - (line(mu) - L.open_mouth * L.teeth * lipw ** 0.6))
         _over(canvas, (0.97, 0.95, 0.9), _aa(teeth, px) * (np.abs(mu) < L.mouth_w * 0.8))
         if L.tongue is not None:
             _over(canvas, L.tongue, _aa(opening, px) * _soft_ellipse(u, v, 0.0, line(0.0) - L.open_mouth * 0.95,

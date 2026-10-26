@@ -21,7 +21,7 @@ import bmesh  # noqa: E402
 from mathutils import Matrix, Vector, noise  # noqa: E402
 
 from lib import common, paint_bake, preview  # noqa: E402
-from characters import chibi, face_paint, head_loft, hero_clips  # noqa: E402
+from characters import chibi, face_atlas, face_paint, head_loft, hero_clips  # noqa: E402
 from characters.leo import render_previews, sculpt_previews  # noqa: E402
 
 SKIN = (0.99, 0.72, 0.56)
@@ -780,6 +780,10 @@ def build():
                      shadow=(0.84, 0.58, 0.5), light=(1.12, 1.03, 0.94), key_strength=0.35,
                      curvature_tint=((0.9, 0.7, 0.64), (1.05, 1.03, 1.02), 0.45)) \
             if mesh is head else dict(cavity=0.3)
+        if mesh is head:
+            # The eyes and mouth in every state too (the face atlas).
+            face_atlas.paint_head(head, highs.get(head), FACE, dict(params, **extra), "nela")
+            continue
         paint_bake.paint(mesh, source="attribute", high=highs.get(mesh), **dict(params, **extra))
     paint_bake.flat_material(glow, GLOW, emission=3.0, name="lantern_glow")
     rig.data.pose_position = "POSE"

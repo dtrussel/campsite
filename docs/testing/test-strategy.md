@@ -110,7 +110,11 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
   hero's model stays within the 40k triangle budget, and each of its
   `spring_chains` has sane tuning and names a chain of bones in the
   model, each the child of the one before, that no clip moves. Mum's
-  model (`MumArrival.SPRINGS`) is held to the same.
+  model (`MumArrival.SPRINGS`) is held to the same. Each kid has a
+  `face_atlas` with all five face states (open, closed, happy, hurt,
+  dazed), Mum's has open and closed, every atlas texture is at most
+  1024 a side, and each model's head mesh has the atlas's face surface
+  with its face-plane UVs (`_validate_face_atlas`).
   `tools/check.sh` shows one summary line;
   `godot --headless --path game res://tools/validate_project.tscn -- --clips`
   prints every number. The pure measures have unit tests
@@ -120,7 +124,9 @@ them in `test-plan.md` files, archived in `docs/history/features/`.)
   companion, and writes PNG strips (or every frame, for a GIF). Besides
   the clip states it records two motions for the spring chains, `turn`
   (a sudden turn while running) and `stop`. The hero `mum` records Mum
-  as the story beats show her (`turn`, `stop`, `wave`, `cheer`). It also
+  as the story beats show her (`turn`, `stop`, `wave`, `cheer`).
+  `--face` frames the head close up instead (the blink and the
+  expressions; from above for `death`). It also
   stacks an old capture over a new one. Usage is in its header:
   `xvfb-run -a godot --path game --resolution 320x180 --fixed-fps 30 res://tools/hero_capture.tscn -- <out_dir> leo walk attack`.
   The clay contact sheets come from Blender (`art/review/clip_sheet.py`,

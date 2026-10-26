@@ -26,6 +26,9 @@ extends Node
 ##                             <out_dir>/<hero>_<role>_<state>/NNN.png,
 ##                             for a GIF:
 ##                             ffmpeg -framerate 30 -i <dir>/%03d.png <dir>.gif
+##   --face                    a close-up of the head instead (the face
+##                             atlas: blinks and expressions), from the
+##                             front, or from above for death
 ##   --stack <old_dir> <new_dir> <out_dir>
 ##                             puts each strip in <old_dir> above the one
 ##                             of the same name in <new_dir> (no capture)
@@ -50,6 +53,12 @@ const COMPANION_SPEEDS: Dictionary = {&"attack": 1.45, &"gather": 1.3}
 const SETTLE_SECONDS: float = 0.6
 ## Motions that are not clips: how long each records after its change.
 const MOTIONS: Dictionary = {&"turn": 1.2, &"stop": 1.2}
+## The face close-up (--face): the camera's distance from the head bone,
+## its lens, and its pitch (higher for a kid lying down).
+const FACE_DISTANCE: float = 1.25
+const FACE_FOV: float = 24.0
+const FACE_PITCH_DEGREES: float = 10.0
+const FACE_DOWN_PITCH_DEGREES: float = 70.0
 
 var _camera: Camera3D = null
 var _stage: Node3D = null
@@ -58,6 +67,8 @@ var _speed: float = 0.0
 ## The way the visual travels (and, while _turning, turns toward).
 var _heading: Vector3 = Vector3.RIGHT
 var _turning: bool = false
+var _face: bool = false
+var _pitch: float = PITCH_DEGREES
 
 
 func _ready() -> void:
@@ -75,6 +86,7 @@ func _ready() -> void:
 	if role_at != -1 and role_at + 1 < args.size():
 		roles = [args[role_at + 1]]
 	var all_frames: bool = args.has("--all-frames")
+	_face = args.has("--face")
 	var plain: Array[String] = []
 	for i in args.size():
 		if args[i].begins_with("--") or (i > 0 and args[i - 1] == "--role"):
@@ -121,17 +133,38 @@ func _physics_process(delta: float) -> void:
 		_visual.face(_heading, delta)
 	if _speed > 0.0:
 		_visual.global_position += _heading * _speed * delta
+	if _face:
+		_frame_face()
+		return
 	_camera.global_position = _visual.global_position + Vector3(0.0, 0.6, 0.0) \
 		+ Vector3(0.0, sin(deg_to_rad(PITCH_DEGREES)), cos(deg_to_rad(PITCH_DEGREES))) * DISTANCE
 
 
+## --face: the camera in front of the head bone (from the south, as the
+## visual faces), at _pitch.
+func _frame_face() -> void:
+	var skeleton: Skeleton3D = _visual.model.find_child("Skeleton3D", true, false) as Skeleton3D \
+		if _visual.model != null else null
+	var bone: int = skeleton.find_bone("head") if skeleton != null else -1
+	if bone == -1:
+		return
+	var head: Vector3 = skeleton.global_transform * skeleton.get_bone_global_pose(bone).origin \
+		+ Vector3(0.0, 0.1 * _visual.model_scale, 0.0)
+	_camera.fov = FACE_FOV
+	_camera.global_position = head + Vector3(0.0, sin(deg_to_rad(_pitch)), cos(deg_to_rad(_pitch))) * FACE_DISTANCE
+	_camera.look_at(head)
+
+
 ## Plays `state` as `role` on a fresh visual and writes its strip.
 func _record(hero: HeroDefinition, role: String, state: StringName, out_dir: String, all_frames: bool) -> void:
-	var name: String = "%s_%s_%s" % [hero.id, role, state]
+	var name: String = "%s_%s_%s%s" % [hero.id, role, state, "_face" if _face else ""]
 	_visual = _make_visual(hero)
 	_stage.add_child(_visual)
 	var travels: bool = state == &"walk" or state == &"move" or MOTIONS.has(state)
 	_visual.face_instantly(Vector3.RIGHT if travels else Vector3(0.3, 0, 1))
+	if _face:
+		_visual.face_instantly(Vector3(0.15, 0, 1))
+		_pitch = FACE_DOWN_PITCH_DEGREES if state == &"death" else FACE_PITCH_DEGREES
 	_heading = Vector3.RIGHT
 	_turning = false
 	_speed = 0.0

@@ -48,7 +48,8 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
 | `characters/leo.py`, `nela.py` | Leo and Nela, modelled from the concept art on the KayKit adventurer rig (all 76 clips). The concept sheets are the reference for faces, outfits and gear (feature 012); each script's docstring lists what it follows |
 | `characters/chibi.py` | Kit for the kids: fused, auto-weighted clothing; rigid gear; face decals (eyes, brows, smile); hair locks; boots, backpack parts; spring chains (`add_chain`, `weight_along`, see "Spring bones" below). `QUICK=1` previews without baking |
 | `characters/head_loft.py` | **Drawn game heads** (feature 014): a loft through superellipse sections (front outline and side profile per character) with a few planar forms: a wedge nose, inset eye plates, a brow shelf, cheek, lip and chin planes. The face itself is painted. Also the sculpted ears (`ear()`). Tune with a `HeadLoft` per character |
-| `characters/face_paint.py` | LoL-style **painted faces**: numpy paints eyes (lids, liner, iris, catchlight), brushed brows, nose/lip shading, contours and face paint into a front-projected image; `head_loft` places its forms from the same `FaceLayout`, and `paint_bake`'s `overlay` bakes it under the lighting |
+| `characters/face_paint.py` | LoL-style **painted faces**: numpy paints eyes (lids, liner, iris, catchlight), brushed brows, nose/lip shading, contours and face paint into a front-projected image; `head_loft` places its forms from the same `FaceLayout`, and `paint_bake`'s `overlay` bakes it under the lighting. `expression(FACE, state)` gives the blink and the expressions |
+| `characters/face_atlas.py` | The kids' and Mum's **face atlas** (see "Face atlas" below): every face state baked under the head's lighting into one small texture, the head's face surface and its face-plane UVs, and the `FaceAtlas` resource the game reads |
 | `ground/textures.py` | Seamless hand-painted grass, dirt and leaf-litter textures (numpy brush stamps) for `painted_ground.gdshader` |
 
 ## Conventions
@@ -117,6 +118,32 @@ Previews (Cycles renders) go to `build/art_previews/`, or to
   crown stay on the head. Mum's tuning is `MumArrival.SPRINGS` (she has
   no hero data). The validator checks the chains against the model, for
   Mum too.
+- **Face atlas** (hero animation): the kids blink and change
+  expression without bones. `face_paint.expression(FACE, state)` gives
+  the face in each of `face_paint.STATES`: `open` (the neutral face),
+  `closed` (the blink), `happy` (smiling arcs and an open grin, for a
+  cheer), `hurt` (screwed-shut `> <` eyes, knitted brows, a gritted
+  frown, for a hit) and `dazed` (spiral eyes, one brow up, a wobbly
+  mouth, while down). In place of the head's own `paint_bake.paint`
+  call, a builder calls `face_atlas.paint_head(head, high, FACE,
+  params, kid)` (`art/characters/face_atlas.py`). It paints every
+  state, bakes each under the head's own painted lighting onto the
+  front-projected face plane (so a cell matches the baked head around
+  it), and keeps one window from the brows to below the mouth. Then it
+  paints the head as before, gives the head's front faces inside the
+  window their own material (`<Kid>_Face_painted`, the same texture)
+  with the face-plane UVs as the second UV map, and writes
+  `game/assets/custom/<kid>_face.webp` (the cells, about 670×780 for a
+  kid, one small texture beside the 1024 bakes) and `<kid>_face.tres`
+  (a `FaceAtlas`: the window, the cells and the states). The hero data
+  points at it (`face_atlas`); in the game `CharacterVisual` swaps the
+  face surface to `painted_face.gdshader` and shows one cell at a time.
+  The atlas adds no triangles. Mum has only `open` and `closed`
+  (`face_atlas.paint_head(..., states=("open", "closed"))`), so she
+  blinks. The validator checks each atlas against its model, its states
+  and a 1024 texture limit. To review the paint without a build, paint
+  the states with `face_paint.paint_face(face_paint.expression(...))`;
+  `hero_capture.tscn ... --face` records the face close up in the game.
 
 ## Audio
 

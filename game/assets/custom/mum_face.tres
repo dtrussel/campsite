@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="FaceAtlas" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/characters/face_atlas.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/custom/mum_face.webp" id="2_atlas"]
+
+[resource]
+script = ExtResource("1_script")
+texture = ExtResource("2_atlas")
+mesh = "Mum_Head"
+material = "Mum_Face_painted"
+states = PackedStringArray("open", "closed")
+window = Rect2(0.231250, 0.348438, 0.537500, 0.465625)
+cell_size = Vector2(0.976331, 0.489726)
+cell_origins = PackedVector2Array(0.011834, 0.006849, 0.011834, 0.503425)

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="HeroDefinition" load_steps=15 format=3 uid="uid://b0campsiteheroleo"]
+[gd_resource type="Resource" script_class="HeroDefinition" load_steps=16 format=3 uid="uid://b0campsiteheroleo"]
 
 [ext_resource type="Script" path="res://scripts/characters/hero_definition.gd" id="1_def"]
 [ext_resource type="Texture2D" path="res://assets/icons/portrait_leo.png" id="2_portrait"]
@@ -7,6 +7,7 @@
 
 [ext_resource type="Script" path="res://scripts/characters/tool_tier.gd" id="5_tier"]
 [ext_resource type="Script" path="res://scripts/characters/spring_chain.gd" id="6_spring"]
+[ext_resource type="Resource" path="res://assets/custom/leo_face.tres" id="7_face"]
 
 [sub_resource type="Resource" id="tier_1"]
 script = ExtResource("5_tier")
@@ -113,6 +114,7 @@ clips = {
 }
 fidgets = Array[StringName]([&"fidget_look", &"fidget_scratch", &"fidget_stick"])
 spring_chains = Array[ExtResource("6_spring")]([SubResource("spring_hair_front"), SubResource("spring_hair_back"), SubResource("spring_hair_l"), SubResource("spring_hair_r"), SubResource("spring_pack")])
+face_atlas = ExtResource("7_face")
 attack_contact_time = 0.125
 reference_speed = 4.004
 walk_reference_speed = 1.155
